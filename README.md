@@ -34,8 +34,8 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   runde Schalter mit leuchtender Kontur, hohe Regler für Helligkeit und Lautstärke.
   Es folgt beim Herunterziehen dem Finger, die Reihen klappen nacheinander auf,
   die Unschärfe dahinter wächst mit; loslassen öffnet es ganz oder schiebt es zurück
-- Mitteilungen im Kontrollzentrum: nach links wischen zeigt eine eigene Glas-Seite mit
-  allen Mitteilungen (antippen öffnet, nach links wischen löscht, „Alle löschen“,
+- Mitteilungen im Kontrollzentrum: nach rechts wischen zeigt eine eigene Glas-Seite mit
+  allen Mitteilungen (antippen öffnet, nach rechts wischen löscht, „Alle löschen“,
   Aktions-Knöpfe). Mit „System-Kontrollzentrum ersetzen“ öffnet die linke Hälfte der
   Statusleiste direkt die Mitteilungen, die rechte die Schalter
 - Kontrollzentrum anpassen (Einstellungen → „Kontrollzentrum: Aussehen“): Farbe der

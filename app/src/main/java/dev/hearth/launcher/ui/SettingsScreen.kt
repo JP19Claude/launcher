@@ -489,8 +489,8 @@ fun SettingsScreen(
             item {
                 Section("Kontrollzentrum: Aussehen") {
                     SwitchRow(
-                        label = "Nach links wischen: Mitteilungen",
-                        description = "Eigene Glas-Seite mit deinen Mitteilungen neben den Schaltern; antippen öffnet, nach links wischen löscht. Mit „System-Kontrollzentrum ersetzen“ öffnet die linke Hälfte der Statusleiste gleich die Mitteilungen.",
+                        label = "Nach rechts wischen: Mitteilungen",
+                        description = "Eigene Glas-Seite mit deinen Mitteilungen links neben den Schaltern; antippen öffnet, nach rechts wischen löscht. Mit „System-Kontrollzentrum ersetzen“ öffnet die linke Hälfte der Statusleiste gleich die Mitteilungen.",
                         checked = s.ccNotifications,
                     ) { v -> update { it.copy(ccNotifications = v) } }
                     RowDivider()

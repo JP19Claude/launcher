@@ -177,7 +177,7 @@ private class ToggleSpec(
 /**
  * The launcher's own control center, in the style of ColorOS 17, made of liquid glass:
  * big connectivity tiles, the media card, round toggles that glow while on, and sliders
- * for brightness and volume. Swipe left for the notifications. The look is set in the
+ * for brightness and volume. Swipe right for the notifications. The look is set in the
  * settings ("Kontrollzentrum: Aussehen").
  */
 @OptIn(ExperimentalFoundationApi::class)
@@ -238,8 +238,13 @@ fun ControlCenter(
     var audioOpen by remember { mutableStateOf(false) }
 
     val pageCount = if (settings.ccNotifications) 2 else 1
-    val pagerState = rememberPagerState(initialPage = initialPage.coerceIn(0, pageCount - 1)) { pageCount }
-    val showNotificationPage: () -> Unit = { scope.launch { pagerState.animateScrollToPage(1) } }
+    // The notifications sit left of the switches: swipe right to see them.
+    val notificationIndex = 0
+    val controlsIndex = if (settings.ccNotifications) 1 else 0
+    val pagerState = rememberPagerState(
+        initialPage = if (initialPage == 1 && settings.ccNotifications) notificationIndex else controlsIndex,
+    ) { pageCount }
+    val showNotificationPage: () -> Unit = { scope.launch { pagerState.animateScrollToPage(notificationIndex) } }
 
     // Scrolls when it doesn't fit; pulling up past the end closes it.
     val density = LocalDensity.current
@@ -370,7 +375,7 @@ fun ControlCenter(
             .nestedScroll(pullToClose),
     ) {
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-            if (page == 1) {
+            if (settings.ccNotifications && page == notificationIndex) {
                 NotificationPage(
                     barPadding = barPadding,
                     reveal = reveal,
@@ -553,7 +558,7 @@ fun ControlCenter(
                         ClaudeSpark(accent, Modifier.size(14.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = if (settings.ccNotifications) "Nach links: Mitteilungen · nach oben: schließen" else "Nach oben wischen zum Schließen",
+                            text = if (settings.ccNotifications) "Nach rechts: Mitteilungen · nach oben: schließen" else "Nach oben wischen zum Schließen",
                             color = OnGlassDim,
                             fontFamily = FontFamily.Serif,
                             fontStyle = FontStyle.Italic,
@@ -603,7 +608,7 @@ fun ControlCenter(
     }
 }
 
-/** Hearth's own notification list, one swipe left of the switches. */
+/** Hearth's own notification list, one swipe right from the switches. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NotificationPage(
@@ -746,7 +751,7 @@ private fun noticeTime(time: Long, now: Long): String {
 }
 
 /**
- * One notification on glass: tap opens it, swipe left removes it (a swipe to the right
+ * One notification on glass: tap opens it, swipe right removes it (a swipe to the left
  * belongs to the page and goes back to the switches).
  */
 @Composable
@@ -789,21 +794,21 @@ private fun NotificationCard(
                             val slop = viewConfiguration.touchSlop
                             when {
                                 dy > slop && dy > abs(totalX) -> break // scrolling the list
-                                totalX < -slop -> dragging = true
-                                totalX > slop -> break // back to the switches
+                                totalX > slop -> dragging = true
+                                totalX < -slop -> break // back to the switches
                             }
                         }
                         if (dragging) {
                             change.consume()
-                            val target = (offset.value + dx).coerceAtMost(0f)
+                            val target = (offset.value + dx).coerceAtLeast(0f)
                             scope.launch { offset.snapTo(target) }
                         }
                     }
                     if (dragging) {
                         val width = size.width.toFloat()
                         scope.launch {
-                            if (notice.clearable && offset.value < -width * 0.33f) {
-                                offset.animateTo(-width * 1.2f, tween(180))
+                            if (notice.clearable && offset.value > width * 0.33f) {
+                                offset.animateTo(width * 1.2f, tween(180))
                                 dismiss()
                             } else {
                                 offset.animateTo(0f, spring(dampingRatio = 0.7f, stiffness = 500f))
