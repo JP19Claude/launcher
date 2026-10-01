@@ -12,6 +12,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hearth.launcher.data.ThemeMode
+import dev.hearth.launcher.data.WidgetRepository
 import dev.hearth.launcher.ui.LauncherScreen
 import dev.hearth.launcher.ui.theme.HearthTheme
 
@@ -43,9 +44,24 @@ class MainActivity : ComponentActivity() {
     /** True between leaving the launcher (onStop) and showing it again (onResume). */
     private var wasInBackground = false
 
+    override fun onStart() {
+        super.onStart()
+        viewModel.widgets.startListening()
+    }
+
     override fun onStop() {
         super.onStop()
         wasInBackground = true
+        viewModel.widgets.stopListening()
+    }
+
+    /** Result of a widget's own setup screen (started through AppWidgetHost, so no result API). */
+    @Deprecated("AppWidgetHost reports configuration results here")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == WidgetRepository.REQUEST_CONFIGURE) {
+            viewModel.widgets.onConfigureResult(resultCode == RESULT_OK)
+        }
     }
 
     override fun onResume() {

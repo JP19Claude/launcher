@@ -1,7 +1,9 @@
 package dev.hearth.launcher.ui
 
 import android.Manifest
+import android.app.Activity
 import android.app.ActivityOptions
+import android.appwidget.AppWidgetProviderInfo
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -38,6 +40,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
@@ -48,6 +51,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -124,6 +128,13 @@ fun LauncherScreen(vm: LauncherViewModel) {
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     var controlOpen by rememberSaveable { mutableStateOf(false) }
     var menu by remember { mutableStateOf<GlassMenuRequest?>(null) }
+    var widgetPickerOpen by remember { mutableStateOf(false) }
+    var selecting by remember { mutableStateOf(false) }
+    var selected by remember { mutableStateOf(emptySet<String>()) }
+    val endSelection = {
+        selecting = false
+        selected = emptySet()
+    }
 
     val context = LocalContext.current
     val storagePermission = rememberLauncherForActivityResult(
@@ -157,7 +168,25 @@ fun LauncherScreen(vm: LauncherViewModel) {
         paginate(homeApps, columns, rows, firstPageRows)
     }
     val libraryPages = if (settings.showAppLibrary) 1 else 0
-    val pagerState = rememberPagerState(pageCount = { pages.size + libraryPages })
+    val widgetPages = if (settings.showWidgetPage) 1 else 0
+    // Page order: [widgets] home pages… [App Library]; the launcher opens on the first home page.
+    val pagerState = rememberPagerState(initialPage = widgetPages) { widgetPages + pages.size + libraryPages }
+    val onLibraryPage = libraryPages > 0 && pagerState.currentPage >= widgetPages + pages.size
+
+    // Adding a widget: permission dialog (once per app) and the widget's own setup screen.
+    val activity = context as? Activity
+    val bindWidget = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        activity?.let { vm.widgets.onBindResult(result.resultCode == Activity.RESULT_OK, it) }
+    }
+    val addWidget: (AppWidgetProviderInfo) -> Unit = { info ->
+        widgetPickerOpen = false
+        val permission = vm.widgets.begin(info)
+        if (permission == null) {
+            activity?.let { vm.widgets.finishBinding(it) }
+        } else {
+            runCatching { bindWidget.launch(permission) }
+        }
+    }
 
     // Apps open with a zoom out of their icon, which the system can start right away.
     val view = LocalView.current
@@ -178,7 +207,13 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val actions = remember(vm, launchApp) {
         AppActions(
             launch = launchApp,
-            menu = { app, bounds -> menu = GlassMenuRequest(bounds, appMenuItems(vm, app), app) },
+            menu = { app, bounds ->
+                val items = appMenuItems(vm, app) {
+                    selecting = true
+                    selected = setOf(app.key)
+                }
+                menu = GlassMenuRequest(bounds, items, app)
+            },
         )
     }
     // Inside an opened App Library folder: launching closes the folder.
@@ -198,6 +233,11 @@ fun LauncherScreen(vm: LauncherViewModel) {
             items = listOf(
                 GlassMenuItem("Launcher-Einstellungen", Icons.Rounded.Settings) { settingsOpen = true },
                 GlassMenuItem("Kontrollzentrum", Icons.Rounded.Home) { controlOpen = true },
+                GlassMenuItem("Widget hinzufügen", Icons.Rounded.Add) { widgetPickerOpen = true },
+                GlassMenuItem("Apps auswählen", Icons.Rounded.CheckCircle) {
+                    selecting = true
+                    selected = emptySet()
+                },
                 GlassMenuItem("Hintergrundbild ändern", Icons.Rounded.Edit) { vm.openWallpaperPicker() },
                 GlassMenuItem("Suche öffnen", Icons.Rounded.Search) { searchOpen = true },
             ),
@@ -214,7 +254,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
             searchOpen = false
             settingsOpen = false
             controlOpen = false
-            if (alreadyInFront && pagerState.currentPage != 0) pagerState.animateScrollToPage(0)
+            widgetPickerOpen = false
+            endSelection()
+            if (alreadyInFront && pagerState.currentPage != widgetPages) pagerState.animateScrollToPage(widgetPages)
         }
     }
 
@@ -232,6 +274,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
     BackHandler {
         when {
             menu != null -> menu = null
+            widgetPickerOpen -> widgetPickerOpen = false
+            selecting -> endSelection()
             openFolder != null -> openFolder = null
             controlOpen -> controlOpen = false
             settingsOpen -> settingsOpen = false
@@ -266,6 +310,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
         LocalSettings provides settings,
         LocalGlassStyle provides glassStyle,
         LocalGlassLight provides light,
+        LocalSelection provides SelectionState(selecting, selected) { app ->
+            selected = if (app.key in selected) selected - app.key else selected + app.key
+        },
     ) {
         Box(Modifier.fillMaxSize()) {
             Box(
@@ -303,13 +350,19 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             state = pagerState,
                             beyondViewportPageCount = 1,
                             modifier = Modifier.weight(1f).fillMaxWidth(),
-                        ) { page ->
+                        ) { pagerPage ->
+                            if (pagerPage < widgetPages) {
+                                WidgetPage(repo = vm.widgets, onAddWidget = { widgetPickerOpen = true })
+                                return@HorizontalPager
+                            }
+                            val page = pagerPage - widgetPages
                             if (page >= pages.size) {
                                 AppLibraryPage(
                                     library = library,
                                     actions = actions,
                                     onOpenSearch = { searchOpen = true },
                                     onOpenFolder = { openFolder = it },
+                                    modifier = Modifier.fadingEdges(),
                                 )
                                 return@HorizontalPager
                             }
@@ -348,14 +401,15 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             Modifier.fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            if (pages.size + libraryPages > 1) {
+                            if (widgetPages + pages.size + libraryPages > 1) {
                                 PageDots(
-                                    count = pages.size + libraryPages,
+                                    count = widgetPages + pages.size + libraryPages,
                                     current = pagerState.currentPage,
                                     modifier = Modifier.padding(bottom = 10.dp),
                                 )
                             }
-                            if (settings.showSearchPill) {
+                            // The App Library has its own search bar at the top.
+                            if (settings.showSearchPill && !onLibraryPage) {
                                 SearchPill(onClick = { searchOpen = true })
                             }
                         }
@@ -437,14 +491,32 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 )
             }
 
+            AnimatedVisibility(
+                visible = widgetPickerOpen,
+                enter = fadeIn(tween(200)) + slideInVertically(tween(300)) { it / 8 },
+                exit = fadeOut(tween(180)) + slideOutVertically(tween(220)) { it / 8 },
+            ) {
+                WidgetPicker(repo = vm.widgets, onPick = addWidget, onDismiss = { widgetPickerOpen = false })
+            }
+
             LibraryFolderOverlay(folder = openFolder, actions = folderActions, onDismiss = { openFolder = null })
+
+            SelectionBar(
+                visible = selecting,
+                count = selected.size,
+                onHide = {
+                    vm.hideAll(selected)
+                    endSelection()
+                },
+                onDone = endSelection,
+            )
 
             GlassMenuOverlay(request = menu, onDismiss = { menu = null })
         }
     }
 }
 
-private fun appMenuItems(vm: LauncherViewModel, app: AppInfo): List<GlassMenuItem> = buildList {
+private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Unit): List<GlassMenuItem> = buildList {
     add(GlassMenuItem("App-Info", Icons.Rounded.Info) { vm.openAppInfo(app) })
     if (vm.isInDock(app)) {
         val dockKeys = vm.dock.value.map { it.key }
@@ -459,6 +531,7 @@ private fun appMenuItems(vm: LauncherViewModel, app: AppInfo): List<GlassMenuIte
     } else if (vm.canAddToDock()) {
         add(GlassMenuItem("Zum Dock hinzufügen", Icons.Rounded.Add) { vm.addToDock(app) })
     }
+    add(GlassMenuItem("Auswählen", Icons.Rounded.CheckCircle, onClick = onSelect))
     add(GlassMenuItem("Ausblenden", Icons.Rounded.Clear) { vm.hide(app) })
     add(GlassMenuItem("Deinstallieren", Icons.Rounded.Delete, destructive = true) { vm.uninstall(app) })
 }
@@ -940,6 +1013,48 @@ private fun WallpaperAccessHint(onClick: () -> Unit, modifier: Modifier = Modifi
                     fontSize = 13.sp,
                     style = OnWallpaperText,
                 )
+            }
+        }
+    }
+}
+
+/** Glass bar while selecting several apps: count, hide them, or finish. */
+@Composable
+private fun SelectionBar(visible: Boolean, count: Int, onHide: () -> Unit, onDone: () -> Unit) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(tween(180)) + slideInVertically(tween(260)) { -it },
+        exit = fadeOut(tween(160)) + slideOutVertically(tween(200)) { -it },
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            LiquidGlass(
+                cornerRadius = 26.dp,
+                refraction = 18.dp,
+                tint = Color.Black.copy(alpha = 0.2f),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    Modifier.padding(start = 18.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = if (count == 0) "Apps antippen zum Auswählen" else "$count ausgewählt",
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (count > 0) {
+                        GlassChip("Ausblenden", onClick = onHide)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    GlassChip("Fertig", onClick = onDone)
+                }
             }
         }
     }

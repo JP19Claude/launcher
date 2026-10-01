@@ -30,6 +30,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
@@ -476,3 +479,23 @@ fun GlassBackdropFill(blur: Dp, modifier: Modifier = Modifier) {
         drawBackdrop(backdrop, origin)
     }
 }
+
+/** Softly fades scrolling content out at the top and bottom instead of cutting it off hard. */
+fun Modifier.fadingEdges(top: Dp = 16.dp, bottom: Dp = 40.dp): Modifier = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val h = size.height
+        if (h <= 0f) return@drawWithContent
+        val t = (top.toPx() / h).coerceIn(0f, 0.45f)
+        val b = (bottom.toPx() / h).coerceIn(0f, 0.45f)
+        drawRect(
+            brush = Brush.verticalGradient(
+                0f to Color.Transparent,
+                t to Color.Black,
+                (1f - b) to Color.Black,
+                1f to Color.Transparent,
+            ),
+            blendMode = BlendMode.DstIn,
+        )
+    }

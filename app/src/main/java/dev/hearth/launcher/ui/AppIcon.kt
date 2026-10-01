@@ -1,6 +1,18 @@
 package dev.hearth.launcher.ui
 
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -66,6 +78,52 @@ import kotlin.math.sin
 
 /** Current launcher settings for every composable below the screen. */
 val LocalSettings = compositionLocalOf { LauncherSettings() }
+
+/** Multi-select mode: tapping icons marks them instead of opening them. */
+@Immutable
+class SelectionState(
+    val active: Boolean = false,
+    val selected: Set<String> = emptySet(),
+    val toggle: (AppInfo) -> Unit = {},
+)
+
+val LocalSelection = compositionLocalOf { SelectionState() }
+
+/** Gentle iOS-style wiggle while selecting. */
+@Composable
+fun Modifier.wiggle(active: Boolean, seed: Int): Modifier {
+    if (!active) return this
+    val transition = rememberInfiniteTransition(label = "wiggle")
+    val angle by transition.animateFloat(
+        initialValue = -1.6f,
+        targetValue = 1.6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 130 + (seed and 0x3F)),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "wiggleAngle",
+    )
+    return graphicsLayer { rotationZ = angle }
+}
+
+/** Round check mark in the corner of a selectable icon. */
+@Composable
+fun SelectionBadge(selected: Boolean, modifier: Modifier = Modifier) {
+    val accent = LocalSettings.current.accent.color
+    Box(
+        modifier
+            .size(22.dp)
+            .shadow(3.dp, CircleShape)
+            .clip(CircleShape)
+            .background(if (selected) accent else Color.White.copy(alpha = 0.55f))
+            .border(1.5.dp, Color.White, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) {
+            Icon(Icons.Rounded.Check, contentDescription = "Ausgewählt", tint = Color.White, modifier = Modifier.size(15.dp))
+        }
+    }
+}
 
 /** Superellipse (n = 5): the soft-cornered "squircle" known from iOS icons. */
 val SquircleShape: Shape = GenericShape { size, _ ->
@@ -200,8 +258,10 @@ fun AppIcon(
         label = "iconPress",
     )
     var bounds by remember { mutableStateOf(Rect.Zero) }
+    val selection = LocalSelection.current
+    val isSelected = selection.active && app.key in selection.selected
 
-    Box(modifier.onGloballyPositioned { bounds = it.boundsInRoot() }) {
+    Box(modifier.wiggle(selection.active, app.key.hashCode())) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
@@ -209,22 +269,32 @@ fun AppIcon(
                 .combinedClickable(
                     interactionSource = interaction,
                     indication = null,
-                    onClick = { onLaunch(app, bounds) },
+                    onClick = { if (selection.active) selection.toggle(app) else onLaunch(app, bounds) },
                     onLongClick = {
                         if (settings.haptics) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        actions.menu(app, bounds)
+                        if (selection.active) selection.toggle(app) else actions.menu(app, bounds)
                     },
                 )
                 .padding(vertical = 6.dp),
         ) {
-            AppIconImage(
-                app = app,
-                size = iconSize,
-                modifier = Modifier.graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                },
-            )
+            Box {
+                AppIconImage(
+                    app = app,
+                    size = iconSize,
+                    // Bounds of the icon itself (before the press scale), for the launch zoom
+                    // and the lifted icon in the context menu.
+                    modifier = Modifier
+                        .onGloballyPositioned { bounds = it.boundsInRoot() }
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                            alpha = if (selection.active && !isSelected) 0.75f else 1f
+                        },
+                )
+                if (selection.active) {
+                    SelectionBadge(isSelected, Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp))
+                }
+            }
             if (showLabel && settings.showLabels) {
                 Spacer(Modifier.height(6.dp))
                 Text(

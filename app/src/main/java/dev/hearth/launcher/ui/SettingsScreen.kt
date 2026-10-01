@@ -24,7 +24,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.input.pointer.pointerInput
+import dev.hearth.launcher.data.AppInfo
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
@@ -102,6 +107,8 @@ fun SettingsScreen(
     val update: ((LauncherSettings) -> LauncherSettings) -> Unit = vm::updateSettings
 
     LaunchedEffect(Unit) { vm.refreshIconPacks() }
+
+    var pickerOpen by remember { mutableStateOf(false) }
 
     // Picks up the accessibility switch when coming back from the system settings.
     var serviceOn by remember { mutableStateOf(ControlCenterService.isEnabled) }
@@ -319,6 +326,11 @@ fun SettingsScreen(
                         description = "Hinter der letzten Seite: alle Apps in Glas-Ordnern",
                         checked = s.showAppLibrary,
                     ) { v -> update { it.copy(showAppLibrary = v) } }
+                    SwitchRow(
+                        label = "Widget-Seite",
+                        description = "Links neben dem Homescreen: deine Widgets auf Glas",
+                        checked = s.showWidgetPage,
+                    ) { v -> update { it.copy(showWidgetPage = v) } }
                     RowDivider()
                     ActionRow(label = "Hintergrundbild ändern", onClick = vm::openWallpaperPicker)
                 }
@@ -415,8 +427,16 @@ fun SettingsScreen(
             item {
                 val hidden = allApps.filter { it.key in s.hiddenApps }
                 Section("Ausgeblendete Apps") {
+                    ActionRow(
+                        label = "Apps auswählen …",
+                        description = "Mehrere Apps auf einmal aus- oder einblenden",
+                    ) { pickerOpen = true }
+                    if (hidden.isNotEmpty()) {
+                        ActionRow(label = "Alle wieder einblenden", onClick = vm::unhideAll)
+                    }
+                    RowDivider()
                     if (hidden.isEmpty()) {
-                        Note("Keine. Lange auf eine App drücken und „Ausblenden“ wählen.")
+                        Note("Keine. Lange auf eine App drücken und „Ausblenden“ oder „Auswählen“ wählen.")
                     }
                     hidden.forEachIndexed { index, app ->
                         if (index > 0) RowDivider()
@@ -455,6 +475,74 @@ fun SettingsScreen(
                 }
             }
         }
+
+        if (pickerOpen) {
+            HiddenAppsPicker(
+                apps = allApps,
+                hidden = s.hiddenApps,
+                onToggle = { app, hide -> vm.setHidden(app.key, hide) },
+                onDone = { pickerOpen = false },
+            )
+        }
+    }
+}
+
+/** All apps with a mark each: marked apps are hidden from home screen, library and search. */
+@Composable
+private fun HiddenAppsPicker(
+    apps: List<AppInfo>,
+    hidden: Set<String>,
+    onToggle: (AppInfo, Boolean) -> Unit,
+    onDone: () -> Unit,
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            .pointerInput(Unit) { detectTapGestures { } },
+    ) {
+        Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 6.dp, bottom = 12.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text("Apps ausblenden", color = TextPrimary, fontFamily = FontFamily.Serif, fontSize = 28.sp)
+                    Text("${hidden.size} ausgeblendet", color = TextSecondary, fontSize = 14.sp)
+                }
+                GlassChip("Fertig", onClick = onDone)
+            }
+            LiquidGlass(
+                cornerRadius = 26.dp,
+                refraction = 16.dp,
+                blur = 20.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .clip(RoundedCornerShape(26.dp)),
+            ) {
+                LazyColumn(contentPadding = PaddingValues(vertical = 6.dp)) {
+                    items(apps, key = { it.key }) { app ->
+                        val isHidden = app.key in hidden
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onToggle(app, !isHidden) }
+                                .padding(horizontal = 18.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            AppIconImage(app, 38.dp)
+                            Spacer(Modifier.width(14.dp))
+                            Text(
+                                app.label,
+                                color = TextPrimary,
+                                fontSize = 15.sp,
+                                maxLines = 1,
+                                modifier = Modifier.weight(1f),
+                            )
+                            SelectionBadge(isHidden)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -474,7 +562,10 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
             cornerRadius = 26.dp,
             refraction = 16.dp,
             blur = 20.dp,
-            modifier = Modifier.fillMaxWidth(),
+            // Clipped, so touch ripples of the rows stay inside the rounded card.
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(26.dp)),
         ) {
             Column(Modifier.padding(vertical = 6.dp), content = content)
         }

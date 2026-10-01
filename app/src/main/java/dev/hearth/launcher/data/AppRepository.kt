@@ -136,17 +136,13 @@ class AppRepository(
         val original = info.getIcon(densityDpi)
 
         if (pack != null) {
+            // Pack icons bring their own shape (often their own glass tile), so they are
+            // never put on a second tile: that showed up as a double frame.
             val themed = pack.iconFor(info.componentName, densityDpi)
-            if (themed != null) {
-                return if (config.glyphs) renderScaled(themed, GLYPH_SCALE) to IconKind.Glyph
-                else renderScaled(themed, 1f) to IconKind.Free
-            }
+            if (themed != null) return renderScaled(themed, 1f) to IconKind.Free
             if (config.adaptUnthemed) {
                 val adapted = pack.adapt(original, info.componentName, iconSizePx, densityDpi)
-                if (adapted != null) {
-                    return if (config.glyphs) scaleBitmap(adapted, GLYPH_SCALE) to IconKind.Glyph
-                    else adapted to IconKind.Free
-                }
+                if (adapted != null) return adapted to IconKind.Free
             }
         }
 
@@ -186,19 +182,6 @@ class AppRepository(
         return bitmap
     }
 
-    private fun scaleBitmap(source: Bitmap, scale: Float): Bitmap {
-        val size = iconSizePx
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val inner = (size * scale).toInt()
-        val offset = (size - inner) / 2
-        Canvas(bitmap).drawBitmap(
-            source,
-            Rect(0, 0, source.width, source.height),
-            Rect(offset, offset, offset + inner, offset + inner),
-            android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG),
-        )
-        return bitmap
-    }
 
     /**
      * Draws the adaptive icon layers without the system mask,
@@ -283,8 +266,6 @@ class AppRepository(
     }
 
     private companion object {
-        /** Icon pack icons on glass tiles: a bit smaller, so the glass shows around them. */
-        const val GLYPH_SCALE = 0.78f
         const val LEGACY_GLYPH_SCALE = 0.66f
     }
 }

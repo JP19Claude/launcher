@@ -197,25 +197,33 @@ private fun LibraryIcon(app: AppInfo, size: Dp, actions: AppActions) {
         label = "libraryIconPress",
     )
     var bounds by remember { mutableStateOf(Rect.Zero) }
-    AppIconImage(
-        app = app,
-        size = size,
-        modifier = Modifier
-            .onGloballyPositioned { bounds = it.boundsInRoot() }
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .combinedClickable(
-                interactionSource = interaction,
-                indication = null,
-                onClick = { actions.launch(app, bounds) },
-                onLongClick = {
-                    if (settings.haptics) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    actions.menu(app, bounds)
-                },
-            ),
-    )
+    val selection = LocalSelection.current
+    val isSelected = selection.active && app.key in selection.selected
+    Box(Modifier.wiggle(selection.active, app.key.hashCode())) {
+        AppIconImage(
+            app = app,
+            size = size,
+            modifier = Modifier
+                .onGloballyPositioned { bounds = it.boundsInRoot() }
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    alpha = if (selection.active && !isSelected) 0.75f else 1f
+                }
+                .combinedClickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    onClick = { if (selection.active) selection.toggle(app) else actions.launch(app, bounds) },
+                    onLongClick = {
+                        if (settings.haptics) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        if (selection.active) selection.toggle(app) else actions.menu(app, bounds)
+                    },
+                ),
+        )
+        if (selection.active) {
+            SelectionBadge(isSelected, Modifier.align(Alignment.TopEnd))
+        }
+    }
 }
 
 /** Four small icons in one corner of a folder; tapping opens the whole folder. */
@@ -281,6 +289,7 @@ fun LibraryFolderOverlay(folder: LibraryFolderContent?, actions: AppActions, onD
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 520.dp)
+                        .clip(RoundedCornerShape(34.dp))
                         .pointerInput(Unit) { detectTapGestures { } },
                 ) {
                     LazyVerticalGrid(

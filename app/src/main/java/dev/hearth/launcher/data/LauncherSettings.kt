@@ -117,6 +117,7 @@ data class LauncherSettings(
     val swipeDownAction: SwipeDownAction = SwipeDownAction.Split,
     val showClaudeCard: Boolean = true,
     val showAppLibrary: Boolean = true,
+    val showWidgetPage: Boolean = true,
     val triggerZone: TriggerZone = TriggerZone.RightHalf,
     // Dock
     val dockSize: Int = 4,
@@ -227,6 +228,7 @@ class SettingsRepository(context: Context) {
             swipeDownAction = enumOf("swipeDownAction", d.swipeDownAction),
             showClaudeCard = prefs.getBoolean("showClaudeCard", d.showClaudeCard),
             showAppLibrary = prefs.getBoolean("showAppLibrary", d.showAppLibrary),
+            showWidgetPage = prefs.getBoolean("showWidgetPage", d.showWidgetPage),
             triggerZone = enumOf("triggerZone", d.triggerZone),
             dockSize = prefs.getInt("dockSize", d.dockSize),
             dockCustomized = prefs.getBoolean("dockCustomized", d.dockCustomized),
@@ -270,6 +272,7 @@ class SettingsRepository(context: Context) {
             .putString("swipeDownAction", s.swipeDownAction.name)
             .putBoolean("showClaudeCard", s.showClaudeCard)
             .putBoolean("showAppLibrary", s.showAppLibrary)
+            .putBoolean("showWidgetPage", s.showWidgetPage)
             .putString("triggerZone", s.triggerZone.name)
             .putInt("dockSize", s.dockSize)
             .putBoolean("dockCustomized", s.dockCustomized)

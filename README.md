@@ -24,6 +24,10 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
 - App-Mediathek wie bei iOS (hinter der letzten Seite): Glas-Ordner nach Kategorie,
   „Vorschläge“ aus deinen meistgenutzten Apps, „Neu hinzugefügt“; die kleinen Icons
   in der Ecke öffnen den ganzen Ordner
+- Widgets: eigene Widget-Seite links neben dem Homescreen (wie die Heute-Ansicht),
+  jedes Widget auf einer Glas-Karte; „Bearbeiten“ zum Verschieben, Vergrößern, Entfernen
+- Mehrere Apps markieren: lange drücken → „Auswählen“ (Icons wackeln, Haken antippen),
+  dann „Ausblenden“; oder in den Einstellungen „Apps auswählen …“ als Liste
 - Schneller zurück in die nächste App: Rückkehr aus einer App scrollt nicht mehr zur
   ersten Seite (das hat den ersten Tipp verschluckt), Apps starten mit Zoom aus dem Icon
 - Liquid Glass im Stil von Apple, fast überall: Icons, Dock, Uhr, Seitenpunkte,

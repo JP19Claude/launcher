@@ -38,6 +38,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
@@ -90,18 +93,14 @@ fun GlassMenuOverlay(request: GlassMenuRequest?, onDismiss: () -> Unit) {
                 .pointerInput(Unit) { detectTapGestures { onDismiss() } },
         ) {
             MenuLayout(anchor = current.anchor) {
-                // Child 0: the lifted icon, exactly where the original sits.
+                // Child 0: the lifted icon, exactly where and as big as the original.
+                val previewSize = with(LocalDensity.current) { current.anchor.width.toDp() }
                 Box(Modifier.graphicsLayer {
                     val s = 1f + 0.08f * appear.value
                     scaleX = s
                     scaleY = s
                 }) {
-                    current.app?.let { app ->
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Spacer(Modifier.height(6.dp))
-                            AppIconImage(app, LocalSettings.current.iconSize.dp)
-                        }
-                    }
+                    current.app?.let { app -> AppIconImage(app, previewSize) }
                 }
                 // Child 1: the glass panel.
                 LiquidGlass(
@@ -117,7 +116,8 @@ fun GlassMenuOverlay(request: GlassMenuRequest?, onDismiss: () -> Unit) {
                             scaleX = 0.75f + 0.25f * v
                             scaleY = 0.75f + 0.25f * v
                             transformOrigin = TransformOrigin(0.5f, 0f)
-                        },
+                        }
+                        .clip(RoundedCornerShape(24.dp)),
                 ) {
                     Column(Modifier.padding(vertical = 6.dp)) {
                         val title = current.title ?: current.app?.label

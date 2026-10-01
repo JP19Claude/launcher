@@ -23,6 +23,7 @@ import dev.hearth.launcher.data.SettingsRepository
 import dev.hearth.launcher.data.SystemControls
 import dev.hearth.launcher.data.WallpaperBackdrop
 import dev.hearth.launcher.data.WallpaperRepository
+import dev.hearth.launcher.data.WidgetRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,6 +57,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     /** Brightness, volume, flashlight & co. for the launcher's control center. */
     val controls = SystemControls(application)
+
+    /** Android widgets on the widget page. */
+    val widgets = WidgetRepository(application)
 
     val settings: StateFlow<LauncherSettings> = settingsRepo.settings
 
@@ -191,6 +195,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun unhide(key: String) {
         settingsRepo.update { it.copy(hiddenApps = it.hiddenApps - key) }
+    }
+
+    /** Hides several apps at once (multi-select). */
+    fun hideAll(keys: Collection<String>) {
+        if (keys.isEmpty()) return
+        settingsRepo.update { s ->
+            s.copy(hiddenApps = s.hiddenApps + keys, dockApps = s.dockApps - keys.toSet())
+        }
+    }
+
+    fun setHidden(key: String, hidden: Boolean) {
+        if (hidden) hideAll(listOf(key)) else unhide(key)
+    }
+
+    fun unhideAll() {
+        settingsRepo.update { it.copy(hiddenApps = emptySet()) }
     }
 
     fun refreshIconPacks() {
