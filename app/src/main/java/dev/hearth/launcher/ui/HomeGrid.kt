@@ -331,7 +331,9 @@ private fun HomeWidgetView(
                 .fillMaxSize()
                 .clip(RoundedCornerShape(24.dp)),
         ) {
-            if (info == null) {
+            if (repo.isInternal(widget.id)) {
+                PhotoWidget(repo, widget.id, Modifier.fillMaxSize().padding(4.dp))
+            } else if (info == null) {
                 Text(
                     "Widget nicht verfügbar",
                     color = Color.White.copy(alpha = 0.8f),

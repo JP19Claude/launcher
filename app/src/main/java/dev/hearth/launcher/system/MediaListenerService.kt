@@ -1,10 +1,29 @@
 package dev.hearth.launcher.system
 
 import android.service.notification.NotificationListenerService
+import android.service.notification.StatusBarNotification
+import dev.hearth.launcher.data.NotificationHub
 
 /**
- * Does nothing by itself. Android only shares the running media sessions (what is playing,
- * cover, controls) with apps that have notification access, and that access is granted
- * to a listener service like this one.
+ * Notification access for Hearth. Android only shares the running media sessions (what is
+ * playing) with apps that have it, and Glimmer uses ongoing notifications (calls, timers,
+ * navigation, downloads) and new messages as live activities.
  */
-class MediaListenerService : NotificationListenerService()
+class MediaListenerService : NotificationListenerService() {
+
+    override fun onListenerConnected() {
+        NotificationHub.refresh(this)
+    }
+
+    override fun onListenerDisconnected() {
+        NotificationHub.clear()
+    }
+
+    override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        if (sbn != null) NotificationHub.onPosted(this, sbn) else NotificationHub.refresh(this)
+    }
+
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        NotificationHub.refresh(this)
+    }
+}

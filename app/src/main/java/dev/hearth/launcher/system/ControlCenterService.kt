@@ -33,6 +33,7 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import dev.hearth.launcher.MainActivity
+import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.MediaRepository
 import dev.hearth.launcher.data.SettingsRepository
 import dev.hearth.launcher.data.SystemControls
@@ -59,6 +60,13 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
     private var panel: View? = null
     private var controls: SystemControls? = null
     private var media: MediaRepository? = null
+    private var glimmer: GlimmerController? = null
+
+    private fun restartGlimmer() {
+        val current = SettingsRepository(this).settings.value
+        glimmer?.stop()
+        if (current.glimmerEnabled) glimmer?.start(current)
+    }
     private val handler = Handler(Looper.getMainLooper())
 
     /** Read from the settings; see [onAccessibilityEvent]. */
@@ -71,6 +79,7 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         when (key) {
             "triggerZone" -> if (trigger != null) addTrigger()
             SettingsRepository.KEY_INTERCEPT -> interceptShade = prefs.getBoolean(key, false)
+            in LauncherSettings.GLIMMER_KEYS -> restartGlimmer()
         }
     }
 
@@ -109,6 +118,8 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         val locked = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
         if (!locked) addTrigger()
+        glimmer = GlimmerController(this)
+        restartGlimmer()
     }
 
     /**
@@ -147,6 +158,7 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         super.onConfigurationChanged(newConfig)
         // Width and status bar height change with rotation.
         if (trigger != null) addTrigger()
+        glimmer?.onConfigurationChanged(newConfig)
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
@@ -164,6 +176,8 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         if (instance === this) instance = null
         hidePanel()
         removeTrigger()
+        glimmer?.stop()
+        glimmer = null
         runCatching { unregisterReceiver(screenReceiver) }
         getSharedPreferences(SettingsRepository.PREFS_NAME, MODE_PRIVATE)
             .unregisterOnSharedPreferenceChangeListener(prefsListener)

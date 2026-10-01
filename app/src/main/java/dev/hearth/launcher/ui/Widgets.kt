@@ -32,11 +32,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -166,7 +180,9 @@ private fun WidgetCard(
                 .height(widget.heightDp.dp)
                 .clip(RoundedCornerShape(28.dp)),
         ) {
-            if (info == null) {
+            if (repo.isInternal(widget.id)) {
+                PhotoWidget(repo, widget.id, Modifier.fillMaxSize().padding(6.dp))
+            } else if (info == null) {
                 Text(
                     "Widget nicht mehr verfügbar",
                     color = Color.White.copy(alpha = 0.8f),
@@ -197,6 +213,10 @@ private fun WidgetCard(
                 EditButton(Icons.Rounded.KeyboardArrowDown, "Nach unten", enabled = canMoveDown) { repo.move(widget.id, 1) }
                 EditButton(null, "Kleiner", label = "−") { repo.resize(widget.id, -40) }
                 EditButton(Icons.Rounded.Add, "Größer") { repo.resize(widget.id, 40) }
+                if (repo.isInternal(widget.id)) {
+                    val pick = LocalPhotoPicker.current
+                    EditButton(Icons.Rounded.Edit, "Fotos auswählen") { pick(widget.id) }
+                }
                 EditButton(Icons.Rounded.Delete, "Entfernen", tint = Color(0xFFFF8A80)) { repo.remove(widget.id) }
             }
         }
@@ -277,6 +297,7 @@ fun GlassChip(text: String, onClick: () -> Unit) {
 fun WidgetPicker(
     repo: WidgetRepository,
     onPick: (AppWidgetProviderInfo) -> Unit,
+    onPickPhotos: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     var choices by remember { mutableStateOf<List<WidgetChoice>?>(null) }
@@ -337,6 +358,13 @@ fun WidgetPicker(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    item(key = "hearth-photos") {
+                        HearthWidgetRow(
+                            title = "Fotos",
+                            subtitle = "Hearth-Widget: deine Bilder als Diashow auf Glas",
+                            onClick = onPickPhotos,
+                        )
+                    }
                     items(list, key = { it.info.provider.flattenToString() + it.info.profile.hashCode() }) { choice ->
                         WidgetChoiceRow(choice) { onPick(choice.info) }
                     }
@@ -385,6 +413,131 @@ private fun WidgetChoiceRow(choice: WidgetChoice, onClick: () -> Unit) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+    }
+}
+
+/** Lets a photo widget ask the launcher to open the photo picker for it (by widget id). */
+val LocalPhotoPicker = compositionLocalOf<(Int) -> Unit> { {} }
+
+/**
+ * Hearth's photo widget: your pictures as a slow slideshow, gently zooming (Ken Burns),
+ * crossfading every few seconds. Tap shows the next one; empty, it asks for photos.
+ */
+@Composable
+fun PhotoWidget(repo: WidgetRepository, id: Int, modifier: Modifier = Modifier) {
+    val versions by repo.photos.versions.collectAsStateWithLifecycle()
+    val files = remember(id, versions[id]) { repo.photos.photos(id) }
+    var index by remember(files) { mutableIntStateOf(0) }
+    val pick = LocalPhotoPicker.current
+    val animations = LocalSettings.current.animations
+
+    LaunchedEffect(files) {
+        while (files.size > 1) {
+            delay(7000)
+            index = (index + 1) % files.size
+        }
+    }
+    val image by produceState<ImageBitmap?>(null, files, index) {
+        if (files.isEmpty()) value = null
+        files.getOrNull(index)?.let { repo.photos.load(it) }?.let { value = it }
+    }
+    val transition = rememberInfiniteTransition(label = "kenBurns")
+    val zoom by transition.animateFloat(
+        initialValue = 1f,
+        targetValue = if (animations) 1.12f else 1f,
+        animationSpec = infiniteRepeatable(tween(14000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "photoZoom",
+    )
+
+    Box(
+        modifier
+            .clip(RoundedCornerShape(20.dp))
+            .clickable {
+                when {
+                    files.isEmpty() -> pick(id)
+                    files.size > 1 -> index = (index + 1) % files.size
+                }
+            },
+    ) {
+        Crossfade(targetState = image, animationSpec = tween(800), label = "photoFade") { picture ->
+            if (picture != null) {
+                Image(
+                    bitmap = picture,
+                    contentDescription = "Foto",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            scaleX = zoom
+                            scaleY = zoom
+                        },
+                )
+            } else {
+                Column(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(Icons.Rounded.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        if (files.isEmpty()) "Fotos auswählen" else "…",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        style = OnWallpaperText,
+                    )
+                }
+            }
+        }
+        if (files.size > 1) {
+            Row(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                files.indices.take(8).forEach { i ->
+                    Box(
+                        Modifier
+                            .size(5.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = if (i == index % 8) 0.95f else 0.45f)),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HearthWidgetRow(title: String, subtitle: String, onClick: () -> Unit) {
+    LiquidGlass(
+        cornerRadius = 24.dp,
+        refraction = 16.dp,
+        interactive = true,
+        tint = Color(0xFFD97757).copy(alpha = 0.18f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .clickable(onClick = onClick),
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                GlyphIcon(Glyph.Camera, Color.White, Modifier.size(28.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text(subtitle, color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+            }
         }
     }
 }

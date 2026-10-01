@@ -80,6 +80,12 @@ enum class PageTransition(val label: String) {
     Flat("Flach"),
 }
 
+/** Look of Glimmer, the island around the front camera. */
+enum class GlimmerStyle(val label: String) {
+    Black("Schwarz wie die Kamera"),
+    Glass("Liquid Glass"),
+}
+
 /** Ready-made looks that set many options at once. */
 enum class DesignPreset(val label: String) {
     ColorOSClaude("ColorOS × Claude"),
@@ -135,6 +141,11 @@ data class LauncherSettings(
     /** Entrance, page and text animations throughout the launcher. */
     val animations: Boolean = true,
     val pageTransition: PageTransition = PageTransition.Depth,
+    // Glimmer: live activities around the front camera, in every app
+    val glimmerEnabled: Boolean = true,
+    val glimmerStyle: GlimmerStyle = GlimmerStyle.Black,
+    val glimmerIdlePill: Boolean = true,
+    val glimmerMessages: Boolean = true,
     // Dock
     val dockSize: Int = 4,
     val dockCustomized: Boolean = false,
@@ -251,6 +262,10 @@ class SettingsRepository(context: Context) {
             iconGloss = prefs.getBoolean("iconGloss", d.iconGloss),
             animations = prefs.getBoolean("animations", d.animations),
             pageTransition = enumOf("pageTransition", d.pageTransition),
+            glimmerEnabled = prefs.getBoolean(KEY_GLIMMER, d.glimmerEnabled),
+            glimmerStyle = enumOf("glimmerStyle", d.glimmerStyle),
+            glimmerIdlePill = prefs.getBoolean("glimmerIdlePill", d.glimmerIdlePill),
+            glimmerMessages = prefs.getBoolean("glimmerMessages", d.glimmerMessages),
             dockSize = prefs.getInt("dockSize", d.dockSize),
             dockCustomized = prefs.getBoolean("dockCustomized", d.dockCustomized),
             dockApps = prefs.getString("dockApps", null)
@@ -300,6 +315,10 @@ class SettingsRepository(context: Context) {
             .putBoolean("iconGloss", s.iconGloss)
             .putBoolean("animations", s.animations)
             .putString("pageTransition", s.pageTransition.name)
+            .putBoolean(KEY_GLIMMER, s.glimmerEnabled)
+            .putString("glimmerStyle", s.glimmerStyle.name)
+            .putBoolean("glimmerIdlePill", s.glimmerIdlePill)
+            .putBoolean("glimmerMessages", s.glimmerMessages)
             .putInt("dockSize", s.dockSize)
             .putBoolean("dockCustomized", s.dockCustomized)
             .putString("dockApps", s.dockApps.joinToString("\n"))
@@ -314,5 +333,7 @@ class SettingsRepository(context: Context) {
     companion object {
         const val PREFS_NAME = "hearth_settings"
         const val KEY_INTERCEPT = "interceptSystemShade"
+        const val KEY_GLIMMER = "glimmerEnabled"
+        val GLIMMER_KEYS = setOf(KEY_GLIMMER, "glimmerStyle", "glimmerIdlePill", "glimmerMessages")
     }
 }

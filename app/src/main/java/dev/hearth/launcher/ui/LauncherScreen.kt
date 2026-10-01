@@ -15,6 +15,7 @@ import android.provider.AlarmClock
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -214,6 +215,34 @@ fun LauncherScreen(vm: LauncherViewModel) {
     }
     // null: widget page; otherwise the home page the new widget goes to.
     var widgetTarget by remember { mutableStateOf<Int?>(null) }
+
+    // Photo widgets: the system photo picker, then the pictures are copied into Hearth.
+    var photoWidgetId by remember { mutableStateOf<Int?>(null) }
+    val pickPhotos = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(maxItems = 30),
+    ) { uris ->
+        val id = photoWidgetId ?: return@rememberLauncherForActivityResult
+        photoWidgetId = null
+        if (uris.isNotEmpty()) {
+            scope.launch {
+                val count = vm.widgets.photos.import(id, uris)
+                toast = GlassToast(if (count == 1) "1 Foto übernommen" else "$count Fotos übernommen")
+            }
+        }
+    }
+    val requestPhotos: (Int) -> Unit = { id ->
+        photoWidgetId = id
+        runCatching {
+            pickPhotos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        }
+    }
+    val addPhotoWidget: () -> Unit = {
+        widgetPickerOpen = false
+        val slot = widgetTarget?.let { targetPage ->
+            findFreeSlot(homeWidgets, pages.size, targetPage, 2, 2, columns, rows, firstPageRows)
+        }
+        requestPhotos(vm.widgets.addPhotoWidget(slot))
+    }
     val addWidget: (AppWidgetProviderInfo) -> Unit = { info ->
         widgetPickerOpen = false
         val slot = widgetTarget?.let { targetPage ->
@@ -441,6 +470,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
         LocalSettings provides settings,
         LocalGlassStyle provides glassStyle,
         LocalGlassLight provides light,
+        LocalPhotoPicker provides requestPhotos,
         LocalSelection provides SelectionState(selecting, selected) { app ->
             selected = if (app.key in selected) selected - app.key else selected + app.key
         },
@@ -575,6 +605,11 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                                     vm.widgets.removeHome(widget.id)
                                                     toast = GlassToast("Widget entfernt")
                                                 },
+                                                onPickPhotos = if (vm.widgets.isInternal(widget.id)) {
+                                                    { requestPhotos(widget.id) }
+                                                } else {
+                                                    null
+                                                },
                                             )
                                         },
                                         onWidgetDrop = { widget, dCols, dRows ->
@@ -694,7 +729,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 enter = fadeIn(tween(200)) + slideInVertically(tween(300)) { it / 8 },
                 exit = fadeOut(tween(180)) + slideOutVertically(tween(220)) { it / 8 },
             ) {
-                WidgetPicker(repo = vm.widgets, onPick = addWidget, onDismiss = { widgetPickerOpen = false })
+                WidgetPicker(
+                    repo = vm.widgets,
+                    onPick = addWidget,
+                    onPickPhotos = addPhotoWidget,
+                    onDismiss = { widgetPickerOpen = false },
+                )
             }
 
             LibraryFolderOverlay(folder = openFolder, actions = folderActions, onDismiss = { openFolder = null })
@@ -1289,8 +1329,10 @@ private fun widgetMenu(
     tryPlace: (HomeWidget) -> Boolean,
     findSlot: (Int) -> HomeWidget?,
     onRemove: () -> Unit,
+    onPickPhotos: (() -> Unit)?,
 ): GlassMenuRequest {
     val items = buildList {
+        if (onPickPhotos != null) add(GlassMenuItem("Fotos auswählen", Icons.Rounded.Edit, onClick = onPickPhotos))
         add(GlassMenuItem("Breiter", Icons.AutoMirrored.Rounded.KeyboardArrowRight) {
             tryPlace(widget.copy(spanX = widget.spanX + 1)) || tryPlace(widget.copy(col = widget.col - 1, spanX = widget.spanX + 1))
         })

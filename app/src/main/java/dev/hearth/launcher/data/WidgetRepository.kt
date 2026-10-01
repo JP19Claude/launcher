@@ -56,6 +56,9 @@ class WidgetChoice(
 class WidgetRepository(private val context: Context) {
 
     val host = AppWidgetHost(context, HOST_ID)
+
+    /** Pictures of the photo widgets. */
+    val photos = PhotoStore(context)
     private val manager = AppWidgetManager.getInstance(context)
     private val prefs = context.getSharedPreferences("hearth_widgets", Context.MODE_PRIVATE)
     private val density = context.resources.displayMetrics.density
@@ -83,6 +86,24 @@ class WidgetRepository(private val context: Context) {
         val scale = minOf(1f, 480f / w)
         return drawable.toBitmap((w * scale).roundToInt().coerceAtLeast(1), (h * scale).roundToInt().coerceAtLeast(1))
             .asImageBitmap()
+    }
+
+    /** Hearth's own widgets (photos) have negative ids; Android widget ids are positive. */
+    fun isInternal(id: Int) = id < 0
+
+    /**
+     * Adds a photo widget, on the home screen at [homeSlot] or on the widget page.
+     * Returns its id; the caller then lets the user pick the photos.
+     */
+    fun addPhotoWidget(homeSlot: HomeWidget?): Int {
+        val id = prefs.getInt(KEY_NEXT_INTERNAL, -1)
+        prefs.edit().putInt(KEY_NEXT_INTERNAL, id - 1).apply()
+        if (homeSlot != null) {
+            updateHome(_homeWidgets.value + homeSlot.copy(id = id))
+        } else {
+            update(_widgets.value + PlacedWidget(id, 220))
+        }
+        return id
     }
 
     fun info(id: Int): AppWidgetProviderInfo? = runCatching { manager.getAppWidgetInfo(id) }.getOrNull()
@@ -178,7 +199,7 @@ class WidgetRepository(private val context: Context) {
     }
 
     fun removeHome(id: Int) {
-        runCatching { host.deleteAppWidgetId(id) }
+        if (isInternal(id)) photos.delete(id) else runCatching { host.deleteAppWidgetId(id) }
         updateHome(_homeWidgets.value.filterNot { it.id == id })
     }
 
@@ -198,7 +219,7 @@ class WidgetRepository(private val context: Context) {
         ?: emptyList()
 
     fun remove(id: Int) {
-        runCatching { host.deleteAppWidgetId(id) }
+        if (isInternal(id)) photos.delete(id) else runCatching { host.deleteAppWidgetId(id) }
         update(_widgets.value.filterNot { it.id == id })
     }
 
@@ -245,6 +266,7 @@ class WidgetRepository(private val context: Context) {
         const val REQUEST_CONFIGURE = 0x4846
         private const val KEY = "widgets"
         private const val KEY_HOME = "homeWidgets"
+        private const val KEY_NEXT_INTERNAL = "nextInternalId"
         const val MIN_HEIGHT = 80
         const val MAX_HEIGHT = 520
     }

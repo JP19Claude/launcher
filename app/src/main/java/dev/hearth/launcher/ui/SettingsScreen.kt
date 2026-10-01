@@ -60,6 +60,7 @@ import dev.hearth.launcher.LauncherViewModel
 import dev.hearth.launcher.data.AccentColor
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.DesignPreset
+import dev.hearth.launcher.data.GlimmerStyle
 import dev.hearth.launcher.data.GlassTint
 import dev.hearth.launcher.data.IconShape
 import dev.hearth.launcher.data.IconStyle
@@ -372,6 +373,42 @@ fun SettingsScreen(
             }
 
             item {
+                Section("Glimmer") {
+                    Note("Hearths Insel um die Frontkamera, in jeder App: Musik mit Cover und tanzenden Balken, Anrufe, Timer, Navigation, Downloads, neue Nachrichten, Laden und Lautlos. Tippen klappt sie auf, lange drücken öffnet die App.")
+                    SwitchRow(label = "Glimmer anzeigen", checked = s.glimmerEnabled) { v -> update { it.copy(glimmerEnabled = v) } }
+                    ChoiceRow(
+                        label = "Aussehen",
+                        options = GlimmerStyle.entries,
+                        selected = s.glimmerStyle,
+                        optionLabel = { it.label },
+                        onSelect = { style -> update { it.copy(glimmerStyle = style) } },
+                    )
+                    SwitchRow(
+                        label = "Kleine Pille, wenn nichts läuft",
+                        description = "Wie beim iPhone; im Querformat ausgeblendet",
+                        checked = s.glimmerIdlePill,
+                    ) { v -> update { it.copy(glimmerIdlePill = v) } }
+                    SwitchRow(label = "Neue Nachrichten kurz zeigen", checked = s.glimmerMessages) { v ->
+                        update { it.copy(glimmerMessages = v) }
+                    }
+                    RowDivider()
+                    ActionRow(
+                        label = "Bedienungshilfe einschalten",
+                        description = if (serviceOn) "An" else "Nötig: „Hearth Kontrollzentrum“ unter Bedienungshilfen",
+                    ) {
+                        val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        runCatching { context.startActivity(intent) }
+                    }
+                    ActionRow(
+                        label = "Benachrichtigungszugriff",
+                        description = "Für Musik, Anrufe, Timer und Nachrichten in Glimmer",
+                        onClick = vm.media::requestAccess,
+                    )
+                }
+            }
+
+            item {
                 Section("Gesten & Kontrollzentrum") {
                     ChoiceRow(
                         label = "Nach unten wischen",
@@ -593,7 +630,7 @@ private fun HiddenAppsPicker(
 
 private val SectionOrder = listOf(
     "Design-Vorlage", "Liquid Glass", "Animationen", "Icons", "Icon-Pack", "Homescreen",
-    "Gesten & Kontrollzentrum", "Dock", "Suche", "Allgemein", "Ausgeblendete Apps",
+    "Glimmer", "Gesten & Kontrollzentrum", "Dock", "Suche", "Allgemein", "Ausgeblendete Apps",
 )
 
 @Composable

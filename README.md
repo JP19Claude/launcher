@@ -30,6 +30,13 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   schließt Hearth es und zeigt seins (braucht den Bedienungshilfe-Dienst)
 - „Vom Startbildschirm entfernen“: App verschwindet vom Homescreen, bleibt aber
   in App-Mediathek und Suche (einzeln im Menü oder mehrere per „Auswählen“)
+- Glimmer, Hearths „Dynamic Island“ um die Frontkamera, in jeder App: Musik mit Cover
+  und tanzenden Balken, Anrufe und Timer mit laufender Zeit, Navigation, Downloads mit
+  Ring, neue Nachrichten, Laden, Lautlos, niedriger Akku; zwei Aktivitäten gleichzeitig
+  als Pille + Blase; Tippen klappt auf (mit den Knöpfen der App), lange drücken öffnet
+  die App; Schwarz oder Liquid Glass (braucht Bedienungshilfe + Benachrichtigungszugriff)
+- Foto-Widget: eigene Bilder als Diashow mit langsamem Zoom auf Glas, für Homescreen
+  und Widget-Seite
 - Apps frei anordnen: Icon lange drücken und ziehen (Menü verschwindet beim Ziehen),
   Glas-Feld zeigt den Zielplatz, belegte Plätze tauschen, am Rand blättert die Seite,
   ins Dock ziehen und aus dem Dock heraus; „Anordnung zurücksetzen“ in den Einstellungen
