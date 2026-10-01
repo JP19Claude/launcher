@@ -1,5 +1,6 @@
 package dev.hearth.launcher.ui
 
+import android.media.AudioManager
 import android.os.Build
 import android.os.SystemClock
 import android.view.KeyEvent
@@ -8,6 +9,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -36,6 +41,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
+import dev.hearth.launcher.data.OutputKind
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.layout.ContentScale
 import dev.hearth.launcher.data.MediaRepository
@@ -65,7 +83,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.SystemControls
 import dev.hearth.launcher.ui.theme.HearthTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.rememberCoroutineScope
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -97,37 +119,69 @@ fun ControlCenter(
     var askedForPermission by remember { mutableStateOf(false) }
 
     // Keep toggles and sliders in sync with changes made elsewhere (hardware keys, system panels).
+    // Reading the system state takes several system calls; done off the main thread,
+    // so the control center doesn't stutter once a second.
     LaunchedEffect(Unit) {
         while (true) {
             delay(1000)
-            state = controls.state()
+            val fresh = withContext(Dispatchers.Default) { controls.state() }
+            state = fresh
             now = LocalDateTime.now()
             if (System.currentTimeMillis() - lastTouch > 1500) {
-                brightness = controls.brightness()
-                volume = controls.volume()
+                val (b, v) = withContext(Dispatchers.Default) { controls.brightness() to controls.volume() }
+                brightness = b
+                volume = v
             }
         }
     }
-    val refresh = { state = controls.state() }
+    val scope = rememberCoroutineScope()
+    val refresh: () -> Unit = { scope.launch { state = withContext(Dispatchers.Default) { controls.state() } } }
     val locale = Locale.getDefault()
+    var audioOpen by remember { mutableStateOf(false) }
+
+    // Scrolls when it doesn't fit; pulling up past the end closes it.
+    val density = LocalDensity.current
+    val closeAfter = with(density) { 110.dp.toPx() }
+    val close by rememberUpdatedState(onClose)
+    val pullToClose = remember {
+        object : NestedScrollConnection {
+            var pulled = 0f
+            var flinging = false
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (!flinging && available.y < 0f) {
+                    pulled -= available.y
+                    if (pulled > closeAfter) {
+                        pulled = 0f
+                        close()
+                    }
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                pulled = 0f
+                flinging = true
+                return Velocity.Zero
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                flinging = false
+                return Velocity.Zero
+            }
+        }
+    }
 
     Box(
         Modifier
             .fillMaxSize()
             .background(scrim)
             .pointerInput(Unit) { detectTapGestures { onClose() } }
-            .pointerInput(Unit) {
-                var total = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { total = 0f },
-                    onDragEnd = { if (total < -60.dp.toPx()) onClose() },
-                    onVerticalDrag = { _, amount -> total += amount },
-                )
-            },
+            .nestedScroll(pullToClose),
     ) {
         Column(
             Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .systemBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -237,6 +291,7 @@ fun ControlCenter(
                     value = brightness,
                     glyph = Glyph.Sun,
                     modifier = Modifier.width(78.dp).fillMaxHeight(),
+                    onLongPress = { controls.openDisplay() },
                     onValueChange = { v ->
                         lastTouch = System.currentTimeMillis()
                         brightness = v
@@ -252,6 +307,8 @@ fun ControlCenter(
                     value = volume,
                     glyph = Glyph.Speaker,
                     modifier = Modifier.width(78.dp).fillMaxHeight(),
+                    // Hold for all volumes, the output device and the earbuds.
+                    onLongPress = { audioOpen = true },
                     onValueChange = { v ->
                         lastTouch = System.currentTimeMillis()
                         volume = v
@@ -260,8 +317,38 @@ fun ControlCenter(
                 )
             }
 
-            // Shortcuts
+            // More switches, like One UI's quick panel
             GlassCard(Modifier.staggeredEntrance(3).fillMaxWidth()) {
+                Column(Modifier.padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        ControlToggle(Glyph.Screenshot, "Screenshot", false, accent, onClick = {
+                            onClose()
+                            controls.takeScreenshot()
+                        })
+                        ControlToggle(Glyph.Lock, "Sperren", false, accent, onClick = {
+                            onClose()
+                            controls.lockScreen()
+                        })
+                        ControlToggle(Glyph.Power, "Ein/Aus", false, accent, onClick = {
+                            onClose()
+                            controls.powerMenu()
+                        })
+                        ControlToggle(Glyph.Battery, "Energie sparen", state.batterySaver, accent, onClick = controls::openBatterySaver)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        ControlToggle(Glyph.Hotspot, "Hotspot", false, accent, onClick = controls::openHotspot)
+                        ControlToggle(Glyph.Nfc, "NFC", state.nfc, accent, onClick = controls::openNfc)
+                        ControlToggle(Glyph.Cast, "Smart View", false, accent, onClick = controls::openCast)
+                        ControlToggle(
+                            Glyph.Contrast, "Dunkel", state.darkMode, accent,
+                            onClick = controls::openDisplay,
+                        )
+                    }
+                }
+            }
+
+            // Shortcuts
+            GlassCard(Modifier.staggeredEntrance(4).fillMaxWidth()) {
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -306,6 +393,14 @@ fun ControlCenter(
                     style = OnWallpaperText,
                 )
             }
+        }
+
+        AnimatedVisibility(
+            visible = audioOpen,
+            enter = fadeIn(tween(160)) + scaleIn(spring(dampingRatio = 0.72f), initialScale = 0.9f),
+            exit = fadeOut(tween(140)) + scaleOut(tween(160), targetScale = 0.95f),
+        ) {
+            AudioSheet(controls, onClose = { audioOpen = false })
         }
     }
 }
@@ -408,8 +503,8 @@ private fun MediaCard(
     // Picks up the permission when coming back from the system settings.
     LaunchedEffect(Unit) {
         while (true) {
-            delay(1000)
-            val access = media.hasAccess()
+            delay(1500)
+            val access = withContext(Dispatchers.Default) { media.hasAccess() }
             if (access != hasAccess) {
                 hasAccess = access
                 media.refreshSessions()
@@ -552,10 +647,12 @@ fun GlassVerticalSlider(
     value: Float,
     glyph: Glyph,
     modifier: Modifier = Modifier,
+    onLongPress: (() -> Unit)? = null,
     onValueChange: (Float) -> Unit,
 ) {
     val current by rememberUpdatedState(value)
     val onChange by rememberUpdatedState(onValueChange)
+    val longPress by rememberUpdatedState(onLongPress)
     val level = value.coerceIn(0f, 1f)
     LiquidGlass(
         cornerRadius = 28.dp,
@@ -571,7 +668,10 @@ fun GlassVerticalSlider(
                 }
             }
             .pointerInput(Unit) {
-                detectTapGestures { offset -> onChange((1f - offset.y / size.height).coerceIn(0f, 1f)) }
+                detectTapGestures(
+                    onLongPress = { longPress?.invoke() },
+                    onTap = { offset -> onChange((1f - offset.y / size.height).coerceIn(0f, 1f)) },
+                )
             },
     ) {
         Box(
@@ -668,5 +768,183 @@ fun OverlayControlCenter(
                 )
             }
         }
+    }
+}
+
+/**
+ * Hold the volume slider: every volume, ring mode, where the sound goes,
+ * and the way to the earbuds' noise cancelling.
+ */
+@Composable
+private fun AudioSheet(controls: SystemControls, onClose: () -> Unit) {
+    val accent = LocalSettings.current.accent.color
+    var output by remember { mutableStateOf(controls.currentOutput()) }
+    var ringer by remember { mutableIntStateOf(controls.ringerMode()) }
+    val levels = remember { mutableStateMapOf<Int, Float>() }
+    var lastTouch by remember { mutableLongStateOf(0L) }
+    val headphoneApp = remember(output) { controls.headphoneApp() }
+    val spatial = remember(output) { controls.spatialAudio() }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            val fresh = withContext(Dispatchers.Default) {
+                Triple(controls.currentOutput(), controls.ringerMode(), controls.streams.associate { it.stream to controls.streamLevel(it.stream) })
+            }
+            output = fresh.first
+            ringer = fresh.second
+            if (System.currentTimeMillis() - lastTouch > 1500) levels.putAll(fresh.third)
+            delay(1000)
+        }
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.35f))
+            .pointerInput(Unit) { detectTapGestures { onClose() } },
+        contentAlignment = Alignment.Center,
+    ) {
+        LiquidGlass(
+            cornerRadius = 32.dp,
+            refraction = 22.dp,
+            tint = Color.Black.copy(alpha = 0.3f),
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(32.dp))
+                .pointerInput(Unit) { detectTapGestures { } },
+        ) {
+            Column(
+                Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // Where the sound goes
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .background(accent.copy(alpha = 0.85f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        GlyphIcon(
+                            if (output.kind == OutputKind.Speaker) Glyph.Speaker else Glyph.Headphones,
+                            Color.White,
+                            Modifier.size(26.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(output.name, color = OnGlass, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(output.kind.label, color = OnGlassDim, fontSize = 13.sp)
+                    }
+                    GlassCircleButton(size = 40.dp, onClick = onClose) {
+                        Text("✕", color = OnGlass, fontSize = 16.sp)
+                    }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    SheetChip("Ausgabe wechseln", Modifier.weight(1f)) { controls.openMediaOutput() }
+                    SheetChip("System-Lautstärke", Modifier.weight(1f)) { controls.openVolumePanel() }
+                }
+
+                // Noise cancelling lives in the earbuds' app; Android gives other apps no switch for it.
+                if (output.kind != OutputKind.Speaker) {
+                    SheetSection("Geräuschunterdrückung") {
+                        Text(
+                            if (headphoneApp != null) {
+                                "Geräuschunterdrückung, Umgebungsklang und Equalizer schaltest du in ${headphoneApp.first}."
+                            } else {
+                                "Android lässt Apps die Geräuschunterdrückung nicht direkt schalten. Öffne die App deiner Kopfhörer oder die Bluetooth-Einstellungen."
+                            },
+                            color = OnGlassDim,
+                            fontSize = 13.sp,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        SheetChip(
+                            if (headphoneApp != null) "${headphoneApp.first} öffnen" else "Bluetooth-Einstellungen",
+                            Modifier.fillMaxWidth(),
+                            highlighted = true,
+                        ) { controls.openHeadphoneApp() }
+                    }
+                }
+
+                if (spatial != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("3D-Audio", color = OnGlass, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        SheetChip(if (spatial) "An" else "Aus") { controls.openSound() }
+                    }
+                }
+
+                // Ring mode
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    listOf(
+                        AudioManager.RINGER_MODE_NORMAL to "Ton",
+                        AudioManager.RINGER_MODE_VIBRATE to "Vibration",
+                        AudioManager.RINGER_MODE_SILENT to "Lautlos",
+                    ).forEach { (mode, label) ->
+                        SheetChip(label, Modifier.weight(1f), highlighted = ringer == mode) {
+                            controls.setRingerMode(mode)
+                            ringer = controls.ringerMode()
+                        }
+                    }
+                }
+
+                // Every volume
+                controls.streams.forEach { stream ->
+                    Column {
+                        Row {
+                            Text(stream.label, color = OnGlass, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                            Text("${((levels[stream.stream] ?: 0f) * 100).toInt()} %", color = OnGlassDim, fontSize = 13.sp)
+                        }
+                        Slider(
+                            value = levels[stream.stream] ?: controls.streamLevel(stream.stream),
+                            onValueChange = { v ->
+                                lastTouch = System.currentTimeMillis()
+                                levels[stream.stream] = v
+                                controls.setStreamLevel(stream.stream, v)
+                            },
+                            colors = SliderDefaults.colors(
+                                thumbColor = Color.White,
+                                activeTrackColor = Color.White.copy(alpha = 0.9f),
+                                inactiveTrackColor = Color.White.copy(alpha = 0.18f),
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SheetSection(title: String, content: @Composable () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White.copy(alpha = 0.08f))
+            .padding(14.dp),
+    ) {
+        Text(title, color = OnGlass, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(4.dp))
+        content()
+    }
+}
+
+@Composable
+private fun SheetChip(text: String, modifier: Modifier = Modifier, highlighted: Boolean = false, onClick: () -> Unit) {
+    val accent = LocalSettings.current.accent.color
+    Box(
+        modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(if (highlighted) accent.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.12f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

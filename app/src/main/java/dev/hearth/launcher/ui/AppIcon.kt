@@ -84,6 +84,8 @@ import kotlin.math.pow
 import kotlin.math.sign
 import kotlin.math.sin
 
+private val IconLight = Offset(-0.45f, -0.89f)
+
 /** Current launcher settings for every composable below the screen. */
 val LocalSettings = compositionLocalOf { LauncherSettings() }
 
@@ -267,7 +269,8 @@ private fun glyphFilter(style: IconStyle, kind: IconKind, accent: AccentColor): 
 @Composable
 fun AppIconImage(app: AppInfo, size: Dp, modifier: Modifier = Modifier) {
     val settings = LocalSettings.current
-    val light = LocalGlassLight.current
+    // Icons keep a fixed highlight: redrawing every icon on each tilt made scrolling lag.
+    val light = remember { mutableStateOf(IconLight) }
     val sheen = if (settings.iconGloss) Modifier.glassSheen(light, settings.glassSpecular) else Modifier
     when (app.iconKind) {
         IconKind.Shaped -> Image(

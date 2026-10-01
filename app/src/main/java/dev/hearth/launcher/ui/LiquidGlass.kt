@@ -134,7 +134,8 @@ fun rememberGlassLight(enabled: Boolean): State<Offset> {
                 x += (tx - x) * 0.2f
                 y += (ty - y) * 0.2f
                 val old = light.value
-                if (abs(old.x - x) + abs(old.y - y) > 0.01f) light.value = Offset(x, y)
+                // Only redraw for a visible change, not for sensor jitter.
+                if (abs(old.x - x) + abs(old.y - y) > 0.04f) light.value = Offset(x, y)
             }
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
@@ -143,7 +144,7 @@ fun rememberGlassLight(enabled: Boolean): State<Offset> {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME ->
-                    sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
+                    sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
                 Lifecycle.Event.ON_PAUSE -> sensorManager.unregisterListener(listener)
                 else -> Unit
             }
@@ -262,11 +263,25 @@ private class GlassEffect {
     }.getOrNull()
 }
 
-private fun DrawScope.drawBackdrop(backdrop: WallpaperBackdrop, origin: Offset) {
+/** Which pre-blurred copy of the wallpaper glass looks through. */
+private enum class Frost { None, Soft, Strong }
+
+private fun frostFor(blurFactor: Float) = when {
+    blurFactor < 0.15f -> Frost.None
+    blurFactor > 1.7f -> Frost.Strong
+    else -> Frost.Soft
+}
+
+private fun DrawScope.drawBackdrop(backdrop: WallpaperBackdrop, origin: Offset, frost: Frost = Frost.Soft) {
+    val image = when (frost) {
+        Frost.None -> backdrop.image
+        Frost.Soft -> backdrop.soft
+        Frost.Strong -> backdrop.strong
+    }
     drawImage(
-        image = backdrop.image,
+        image = image,
         srcOffset = IntOffset.Zero,
-        srcSize = IntSize(backdrop.image.width, backdrop.image.height),
+        srcSize = IntSize(image.width, image.height),
         dstOffset = IntOffset(-origin.x.roundToInt(), -origin.y.roundToInt()),
         dstSize = IntSize(backdrop.screenWidth, backdrop.screenHeight),
         colorFilter = Vibrancy,
@@ -320,8 +335,10 @@ fun LiquidGlass(
     val density = LocalDensity.current
     val radiusPx = with(density) { cornerRadius.toPx() }
     val refractionPx = with(density) { refraction.toPx() } * style.refraction
-    val blurPx = with(density) { blur.toPx() } * style.blur
+    // blur only picks how frosted the glass is; the actual blur is precomputed.
+    val frost = frostFor(style.blur * (blur.value / 14f).coerceIn(0.5f, 1.6f))
     val rimPx = with(density) { 1.dp.toPx() }
+    val shaderMinPx = with(density) { 90.dp.toPx() }
     val glassEffect = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) runCatching { GlassEffect() }.getOrNull() else null
     }
@@ -379,30 +396,31 @@ fun LiquidGlass(
                     .graphicsLayer {
                         clip = true
                         shape = glassShape
-                        renderEffect = when {
-                            glassEffect != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
-                                glassEffect.create(
-                                    width = size.width,
-                                    height = size.height,
-                                    radius = min(radiusPx, size.minDimension / 2f),
-                                    depth = min(refractionPx, size.minDimension / 2f),
-                                    blur = blurPx,
-                                    dispersion = style.dispersion,
-                                    specular = specular,
-                                    light = light.value,
-                                    touch = touch,
-                                    glow = glow,
-                                )?.asComposeRenderEffect()
-                                    ?: if (blurPx >= 0.5f) BlurEffect(blurPx, blurPx, TileMode.Clamp) else null
-
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && blurPx >= 0.5f ->
-                                BlurEffect(blurPx, blurPx, TileMode.Clamp)
-
-                            else -> null
+                        // The wallpaper is already blurred, so only the lens shader runs here,
+                        // and only on surfaces big enough for it to show (not on every icon).
+                        renderEffect = if (
+                            glassEffect != null &&
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            size.minDimension >= shaderMinPx
+                        ) {
+                            glassEffect.create(
+                                width = size.width,
+                                height = size.height,
+                                radius = min(radiusPx, size.minDimension / 2f),
+                                depth = min(refractionPx, size.minDimension / 2f),
+                                blur = 0f,
+                                dispersion = style.dispersion,
+                                specular = specular,
+                                light = light.value,
+                                touch = touch,
+                                glow = glow,
+                            )?.asComposeRenderEffect()
+                        } else {
+                            null
                         }
                     },
             ) {
-                drawBackdrop(backdrop, origin)
+                drawBackdrop(backdrop, origin, frost)
             }
         }
 
@@ -462,21 +480,16 @@ fun LiquidGlass(
 
 /** Full-screen frosted glass, used behind search, menus and settings. */
 @Composable
+@Suppress("UNUSED_PARAMETER")
 fun GlassBackdropFill(blur: Dp, modifier: Modifier = Modifier) {
     val backdrop = LocalBackdrop.current ?: return
-    val blurPx = with(LocalDensity.current) { blur.toPx() } * LocalGlassStyle.current.blur.coerceAtLeast(0.3f)
     var origin by remember { mutableStateOf(Offset.Zero) }
     Canvas(
         modifier
             .onGloballyPositioned { origin = it.positionInWindow() }
-            .graphicsLayer {
-                clip = true
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && blurPx >= 0.5f) {
-                    renderEffect = BlurEffect(blurPx, blurPx, TileMode.Clamp)
-                }
-            },
+            .graphicsLayer { clip = true },
     ) {
-        drawBackdrop(backdrop, origin)
+        drawBackdrop(backdrop, origin, Frost.Strong)
     }
 }
 

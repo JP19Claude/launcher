@@ -30,6 +30,13 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   schließt Hearth es und zeigt seins (braucht den Bedienungshilfe-Dienst)
 - „Vom Startbildschirm entfernen“: App verschwindet vom Homescreen, bleibt aber
   in App-Mediathek und Suche (einzeln im Menü oder mehrere per „Auswählen“)
+- Kontrollzentrum wie One UI: Lautstärke gedrückt halten öffnet das Audio-Fenster
+  (Ausgabegerät, alle Lautstärken, Ton/Vibration/Lautlos, 3D-Audio, Kopfhörer-App für
+  die Geräuschunterdrückung); dazu Screenshot, Sperren, Ein/Aus-Menü, Energiesparen,
+  Hotspot, NFC, Smart View, Dunkelmodus; scrollbar, nach oben ziehen schließt
+- Weniger Ruckler: Hintergrund wird einmal vorab weichgezeichnet statt pro Glasfläche
+  und Bild, Linsen-Shader nur auf großen Flächen, ruhigerer Bewegungssensor, Icon-Glanz
+  ohne Dauer-Neuzeichnen, Claude-Funke animiert nur kurz, Systemabfragen im Hintergrund
 - Glimmer, Hearths „Dynamic Island“ um die Frontkamera, in jeder App: Musik mit Cover
   und tanzenden Balken, Anrufe und Timer mit laufender Zeit, Navigation, Downloads mit
   Ring, neue Nachrichten, Laden, Lautlos, niedriger Akku; zwei Aktivitäten gleichzeitig

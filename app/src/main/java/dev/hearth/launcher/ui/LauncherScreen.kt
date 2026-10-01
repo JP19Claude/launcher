@@ -471,8 +471,11 @@ fun LauncherScreen(vm: LauncherViewModel) {
         LocalGlassStyle provides glassStyle,
         LocalGlassLight provides light,
         LocalPhotoPicker provides requestPhotos,
-        LocalSelection provides SelectionState(selecting, selected) { app ->
-            selected = if (app.key in selected) selected - app.key else selected + app.key
+        // Remembered, so icons don't all recompose whenever the home screen does.
+        LocalSelection provides remember(selecting, selected) {
+            SelectionState(selecting, selected) { app ->
+                selected = if (app.key in selected) selected - app.key else selected + app.key
+            }
         },
     ) {
         Box(

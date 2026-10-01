@@ -22,6 +22,7 @@
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.NFC" />
     <uses-permission
         android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
@@ -30,6 +31,25 @@
     <queries>
         <!-- Claude app, for "Frag Claude" -->
         <package android:name="com.anthropic.claude" />
+        <!-- Earbud companion apps, opened for noise cancelling -->
+        <package android:name="com.samsung.android.app.watchmanager" />
+        <package android:name="com.sony.songpal.mdr" />
+        <package android:name="com.bose.bosemusic" />
+        <package android:name="com.bose.monet" />
+        <package android:name="com.jabra.moments" />
+        <package android:name="com.sennheiser.control" />
+        <package android:name="com.nothing.ear" />
+        <package android:name="com.nothing.x" />
+        <package android:name="com.oneplus.twspods" />
+        <package android:name="com.heytap.headset" />
+        <package android:name="com.google.android.apps.wearables.maestro.companion" />
+        <package android:name="com.apple.android.beats" />
+        <package android:name="com.harman.jblmusicflow" />
+        <package android:name="com.jbl.headphones" />
+        <package android:name="com.soundcore.android" />
+        <package android:name="com.oppo.melody" />
+        <package android:name="com.huawei.smarthome" />
+        <package android:name="com.xiaomi.wearable" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />

@@ -28,12 +28,74 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.max
 
-/** A small copy of the wallpaper plus the screen size it should be stretched to. */
+/**
+ * A small copy of the wallpaper plus the screen size it should be stretched to.
+ * [soft] and [strong] are blurred once up front, so glass surfaces only have to draw
+ * them instead of blurring the wallpaper again in every frame (that was the main lag).
+ */
 class WallpaperBackdrop(
     val image: ImageBitmap,
+    val soft: ImageBitmap,
+    val strong: ImageBitmap,
     val screenWidth: Int,
     val screenHeight: Int,
 )
+
+/** Fast blur on the CPU: three box blurs in a row look like a Gaussian blur. */
+internal fun blurred(source: Bitmap, radius: Int, downscale: Int = 1): Bitmap {
+    val small = if (downscale > 1) {
+        Bitmap.createScaledBitmap(
+            source,
+            (source.width / downscale).coerceAtLeast(1),
+            (source.height / downscale).coerceAtLeast(1),
+            true,
+        )
+    } else {
+        source.copy(Bitmap.Config.ARGB_8888, true)
+    }
+    val w = small.width
+    val h = small.height
+    val pixels = IntArray(w * h)
+    small.getPixels(pixels, 0, w, 0, 0, w, h)
+    val buffer = IntArray(w * h)
+    val r = radius.coerceAtLeast(1)
+    repeat(3) {
+        boxBlur(pixels, buffer, w, h, r, horizontal = true)
+        boxBlur(buffer, pixels, w, h, r, horizontal = false)
+    }
+    val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+    out.setPixels(pixels, 0, w, 0, 0, w, h)
+    return out
+}
+
+private fun boxBlur(src: IntArray, dst: IntArray, w: Int, h: Int, r: Int, horizontal: Boolean) {
+    val lines = if (horizontal) h else w
+    val length = if (horizontal) w else h
+    val window = 2 * r + 1
+    for (line in 0 until lines) {
+        fun index(i: Int): Int {
+            val c = i.coerceIn(0, length - 1)
+            return if (horizontal) line * w + c else c * w + line
+        }
+        var sr = 0
+        var sg = 0
+        var sb = 0
+        for (i in -r..r) {
+            val p = src[index(i)]
+            sr += (p shr 16) and 0xFF
+            sg += (p shr 8) and 0xFF
+            sb += p and 0xFF
+        }
+        for (i in 0 until length) {
+            dst[index(i)] = (0xFF shl 24) or ((sr / window) shl 16) or ((sg / window) shl 8) or (sb / window)
+            val out = src[index(i - r)]
+            val inn = src[index(i + r + 1)]
+            sr += ((inn shr 16) and 0xFF) - ((out shr 16) and 0xFF)
+            sg += ((inn shr 8) and 0xFF) - ((out shr 8) and 0xFF)
+            sb += (inn and 0xFF) - (out and 0xFF)
+        }
+    }
+}
 
 /**
  * Provides the wallpaper as a bitmap so glass surfaces can blur and refract it.
@@ -112,7 +174,15 @@ class WallpaperRepository(private val context: Context) {
         drawable.setBounds(left, top, left + w, top + h)
         drawable.draw(canvas)
 
-        _backdrop.value = WallpaperBackdrop(bitmap.asImageBitmap(), screenW, screenH)
+        val soft = if (factor <= 4) blurred(bitmap, radius = 9) else bitmap
+        val strong = if (factor <= 4) blurred(bitmap, radius = 10, downscale = 3) else bitmap
+        _backdrop.value = WallpaperBackdrop(
+            image = bitmap.asImageBitmap(),
+            soft = soft.asImageBitmap(),
+            strong = strong.asImageBitmap(),
+            screenWidth = screenW,
+            screenHeight = screenH,
+        )
     }
 
     @Suppress("DEPRECATION")

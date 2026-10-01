@@ -14,12 +14,18 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.AlarmClock
 import android.provider.MediaStore
 import android.provider.Settings
+import android.accessibilityservice.AccessibilityService
+import android.content.res.Configuration
+import android.media.AudioDeviceInfo
+import android.nfc.NfcAdapter
+import android.os.PowerManager
 import android.view.KeyEvent
 import dev.hearth.launcher.system.ControlCenterService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,7 +47,23 @@ data class ControlState(
     val autoRotate: Boolean = false,
     val autoBrightness: Boolean = false,
     val canWriteSettings: Boolean = false,
+    val batterySaver: Boolean = false,
+    val darkMode: Boolean = false,
+    val nfc: Boolean = false,
 )
+
+enum class OutputKind(val label: String) {
+    Bluetooth("Bluetooth"),
+    Wired("Kabel"),
+    Usb("USB"),
+    Speaker("Lautsprecher"),
+}
+
+/** Where sound goes right now. */
+data class AudioOutput(val name: String, val kind: OutputKind)
+
+/** A volume the audio sheet can change. */
+data class VolumeStream(val stream: Int, val label: String)
 
 /**
  * What the launcher's own control center can do. Android lets normal apps change
@@ -106,7 +128,126 @@ class SystemControls(private val context: Context) {
         autoBrightness = Settings.System.getInt(resolver, Settings.System.SCREEN_BRIGHTNESS_MODE, 0) ==
             Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC,
         canWriteSettings = Settings.System.canWrite(context),
+        batterySaver = runCatching { context.getSystemService(PowerManager::class.java)?.isPowerSaveMode == true }
+            .getOrDefault(false),
+        darkMode = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES,
+        nfc = runCatching { NfcAdapter.getDefaultAdapter(context)?.isEnabled == true }.getOrDefault(false),
     )
+
+    // Audio
+
+    val streams = listOf(
+        VolumeStream(AudioManager.STREAM_MUSIC, "Medien"),
+        VolumeStream(AudioManager.STREAM_VOICE_CALL, "Anrufe"),
+        VolumeStream(AudioManager.STREAM_RING, "Klingelton"),
+        VolumeStream(AudioManager.STREAM_NOTIFICATION, "Benachrichtigungen"),
+        VolumeStream(AudioManager.STREAM_ALARM, "Wecker"),
+        VolumeStream(AudioManager.STREAM_SYSTEM, "System"),
+    )
+
+    fun streamLevel(stream: Int): Float {
+        val a = audio ?: return 0f
+        val max = a.getStreamMaxVolume(stream).coerceAtLeast(1)
+        return a.getStreamVolume(stream).toFloat() / max
+    }
+
+    /** Some volumes can't be changed while "Do not disturb" is on; that is ignored then. */
+    fun setStreamLevel(stream: Int, level: Float) {
+        val a = audio ?: return
+        val max = a.getStreamMaxVolume(stream)
+        runCatching { a.setStreamVolume(stream, (level.coerceIn(0f, 1f) * max).roundToInt(), 0) }
+    }
+
+    fun ringerMode(): Int = audio?.ringerMode ?: AudioManager.RINGER_MODE_NORMAL
+
+    /** Silent needs "Do not disturb" access on Android; without it the settings open. */
+    fun setRingerMode(mode: Int) {
+        val a = audio ?: return
+        if (mode == AudioManager.RINGER_MODE_SILENT && notifications?.isNotificationPolicyAccessGranted != true) {
+            start(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+            return
+        }
+        runCatching { a.ringerMode = mode }
+    }
+
+    fun currentOutput(): AudioOutput {
+        val devices = runCatching { audio?.getDevices(AudioManager.GET_DEVICES_OUTPUTS) }.getOrNull().orEmpty()
+        fun find(vararg types: Int) = devices.firstOrNull { it.type in types }
+        val bt = find(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_BLE_SPEAKER)
+        if (bt != null) return AudioOutput(bt.productName?.toString().orEmpty().ifBlank { "Bluetooth-Kopfhörer" }, OutputKind.Bluetooth)
+        val wired = find(AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_WIRED_HEADSET)
+        if (wired != null) return AudioOutput("Kopfhörer (Kabel)", OutputKind.Wired)
+        val usb = find(AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_USB_DEVICE)
+        if (usb != null) return AudioOutput(usb.productName?.toString().orEmpty().ifBlank { "USB-Audio" }, OutputKind.Usb)
+        return AudioOutput("Telefon-Lautsprecher", OutputKind.Speaker)
+    }
+
+    /** Spatial / 3D audio: null if the phone has none. */
+    fun spatialAudio(): Boolean? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S_V2) return null
+        val spatializer = audio?.spatializer ?: return null
+        if (spatializer.immersiveAudioLevel == android.media.Spatializer.SPATIALIZER_IMMERSIVE_LEVEL_NONE) return null
+        return spatializer.isEnabled
+    }
+
+    /**
+     * The earbuds' own app, where noise cancelling is switched. Android has no way for
+     * other apps to switch it, so Hearth opens the right app instead.
+     */
+    fun headphoneApp(): Pair<String, Intent>? {
+        val pm = context.packageManager
+        return HeadphoneApps.firstNotNullOfOrNull { pkg ->
+            val launch = pm.getLaunchIntentForPackage(pkg) ?: return@firstNotNullOfOrNull null
+            val label = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+            label to launch
+        }
+    }
+
+    fun openHeadphoneApp(): Boolean {
+        val app = headphoneApp() ?: return start(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+        return start(app.second)
+    }
+
+    /** The system's "media output" picker (which speaker or earbuds to play on). */
+    fun openMediaOutput() {
+        val panel = Intent("com.android.settings.panel.action.MEDIA_OUTPUT")
+            .putExtra("com.android.settings.panel.extra.PACKAGE_NAME", context.packageName)
+        if (start(panel)) return
+        val dialog = Intent("com.android.systemui.action.LAUNCH_MEDIA_OUTPUT_DIALOG")
+            .setPackage("com.android.systemui")
+            .putExtra("package_name", context.packageName)
+        if (runCatching { context.sendBroadcast(dialog) }.isSuccess) return
+        start(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+    }
+
+    fun openVolumePanel() = start(Intent(Settings.Panel.ACTION_VOLUME), Intent(Settings.ACTION_SOUND_SETTINGS))
+
+    // One UI style extras
+
+    /** Needs the Hearth accessibility service; returns false (and opens its settings) without it. */
+    private fun globalAction(action: Int, delayMs: Long = 0): Boolean {
+        val service = ControlCenterService.instance
+        if (service == null) {
+            start(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            return false
+        }
+        Handler(Looper.getMainLooper()).postDelayed({ service.performGlobalAction(action) }, delayMs)
+        return true
+    }
+
+    /** Waits a moment, so the control center itself is gone from the screenshot. */
+    fun takeScreenshot() = globalAction(AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT, 500)
+    fun lockScreen() = globalAction(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN, 250)
+    fun powerMenu() = globalAction(AccessibilityService.GLOBAL_ACTION_POWER_DIALOG, 150)
+
+    fun openBatterySaver() = start(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS))
+    fun openHotspot() = start(
+        Intent().setClassName("com.android.settings", "com.android.settings.TetherSettings"),
+        Intent(Settings.ACTION_WIRELESS_SETTINGS),
+    )
+    fun openNfc() = start(Intent(Settings.Panel.ACTION_NFC), Intent(Settings.ACTION_NFC_SETTINGS))
+    fun openCast() = start(Intent(Settings.ACTION_CAST_SETTINGS))
 
     fun requestWriteSettings() {
         start(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${context.packageName}")))
@@ -258,5 +399,27 @@ class SystemControls(private val context: Context) {
 
     companion object {
         const val CLAUDE_PACKAGE = "com.anthropic.claude"
+
+        /** Companion apps of popular earbuds (noise cancelling lives there). */
+        val HeadphoneApps = listOf(
+            "com.samsung.android.app.watchmanager",
+            "com.sony.songpal.mdr",
+            "com.bose.bosemusic",
+            "com.bose.monet",
+            "com.jabra.moments",
+            "com.sennheiser.control",
+            "com.nothing.ear",
+            "com.nothing.x",
+            "com.oneplus.twspods",
+            "com.heytap.headset",
+            "com.google.android.apps.wearables.maestro.companion",
+            "com.apple.android.beats",
+            "com.harman.jblmusicflow",
+            "com.jbl.headphones",
+            "com.soundcore.android",
+            "com.oppo.melody",
+            "com.huawei.smarthome",
+            "com.xiaomi.wearable",
+        )
     }
 }

@@ -10,7 +10,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.Animatable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -38,6 +42,7 @@ enum class Glyph {
     Camera, Alarm, Calculator,
     Play, Pause, Next, Previous,
     Spark, Bell, Tiles,
+    Screenshot, Power, Battery, Hotspot, Nfc, Cast, Contrast, Lock, Headphones,
 }
 
 @Composable
@@ -229,6 +234,64 @@ fun DrawScope.drawGlyph(glyph: Glyph, c: Color) {
                 )
             }
         }
+        Glyph.Screenshot -> {
+            // Four corner brackets
+            line(0.16f, 0.32f, 0.16f, 0.16f); line(0.16f, 0.16f, 0.32f, 0.16f)
+            line(0.68f, 0.16f, 0.84f, 0.16f); line(0.84f, 0.16f, 0.84f, 0.32f)
+            line(0.84f, 0.68f, 0.84f, 0.84f); line(0.84f, 0.84f, 0.68f, 0.84f)
+            line(0.32f, 0.84f, 0.16f, 0.84f); line(0.16f, 0.84f, 0.16f, 0.68f)
+            drawCircle(c, radius = w * 0.1f, center = center)
+        }
+        Glyph.Power -> {
+            arc(0.5f, 0.55f, 0.3f, -60f, 300f)
+            line(0.5f, 0.14f, 0.5f, 0.5f)
+        }
+        Glyph.Battery -> {
+            drawRoundRect(c, topLeft = p(0.3f, 0.18f), size = Size(w * 0.4f, h * 0.68f), cornerRadius = CornerRadius(w * 0.07f), style = stroke)
+            drawRoundRect(c, topLeft = p(0.42f, 0.1f), size = Size(w * 0.16f, h * 0.07f), cornerRadius = CornerRadius(w * 0.02f))
+            drawRoundRect(c, topLeft = p(0.37f, 0.5f), size = Size(w * 0.26f, h * 0.29f), cornerRadius = CornerRadius(w * 0.03f))
+        }
+        Glyph.Hotspot -> {
+            drawCircle(c, radius = w * 0.07f, center = center)
+            arc(0.5f, 0.5f, 0.22f, -140f, 100f)
+            arc(0.5f, 0.5f, 0.22f, 40f, 100f)
+            arc(0.5f, 0.5f, 0.38f, -140f, 100f)
+            arc(0.5f, 0.5f, 0.38f, 40f, 100f)
+        }
+        Glyph.Nfc -> {
+            drawRoundRect(c, topLeft = p(0.16f, 0.16f), size = Size(w * 0.68f, h * 0.68f), cornerRadius = CornerRadius(w * 0.14f), style = stroke)
+            line(0.36f, 0.66f, 0.36f, 0.34f)
+            line(0.36f, 0.34f, 0.64f, 0.66f)
+            line(0.64f, 0.66f, 0.64f, 0.34f)
+        }
+        Glyph.Cast -> {
+            val frame = Path().apply {
+                moveTo(0.14f * w, 0.36f * h)
+                lineTo(0.14f * w, 0.22f * h)
+                lineTo(0.86f * w, 0.22f * h)
+                lineTo(0.86f * w, 0.78f * h)
+                lineTo(0.56f * w, 0.78f * h)
+            }
+            drawPath(frame, c, style = stroke)
+            arc(0.14f, 0.82f, 0.14f, -90f, 90f)
+            arc(0.14f, 0.82f, 0.28f, -90f, 90f)
+            drawCircle(c, radius = w * 0.045f, center = p(0.16f, 0.8f))
+        }
+        Glyph.Contrast -> {
+            drawCircle(c, radius = w * 0.32f, center = center, style = stroke)
+            drawArc(c, 90f, 180f, true, topLeft = p(0.18f, 0.18f), size = Size(w * 0.64f, h * 0.64f))
+        }
+        Glyph.Lock -> {
+            arc(0.5f, 0.42f, 0.17f, 180f, 180f)
+            line(0.33f, 0.42f, 0.33f, 0.48f)
+            line(0.67f, 0.42f, 0.67f, 0.48f)
+            drawRoundRect(c, topLeft = p(0.24f, 0.46f), size = Size(w * 0.52f, h * 0.38f), cornerRadius = CornerRadius(w * 0.08f))
+        }
+        Glyph.Headphones -> {
+            arc(0.5f, 0.55f, 0.32f, 180f, 180f)
+            drawRoundRect(c, topLeft = p(0.14f, 0.52f), size = Size(w * 0.16f, h * 0.3f), cornerRadius = CornerRadius(w * 0.06f))
+            drawRoundRect(c, topLeft = p(0.7f, 0.52f), size = Size(w * 0.16f, h * 0.3f), cornerRadius = CornerRadius(w * 0.06f))
+        }
         Glyph.Spark -> {
             drawPath(sparkPath(Size(w * 0.78f, h * 0.78f)).also { it.translate(p(0f, 0.22f)) }, c)
             drawPath(sparkPath(Size(w * 0.34f, h * 0.34f)).also { it.translate(p(0.66f, 0f)) }, c.copy(alpha = c.alpha * 0.8f))
@@ -236,22 +299,25 @@ fun DrawScope.drawGlyph(glyph: Glyph, c: Color) {
     }
 }
 
-/** A slowly turning, breathing sparkle in Claude's terracotta, like Claude thinking. */
+/**
+ * A sparkle in Claude's terracotta that turns and breathes for a few seconds when it
+ * appears, then rests (a never-ending animation kept the whole screen redrawing).
+ */
 @Composable
 fun ClaudeSpark(color: Color, modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "spark")
-    val rotation by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(7000, easing = LinearEasing)),
-        label = "sparkRotation",
-    )
-    val pulse by transition.animateFloat(
-        initialValue = 0.78f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "sparkPulse",
-    )
+    val animate = LocalSettings.current.animations
+    val spin = remember { Animatable(0f) }
+    val breath = remember { Animatable(1f) }
+    LaunchedEffect(animate) {
+        if (!animate) return@LaunchedEffect
+        launch { spin.animateTo(360f, tween(5200, easing = FastOutSlowInEasing)) }
+        repeat(3) {
+            breath.animateTo(0.78f, tween(550, easing = FastOutSlowInEasing))
+            breath.animateTo(1f, tween(550, easing = FastOutSlowInEasing))
+        }
+    }
+    val rotation = spin.value
+    val pulse = breath.value
     Canvas(modifier) {
         val big = Size(size.width * 0.8f, size.height * 0.8f)
         translate(left = 0f, top = size.height * 0.2f) {
