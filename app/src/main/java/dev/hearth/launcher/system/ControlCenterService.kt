@@ -115,8 +115,13 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
                 if (trigger != null) addTrigger()
             }
             in SettingsRepository.GLIMMER_KEYS -> restartGlimmer()
+            SettingsRepository.KEY_LOCK_LAYOUT, SettingsRepository.KEY_LOCK_CONTENT -> lockNotes?.update()
         }
     }
+
+    /** iOS-style notifications on the lock screen. */
+    private var lockNotes: LockNotificationsController? = null
+    private var lockCheckPending = false
 
     // Hide the strip on the lock screen, bring it back as soon as the phone is usable.
     private val screenReceiver = object : BroadcastReceiver() {
@@ -125,11 +130,18 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
                 Intent.ACTION_SCREEN_OFF -> {
                     hidePanel(immediately = true)
                     removeTrigger()
+                    lockNotes?.update()
                 }
                 // Screen back on without the lock screen (it locks only after a while):
                 // there's no "user present" then, the strip used to stay missing.
-                Intent.ACTION_SCREEN_ON -> handler.postDelayed({ ensureTrigger() }, 300)
-                Intent.ACTION_USER_PRESENT -> ensureTrigger()
+                Intent.ACTION_SCREEN_ON -> {
+                    handler.postDelayed({ ensureTrigger() }, 300)
+                    lockNotes?.updateSoon()
+                }
+                Intent.ACTION_USER_PRESENT -> {
+                    ensureTrigger()
+                    lockNotes?.update()
+                }
             }
         }
     }
@@ -160,6 +172,7 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         ensureTrigger()
         glimmer = GlimmerController(this)
         restartGlimmer()
+        lockNotes = LockNotificationsController(this).also { it.update() }
         // Warm up the panel window once the service is settled.
         handler.postDelayed({ ensurePanelWindow() }, 1200)
     }
@@ -173,6 +186,14 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         if (event == null) return
         // Any sign of life from the status bar: make sure the strip is there.
         if (trigger == null) ensureTrigger()
+        // The lock screen changed (camera opened over it, unlocked): look again, in batches.
+        if (lockNotes != null && !lockCheckPending && trigger == null) {
+            lockCheckPending = true
+            handler.postDelayed({
+                lockCheckPending = false
+                lockNotes?.update()
+            }, 400)
+        }
         if (!interceptShade) return
         if (event.packageName?.toString() != SYSTEM_UI) return
         when (event.eventType) {
@@ -308,6 +329,8 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         removeTrigger()
         glimmer?.stop()
         glimmer = null
+        lockNotes?.stop()
+        lockNotes = null
         runCatching { unregisterReceiver(screenReceiver) }
         getSharedPreferences(SettingsRepository.PREFS_NAME, MODE_PRIVATE)
             .unregisterOnSharedPreferenceChangeListener(prefsListener)
@@ -315,6 +338,7 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         controls = null
         handler.removeCallbacksAndMessages(null)
         shadeCheckPending = false
+        lockCheckPending = false
     }
 
     private fun allowSystemShade() {

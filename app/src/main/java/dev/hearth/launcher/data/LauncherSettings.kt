@@ -128,6 +128,14 @@ enum class CcToggleShape(val label: String) {
     Rounded("Abgerundet"),
 }
 
+/** How notifications show on the lock screen (like iOS). */
+enum class LockLayout(val label: String) {
+    Stack("Stapel"),
+    Count("Anzahl"),
+    List("Liste"),
+    Off("Aus"),
+}
+
 /** Ready-made looks that set many options at once. */
 enum class DesignPreset(val label: String) {
     ColorOSClaude("ColorOS × Claude"),
@@ -198,6 +206,10 @@ data class LauncherSettings(
     val ccDim: Float = 0.5f,
     /** Swipe right in the control center for Hearth's own notification list. */
     val ccNotifications: Boolean = true,
+    // Lock screen notifications, iOS style
+    val lockNotifications: LockLayout = LockLayout.Stack,
+    /** Show what notifications say on the lock screen (private ones always stay hidden). */
+    val lockShowContent: Boolean = true,
     // Control center glass
     val ccGlassTint: CcGlassTint = CcGlassTint.Clear,
     /** How milky the panels are (0 = clear, 1 = nearly solid). */
@@ -372,6 +384,8 @@ class SettingsRepository(context: Context) {
             ccShowShortcuts = prefs.getBoolean("ccShowShortcuts", d.ccShowShortcuts),
             ccDim = prefs.getFloat("ccDim", d.ccDim),
             ccNotifications = prefs.getBoolean("ccNotifications", d.ccNotifications),
+            lockNotifications = enumOf(KEY_LOCK_LAYOUT, d.lockNotifications),
+            lockShowContent = prefs.getBoolean(KEY_LOCK_CONTENT, d.lockShowContent),
             ccGlassTint = enumOf("ccGlassTint", d.ccGlassTint),
             ccGlassOpacity = prefs.getFloat("ccGlassOpacity", d.ccGlassOpacity),
             ccSpecular = prefs.getFloat("ccSpecular", d.ccSpecular),
@@ -446,6 +460,8 @@ class SettingsRepository(context: Context) {
             .putBoolean("ccShowShortcuts", s.ccShowShortcuts)
             .putFloat("ccDim", s.ccDim)
             .putBoolean("ccNotifications", s.ccNotifications)
+            .putString(KEY_LOCK_LAYOUT, s.lockNotifications.name)
+            .putBoolean(KEY_LOCK_CONTENT, s.lockShowContent)
             .putString("ccGlassTint", s.ccGlassTint.name)
             .putFloat("ccGlassOpacity", s.ccGlassOpacity)
             .putFloat("ccSpecular", s.ccSpecular)
@@ -475,5 +491,7 @@ class SettingsRepository(context: Context) {
         const val KEY_INTERCEPT = "interceptSystemShade"
         const val KEY_GLIMMER = "glimmerEnabled"
         val GLIMMER_KEYS = setOf(KEY_GLIMMER, "glimmerStyle", "glimmerIdlePill", "glimmerMessages")
+        const val KEY_LOCK_LAYOUT = "lockNotifications"
+        const val KEY_LOCK_CONTENT = "lockShowContent"
     }
 }

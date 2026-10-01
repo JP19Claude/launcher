@@ -173,7 +173,7 @@ private fun Modifier.unfold(index: Int, reveal: () -> Float): Modifier = graphic
 private val LocalCcCorner = compositionLocalOf { 28.dp }
 
 /** The glass of the control center's panels, from "Kontrollzentrum: Aussehen". */
-private fun controlCenterGlass(base: GlassStyle, s: LauncherSettings): GlassStyle {
+internal fun controlCenterGlass(base: GlassStyle, s: LauncherSettings): GlassStyle {
     val o = s.ccGlassOpacity.coerceIn(0f, 1f)
     val tint = when (s.ccGlassTint) {
         CcGlassTint.Clear -> Color.White.copy(alpha = 0.02f + 0.24f * o)
@@ -937,7 +937,7 @@ private fun NotificationPage(
 
 /** The glass edge of a notification lying under the top one of a stack. */
 @Composable
-private fun StackLayer(modifier: Modifier) {
+internal fun StackLayer(modifier: Modifier) {
     Box(
         modifier
             .clip(RoundedCornerShape(22.dp))
@@ -948,7 +948,7 @@ private fun StackLayer(modifier: Modifier) {
 
 /** Small round glass ✕; shows [label] next to it when set (the iPhone's "clear" step). */
 @Composable
-private fun IosClearButton(label: String?, onClick: () -> Unit) {
+internal fun IosClearButton(label: String?, onClick: () -> Unit) {
     Row(
         Modifier
             .height(30.dp)
@@ -970,7 +970,7 @@ private fun IosClearButton(label: String?, onClick: () -> Unit) {
 }
 
 @Composable
-private fun IosPill(text: String, onClick: () -> Unit) {
+internal fun IosPill(text: String, onClick: () -> Unit) {
     Box(
         Modifier
             .height(30.dp)
@@ -1003,7 +1003,7 @@ private val SwipeButtonWidth = 78.dp
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun NotificationCard(
+internal fun NotificationCard(
     notice: ShadeNotice,
     now: Long,
     modifier: Modifier = Modifier,

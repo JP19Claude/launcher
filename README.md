@@ -44,6 +44,10 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   blau für WLAN/Bluetooth, grün für Mobilfunk, orange für Flugmodus –, Verbindungs-Block
   neben der Medien-Karte, „Nicht stören“ und „Smart View“ als breite Knöpfe neben den
   hohen Reglern, darunter runde Glas-Knöpfe ohne Beschriftung) oder ColorOS 17
+- Mitteilungen auf dem Sperrbildschirm wie bei iOS (über den Bedienungshilfe-Dienst):
+  als Stapel unten (antippen fächert auf), als Anzahl oder als Liste; nach links wischen
+  löscht, antippen öffnet nach dem Entsperren, ✕ → „Alle löschen“. Inhalte lassen sich
+  ausblenden, als geheim markierte Mitteilungen erscheinen nie
 - Glas und Design des Kontrollzentrums einstellbar: Glas (klar, milchig, dunkel,
   Akzentfarbe, wie der Launcher), Deckkraft, Glanz an den Kanten, Lichtbrechung,
   Weichzeichnen und Abdunkeln des Hintergrunds, Größe der Schalter, Rundung der Flächen.

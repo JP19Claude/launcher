@@ -71,6 +71,7 @@ import dev.hearth.launcher.data.GlassTint
 import dev.hearth.launcher.data.IconShape
 import dev.hearth.launcher.data.IconStyle
 import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.data.LockLayout
 import dev.hearth.launcher.data.PageTransition
 import dev.hearth.launcher.data.SearchEngine
 import dev.hearth.launcher.data.SwipeDownAction
@@ -576,6 +577,24 @@ fun SettingsScreen(
                         update { it.copy(ccDim = v) }
                     }
                     Note("Änderungen gelten beim nächsten Öffnen des Kontrollzentrums, in Hearth und über anderen Apps. Das Weichzeichnen über anderen Apps braucht Android 12+ und ein Handy, das es unterstützt; sonst dunkelt Hearth stärker ab.")
+                }
+            }
+
+            item {
+                Section("Sperrbildschirm") {
+                    ChoiceRow(
+                        label = "Mitteilungen wie bei iOS",
+                        options = LockLayout.entries,
+                        selected = s.lockNotifications,
+                        optionLabel = { it.label },
+                        onSelect = { layout -> update { it.copy(lockNotifications = layout) } },
+                    )
+                    SwitchRow(
+                        label = "Inhalte anzeigen",
+                        description = "Aus: nur App und „Mitteilung“. Mitteilungen, die Apps als geheim markieren, erscheinen nie.",
+                        checked = s.lockShowContent,
+                    ) { v -> update { it.copy(lockShowContent = v) } }
+                    Note("Stapel: die neueste unten, die anderen dahinter, antippen fächert sie auf. Anzahl: „3 Mitteilungen“, antippen zeigt sie. Liste: alle untereinander. Nach links wischen löscht, antippen öffnet nach dem Entsperren. Braucht den Dienst „Hearth Kontrollzentrum“ und den Benachrichtigungszugriff. Damit nichts doppelt erscheint, stell die Mitteilungen des Systems auf dem Sperrbildschirm auf „Nur Symbole“ oder aus.")
                 }
             }
 
