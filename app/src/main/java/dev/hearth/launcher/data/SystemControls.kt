@@ -108,7 +108,19 @@ class SystemControls(private val context: Context) {
         if (id != 0) res.getInteger(id) else 255
     }.getOrDefault(255).takeIf { it > 0 } ?: 255
 
-    fun state(): ControlState = ControlState(
+    /** The last state read, so the control center opens with the right toggles lit. */
+    @Volatile
+    var lastState: ControlState? = null
+        private set
+
+    fun state(): ControlState = readState().also { lastState = it }
+
+    /** Reads the state in the background, e.g. when a finger lands on the status bar. */
+    fun prefetch() {
+        writer.post { runCatching { state() } }
+    }
+
+    private fun readState(): ControlState = ControlState(
         wifi = runCatching { context.getSystemService(WifiManager::class.java)?.isWifiEnabled == true }.getOrDefault(false),
         mobileData = runCatching {
             val cm = context.getSystemService(ConnectivityManager::class.java)

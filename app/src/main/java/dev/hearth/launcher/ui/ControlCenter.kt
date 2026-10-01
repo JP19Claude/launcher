@@ -97,13 +97,60 @@ import androidx.compose.runtime.rememberCoroutineScope
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.animation.core.Animatable
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.geometry.CornerRadius
 
 private val OnGlass = Color.White
 private val OnGlassDim = Color.White.copy(alpha = 0.7f)
 
+
+
 /**
- * The launcher's own control center, ColorOS-style, made of liquid glass:
- * connectivity, media, quick toggles, and big vertical sliders for brightness and volume.
+ * How far the overlay control center is pulled out, shared between the service (which sees
+ * the finger on the status bar) and the panel. While [dragging], the panel sits exactly at
+ * [progress]; on release it springs to [target] (1 = open, 0 = closed and gone).
+ */
+class PanelReveal {
+    var progress by mutableFloatStateOf(0f)
+    var dragging by mutableStateOf(false)
+    var target by mutableFloatStateOf(1f)
+
+    /** Speed of the finger on release, in panel heights per second. */
+    var flingVelocity = 0f
+
+    fun close() {
+        flingVelocity = 0f
+        dragging = false
+        target = 0f
+    }
+}
+
+/**
+ * Rows unfold from under the status bar one after another as the panel comes out,
+ * like on ColorOS. Only reads [reveal] while drawing, so pulling never recomposes.
+ */
+private fun Modifier.unfold(index: Int, reveal: () -> Float): Modifier = graphicsLayer {
+    val p = reveal()
+    val rest = 1f - p.coerceAtMost(1f)
+    translationY = -rest * (36.dp.toPx() + index * 26.dp.toPx()) + (p - 1f).coerceAtLeast(0f) * 60.dp.toPx()
+    val s = 0.9f + 0.1f * p.coerceIn(0f, 1f)
+    scaleX = s
+    scaleY = s
+    transformOrigin = TransformOrigin(0.5f, 0f)
+    alpha = ((p - index * 0.05f) / 0.6f).coerceIn(0f, 1f)
+}
+
+/**
+ * The launcher's own control center, in the style of ColorOS 17, made of liquid glass:
+ * big connectivity tiles, the media card, round toggles that glow while on, and tall
+ * sliders for brightness and volume.
  */
 @Composable
 fun ControlCenter(
@@ -116,10 +163,12 @@ fun ControlCenter(
     scrim: Color = Color.Black.copy(alpha = 0.28f),
     /** Explicit room for status and navigation bar; overlay windows don't always get insets. */
     barPadding: PaddingValues? = null,
+    /** How far the panel is out (0..1), read while drawing; 1 when it simply appears. */
+    reveal: () -> Float = { 1f },
 ) {
     val accent = LocalSettings.current.accent.color
-    // Filled right away off the main thread (several system calls), so opening doesn't stutter.
-    var state by remember { mutableStateOf(ControlState()) }
+    // Starts with the last known state (no toggles flickering on), refreshed off the main thread.
+    var state by remember { mutableStateOf(controls.lastState ?: ControlState()) }
     LaunchedEffect(Unit) { state = withContext(Dispatchers.Default) { controls.state() } }
 
     // Whatever opens a system screen or app from here closes the control center,
@@ -138,8 +187,6 @@ fun ControlCenter(
     var askedForPermission by remember { mutableStateOf(false) }
 
     // Keep toggles and sliders in sync with changes made elsewhere (hardware keys, system panels).
-    // Reading the system state takes several system calls; done off the main thread,
-    // so the control center doesn't stutter once a second.
     LaunchedEffect(Unit) {
         while (true) {
             delay(1000)
@@ -160,7 +207,7 @@ fun ControlCenter(
 
     // Scrolls when it doesn't fit; pulling up past the end closes it.
     val density = LocalDensity.current
-    val closeAfter = with(density) { 110.dp.toPx() }
+    val closeAfter = with(density) { 90.dp.toPx() }
     val close by rememberUpdatedState(onClose)
     val pullToClose = remember {
         object : NestedScrollConnection {
@@ -173,6 +220,8 @@ fun ControlCenter(
                         pulled = 0f
                         close()
                     }
+                } else if (available.y > 0f) {
+                    pulled = 0f
                 }
                 return Offset.Zero
             }
@@ -190,11 +239,32 @@ fun ControlCenter(
         }
     }
 
+    val toggleTorch = { controls.setTorch(!torch) }
+    val toggleDnd = {
+        controls.toggleDoNotDisturb()
+        refresh()
+    }
+
     Box(
         Modifier
             .fillMaxSize()
-            .background(scrim)
+            .drawBehind { drawRect(scrim.copy(alpha = scrim.alpha * reveal().coerceIn(0f, 1f))) }
+            // Tap or swipe up on the empty area: close.
             .pointerInput(Unit) { detectTapGestures { onClose() } }
+            .pointerInput(Unit) {
+                var dragged = 0f
+                detectVerticalDragGestures(
+                    onDragStart = { dragged = 0f },
+                    onVerticalDrag = { change, amount ->
+                        dragged += amount
+                        if (dragged < -closeAfter / 2) {
+                            change.consume()
+                            dragged = 0f
+                            onClose()
+                        }
+                    },
+                )
+            }
             .nestedScroll(pullToClose),
     ) {
         Column(
@@ -202,34 +272,44 @@ fun ControlCenter(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .then(if (barPadding != null) Modifier.padding(barPadding) else Modifier.systemBarsPadding())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Header: time and date on the left, launcher settings on the right.
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.staggeredEntrance(0).padding(horizontal = 6.dp)) {
+            // Header: date over a big light clock, like ColorOS; settings on the right.
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                modifier = Modifier.unfold(0, reveal).padding(horizontal = 6.dp),
+            ) {
                 Column(Modifier.weight(1f)) {
+                    Text(
+                        text = now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale)),
+                        color = OnGlassDim,
+                        fontSize = 14.sp,
+                        style = OnWallpaperText,
+                    )
                     Text(
                         text = now.format(DateTimeFormatter.ofPattern("HH:mm", locale)),
                         color = OnGlass,
-                        fontSize = 44.sp,
+                        fontSize = 50.sp,
                         fontWeight = FontWeight.Light,
                         style = OnWallpaperText,
                     )
-                    Text(
-                        text = now.format(DateTimeFormatter.ofPattern("EEE, d. MMMM", locale)),
-                        color = OnGlassDim,
-                        fontSize = 15.sp,
-                        style = OnWallpaperText,
-                    )
                 }
-                GlassCircleButton(size = 44.dp, onClick = onOpenLauncherSettings) {
-                    Icon(Icons.Rounded.Settings, contentDescription = "Launcher-Einstellungen", tint = OnGlass)
+                if (onShowSystemQuickSettings != null) {
+                    GlassCircleButton(size = 40.dp, onClick = onShowSystemQuickSettings) {
+                        GlyphIcon(Glyph.Tiles, OnGlass, Modifier.size(20.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                }
+                GlassCircleButton(size = 40.dp, onClick = onOpenLauncherSettings) {
+                    Icon(Icons.Rounded.Settings, contentDescription = "Launcher-Einstellungen", tint = OnGlass, modifier = Modifier.size(22.dp))
                 }
             }
 
             if (!state.canWriteSettings) {
                 GlassCard(
                     modifier = Modifier
+                        .unfold(0, reveal)
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(24.dp))
                         .clickable { controls.requestWriteSettings() },
@@ -249,97 +329,111 @@ fun ControlCenter(
                 }
             }
 
-            // Connectivity + media
-            Row(Modifier.staggeredEntrance(1).fillMaxWidth().height(164.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                GlassCard(Modifier.weight(1f).fillMaxHeight()) {
-                    Column(
-                        Modifier.fillMaxSize().padding(10.dp),
-                        verticalArrangement = Arrangement.SpaceEvenly,
-                    ) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            ControlToggle(Glyph.Wifi, "WLAN", state.wifi, accent, onClick = controls::openWifi)
-                            ControlToggle(Glyph.Cellular, "Mobil", state.mobileData, accent, onClick = controls::openInternet)
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            ControlToggle(Glyph.Bluetooth, "Bluetooth", state.bluetooth, accent, onClick = controls::openBluetooth)
-                            ControlToggle(Glyph.Airplane, "Flugmodus", state.airplane, accent, onClick = controls::openAirplane)
-                        }
-                    }
-                }
+            // Two big tiles: WLAN and mobile data.
+            Row(Modifier.unfold(1, reveal).fillMaxWidth().height(70.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                BigTile(
+                    glyph = Glyph.Wifi,
+                    label = "WLAN",
+                    status = if (state.wifi) "An" else "Aus",
+                    active = state.wifi,
+                    accent = accent,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    onClick = controls::openWifi,
+                )
+                BigTile(
+                    glyph = Glyph.Cellular,
+                    label = "Mobile Daten",
+                    status = if (state.airplane) "Flugmodus" else if (state.mobileData) "Verbunden" else "Aus",
+                    active = state.mobileData,
+                    accent = accent,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    onClick = controls::openInternet,
+                )
+            }
+
+            // Media card next to four round toggles.
+            Row(Modifier.unfold(2, reveal).fillMaxWidth().height(168.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MediaCard(media, controls, accent, onClose, Modifier.weight(1f).fillMaxHeight())
-            }
-
-            // Toggles + vertical sliders
-            Row(Modifier.staggeredEntrance(2).fillMaxWidth().height(212.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                GlassCard(Modifier.weight(1f).fillMaxHeight()) {
-                    Column(
-                        Modifier.fillMaxSize().padding(8.dp),
-                        verticalArrangement = Arrangement.SpaceEvenly,
-                    ) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            ControlToggle(
-                                Glyph.Torch, "Lampe", torch, accent,
-                                enabled = controls.hasTorch,
-                                onClick = { controls.setTorch(!torch) },
-                            )
-                            ControlToggle(Glyph.Moon, "Nicht stören", state.doNotDisturb, accent, onClick = {
-                                controls.toggleDoNotDisturb()
-                                refresh()
-                            })
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            ControlToggle(Glyph.Vibrate, "Vibration", state.vibrate, accent, onClick = {
-                                controls.toggleVibrate()
-                                refresh()
-                            }, onLongClick = { controls.openSound() })
-                            ControlToggle(Glyph.Rotate, "Drehen", state.autoRotate, accent, onClick = {
-                                controls.setAutoRotate(!state.autoRotate)
-                                refresh()
-                            })
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            ControlToggle(Glyph.AutoSun, "Auto-Hell", state.autoBrightness, accent, onClick = {
-                                controls.setAutoBrightness(!state.autoBrightness)
-                                refresh()
-                            }, onLongClick = { controls.openDisplay() })
-                            ControlToggle(Glyph.Location, "Standort", state.location, accent, onClick = controls::openLocation)
-                        }
+                ToggleGrid(Modifier.weight(1f).fillMaxHeight()) {
+                    ToggleRow {
+                        ControlToggle(Glyph.Bluetooth, "Bluetooth", state.bluetooth, accent, onClick = controls::openBluetooth)
+                        ControlToggle(Glyph.Airplane, "Flugmodus", state.airplane, accent, onClick = controls::openAirplane)
+                    }
+                    ToggleRow {
+                        ControlToggle(
+                            Glyph.Torch, "Taschenlampe", torch, accent,
+                            enabled = controls.hasTorch,
+                            onClick = toggleTorch,
+                        )
+                        ControlToggle(Glyph.Location, "Standort", state.location, accent, onClick = controls::openLocation)
                     }
                 }
-                GlassVerticalSlider(
-                    value = brightness,
-                    glyph = Glyph.Sun,
-                    modifier = Modifier.width(78.dp).fillMaxHeight(),
-                    onLongPress = { controls.openDisplay() },
-                    onValueChange = { v ->
-                        lastTouch = System.currentTimeMillis()
-                        brightness = v
-                        if (controls.setBrightness(v)) {
-                            state = state.copy(autoBrightness = false)
-                        } else if (!state.canWriteSettings && !askedForPermission) {
-                            askedForPermission = true
-                            controls.requestWriteSettings()
-                        }
-                    },
-                )
-                GlassVerticalSlider(
-                    value = volume,
-                    glyph = Glyph.Speaker,
-                    modifier = Modifier.width(78.dp).fillMaxHeight(),
-                    // Hold for all volumes, the output device and the earbuds.
-                    onLongPress = { audioOpen = true },
-                    onValueChange = { v ->
-                        lastTouch = System.currentTimeMillis()
-                        volume = v
-                        controls.setVolume(v)
-                    },
-                )
             }
 
-            // More switches, like One UI's quick panel
-            GlassCard(Modifier.staggeredEntrance(3).fillMaxWidth()) {
-                Column(Modifier.padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Four more toggles next to the tall brightness and volume sliders.
+            Row(Modifier.unfold(3, reveal).fillMaxWidth().height(196.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ToggleGrid(Modifier.weight(1f).fillMaxHeight()) {
+                    ToggleRow {
+                        ControlToggle(Glyph.Moon, "Nicht stören", state.doNotDisturb, accent, onClick = toggleDnd)
+                        ControlToggle(Glyph.Vibrate, "Vibration", state.vibrate, accent, onClick = {
+                            controls.toggleVibrate()
+                            refresh()
+                        }, onLongClick = { audioOpen = true })
+                    }
+                    ToggleRow {
+                        ControlToggle(Glyph.Rotate, "Drehen", state.autoRotate, accent, onClick = {
+                            controls.setAutoRotate(!state.autoRotate)
+                            refresh()
+                        })
+                        ControlToggle(Glyph.AutoSun, "Auto-Hell", state.autoBrightness, accent, onClick = {
+                            controls.setAutoBrightness(!state.autoBrightness)
+                            refresh()
+                        }, onLongClick = { controls.openDisplay() })
+                    }
+                }
+                Row(Modifier.weight(1f).fillMaxHeight(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    GlassVerticalSlider(
+                        value = brightness,
+                        glyph = Glyph.Sun,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        onLongPress = { controls.openDisplay() },
+                        onValueChange = { v ->
+                            lastTouch = System.currentTimeMillis()
+                            brightness = v
+                            if (controls.setBrightness(v)) {
+                                if (state.autoBrightness) state = state.copy(autoBrightness = false)
+                            } else if (!state.canWriteSettings && !askedForPermission) {
+                                askedForPermission = true
+                                controls.requestWriteSettings()
+                            }
+                        },
+                    )
+                    GlassVerticalSlider(
+                        value = volume,
+                        glyph = Glyph.Speaker,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        // Hold for all volumes, the output device and the earbuds.
+                        onLongPress = { audioOpen = true },
+                        onValueChange = { v ->
+                            lastTouch = System.currentTimeMillis()
+                            volume = v
+                            controls.setVolume(v)
+                        },
+                    )
+                }
+            }
+
+            // Everything else, four to a row, like the lower part of the ColorOS panel.
+            GlassCard(Modifier.unfold(4, reveal).fillMaxWidth()) {
+                Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        ControlToggle(Glyph.Battery, "Energie sparen", state.batterySaver, accent, onClick = controls::openBatterySaver)
+                        ControlToggle(Glyph.Hotspot, "Hotspot", false, accent, onClick = controls::openHotspot)
+                        ControlToggle(Glyph.Nfc, "NFC", state.nfc, accent, onClick = controls::openNfc)
+                        ControlToggle(Glyph.Contrast, "Dunkel", state.darkMode, accent, onClick = controls::openDisplay)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        ControlToggle(Glyph.Cast, "Smart View", false, accent, onClick = controls::openCast)
                         ControlToggle(Glyph.Screenshot, "Screenshot", false, accent, onClick = {
                             onClose()
                             controls.takeScreenshot()
@@ -352,72 +446,62 @@ fun ControlCenter(
                             onClose()
                             controls.powerMenu()
                         })
-                        ControlToggle(Glyph.Battery, "Energie sparen", state.batterySaver, accent, onClick = controls::openBatterySaver)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        ControlToggle(Glyph.Hotspot, "Hotspot", false, accent, onClick = controls::openHotspot)
-                        ControlToggle(Glyph.Nfc, "NFC", state.nfc, accent, onClick = controls::openNfc)
-                        ControlToggle(Glyph.Cast, "Smart View", false, accent, onClick = controls::openCast)
-                        ControlToggle(
-                            Glyph.Contrast, "Dunkel", state.darkMode, accent,
-                            onClick = controls::openDisplay,
-                        )
                     }
                 }
             }
 
             // Shortcuts
-            GlassCard(Modifier.staggeredEntrance(4).fillMaxWidth()) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                ) {
-                    Shortcut(Glyph.Camera, "Kamera") { controls.openCamera(); onClose() }
-                    Shortcut(Glyph.Alarm, "Wecker") { controls.openAlarms(); onClose() }
-                    Shortcut(Glyph.Calculator, "Rechner") { controls.openCalculator(); onClose() }
-                    Shortcut(Glyph.Spark, "Claude", tint = accent) { controls.openClaude(); onClose() }
-                }
-            }
-
-            // Way out to the system's own panels (notifications, and anything only the system can switch).
-            if (onShowNotifications != null || onShowSystemQuickSettings != null) {
-                Row(Modifier.staggeredEntrance(4).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (onShowNotifications != null) {
-                        GlassPill(Glyph.Bell, "Mitteilungen", Modifier.weight(1f), onShowNotifications)
-                    }
-                    if (onShowSystemQuickSettings != null) {
-                        GlassPill(Glyph.Tiles, "System-Schalter", Modifier.weight(1f), onShowSystemQuickSettings)
-                    }
-                }
-            }
-
-            // A small Claude-flavored footer.
             Row(
                 Modifier
+                    .unfold(5, reveal)
                     .fillMaxWidth()
-                    .padding(top = 4.dp, bottom = 12.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
+                    .padding(vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                ClaudeSpark(accent, Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "Nach oben wischen zum Schließen",
-                    color = OnGlassDim,
-                    fontFamily = FontFamily.Serif,
-                    fontStyle = FontStyle.Italic,
-                    fontSize = 13.sp,
-                    style = OnWallpaperText,
+                Shortcut(Glyph.Camera, "Kamera") { controls.openCamera(); onClose() }
+                Shortcut(Glyph.Alarm, "Wecker") { controls.openAlarms(); onClose() }
+                Shortcut(Glyph.Calculator, "Rechner") { controls.openCalculator(); onClose() }
+                Shortcut(Glyph.Spark, "Claude", tint = accent) { controls.openClaude(); onClose() }
+            }
+
+            // Notifications live in the system shade; one tap away.
+            if (onShowNotifications != null) {
+                GlassPill(Glyph.Bell, "Mitteilungen anzeigen", Modifier.unfold(6, reveal).fillMaxWidth(), onShowNotifications)
+            }
+
+            // A small Claude-flavored footer, and the handle to push it back up.
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp, bottom = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ClaudeSpark(accent, Modifier.size(14.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Nach oben wischen zum Schließen",
+                        color = OnGlassDim,
+                        fontFamily = FontFamily.Serif,
+                        fontStyle = FontStyle.Italic,
+                        fontSize = 13.sp,
+                        style = OnWallpaperText,
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Box(
+                    Modifier
+                        .size(width = 40.dp, height = 5.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.55f)),
                 )
             }
         }
 
         AnimatedVisibility(
             visible = audioOpen,
-            enter = fadeIn(tween(160)) + scaleIn(spring(dampingRatio = 0.72f), initialScale = 0.9f),
-            exit = fadeOut(tween(140)) + scaleOut(tween(160), targetScale = 0.95f),
+            enter = fadeIn(tween(140)) + scaleIn(spring(dampingRatio = 0.72f, stiffness = 500f), initialScale = 0.9f),
+            exit = fadeOut(tween(120)) + scaleOut(tween(140), targetScale = 0.95f),
         ) {
             AudioSheet(controls, onClose = { audioOpen = false })
         }
@@ -437,6 +521,24 @@ private fun GlassCard(modifier: Modifier = Modifier, content: @Composable () -> 
     }
 }
 
+/** Glass card holding two rows of round toggles. */
+@Composable
+private fun ToggleGrid(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    GlassCard(modifier) {
+        Column(
+            Modifier.fillMaxSize().padding(vertical = 6.dp),
+            verticalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun ToggleRow(content: @Composable () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) { content() }
+}
+
 @Composable
 private fun GlassCircleButton(size: Dp, onClick: () -> Unit, content: @Composable () -> Unit) {
     LiquidGlass(
@@ -452,7 +554,36 @@ private fun GlassCircleButton(size: Dp, onClick: () -> Unit, content: @Composabl
     }
 }
 
-/** Round glass toggle; filled with the accent color while on. */
+/** The soft colored glow around a switch that is on (ColorOS 17's lit contour). */
+private fun Modifier.onGlow(active: Boolean, color: Color, cornerRadius: Dp? = null): Modifier =
+    if (!active) {
+        this
+    } else {
+        drawBehind {
+            val spread = 7.dp.toPx()
+            if (cornerRadius == null) {
+                val radius = size.minDimension / 2f + spread
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        0.55f to color.copy(alpha = 0.55f),
+                        1f to Color.Transparent,
+                        center = center,
+                        radius = radius,
+                    ),
+                    radius = radius,
+                )
+            } else {
+                drawRoundRect(
+                    color = color.copy(alpha = 0.28f),
+                    topLeft = Offset(-spread / 2f, -spread / 2f),
+                    size = androidx.compose.ui.geometry.Size(size.width + spread, size.height + spread),
+                    cornerRadius = CornerRadius(cornerRadius.toPx() + spread / 2f),
+                )
+            }
+        }
+    }
+
+/** Round glass toggle; filled with the accent color and glowing while on. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ControlToggle(
@@ -464,14 +595,15 @@ private fun ControlToggle(
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(66.dp)) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(70.dp)) {
         LiquidGlass(
             cornerRadius = 26.dp,
             refraction = 14.dp,
             blur = 10.dp,
             interactive = true,
-            tint = if (active) accent.copy(alpha = 0.88f) else null,
+            tint = if (active) accent.copy(alpha = 0.92f) else null,
             modifier = Modifier
+                .onGlow(active, accent)
                 .size(52.dp)
                 .clip(CircleShape)
                 .combinedClickable(enabled = enabled, onClick = onClick, onLongClick = onLongClick),
@@ -482,10 +614,10 @@ private fun ControlToggle(
                 modifier = Modifier.align(Alignment.Center).size(24.dp),
             )
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(5.dp))
         Text(
             text = label,
-            color = OnGlass,
+            color = if (active) OnGlass else OnGlassDim,
             fontSize = 11.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -494,11 +626,70 @@ private fun ControlToggle(
     }
 }
 
+/** Wide ColorOS tile: icon in a circle, name and state; lit with the accent while on. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BigTile(
+    glyph: Glyph,
+    label: String,
+    status: String,
+    active: Boolean,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+    onClick: () -> Unit,
+) {
+    LiquidGlass(
+        cornerRadius = 26.dp,
+        refraction = 18.dp,
+        blur = 18.dp,
+        interactive = true,
+        tint = if (active) accent.copy(alpha = 0.32f) else null,
+        modifier = modifier
+            .onGlow(active, accent, cornerRadius = 26.dp)
+            .clip(RoundedCornerShape(26.dp))
+            .then(
+                if (active) {
+                    Modifier.border(
+                        width = 1.dp,
+                        brush = Brush.linearGradient(listOf(accent.copy(alpha = 0.9f), Color.White.copy(alpha = 0.25f), accent.copy(alpha = 0.6f))),
+                        shape = RoundedCornerShape(26.dp),
+                    )
+                } else {
+                    Modifier
+                },
+            )
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+    ) {
+        Row(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(if (active) accent else Color.White.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                GlyphIcon(glyph, OnGlass, Modifier.size(22.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(label, color = OnGlass, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(status, color = OnGlassDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
 @Composable
 private fun Shortcut(glyph: Glyph, label: String, tint: Color = OnGlass, onClick: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        GlassCircleButton(size = 54.dp, onClick = onClick) {
-            GlyphIcon(glyph, tint, Modifier.size(26.dp))
+        GlassCircleButton(size = 52.dp, onClick = onClick) {
+            GlyphIcon(glyph, tint, Modifier.size(24.dp))
         }
         Spacer(Modifier.height(4.dp))
         Text(label, color = OnGlass, fontSize = 11.sp, style = OnWallpaperText)
@@ -797,8 +988,10 @@ private fun GlassPill(glyph: Glyph, label: String, modifier: Modifier = Modifier
     }
 }
 
+
 /**
  * The control center as its own window over other apps (opened by [dev.hearth.launcher.system.ControlCenterService]).
+ * It follows the finger while pulled from the status bar and springs open or back on release.
  * The wallpaper isn't behind it here, so the window blurs the app below instead (Android 12+).
  */
 @Composable
@@ -806,7 +999,9 @@ fun OverlayControlCenter(
     settings: LauncherSettings,
     controls: SystemControls,
     media: MediaRepository,
-    onClose: () -> Unit,
+    reveal: PanelReveal,
+    onClosed: () -> Unit,
+    onRevealChanged: (Float) -> Unit,
     onOpenLauncherSettings: () -> Unit,
     onShowNotifications: () -> Unit,
     onShowSystemQuickSettings: () -> Unit,
@@ -817,7 +1012,28 @@ fun OverlayControlCenter(
             context.getSystemService(WindowManager::class.java)?.isCrossWindowBlurEnabled == true
     }
     val light = rememberGlassLight(settings.glassMotion)
-    val appear = remember { MutableTransitionState(false).apply { targetState = true } }
+    val shown = remember { Animatable(if (reveal.dragging) reveal.progress else 0f) }
+    val closed by rememberUpdatedState(onClosed)
+    val revealChanged by rememberUpdatedState(onRevealChanged)
+    LaunchedEffect(reveal) {
+        snapshotFlow { reveal.dragging to reveal.target }.collectLatest { (dragging, target) ->
+            if (dragging) {
+                // Glued to the finger.
+                snapshotFlow { reveal.progress }.collect { shown.snapTo(it) }
+            } else {
+                val spec = if (target > 0f) {
+                    spring<Float>(dampingRatio = 0.8f, stiffness = 480f)
+                } else {
+                    spring<Float>(dampingRatio = 1f, stiffness = 900f)
+                }
+                shown.animateTo(target, spec, initialVelocity = reveal.flingVelocity)
+                if (target <= 0f) closed()
+            }
+        }
+    }
+    LaunchedEffect(Unit) {
+        snapshotFlow { shown.value }.collect { revealChanged(it) }
+    }
     // Room for status bar (with the camera) and navigation bar, measured directly.
     val density = LocalDensity.current
     val barPadding = remember(context, density) {
@@ -828,7 +1044,7 @@ fun OverlayControlCenter(
         }
         with(density) {
             PaddingValues(
-                top = (bar("status_bar_height").toDp() + 8.dp).coerceAtLeast(32.dp),
+                top = (bar("status_bar_height").toDp() + 6.dp).coerceAtLeast(30.dp),
                 bottom = bar("navigation_bar_height").toDp() + 4.dp,
             )
         }
@@ -840,21 +1056,17 @@ fun OverlayControlCenter(
             LocalGlassLight provides light,
             LocalBackdrop provides null,
         ) {
-            AnimatedVisibility(
-                visibleState = appear,
-                enter = fadeIn(tween(180)) + slideInVertically(tween(300)) { -it / 6 },
-            ) {
-                ControlCenter(
-                    controls = controls,
-                    media = media,
-                    onClose = onClose,
-                    onOpenLauncherSettings = onOpenLauncherSettings,
-                    onShowNotifications = onShowNotifications,
-                    onShowSystemQuickSettings = onShowSystemQuickSettings,
-                    scrim = Color.Black.copy(alpha = if (blurBehind) 0.35f else 0.72f),
-                    barPadding = barPadding,
-                )
-            }
+            ControlCenter(
+                controls = controls,
+                media = media,
+                onClose = reveal::close,
+                onOpenLauncherSettings = onOpenLauncherSettings,
+                onShowNotifications = onShowNotifications,
+                onShowSystemQuickSettings = onShowSystemQuickSettings,
+                scrim = Color.Black.copy(alpha = if (blurBehind) 0.38f else 0.74f),
+                barPadding = barPadding,
+                reveal = { shown.value },
+            )
         }
     }
 }

@@ -263,6 +263,14 @@ private class GlassEffect {
     }.getOrNull()
 }
 
+/**
+ * Compiling the shader is the slow part, so all glass shares one. Safe: every effect takes
+ * its own copy of the uniforms when it is created.
+ */
+private val SharedGlassEffect: GlassEffect? by lazy {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) runCatching { GlassEffect() }.getOrNull() else null
+}
+
 /** Which pre-blurred copy of the wallpaper glass looks through. */
 private enum class Frost { None, Soft, Strong }
 
@@ -339,9 +347,8 @@ fun LiquidGlass(
     val frost = frostFor(style.blur * (blur.value / 14f).coerceIn(0.5f, 1.6f))
     val rimPx = with(density) { 1.dp.toPx() }
     val shaderMinPx = with(density) { 90.dp.toPx() }
-    val glassEffect = remember {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) runCatching { GlassEffect() }.getOrNull() else null
-    }
+    // One compiled shader for every glass surface, and none at all without the wallpaper.
+    val glassEffect = if (backdrop != null) SharedGlassEffect else null
     var origin by remember { mutableStateOf(Offset.Zero) }
 
     val isInteractive = interactive && style.interactive

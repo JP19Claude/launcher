@@ -450,7 +450,7 @@ fun SettingsScreen(
                     }
                     SwitchRow(
                         label = "System-Kontrollzentrum ersetzen",
-                        description = "Geht das Kontrollzentrum von One UI, ColorOS & Co. auf, schließt Hearth es und zeigt seins. Braucht den Dienst oben.",
+                        description = "Die ganze Statusleiste öffnet dann Hearths Kontrollzentrum, Mitteilungen gibt es darin per Knopf. Geht das von One UI & Co. trotzdem auf (andere Geste), schließt Hearth es sofort. Braucht den Dienst oben.",
                         checked = s.interceptSystemShade,
                     ) { v -> update { it.copy(interceptSystemShade = v) } }
                     ActionRow(
@@ -458,7 +458,7 @@ fun SettingsScreen(
                         description = "Benachrichtigungszugriff, damit das Kontrollzentrum zeigt, was gerade läuft",
                         onClick = vm.media::requestAccess,
                     )
-                    ChoiceRow(
+                    if (!s.interceptSystemShade) ChoiceRow(
                         label = "Bereich oben, der es öffnet",
                         options = TriggerZone.entries,
                         selected = s.triggerZone,

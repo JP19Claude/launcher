@@ -10,18 +10,25 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.PixelFormat
+import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.VelocityTracker
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.FrameLayout
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -38,13 +45,15 @@ import dev.hearth.launcher.data.MediaRepository
 import dev.hearth.launcher.data.SettingsRepository
 import dev.hearth.launcher.data.SystemControls
 import dev.hearth.launcher.ui.OverlayControlCenter
+import dev.hearth.launcher.ui.PanelReveal
 import kotlin.math.roundToInt
 
 /**
  * Makes the Hearth control center available in every app, as close to replacing the
- * system one as Android allows: an invisible strip over the right part of the status bar
- * catches the swipe down and opens the glass control center as an overlay.
- * The left part keeps opening the normal notification shade.
+ * system one as Android allows: an invisible strip over the status bar catches the swipe
+ * down and pulls the glass control center out with the finger, like on ColorOS.
+ * If the system shade opens anyway (another part of the status bar, a gesture), it is
+ * closed again and Hearth's control center shows instead.
  *
  * Runs as an accessibility service, because only those may draw over the status bar.
  */
@@ -57,10 +66,21 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
 
     private var windowManager: WindowManager? = null
     private var trigger: View? = null
-    private var panel: View? = null
     private var controls: SystemControls? = null
     private var media: MediaRepository? = null
     private var glimmer: GlimmerController? = null
+
+    /**
+     * The panel window stays added and only hides between uses, so opening doesn't have to
+     * set up a window and Compose from scratch each time (that was the delay).
+     */
+    private var panelRoot: FrameLayout? = null
+    private var panelParams: WindowManager.LayoutParams? = null
+    private var panelVisible = false
+    private var panelOpen by mutableStateOf(false)
+    private var panelSettings by mutableStateOf(LauncherSettings())
+    private val reveal = PanelReveal()
+    private var blurRadius = -1
 
     private fun restartGlimmer() {
         val current = SettingsRepository(this).settings.value
@@ -72,26 +92,44 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
     /** Read from the settings; see [onAccessibilityEvent]. */
     @Volatile private var interceptShade = false
 
-    /** While Hearth itself opened the system shade, it must not be closed again right away. */
-    private var allowSystemShadeUntil = 0L
+    /**
+     * Hearth itself opened the system shade (notifications, system switches): leave it open
+     * until it was closed again. [allowShadeUntil] is the fallback if its closing isn't seen.
+     */
+    private var allowShade = false
+    private var allowShadeSeen = false
+    private var allowShadeUntil = 0L
+
+    private var shadeCheckPending = false
+    private val shadeCheck = Runnable {
+        shadeCheckPending = false
+        checkSystemShade()
+    }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
         when (key) {
             "triggerZone" -> if (trigger != null) addTrigger()
-            SettingsRepository.KEY_INTERCEPT -> interceptShade = prefs.getBoolean(key, false)
+            SettingsRepository.KEY_INTERCEPT -> {
+                interceptShade = prefs.getBoolean(key, false)
+                // Covering the whole status bar is what makes the replacement reliable.
+                if (trigger != null) addTrigger()
+            }
             in SettingsRepository.GLIMMER_KEYS -> restartGlimmer()
         }
     }
 
-    // Hide the strip on the lock screen, bring it back once unlocked.
+    // Hide the strip on the lock screen, bring it back as soon as the phone is usable.
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 Intent.ACTION_SCREEN_OFF -> {
-                    hidePanel()
+                    hidePanel(immediately = true)
                     removeTrigger()
                 }
-                Intent.ACTION_USER_PRESENT -> addTrigger()
+                // Screen back on without the lock screen (it locks only after a while):
+                // there's no "user present" then, the strip used to stay missing.
+                Intent.ACTION_SCREEN_ON -> handler.postDelayed({ ensureTrigger() }, 300)
+                Intent.ACTION_USER_PRESENT -> ensureTrigger()
             }
         }
     }
@@ -113,35 +151,125 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         interceptShade = prefs.getBoolean(SettingsRepository.KEY_INTERCEPT, false)
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_USER_PRESENT)
         }
         ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-        val locked = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
-        if (!locked) addTrigger()
+        controls = SystemControls(this).also { it.prefetch() }
+        media = MediaRepository(this)
+        ensureTrigger()
         glimmer = GlimmerController(this)
         restartGlimmer()
+        // Warm up the panel window once the service is settled.
+        handler.postDelayed({ ensurePanelWindow() }, 1200)
     }
 
     /**
      * "Replace the system control center": when the system's notification shade or quick
      * settings open (from a swipe the strip didn't catch), close them and show Hearth's
-     * control center instead. Only window changes of the system UI are delivered here.
+     * control center instead. Only events of the system UI are delivered here.
      */
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (!interceptShade || event == null) return
-        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (event == null) return
+        // Any sign of life from the status bar: make sure the strip is there.
+        if (trigger == null) ensureTrigger()
+        if (!interceptShade) return
         if (event.packageName?.toString() != SYSTEM_UI) return
-        if (SystemClock.elapsedRealtime() < allowSystemShadeUntil) return
-        if (getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true) return
-        val text = buildString {
-            event.text?.forEach { append(it).append(' ') }
-            append(event.contentDescription ?: "").append(' ')
-            append(event.className ?: "")
-        }.lowercase()
-        if (ShadeWords.none { it in text }) return
+        when (event.eventType) {
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                val text = buildString {
+                    event.text?.forEach { append(it).append(' ') }
+                    append(event.contentDescription ?: "").append(' ')
+                    append(event.className ?: "")
+                }.lowercase()
+                if (ShadeWords.any { it in text } && !isLocked() && !shadeAllowed()) {
+                    takeOverShade()
+                } else {
+                    scheduleShadeCheck(0)
+                }
+            }
+            // Fires many times while the shade moves; looked at in small batches.
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> scheduleShadeCheck(90)
+        }
+    }
 
+    private fun scheduleShadeCheck(delayMs: Long) {
+        if (shadeCheckPending) return
+        shadeCheckPending = true
+        handler.postDelayed(shadeCheck, delayMs)
+    }
+
+    private fun checkSystemShade() {
+        if (!interceptShade && !allowShade) return
+        val open = isSystemShadeOpen()
+        if (allowShade) {
+            if (open) {
+                allowShadeSeen = true
+            } else if (allowShadeSeen || SystemClock.elapsedRealtime() > allowShadeUntil) {
+                // The shade Hearth opened was closed again: from now on, replace it again.
+                allowShade = false
+                allowShadeSeen = false
+            }
+            return
+        }
+        if (open && interceptShade && !isLocked()) takeOverShade()
+    }
+
+    private fun shadeAllowed(): Boolean {
+        if (!allowShade) return false
+        if (!allowShadeSeen && SystemClock.elapsedRealtime() > allowShadeUntil) {
+            allowShade = false
+            return false
+        }
+        return true
+    }
+
+    /** Hearth's panel first (it sits above the shade), then the shade goes away underneath. */
+    private fun takeOverShade() {
+        showPanel()
         dismissSystemShade()
-        handler.postDelayed({ showPanel() }, 150)
+        // A finger still on the shade can hold it open; try again once it let go.
+        handler.postDelayed({ if (isSystemShadeOpen()) dismissSystemShade() }, 350)
+        handler.postDelayed({ if (isSystemShadeOpen()) dismissSystemShade() }, 900)
+    }
+
+    /**
+     * Whether the system's quick settings are on screen: a system UI window showing one of
+     * the quick settings views. A heads-up notification lives in the same window, so the
+     * window alone doesn't count; the quick settings are hidden while it's only that.
+     */
+    private fun isSystemShadeOpen(): Boolean {
+        if (isLocked()) return false
+        val list = runCatching { windows }.getOrNull() ?: return false
+        for (window in list) {
+            val root = runCatching { window.root }.getOrNull() ?: continue
+            if (root.packageName?.toString() != SYSTEM_UI) continue
+            if (showsQuickSettings(root)) return true
+        }
+        return false
+    }
+
+    private fun showsQuickSettings(root: AccessibilityNodeInfo): Boolean {
+        val queue = ArrayDeque<AccessibilityNodeInfo>()
+        queue.add(root)
+        var visited = 0
+        val bounds = Rect()
+        while (queue.isNotEmpty() && visited < MAX_NODES) {
+            val node = queue.removeFirst()
+            visited++
+            val id = node.viewIdResourceName
+            if (id != null && id.startsWith(SYSTEM_UI_ID)) {
+                val name = id.substring(SYSTEM_UI_ID.length)
+                if (QuickSettingsIds.any { name.startsWith(it) || name.contains(it) } && node.isVisibleToUser) {
+                    node.getBoundsInScreen(bounds)
+                    if (bounds.height() > 0 && bounds.width() > 0) return true
+                }
+            }
+            for (i in 0 until node.childCount) {
+                runCatching { node.getChild(i) }.getOrNull()?.let(queue::add)
+            }
+        }
+        return false
     }
 
     private fun dismissSystemShade() {
@@ -151,6 +279,8 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
             performGlobalAction(GLOBAL_ACTION_BACK)
         }
     }
+
+    private fun isLocked(): Boolean = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
 
     override fun onInterrupt() = Unit
 
@@ -174,7 +304,7 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
 
     private fun shutdown() {
         if (instance === this) instance = null
-        hidePanel()
+        removePanelWindow()
         removeTrigger()
         glimmer?.stop()
         glimmer = null
@@ -184,17 +314,24 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         controls?.close()
         controls = null
         handler.removeCallbacksAndMessages(null)
+        shadeCheckPending = false
+    }
+
+    private fun allowSystemShade() {
+        allowShade = true
+        allowShadeSeen = false
+        allowShadeUntil = SystemClock.elapsedRealtime() + SYSTEM_SHADE_GRACE_MS
     }
 
     /** Pulls down the normal notification shade. */
     fun showNotifications(): Boolean {
-        allowSystemShadeUntil = SystemClock.elapsedRealtime() + SYSTEM_SHADE_GRACE_MS
+        allowSystemShade()
         return performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
     }
 
     /** Opens the system's own quick settings, in case something is only there. */
     fun showSystemQuickSettings(): Boolean {
-        allowSystemShadeUntil = SystemClock.elapsedRealtime() + SYSTEM_SHADE_GRACE_MS
+        allowSystemShade()
         return performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
     }
 
@@ -207,27 +344,62 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         return height.coerceAtLeast(dp(24))
     }
 
+    private fun ensureTrigger() {
+        if (trigger != null || windowManager == null) return
+        if (isLocked()) return
+        if (getSystemService(PowerManager::class.java)?.isInteractive == false) return
+        addTrigger()
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     private fun addTrigger() {
         val wm = windowManager ?: return
         removeTrigger()
         val zone = SettingsRepository(this).settings.value.triggerZone
-        val width = (resources.displayMetrics.widthPixels * zone.fraction).roundToInt()
+        // Replacing the system control center: the whole status bar opens Hearth's,
+        // so the system's doesn't flash up first. Notifications are a button inside.
+        val fraction = if (interceptShade) 1f else zone.fraction
+        val width = (resources.displayMetrics.widthPixels * fraction).roundToInt()
 
         val view = View(this)
         var startY = 0f
-        var opened = false
+        var pulling = false
+        var tracker: VelocityTracker? = null
+        val distance = dp(PULL_DISTANCE_DP).toFloat()
         view.setOnTouchListener { _, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     startY = event.rawY
-                    opened = false
+                    pulling = false
+                    tracker?.recycle()
+                    tracker = VelocityTracker.obtain().also { it.addMovement(event) }
+                    // Read the toggles while the finger is still moving.
+                    controls?.prefetch()
                 }
-                MotionEvent.ACTION_MOVE -> if (!opened && event.rawY - startY > dp(18)) {
-                    opened = true
-                    showPanel()
+                MotionEvent.ACTION_MOVE -> {
+                    tracker?.addMovement(event)
+                    val dy = event.rawY - startY
+                    if (!pulling && dy > dp(5)) {
+                        pulling = true
+                        startPull()
+                    }
+                    if (pulling) reveal.progress = (dy / distance).coerceIn(0f, 1.06f)
                 }
-                MotionEvent.ACTION_UP -> if (!opened && event.rawY - startY > dp(6)) showPanel()
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    tracker?.addMovement(event)
+                    val velocity = tracker?.let {
+                        it.computeCurrentVelocity(1000)
+                        it.yVelocity
+                    } ?: 0f
+                    tracker?.recycle()
+                    tracker = null
+                    if (pulling) {
+                        endPull(velocity, distance)
+                    } else if (event.actionMasked == MotionEvent.ACTION_UP && event.rawY - startY > dp(2)) {
+                        showPanel()
+                    }
+                    pulling = false
+                }
             }
             true
         }
@@ -254,13 +426,21 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         runCatching { windowManager?.removeView(view) }
     }
 
-    fun showPanel() {
-        val wm = windowManager ?: return
-        if (panel != null) return
-        val settings = SettingsRepository(this).settings.value
-        val systemControls = controls ?: SystemControls(this).also { controls = it }
-        val mediaRepository = media ?: MediaRepository(this).also { media = it }
+    // ---- Panel ----
 
+    private fun shownFlags(): Int =
+        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) WindowManager.LayoutParams.FLAG_BLUR_BEHIND else 0)
+
+    private fun hiddenFlags(): Int =
+        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+
+    private fun ensurePanelWindow(): Boolean {
+        if (panelRoot != null) return true
+        val wm = windowManager ?: return false
         val root = object : FrameLayout(this) {
             override fun dispatchKeyEvent(event: KeyEvent): Boolean {
                 if (event.keyCode == KeyEvent.KEYCODE_BACK) {
@@ -276,56 +456,155 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
             setViewTreeLifecycleOwner(this@ControlCenterService)
             setViewTreeSavedStateRegistryOwner(this@ControlCenterService)
             setContent {
-                OverlayControlCenter(
-                    settings = settings,
-                    controls = systemControls,
-                    media = mediaRepository,
-                    onClose = this@ControlCenterService::hidePanel,
-                    onOpenLauncherSettings = {
-                        hidePanel()
-                        val intent = Intent(this@ControlCenterService, MainActivity::class.java)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            .putExtra(MainActivity.EXTRA_OPEN_SETTINGS, true)
-                        runCatching { startActivity(intent) }
-                    },
-                    onShowNotifications = {
-                        hidePanel()
-                        showNotifications()
-                    },
-                    onShowSystemQuickSettings = {
-                        hidePanel()
-                        showSystemQuickSettings()
-                    },
-                )
+                val systemControls = controls
+                val mediaRepository = media
+                if (panelOpen && systemControls != null && mediaRepository != null) {
+                    OverlayControlCenter(
+                        settings = panelSettings,
+                        controls = systemControls,
+                        media = mediaRepository,
+                        reveal = reveal,
+                        onClosed = this@ControlCenterService::onPanelClosed,
+                        onRevealChanged = this@ControlCenterService::setPanelBlur,
+                        onOpenLauncherSettings = {
+                            hidePanel(immediately = true)
+                            val intent = Intent(this@ControlCenterService, MainActivity::class.java)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                .putExtra(MainActivity.EXTRA_OPEN_SETTINGS, true)
+                            runCatching { startActivity(intent) }
+                        },
+                        onShowNotifications = {
+                            hidePanel(immediately = true)
+                            showNotifications()
+                        },
+                        onShowSystemQuickSettings = {
+                            hidePanel(immediately = true)
+                            showSystemQuickSettings()
+                        },
+                    )
+                }
             }
         }
         root.addView(compose, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        root.visibility = View.GONE
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+            hiddenFlags(),
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             title = "Hearth control center"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) setFitInsetsTypes(0)
-            // Real glass over whatever app is open (Android 12+, if the phone supports it).
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                flags = flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
-                blurBehindRadius = dp(36)
-            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) blurBehindRadius = 0
         }
-        if (runCatching { wm.addView(root, params) }.isSuccess) panel = root
+        if (runCatching { wm.addView(root, params) }.isFailure) return false
+        panelRoot = root
+        panelParams = params
+        panelVisible = false
+        blurRadius = 0
+        return true
     }
 
-    fun hidePanel() {
-        val view = panel ?: return
-        panel = null
-        runCatching { windowManager?.removeView(view) }
+    private fun makePanelVisible(): Boolean {
+        if (panelVisible) return true
+        if (!ensurePanelWindow()) return false
+        val root = panelRoot ?: return false
+        val params = panelParams ?: return false
+        panelSettings = SettingsRepository(this).settings.value
+        panelOpen = true
+        params.flags = shownFlags()
+        root.visibility = View.VISIBLE
+        if (runCatching { windowManager?.updateViewLayout(root, params) }.isFailure) {
+            removePanelWindow()
+            return false
+        }
+        panelVisible = true
+        return true
+    }
+
+    /** The finger started pulling on the status bar: the panel follows it. */
+    private fun startPull() {
+        if (panelVisible && !reveal.dragging && reveal.target == 1f) return
+        reveal.progress = 0f
+        reveal.flingVelocity = 0f
+        reveal.dragging = true
+        if (!makePanelVisible()) reveal.dragging = false
+    }
+
+    /** The finger let go: open fully, or slide back if it was only a small tug. */
+    private fun endPull(velocity: Float, distance: Float) {
+        if (!reveal.dragging) return
+        val open = when {
+            velocity > dp(400) -> true
+            velocity < -dp(300) -> false
+            else -> reveal.progress > 0.32f
+        }
+        reveal.flingVelocity = (velocity / distance).coerceIn(-12f, 12f)
+        reveal.target = if (open) 1f else 0f
+        reveal.dragging = false
+    }
+
+    fun showPanel() {
+        reveal.flingVelocity = 0f
+        reveal.dragging = false
+        reveal.target = 1f
+        makePanelVisible()
+    }
+
+    /** Slides the panel away; [immediately] for screen off and opening other things. */
+    fun hidePanel(immediately: Boolean = false) {
+        if (!panelVisible) return
+        if (immediately) {
+            onPanelClosed()
+        } else {
+            reveal.dragging = false
+            reveal.flingVelocity = 0f
+            reveal.target = 0f
+        }
+    }
+
+    /** Called when the panel finished sliding away. */
+    private fun onPanelClosed() {
+        reveal.dragging = false
+        reveal.target = 0f
+        reveal.progress = 0f
+        panelOpen = false
+        val root = panelRoot ?: return
+        val params = panelParams ?: return
+        if (!panelVisible) return
+        panelVisible = false
+        root.visibility = View.GONE
+        params.flags = hiddenFlags()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) params.blurBehindRadius = 0
+        blurRadius = 0
+        runCatching { windowManager?.updateViewLayout(root, params) }
+    }
+
+    /** The blur of the app behind grows with the panel, in a few steps (each is a window update). */
+    private fun setPanelBlur(fraction: Float) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !panelVisible) return
+        val root = panelRoot ?: return
+        val params = panelParams ?: return
+        val steps = 5
+        val step = (fraction.coerceIn(0f, 1f) * steps).roundToInt()
+        val radius = dp(BLUR_DP) * step / steps
+        if (radius == blurRadius) return
+        blurRadius = radius
+        params.blurBehindRadius = radius
+        runCatching { windowManager?.updateViewLayout(root, params) }
+    }
+
+    private fun removePanelWindow() {
+        val root = panelRoot ?: return
+        panelRoot = null
+        panelParams = null
+        panelVisible = false
+        panelOpen = false
+        runCatching { windowManager?.removeView(root) }
     }
 
     companion object {
@@ -337,14 +616,24 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         val isEnabled: Boolean get() = instance != null
 
         private const val SYSTEM_UI = "com.android.systemui"
+        private const val SYSTEM_UI_ID = "com.android.systemui:id/"
         private const val SYSTEM_SHADE_GRACE_MS = 20_000L
+        private const val PULL_DISTANCE_DP = 260
+        private const val BLUR_DP = 36
+        private const val MAX_NODES = 220
 
         /** How the system names its shade (Android, One UI, ColorOS; German and English). */
         private val ShadeWords = listOf(
             "notification shade", "quick settings", "quick panel", "notification panel",
             "benachrichtigungsfeld", "benachrichtigungsleiste", "benachrichtigungsbereich",
             "benachrichtigungsfenster", "schnelleinstellungen", "schnellzugriff", "schnellfeld",
-            "mitteilungszentrale", "kontrollzentrum", "statusleiste erweitert",
+            "mitteilungszentrale", "kontrollzentrum", "statusleiste erweitert", "schnelleinstellungsbereich",
+        )
+
+        /** View ids of the system's quick settings (AOSP, One UI and others). */
+        private val QuickSettingsIds = listOf(
+            "qs_", "quick_qs", "quick_settings", "quick_panel", "qspanel", "brightness_slider",
+            "sec_qs", "expanded_qs",
         )
     }
 }

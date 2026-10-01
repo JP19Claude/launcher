@@ -15,7 +15,7 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   - Helligkeit/Drehung brauchen „Systemeinstellungen ändern“, Nicht stören den
     Zugriff auf „Bitte nicht stören“
 - Kontrollzentrum in allen Apps (Bedienungshilfe „Hearth Kontrollzentrum“ einschalten):
-  ein unsichtbarer Streifen über dem rechten Teil der Statusleiste fängt das Wischen
+  ein unsichtbarer Streifen über der Statusleiste fängt das Wischen
   nach unten ab und öffnet das Glas-Kontrollzentrum über der App (ab Android 12 mit
   echter Unschärfe dahinter). Links öffnet weiter die normale Mitteilungsleiste.
   Bereich einstellbar: rechte Hälfte, rechtes Drittel, ganze Breite. Ganz entfernen
@@ -26,8 +26,14 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   in der Ecke öffnen den ganzen Ordner
 - Kontrollzentrum zeigt, was gerade läuft: Cover, Titel, Interpret, Fortschritt,
   Glas in der Farbe des Covers (braucht einmal „Benachrichtigungszugriff“)
-- „System-Kontrollzentrum ersetzen“: geht das Panel von One UI/ColorOS doch auf,
-  schließt Hearth es und zeigt seins (braucht den Bedienungshilfe-Dienst)
+- „System-Kontrollzentrum ersetzen“: die ganze Statusleiste öffnet dann Hearths
+  Kontrollzentrum (Mitteilungen per Knopf darin). Geht das Panel von One UI/ColorOS
+  doch auf, erkennt Hearth es sofort an den Schnelleinstellungen im Fenster der
+  System-Oberfläche, schließt es und zeigt seins (braucht den Bedienungshilfe-Dienst)
+- Kontrollzentrum im Stil von ColorOS 17: große WLAN- und Mobil-Kacheln, Medien-Karte,
+  runde Schalter mit leuchtender Kontur, hohe Regler für Helligkeit und Lautstärke.
+  Es folgt beim Herunterziehen dem Finger, die Reihen klappen nacheinander auf,
+  die Unschärfe dahinter wächst mit; loslassen öffnet es ganz oder schiebt es zurück
 - „Vom Startbildschirm entfernen“: App verschwindet vom Homescreen, bleibt aber
   in App-Mediathek und Suche (einzeln im Menü oder mehrere per „Auswählen“)
 - Ordner: App auf eine andere ziehen erstellt einen Glas-Ordner, weitere Apps darauf
