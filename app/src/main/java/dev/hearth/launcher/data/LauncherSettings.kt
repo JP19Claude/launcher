@@ -109,6 +109,7 @@ data class LauncherSettings(
     val swipeOpensSearch: Boolean = true,
     val swipeDownAction: SwipeDownAction = SwipeDownAction.Split,
     val showClaudeCard: Boolean = true,
+    val showAppLibrary: Boolean = true,
     // Dock
     val dockSize: Int = 4,
     val dockCustomized: Boolean = false,
@@ -217,6 +218,7 @@ class SettingsRepository(context: Context) {
             swipeOpensSearch = prefs.getBoolean("swipeOpensSearch", d.swipeOpensSearch),
             swipeDownAction = enumOf("swipeDownAction", d.swipeDownAction),
             showClaudeCard = prefs.getBoolean("showClaudeCard", d.showClaudeCard),
+            showAppLibrary = prefs.getBoolean("showAppLibrary", d.showAppLibrary),
             dockSize = prefs.getInt("dockSize", d.dockSize),
             dockCustomized = prefs.getBoolean("dockCustomized", d.dockCustomized),
             dockApps = prefs.getString("dockApps", null)
@@ -258,6 +260,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("swipeOpensSearch", s.swipeOpensSearch)
             .putString("swipeDownAction", s.swipeDownAction.name)
             .putBoolean("showClaudeCard", s.showClaudeCard)
+            .putBoolean("showAppLibrary", s.showAppLibrary)
             .putInt("dockSize", s.dockSize)
             .putBoolean("dockCustomized", s.dockCustomized)
             .putString("dockApps", s.dockApps.joinToString("\n"))

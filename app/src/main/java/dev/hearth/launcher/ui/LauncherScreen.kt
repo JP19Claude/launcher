@@ -1,6 +1,7 @@
 package dev.hearth.launcher.ui
 
 import android.Manifest
+import android.app.ActivityOptions
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -87,6 +88,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -106,6 +108,7 @@ import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun LauncherScreen(vm: LauncherViewModel) {
@@ -114,6 +117,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val backdrop by vm.backdrop.collectAsStateWithLifecycle()
     val needsWallpaperAccess by vm.needsWallpaperAccess.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
+    val library by vm.library.collectAsStateWithLifecycle()
+    var openFolder by remember { mutableStateOf<LibraryFolderContent?>(null) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     var controlOpen by rememberSaveable { mutableStateOf(false) }
@@ -150,12 +155,39 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val pages = remember(homeApps, columns, rows, firstPageRows) {
         paginate(homeApps, columns, rows, firstPageRows)
     }
-    val pagerState = rememberPagerState(pageCount = { pages.size })
+    val libraryPages = if (settings.showAppLibrary) 1 else 0
+    val pagerState = rememberPagerState(pageCount = { pages.size + libraryPages })
 
-    val actions = remember(vm) {
+    // Apps open with a zoom out of their icon, which the system can start right away.
+    val view = LocalView.current
+    val launchApp: (AppInfo, Rect?) -> Unit = remember(vm, view) {
+        { app, bounds ->
+            val area = bounds?.takeIf { it.width > 0f && it.height > 0f }
+            val source = area?.let {
+                android.graphics.Rect(it.left.roundToInt(), it.top.roundToInt(), it.right.roundToInt(), it.bottom.roundToInt())
+            }
+            val options = source?.let {
+                runCatching {
+                    ActivityOptions.makeScaleUpAnimation(view, it.left, it.top, it.width(), it.height()).toBundle()
+                }.getOrNull()
+            }
+            vm.launch(app, source, options)
+        }
+    }
+    val actions = remember(vm, launchApp) {
         AppActions(
-            launch = vm::launch,
+            launch = launchApp,
             menu = { app, bounds -> menu = GlassMenuRequest(bounds, appMenuItems(vm, app), app) },
+        )
+    }
+    // Inside an opened App Library folder: launching closes the folder.
+    val folderActions = remember(actions) {
+        AppActions(
+            launch = { app, bounds ->
+                openFolder = null
+                actions.launch(app, bounds)
+            },
+            menu = actions.menu,
         )
     }
     val homeMenu: (Offset) -> Unit = { position ->
@@ -171,14 +203,17 @@ fun LauncherScreen(vm: LauncherViewModel) {
         )
     }
 
-    // Home button: close everything and jump back to the first page.
+    // Home button: close everything. Only a press on the home screen itself jumps back
+    // to the first page; coming back from an app keeps the page, so no scroll animation
+    // swallows the next tap on an icon.
     LaunchedEffect(Unit) {
-        vm.homeEvents.collect {
+        vm.homeEvents.collect { alreadyInFront ->
             menu = null
+            openFolder = null
             searchOpen = false
             settingsOpen = false
             controlOpen = false
-            pagerState.animateScrollToPage(0)
+            if (alreadyInFront && pagerState.currentPage != 0) pagerState.animateScrollToPage(0)
         }
     }
 
@@ -186,6 +221,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     BackHandler {
         when {
             menu != null -> menu = null
+            openFolder != null -> openFolder = null
             controlOpen -> controlOpen = false
             settingsOpen -> settingsOpen = false
             else -> searchOpen = false
@@ -197,7 +233,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val menuBlur by animateDpAsState(
         targetValue = when {
             controlOpen -> 24.dp
-            menu != null -> 16.dp
+            menu != null || openFolder != null -> 16.dp
             else -> 0.dp
         },
         animationSpec = tween(260),
@@ -257,6 +293,15 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             beyondViewportPageCount = 1,
                             modifier = Modifier.weight(1f).fillMaxWidth(),
                         ) { page ->
+                            if (page >= pages.size) {
+                                AppLibraryPage(
+                                    library = library,
+                                    actions = actions,
+                                    onOpenSearch = { searchOpen = true },
+                                    onOpenFolder = { openFolder = it },
+                                )
+                                return@HorizontalPager
+                            }
                             Box(Modifier.fillMaxSize()) {
                                 LongPressArea(onLongPress = homeMenu, modifier = Modifier.matchParentSize())
                                 Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
@@ -292,9 +337,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             Modifier.fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            if (pages.size > 1) {
+                            if (pages.size + libraryPages > 1) {
                                 PageDots(
-                                    count = pages.size,
+                                    count = pages.size + libraryPages,
                                     current = pagerState.currentPage,
                                     modifier = Modifier.padding(bottom = 10.dp),
                                 )
@@ -320,8 +365,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     SearchOverlay(
                         apps = apps,
                         actions = actions,
-                        onLaunch = {
-                            vm.launch(it)
+                        onLaunch = { app, bounds ->
+                            launchApp(app, bounds)
                             searchOpen = false
                         },
                         onWebSearch = {
@@ -368,6 +413,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     },
                 )
             }
+
+            LibraryFolderOverlay(folder = openFolder, actions = folderActions, onDismiss = { openFolder = null })
 
             GlassMenuOverlay(request = menu, onDismiss = { menu = null })
         }

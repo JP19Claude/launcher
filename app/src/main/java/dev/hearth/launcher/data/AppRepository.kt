@@ -13,6 +13,7 @@ import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.UserHandle
@@ -117,12 +118,15 @@ class AppRepository(
             .mapNotNull { info ->
                 runCatching {
                     val (bitmap, kind) = renderIcon(info, config, pack)
+                    val label = info.label.toString()
                     AppInfo(
-                        label = info.label.toString(),
+                        label = label,
                         component = info.componentName,
                         user = info.user,
                         icon = bitmap.asImageBitmap(),
                         iconKind = kind,
+                        installTime = info.firstInstallTime,
+                        category = categorize(info.applicationInfo, info.componentName.packageName, label),
                     )
                 }.getOrNull()
             }
@@ -224,8 +228,13 @@ class AppRepository(
         return bitmap
     }
 
-    fun launch(app: AppInfo, sourceBounds: Rect? = null) {
-        runCatching { launcherApps.startMainActivity(app.component, app.user, sourceBounds, null) }
+    /** [options] carries the launch animation (zoom out of the icon). */
+    fun launch(app: AppInfo, sourceBounds: Rect? = null, options: Bundle? = null) {
+        runCatching { launcherApps.startMainActivity(app.component, app.user, sourceBounds, options) }
+            .onFailure {
+                // Some ROMs reject the animation options; start plainly instead.
+                runCatching { launcherApps.startMainActivity(app.component, app.user, sourceBounds, null) }
+            }
     }
 
     fun openAppInfo(app: AppInfo) {

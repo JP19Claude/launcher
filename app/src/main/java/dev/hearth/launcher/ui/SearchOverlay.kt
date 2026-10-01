@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -57,7 +58,7 @@ import dev.hearth.launcher.data.AppInfo
 fun SearchOverlay(
     apps: List<AppInfo>,
     actions: AppActions,
-    onLaunch: (AppInfo) -> Unit,
+    onLaunch: (AppInfo, Rect?) -> Unit,
     onWebSearch: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onAskClaude: (String) -> Unit,
@@ -105,7 +106,7 @@ fun SearchOverlay(
                 onValueChange = { query = it },
                 onSubmit = {
                     val first = results.firstOrNull()
-                    if (first != null) onLaunch(first) else if (trimmed.isNotEmpty()) onWebSearch(trimmed)
+                    if (first != null) onLaunch(first, null) else if (trimmed.isNotEmpty()) onWebSearch(trimmed)
                 },
                 modifier = Modifier
                     .weight(1f)

@@ -2,17 +2,23 @@ package dev.hearth.launcher
 
 import android.app.Application
 import android.content.Intent
+import android.graphics.Rect
+import android.os.Bundle
 import android.provider.Settings
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.hearth.launcher.data.AppInfo
 import dev.hearth.launcher.data.AppRepository
+import dev.hearth.launcher.data.AppUsage
 import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.IconConfig
 import dev.hearth.launcher.data.IconPackInfo
 import dev.hearth.launcher.data.IconPackRepository
 import dev.hearth.launcher.data.IconStyle
 import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.data.LibraryCategory
+import dev.hearth.launcher.data.UsageRepository
 import dev.hearth.launcher.data.SettingsRepository
 import dev.hearth.launcher.data.SystemControls
 import dev.hearth.launcher.data.WallpaperBackdrop
@@ -32,12 +38,21 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/** Content of the App Library: suggestions, recently added, and one folder per category. */
+@Immutable
+data class AppLibraryData(
+    val suggestions: List<AppInfo> = emptyList(),
+    val recent: List<AppInfo> = emptyList(),
+    val folders: List<Pair<LibraryCategory, List<AppInfo>>> = emptyList(),
+)
+
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
 
     private val settingsRepo = SettingsRepository(application)
     private val iconPackRepo = IconPackRepository(application)
     private val repo = AppRepository(application, iconPackRepo)
     private val wallpaper = WallpaperRepository(application)
+    private val usage = UsageRepository(application)
 
     /** Brightness, volume, flashlight & co. for the launcher's control center. */
     val controls = SystemControls(application)
@@ -59,6 +74,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    /** Apps sorted into folders, like the App Library on iOS. */
+    val library: StateFlow<AppLibraryData> = combine(apps, usage.usage) { all, used -> buildLibrary(all, used) }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AppLibraryData())
+
     /** Wallpaper copy for the glass surfaces, or null if it can't be read. */
     val backdrop: StateFlow<WallpaperBackdrop?> = wallpaper.backdrop
 
@@ -68,10 +88,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _iconPacks = MutableStateFlow<List<IconPackInfo>>(emptyList())
     val iconPacks: StateFlow<List<IconPackInfo>> = _iconPacks.asStateFlow()
 
-    private val _homeEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val _homeEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
 
-    /** Emits when the home button is pressed while the launcher is already open. */
-    val homeEvents: SharedFlow<Unit> = _homeEvents.asSharedFlow()
+    /**
+     * Emits on the home button. True: pressed while the launcher was already in front
+     * (jump back to the first page). False: coming back from an app (only close overlays,
+     * instantly, so the next tap reaches an icon right away).
+     */
+    val homeEvents: SharedFlow<Boolean> = _homeEvents.asSharedFlow()
 
     init {
         // New default look (ColorOS × Claude), applied once to existing installs.
@@ -175,8 +199,25 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun onHomePressed() {
-        _homeEvents.tryEmit(Unit)
+    fun onHomePressed(alreadyInFront: Boolean) {
+        _homeEvents.tryEmit(alreadyInFront)
+    }
+
+    private fun buildLibrary(all: List<AppInfo>, used: Map<String, AppUsage>): AppLibraryData {
+        val now = System.currentTimeMillis()
+        val suggestions = all
+            .filter { it.key in used }
+            .sortedByDescending { UsageRepository.score(used.getValue(it.key), now) }
+            .take(4)
+        val recent = all
+            .filter { it.installTime > 0 }
+            .sortedByDescending { it.installTime }
+            .take(4)
+        val folders = all
+            .groupBy { it.category }
+            .toSortedMap(compareBy { it.ordinal })
+            .map { (category, list) -> category to list }
+        return AppLibraryData(suggestions, recent, folders)
     }
 
     /** Called on resume: picks up a permission granted in the system settings. */
@@ -186,7 +227,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun refreshWallpaper() = wallpaper.refresh()
 
-    fun launch(app: AppInfo) = repo.launch(app)
+    fun launch(app: AppInfo, sourceBounds: Rect? = null, options: Bundle? = null) {
+        usage.recordLaunch(app.key)
+        repo.launch(app, sourceBounds, options)
+    }
     fun openAppInfo(app: AppInfo) = repo.openAppInfo(app)
     fun uninstall(app: AppInfo) = repo.uninstall(app)
     fun webSearch(query: String) = repo.webSearch(query, settings.value.searchEngine)

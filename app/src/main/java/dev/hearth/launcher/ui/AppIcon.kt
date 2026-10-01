@@ -110,7 +110,8 @@ internal val OnWallpaperText = TextStyle(
 
 @Immutable
 class AppActions(
-    val launch: (AppInfo) -> Unit,
+    /** Starts the app, zooming out of the icon at these bounds (root coordinates). */
+    val launch: (AppInfo, Rect?) -> Unit,
     /** Long press: opens the context menu next to the icon (bounds in root coordinates). */
     val menu: (AppInfo, Rect) -> Unit,
 )
@@ -186,7 +187,7 @@ fun AppIcon(
     showLabel: Boolean = true,
     onWallpaper: Boolean = true,
     fillCell: Boolean = false,
-    onLaunch: (AppInfo) -> Unit = actions.launch,
+    onLaunch: (AppInfo, Rect?) -> Unit = actions.launch,
 ) {
     val settings = LocalSettings.current
     val iconSize = settings.iconSize.dp
@@ -208,7 +209,7 @@ fun AppIcon(
                 .combinedClickable(
                     interactionSource = interaction,
                     indication = null,
-                    onClick = { onLaunch(app) },
+                    onClick = { onLaunch(app, bounds) },
                     onLongClick = {
                         if (settings.haptics) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         actions.menu(app, bounds)

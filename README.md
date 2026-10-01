@@ -15,6 +15,11 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   - Helligkeit/Drehung brauchen „Systemeinstellungen ändern“, Nicht stören den
     Zugriff auf „Bitte nicht stören“; das System-Kontrollzentrum bleibt unverändert
 - Suche: „Claude fragen“ übergibt die Frage an die Claude-App oder claude.ai
+- App-Mediathek wie bei iOS (hinter der letzten Seite): Glas-Ordner nach Kategorie,
+  „Vorschläge“ aus deinen meistgenutzten Apps, „Neu hinzugefügt“; die kleinen Icons
+  in der Ecke öffnen den ganzen Ordner
+- Schneller zurück in die nächste App: Rückkehr aus einer App scrollt nicht mehr zur
+  ersten Seite (das hat den ersten Tipp verschluckt), Apps starten mit Zoom aus dem Icon
 - Liquid Glass im Stil von Apple, fast überall: Icons, Dock, Uhr, Seitenpunkte,
   Such-Pille, Suche, Kontextmenüs und Einstellungen
   - Linsenwölbung am Rand, leichte Vergrößerung in der Mitte, Farbsäume (Android 13+)

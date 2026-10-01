@@ -27,6 +27,10 @@ data class AppInfo(
     val user: UserHandle,
     val icon: ImageBitmap,
     val iconKind: IconKind = IconKind.Shaped,
+    /** When the app was first installed, for "Neu hinzugefügt". */
+    val installTime: Long = 0L,
+    /** Folder in the App Library. */
+    val category: LibraryCategory = LibraryCategory.Other,
 ) {
     val packageName: String get() = component.packageName
 

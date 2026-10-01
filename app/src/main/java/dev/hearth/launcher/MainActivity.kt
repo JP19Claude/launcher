@@ -39,14 +39,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** True between leaving the launcher (onStop) and showing it again (onResume). */
+    private var wasInBackground = false
+
+    override fun onStop() {
+        super.onStop()
+        wasInBackground = true
+    }
+
     override fun onResume() {
         super.onResume()
+        wasInBackground = false
         viewModel.onResume()
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // Home button pressed while the launcher is already in front.
-        viewModel.onHomePressed()
+        // Home button: either pressed on the home screen itself, or on the way back from an app.
+        viewModel.onHomePressed(alreadyInFront = !wasInBackground)
     }
 }

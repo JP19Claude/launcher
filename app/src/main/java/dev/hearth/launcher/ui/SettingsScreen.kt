@@ -299,6 +299,11 @@ fun SettingsScreen(
                     SwitchRow(label = "Claude-Karte anzeigen", checked = s.showClaudeCard) { v ->
                         update { it.copy(showClaudeCard = v) }
                     }
+                    SwitchRow(
+                        label = "App-Mediathek",
+                        description = "Hinter der letzten Seite: alle Apps in Glas-Ordnern",
+                        checked = s.showAppLibrary,
+                    ) { v -> update { it.copy(showAppLibrary = v) } }
                     RowDivider()
                     ActionRow(label = "Hintergrundbild ändern", onClick = vm::openWallpaperPicker)
                 }
