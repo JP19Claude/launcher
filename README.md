@@ -93,9 +93,16 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   - Musik: Fortschrittsbalken zum Spulen (ziehen oder tippen); pausierte Musik bleibt
     10 Minuten in Glimmer (mit Play-Zeichen), damit sie sich dort wieder starten lässt
   - Schließt du eine App, fließt sie wie bei HarmonyOS in Glimmer: sie schrumpft zu einer
-    Karte in ihren Farben, steigt zur Kamera, wird dabei flach wie eine Kapsel und dunkel,
-    verschmilzt über eine flüssige Brücke mit der Insel (Android 12+), die sich kurz breit
-    drückt und zurückfedert (für Apps, die über Hearth geöffnet wurden; abschaltbar)
+    Karte in der Hintergrundfarbe der App (aus ihrem Theme), ihr Icon verschwimmt, sie steigt
+    zur Kamera, wird flach wie eine Kapsel und dunkel; die Insel streckt sich ihr entgegen,
+    beide verschmelzen über eine flüssige Brücke (Android 12+), dann drückt sich die Insel
+    kurz breit und federt zurück (für Apps, die über Hearth geöffnet wurden; abschaltbar)
+  - Entsperren wie Face ID: wacht das Handy gesperrt auf, wird Glimmer zum abgerundeten
+    Quadrat mit Face-ID-Symbol (oder Fingerabdruck), das atmet und sich umsieht; beim
+    Entsperren faltet es sich zu einem Haken
+  - Always-On-Display: Musik und Aktivitäten bleiben sichtbar, gedimmt und ohne Bewegung
+    (sofern das Handy Einblendungen im AOD zulässt)
+  - Laden zeigt eine kleine Batterie, die sich füllt
 - Foto-Widget: eigene Bilder als Diashow mit langsamem Zoom auf Glas, für Homescreen
   und Widget-Seite
 - Apps frei anordnen: Icon lange drücken und ziehen (Menü verschwindet beim Ziehen),

@@ -42,6 +42,11 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import android.content.Context
+import android.util.TypedValue
+import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.platform.LocalContext
 
 private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
 
@@ -58,6 +63,35 @@ private fun iconColor(app: AppInfo): Color = runCatching {
 }.getOrDefault(Color(0xFF2A2A2E))
 
 /**
+ * The color the app's own window has (its splash or window background), so the card looks
+ * like the app that just closed, not just its icon. Null if the app doesn't say.
+ */
+private fun appWindowColor(context: Context, app: AppInfo): Color? = runCatching {
+    val pm = context.packageManager
+    val activity = pm.getActivityInfo(app.component, 0)
+    val themeRes = activity.themeResource.takeIf { it != 0 } ?: activity.applicationInfo.theme
+    if (themeRes == 0) return@runCatching null
+    val appContext = context.createPackageContext(app.packageName, 0)
+    val theme = appContext.resources.newTheme().apply { applyStyle(themeRes, true) }
+    val attrs = buildList {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) add(android.R.attr.windowSplashScreenBackground)
+        add(android.R.attr.windowBackground)
+        add(android.R.attr.colorBackground)
+    }
+    val value = TypedValue()
+    attrs.firstNotNullOfOrNull { attr ->
+        if (theme.resolveAttribute(attr, value, true) &&
+            value.type >= TypedValue.TYPE_FIRST_COLOR_INT && value.type <= TypedValue.TYPE_LAST_COLOR_INT &&
+            (value.data ushr 24) > 0x80
+        ) {
+            Color(value.data)
+        } else {
+            null
+        }
+    }
+}.getOrNull()
+
+/**
  * Closing an app, the way HarmonyOS does it: the app shrinks to a card in its own colors,
  * rises towards the camera while it flattens into a capsule, turns dark, and flows into
  * Glimmer through a liquid neck (Android 12+); the island takes it in with a springy squash.
@@ -71,7 +105,12 @@ fun GlimmerFlyIn(app: AppInfo, island: DpSize?, onPulse: () -> Unit, onDone: () 
     val absorb = remember(app) { Animatable(0f) }
     val pulse by rememberUpdatedState(onPulse)
     val done by rememberUpdatedState(onDone)
-    val color = remember(app) { iconColor(app) }
+    val context = LocalContext.current
+    // The app's own background, softly mixed with its icon color so it never looks flat.
+    val color = remember(app) {
+        val icon = iconColor(app)
+        appWindowColor(context, app)?.let { lerpColor(it, icon, 0.25f) } ?: icon
+    }
     val icon = app.icon
 
     // Where Glimmer sits: centered on the camera cutout at the top, or the top middle.
@@ -162,15 +201,17 @@ fun GlimmerFlyIn(app: AppInfo, island: DpSize?, onPulse: () -> Unit, onDone: () 
             val (pos, size) = card(t)
             val radius = min(size.width, size.height) / 2f
             drawRoundRect(Color.Black, pos, size, CornerRadius(min(lerp(36.dp.toPx(), radius, t), radius)))
-            // The island, swelling as it takes the card in.
+            // The island reaches down for the card as it comes (like a drop pulled towards
+            // another), then swells as it takes it in.
             val a = absorb.value
-            val pw = targetW * (1f + 0.18f * a)
-            val ph = targetH * (1f - 0.10f * a)
+            val reach = smoothstep(0.5f, 0.82f, t) * (1f - smoothstep(0.84f, 0.95f, t))
+            val pw = targetW * (1f + 0.10f * reach + 0.18f * a)
+            val ph = targetH * (1f + 0.45f * reach - 0.10f * a)
             drawRoundRect(
                 Color.Black,
-                Offset(camX - pw / 2f, camY - ph / 2f),
+                Offset(camX - pw / 2f, camY - targetH / 2f),
                 Size(pw, ph),
-                CornerRadius(ph / 2f),
+                CornerRadius(min(ph, pw) / 2f),
                 alpha = smoothstep(0.32f, 0.5f, t),
             )
         }
@@ -195,6 +236,18 @@ fun GlimmerFlyIn(app: AppInfo, island: DpSize?, onPulse: () -> Unit, onDone: () 
                 cornerRadius = corner,
                 alpha = body,
             )
+            // Light along the top, like glass over the app's window.
+            drawRoundRect(
+                brush = Brush.verticalGradient(
+                    0f to Color.White.copy(alpha = 0.16f * body),
+                    0.25f to Color.Transparent,
+                    startY = pos.y,
+                    endY = pos.y + size.height,
+                ),
+                topLeft = pos,
+                size = size,
+                cornerRadius = corner,
+            )
             drawRoundRect(
                 Color.White.copy(alpha = 0.22f * body),
                 pos,
@@ -202,6 +255,25 @@ fun GlimmerFlyIn(app: AppInfo, island: DpSize?, onPulse: () -> Unit, onDone: () 
                 corner,
                 style = Stroke(1.dp.toPx()),
             )
+        }
+
+        // The icon blurs as it shrinks (Android 12+), the app's content dissolving into color.
+        Canvas(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    val t = travel.value.coerceIn(0f, 1f)
+                    val r = 22.dp.toPx() * smoothstep(0.08f, 0.5f, t)
+                    renderEffect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && r > 0.5f) {
+                        BlurEffect(r, r, TileMode.Decal)
+                    } else {
+                        null
+                    }
+                },
+        ) {
+            val t = travel.value.coerceIn(0f, 1f)
+            val appear = smoothstep(0f, 0.06f, t)
+            val (pos, size) = card(t)
             val iconAlpha = (1f - smoothstep(0.3f, 0.58f, t)) * appear
             if (iconAlpha > 0.001f) {
                 val iconSize = max(lerp(84.dp.toPx(), 18.dp.toPx(), t), 1f)

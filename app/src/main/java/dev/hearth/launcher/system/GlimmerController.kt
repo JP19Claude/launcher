@@ -17,6 +17,8 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
+import android.view.Display
+import android.hardware.display.DisplayManager
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -33,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import dev.hearth.launcher.data.GlimmerStyle
+import dev.hearth.launcher.data.GlimmerUnlock
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.LiveNotice
 import dev.hearth.launcher.data.MediaRepository
@@ -98,6 +101,31 @@ class GlimmerController(private val service: ControlCenterService) {
         d.isSink && d.type in HeadphoneTypes
     }
 
+    /** Face ID-style moment while unlocking: scanning when the screen wakes locked, a tick when unlocked. */
+    private val unlock = MutableStateFlow<IslandContent.Unlock?>(null)
+    private var unlockToken = 0
+    private fun showUnlock(success: Boolean, hideAfter: Long) {
+        val symbol = settings.glimmerUnlock
+        if (symbol == GlimmerUnlock.Off) return
+        unlock.value = IslandContent.Unlock(success = success, face = symbol == GlimmerUnlock.FaceId)
+        val token = ++unlockToken
+        handler.postDelayed({ if (token == unlockToken) unlock.value = null }, hideAfter)
+    }
+
+    /** The always-on display is showing (screen "off" but drawing). */
+    private val dozing = MutableStateFlow(false)
+    private val displayListener = object : DisplayManager.DisplayListener {
+        override fun onDisplayAdded(displayId: Int) = Unit
+        override fun onDisplayRemoved(displayId: Int) = Unit
+        override fun onDisplayChanged(displayId: Int) {
+            if (displayId == Display.DEFAULT_DISPLAY) updateDozing()
+        }
+    }
+    private fun updateDozing() {
+        val state = service.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)?.state
+        dozing.value = state == Display.STATE_DOZE || state == Display.STATE_DOZE_SUSPEND
+    }
+
     /** On the lock screen Glimmer shows live activities, but no empty idle pill. */
     private val locked = MutableStateFlow(false)
     private fun updateLocked() {
@@ -118,8 +146,22 @@ class GlimmerController(private val service: ControlCenterService) {
             when (intent.action) {
                 Intent.ACTION_SCREEN_OFF, Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> {
                     updateLocked()
+                    updateDozing()
                     // Unlocking with the fingerprint can come a moment after the screen turns on.
-                    handler.postDelayed({ updateLocked() }, 600)
+                    handler.postDelayed({
+                        updateLocked()
+                        updateDozing()
+                    }, 600)
+                    when (intent.action) {
+                        // Woken up while locked: the face (or finger) is being checked.
+                        Intent.ACTION_SCREEN_ON -> if (locked.value) showUnlock(success = false, hideAfter = 2600)
+                        // Unlocked: the scan turns into a tick, then the island goes back.
+                        Intent.ACTION_USER_PRESENT -> showUnlock(success = true, hideAfter = 1250)
+                        else -> {
+                            unlockToken++
+                            unlock.value = null
+                        }
+                    }
                 }
                 Intent.ACTION_POWER_CONNECTED -> {
                     val level = batteryLevel()
@@ -207,6 +249,8 @@ class GlimmerController(private val service: ControlCenterService) {
         }
         batteryFull = true
         startHeadphoneWatch()
+        runCatching { service.getSystemService(DisplayManager::class.java)?.registerDisplayListener(displayListener, handler) }
+        updateDozing()
         ContextCompat.registerReceiver(service, systemReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         receiverRegistered = true
         scope = MainScope().also { s ->
@@ -254,6 +298,8 @@ class GlimmerController(private val service: ControlCenterService) {
     }
 
     fun stop() {
+        runCatching { service.getSystemService(DisplayManager::class.java)?.unregisterDisplayListener(displayListener) }
+        unlock.value = null
         audioCallback?.let { cb ->
             runCatching { service.getSystemService(AudioManager::class.java)?.unregisterAudioDeviceCallback(cb) }
         }
@@ -328,6 +374,9 @@ class GlimmerController(private val service: ControlCenterService) {
                 val pulseCount by pulse.collectAsStateWithLifecycle()
                 val sideways by landscape.collectAsStateWithLifecycle()
                 val onLockScreen by locked.collectAsStateWithLifecycle()
+                val unlocking by unlock.collectAsStateWithLifecycle()
+                val aod by dozing.collectAsStateWithLifecycle()
+                val onAod = aod && settings.glimmerAod
 
                 val ongoing = live.sortedBy { priority(it.kind) }
                 val ordered = buildList<IslandContent> {
@@ -347,10 +396,18 @@ class GlimmerController(private val service: ControlCenterService) {
                     ordered
                 }
                 lastOrder = activities.map { islandKey(it) }
+                // On the always-on display only music and live activities, still and dimmed.
+                val shown = when {
+                    aod && !settings.glimmerAod -> emptyList()
+                    onAod -> activities.filter { it is IslandContent.Media || it is IslandContent.Live }
+                    else -> activities
+                }
                 // On the lock screen too, but without the empty idle pill there.
-                val main = activities.firstOrNull()
-                    ?: if (settings.glimmerIdlePill && !sideways && !onLockScreen) IslandContent.Idle else IslandContent.Hidden
-                val second = activities.drop(1).firstOrNull()
+                // Unlocking (Face ID moment) goes before everything else.
+                val main = unlocking
+                    ?: shown.firstOrNull()
+                    ?: if (settings.glimmerIdlePill && !sideways && !onLockScreen && !aod) IslandContent.Idle else IslandContent.Hidden
+                val second = if (unlocking != null) null else shown.drop(1).firstOrNull()
 
                 HearthTheme(dark = true) {
                     CompositionLocalProvider(
@@ -360,7 +417,9 @@ class GlimmerController(private val service: ControlCenterService) {
                         GlimmerIsland(
                             content = main,
                             secondary = second,
-                            expanded = isExpanded && main !is IslandContent.Idle && main !is IslandContent.Hidden,
+                            expanded = isExpanded && !aod && main !is IslandContent.Idle && main !is IslandContent.Hidden &&
+                                main !is IslandContent.Unlock,
+                            dimmed = onAod,
                             style = settings.glimmerStyle,
                             screenWidthDp = service.resources.configuration.screenWidthDp.toFloat(),
                             topInset = (topInset / density).dp,

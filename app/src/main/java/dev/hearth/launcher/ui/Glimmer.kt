@@ -90,6 +90,14 @@ import androidx.compose.ui.graphics.Brush
 import dev.hearth.launcher.data.GlimmerMusicStyle
 import kotlin.math.cos
 import kotlin.math.sin
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.translate
 
 /** What Glimmer shows right now. */
 @Immutable
@@ -105,6 +113,9 @@ sealed interface IslandContent {
     data class Live(val notice: LiveNotice) : IslandContent
 
     data class Message(val notice: LiveNotice) : IslandContent
+
+    /** Face ID moment: scanning while the phone checks, then a tick once it's unlocked. */
+    data class Unlock(val success: Boolean, val face: Boolean) : IslandContent
 
     /** Short system moments: charging, silent mode, low battery. */
     data class Alert(
@@ -122,6 +133,11 @@ private val Orange = Color(0xFFFF9F0A)
 /** Height of the pill when not expanded: as tall as the status bar row, like the camera ring. */
 const val ISLAND_HEIGHT_DP = 30f
 
+private const val UNLOCK_SIZE_DP = 92f
+
+/** True on the always-on display: everything holds still (no frames while the phone dozes). */
+private val LocalGlimmerStill = compositionLocalOf { false }
+
 /** Size of the secondary bubble next to the pill, plus the gap. */
 private val SecondaryExtra = 36.dp
 
@@ -136,6 +152,8 @@ fun islandSize(content: IslandContent, expanded: Boolean, screenWidthDp: Float, 
     return when {
         content is IslandContent.Hidden -> DpSize(0.dp, 0.dp)
         content is IslandContent.Idle -> DpSize((screenWidthDp * 0.27f).coerceIn(86f, 110f).dp, ISLAND_HEIGHT_DP.dp)
+        // Like Face ID on the iPhone: the island becomes a rounded square for the moment.
+        content is IslandContent.Unlock -> DpSize(UNLOCK_SIZE_DP.dp, UNLOCK_SIZE_DP.dp)
         !expanded -> DpSize(compact, ISLAND_HEIGHT_DP.dp)
         else -> DpSize(
             full,
@@ -189,6 +207,8 @@ fun GlimmerIsland(
     onCollapse: () -> Unit,
     onOpen: (IslandContent) -> Unit,
     onTargetSize: (DpSize) -> Unit,
+    /** Always-on display: dimmed and without motion. */
+    dimmed: Boolean = false,
 ) {
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
@@ -206,7 +226,11 @@ fun GlimmerIsland(
     val mainWidth = if (hasSecondary) target.width - SecondaryExtra else target.width
     val width by animateDpAsState(mainWidth, morph, label = "islandWidth")
     val height by animateDpAsState(target.height, morph, label = "islandHeight")
-    val corner = if (expanded) 38.dp else height / 2
+    val corner = when {
+        expanded -> 38.dp
+        content is IslandContent.Unlock -> 30.dp
+        else -> height / 2
+    }
 
     // Something new arrives: a little hop and a shimmer in its color, like a drop landing.
     val animations = LocalSettings.current.animations
@@ -217,7 +241,7 @@ fun GlimmerIsland(
     val key = islandKey(content)
     val lastPulse = remember { intArrayOf(pulse) }
     LaunchedEffect(key, pulse) {
-        if (!animations || content is IslandContent.Hidden) return@LaunchedEffect
+        if (!animations || dimmed || content is IslandContent.Hidden || content is IslandContent.Unlock) return@LaunchedEffect
         val pulsed = pulse != lastPulse[0]
         lastPulse[0] = pulse
         if (content is IslandContent.Idle && !pulsed) return@LaunchedEffect
@@ -240,24 +264,27 @@ fun GlimmerIsland(
     }
     val glowColor = glowColorOf(content, LocalSettings.current.accent.color)
     val tap: () -> Unit = {
-        if (content !is IslandContent.Idle) {
+        if (content !is IslandContent.Idle && content !is IslandContent.Unlock) {
             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             if (tapOpens && !expanded) onOpen(content) else onToggle()
         }
     }
     val hold: () -> Unit = {
-        if (content !is IslandContent.Idle) {
+        if (content !is IslandContent.Idle && content !is IslandContent.Unlock) {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             if (tapOpens && !expanded) onExpand() else onOpen(content)
         }
     }
 
+    CompositionLocalProvider(LocalGlimmerStill provides dimmed) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         if (content is IslandContent.Hidden) return@Box
         Row(
             Modifier
                 .padding(top = topInset)
                 .graphicsLayer {
+                    // Always-on display: softer, so it doesn't glare or burn in.
+                    alpha = if (dimmed) 0.62f else 1f
                     val s = if (expanded) 1f else hop.value
                     val q = if (expanded) 0f else squash.value
                     scaleX = s * (1f + 0.14f * q)
@@ -355,6 +382,7 @@ fun GlimmerIsland(
             }
         }
     }
+    }
 }
 
 /** The color Glimmer shimmers in for an activity. */
@@ -363,6 +391,7 @@ private fun glowColorOf(content: IslandContent, accent: Color): Color = when (co
     is IslandContent.Message -> accent
     is IslandContent.Media -> content.playing.artPalette.firstOrNull() ?: content.playing.artColor ?: Color.White
     is IslandContent.Live -> noticeColor(content.notice.kind)
+    is IslandContent.Unlock -> Color.White
     else -> Color.White
 }
 
@@ -373,6 +402,8 @@ internal fun islandKey(content: IslandContent): String = when (content) {
     is IslandContent.Alert -> "alert-${content.title}"
     IslandContent.Idle -> "idle"
     IslandContent.Hidden -> "hidden"
+    // One key for scanning and done, so the scan turns into the tick in place.
+    is IslandContent.Unlock -> "unlock"
 }
 
 @Composable
@@ -459,6 +490,12 @@ private fun AppBadge(notice: LiveNotice, size: Dp) {
 @Composable
 private fun CompactContent(content: IslandContent) {
     if (content is IslandContent.Idle || content is IslandContent.Hidden) return
+    if (content is IslandContent.Unlock) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            UnlockGlyph(content, Modifier.size(50.dp))
+        }
+        return
+    }
     if (content is IslandContent.Media && LocalSettings.current.glimmerMusicStyle == GlimmerMusicStyle.Hyper) {
         HyperCompact(content.playing)
         return
@@ -497,15 +534,22 @@ private fun CompactContent(content: IslandContent) {
                 }
             }
             is IslandContent.Message -> PulseDot(LocalSettings.current.accent.color)
-            is IslandContent.Alert -> Text(
-                content.value,
-                color = content.color,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 96.dp),
-            )
+            is IslandContent.Alert -> Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    content.value,
+                    color = content.color,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 96.dp),
+                )
+                // Charging and battery: a small battery filling up, like on the iPhone.
+                content.level?.let { level ->
+                    Spacer(Modifier.width(5.dp))
+                    LevelBar(level, content.color, Modifier.size(24.dp, 12.dp))
+                }
+            }
             else -> Unit
         }
         Spacer(Modifier.width(2.dp))
@@ -515,6 +559,10 @@ private fun CompactContent(content: IslandContent) {
 /** A small dot that breathes: something new is waiting. */
 @Composable
 private fun PulseDot(color: Color) {
+    if (LocalGlimmerStill.current) {
+        Box(Modifier.size(8.dp).clip(CircleShape).background(color))
+        return
+    }
     val transition = rememberInfiniteTransition(label = "pulseDot")
     val scale by transition.animateFloat(0.6f, 1f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "dotScale")
     Box(
@@ -703,8 +751,13 @@ private fun paletteOf(p: NowPlaying): List<Color> {
 @Composable
 private fun HyperCompact(p: NowPlaying) {
     val colors = paletteOf(p)
-    val transition = rememberInfiniteTransition(label = "hyperGlow")
-    val breath by transition.animateFloat(0.55f, 1f, infiniteRepeatable(tween(1800), RepeatMode.Reverse), label = "breath")
+    val still = LocalGlimmerStill.current
+    val breath = if (still) {
+        0.5f
+    } else {
+        val transition = rememberInfiniteTransition(label = "hyperGlow")
+        transition.animateFloat(0.55f, 1f, infiniteRepeatable(tween(1800), RepeatMode.Reverse), label = "breath").value
+    }
     Box(
         Modifier
             .fillMaxSize()
@@ -750,6 +803,10 @@ private fun HyperCompact(p: NowPlaying) {
 /** Seven slim bars rising and falling like a sound wave, painted across the cover's colors. */
 @Composable
 private fun HyperWave(colors: List<Color>, playing: Boolean, modifier: Modifier) {
+    if (LocalGlimmerStill.current) {
+        StillBars(colors, 7, modifier)
+        return
+    }
     val transition = rememberInfiniteTransition(label = "hyperWave")
     val phase by transition.animateFloat(
         0f,
@@ -893,9 +950,128 @@ private fun IslandButton(glyph: Glyph, big: Boolean = false, onClick: () -> Unit
     }
 }
 
+/**
+ * Face ID (or the fingerprint) like on the iPhone: the frame and face breathe and look around
+ * while the phone checks, then everything folds into a tick once it's unlocked.
+ */
+@Composable
+private fun UnlockGlyph(content: IslandContent.Unlock, modifier: Modifier) {
+    val done = remember { Animatable(if (content.success) 1f else 0f) }
+    LaunchedEffect(content.success) {
+        if (content.success) done.animateTo(1f, tween(460, easing = FastOutSlowInEasing)) else done.snapTo(0f)
+    }
+    val still = LocalGlimmerStill.current
+    val transition = rememberInfiniteTransition(label = "unlockScan")
+    val breath by transition.animateFloat(0.93f, 1.03f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "breath")
+    val scan by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1300, easing = LinearEasing)), label = "scan")
+    Canvas(modifier) {
+        val d = done.value
+        val w = size.minDimension
+        val stroke = w * 0.07f
+        val lineStyle = Stroke(width = stroke, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val checking = if (still) 1f else breath
+        // The frame: four rounded corners, pulling in a little once done.
+        scale(checking * (1f - 0.14f * d), center) {
+            val inset = w * 0.06f
+            val len = w * 0.24f
+            val r = w * 0.12f
+            val corner = Path().apply {
+                moveTo(inset, inset + len)
+                lineTo(inset, inset + r)
+                quadraticBezierTo(inset, inset, inset + r, inset)
+                lineTo(inset + len, inset)
+            }
+            val frameAlpha = 1f - 0.5f * d
+            for ((sx, sy) in listOf(1f to 1f, -1f to 1f, 1f to -1f, -1f to -1f)) {
+                scale(sx, sy, center) { drawPath(corner, Color.White.copy(alpha = frameAlpha), style = lineStyle) }
+            }
+        }
+        val features = 1f - ((d - 0f) / 0.45f).coerceIn(0f, 1f)
+        if (features > 0f) {
+            val look = if (still) 0f else sin(scan * 2f * Math.PI.toFloat()) * w * 0.035f
+            if (content.face) {
+                translate(left = look) {
+                    val c = Color.White.copy(alpha = features)
+                    // Eyes, nose, smile.
+                    drawLine(c, Offset(w * 0.36f, w * 0.37f), Offset(w * 0.36f, w * 0.46f), stroke, StrokeCap.Round)
+                    drawLine(c, Offset(w * 0.64f, w * 0.37f), Offset(w * 0.64f, w * 0.46f), stroke, StrokeCap.Round)
+                    val nose = Path().apply {
+                        moveTo(w * 0.52f, w * 0.37f)
+                        lineTo(w * 0.52f, w * 0.56f)
+                        lineTo(w * 0.46f, w * 0.56f)
+                    }
+                    drawPath(nose, c, style = lineStyle)
+                    drawArc(
+                        c,
+                        startAngle = 25f,
+                        sweepAngle = 130f,
+                        useCenter = false,
+                        topLeft = Offset(w * 0.33f, w * 0.44f),
+                        size = Size(w * 0.34f, w * 0.26f),
+                        style = lineStyle,
+                    )
+                }
+            } else {
+                // Fingerprint ridges, lit up one after another while checking.
+                val c = Offset(w * 0.5f, w * 0.56f)
+                for (i in 0 until 4) {
+                    val radius = w * (0.1f + i * 0.075f)
+                    val lit = if (still) 1f else ((scan * 4f - i).coerceIn(0f, 1f))
+                    drawArc(
+                        Color.White.copy(alpha = features * (0.35f + 0.65f * lit)),
+                        startAngle = 200f - i * 6f,
+                        sweepAngle = 220f + i * 12f,
+                        useCenter = false,
+                        topLeft = Offset(c.x - radius, c.y - radius),
+                        size = Size(radius * 2f, radius * 2f),
+                        style = lineStyle,
+                    )
+                }
+            }
+        }
+        // The tick, drawn on as the face fades.
+        val tickProgress = ((d - 0.3f) / 0.7f).coerceIn(0f, 1f)
+        if (tickProgress > 0f) {
+            val tick = Path().apply {
+                moveTo(w * 0.30f, w * 0.52f)
+                lineTo(w * 0.45f, w * 0.66f)
+                lineTo(w * 0.72f, w * 0.36f)
+            }
+            val measure = PathMeasure().apply { setPath(tick, false) }
+            val part = Path()
+            measure.getSegment(0f, measure.length * tickProgress, part, true)
+            drawPath(part, Color.White, style = Stroke(width = stroke * 1.2f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+    }
+}
+
+/** Bars standing still at gentle heights (always-on display). */
+@Composable
+private fun StillBars(colors: List<Color>, count: Int, modifier: Modifier) {
+    Canvas(modifier) {
+        val gap = size.width * 0.08f
+        val barWidth = (size.width - gap * (count - 1)) / count
+        val brush = Brush.horizontalGradient(if (colors.size > 1) colors else colors + colors)
+        for (i in 0 until count) {
+            val level = 0.35f + 0.4f * ((i * 37) % 10) / 10f
+            val h = size.height * level
+            drawRoundRect(
+                brush = brush,
+                topLeft = Offset(i * (barWidth + gap), (size.height - h) / 2f),
+                size = Size(barWidth, h),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 2f),
+            )
+        }
+    }
+}
+
 /** Four bars dancing to the music (still while paused), in the cover's color. */
 @Composable
 private fun Equalizer(color: Color, playing: Boolean, modifier: Modifier) {
+    if (LocalGlimmerStill.current) {
+        StillBars(listOf(if (color.luminanceIsDark()) Color.White else color), 4, modifier)
+        return
+    }
     val transition = rememberInfiniteTransition(label = "equalizer")
     val bars = listOf(380, 520, 300, 450).mapIndexed { i, duration ->
         transition.animateFloat(
