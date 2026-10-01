@@ -69,6 +69,7 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 fun WidgetPage(repo: WidgetRepository, onAddWidget: () -> Unit, modifier: Modifier = Modifier) {
+    // modifier carries the page transition; the scrolling column sits inside it.
     val widgets by repo.widgets.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf(false) }
     if (widgets.isEmpty() && editing) editing = false
@@ -110,6 +111,7 @@ fun WidgetPage(repo: WidgetRepository, onAddWidget: () -> Unit, modifier: Modifi
 
         widgets.forEachIndexed { index, widget ->
             key(widget.id) {
+                Box(Modifier.staggeredEntrance(index + 1)) {
                 WidgetCard(
                     repo = repo,
                     widget = widget,
@@ -117,6 +119,7 @@ fun WidgetPage(repo: WidgetRepository, onAddWidget: () -> Unit, modifier: Modifi
                     canMoveUp = index > 0,
                     canMoveDown = index < widgets.lastIndex,
                 )
+                }
             }
         }
 
@@ -202,7 +205,7 @@ private fun WidgetCard(
 
 /** The real Android widget view, told how much room it has. */
 @Composable
-private fun HostedWidget(repo: WidgetRepository, id: Int, info: AppWidgetProviderInfo, modifier: Modifier) {
+internal fun HostedWidget(repo: WidgetRepository, id: Int, info: AppWidgetProviderInfo, modifier: Modifier) {
     BoxWithConstraints(modifier) {
         val widthDp = maxWidth.value.toInt()
         val heightDp = maxHeight.value.toInt()

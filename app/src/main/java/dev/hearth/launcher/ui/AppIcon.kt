@@ -205,19 +205,24 @@ private fun glyphFilter(style: IconStyle, kind: IconKind, accent: AccentColor): 
 @Composable
 fun AppIconImage(app: AppInfo, size: Dp, modifier: Modifier = Modifier) {
     val settings = LocalSettings.current
+    val light = LocalGlassLight.current
+    val sheen = if (settings.iconGloss) Modifier.glassSheen(light, settings.glassSpecular) else Modifier
     when (app.iconKind) {
         IconKind.Shaped -> Image(
             bitmap = app.icon,
             contentDescription = app.label,
             modifier = modifier
                 .size(size)
-                .shadow(elevation = 6.dp, shape = settings.iconShape.clipShape(), clip = true),
+                .shadow(elevation = 6.dp, shape = settings.iconShape.clipShape(), clip = true)
+                .then(sheen),
         )
 
         IconKind.Free -> Image(
             bitmap = app.icon,
             contentDescription = app.label,
-            modifier = modifier.size(size),
+            modifier = modifier
+                .size(size)
+                .then(sheen),
         )
 
         IconKind.Glyph, IconKind.MonoGlyph -> LiquidGlass(

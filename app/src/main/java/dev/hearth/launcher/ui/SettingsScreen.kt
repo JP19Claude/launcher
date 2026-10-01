@@ -64,6 +64,7 @@ import dev.hearth.launcher.data.GlassTint
 import dev.hearth.launcher.data.IconShape
 import dev.hearth.launcher.data.IconStyle
 import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.data.PageTransition
 import dev.hearth.launcher.data.SearchEngine
 import dev.hearth.launcher.data.SwipeDownAction
 import dev.hearth.launcher.data.TriggerZone
@@ -211,6 +212,11 @@ fun SettingsScreen(
                         checked = s.glassMotion,
                     ) { v -> update { it.copy(glassMotion = v) } }
                     SwitchRow(
+                        label = "Glanz auf Icons",
+                        description = "Lichtreflex auf jedem Icon, der beim Kippen mitwandert",
+                        checked = s.iconGloss,
+                    ) { v -> update { it.copy(iconGloss = v) } }
+                    SwitchRow(
                         label = "Glas reagiert auf Berührung",
                         description = "Wölbt sich und leuchtet unter dem Finger",
                         checked = s.glassInteractive,
@@ -226,6 +232,23 @@ fun SettingsScreen(
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
                         Note("Lichtbrechung, Farbsäume und Glanzlichter brauchen Android 13. Auf diesem Gerät gibt es Unschärfe und Lichtkanten.")
                     }
+                }
+            }
+
+            item {
+                Section("Animationen") {
+                    SwitchRow(
+                        label = "Animationen",
+                        description = "Zoom beim Zurückkehren, rollende Uhr, Karten erscheinen nacheinander",
+                        checked = s.animations,
+                    ) { v -> update { it.copy(animations = v) } }
+                    ChoiceRow(
+                        label = "Seitenwechsel",
+                        options = PageTransition.entries,
+                        selected = s.pageTransition,
+                        optionLabel = { it.label },
+                        onSelect = { t -> update { it.copy(pageTransition = t) } },
+                    )
                 }
             }
 
@@ -563,9 +586,18 @@ private fun HiddenAppsPicker(
     }
 }
 
+private val SectionOrder = listOf(
+    "Design-Vorlage", "Liquid Glass", "Animationen", "Icons", "Icon-Pack", "Homescreen",
+    "Gesten & Kontrollzentrum", "Dock", "Suche", "Allgemein", "Ausgeblendete Apps",
+)
+
 @Composable
 private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.padding(vertical = 8.dp)) {
+    Column(
+        Modifier
+            .staggeredEntrance(SectionOrder.indexOf(title).coerceAtLeast(0))
+            .padding(vertical = 8.dp),
+    ) {
         Text(
             text = title.uppercase(),
             color = TextSecondary,

@@ -146,13 +146,24 @@ fun SearchOverlay(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
         )
 
+        // All results sit on one big sheet of liquid glass.
+        LiquidGlass(
+            cornerRadius = 30.dp,
+            refraction = 22.dp,
+            blur = 20.dp,
+            modifier = Modifier
+                .padding(start = 10.dp, end = 10.dp, bottom = 10.dp)
+                .fillMaxSize()
+                .clip(RoundedCornerShape(30.dp)),
+        ) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(LocalSettings.current.columns),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp),
+            contentPadding = PaddingValues(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 24.dp),
         ) {
             items(results, key = { it.key }) { app ->
-                Box(contentAlignment = Alignment.Center) {
+                // Results glide into place while typing.
+                Box(Modifier.animateItem(), contentAlignment = Alignment.Center) {
                     AppIcon(app, actions, onWallpaper = false, fillCell = true, onLaunch = onLaunch)
                 }
             }
@@ -164,6 +175,7 @@ fun SearchOverlay(
                     WebSearchRow(query = trimmed, onClick = { onWebSearch(trimmed) })
                 }
             }
+        }
         }
     }
     }

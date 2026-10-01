@@ -18,7 +18,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -58,6 +62,8 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
@@ -72,6 +78,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -91,7 +98,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
+import dev.hearth.launcher.data.HomeWidget
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -100,6 +111,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
@@ -110,6 +122,7 @@ import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.SwipeDownAction
 import dev.hearth.launcher.system.ControlCenterService
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -137,6 +150,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     }
 
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val storagePermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { vm.refreshWallpaper() }
@@ -164,9 +178,14 @@ fun LauncherScreen(vm: LauncherViewModel) {
         val dockKeys = dock.map { it.key }.toSet()
         apps.filterNot { it.key in dockKeys || it.key in settings.removedFromHome }
     }
-    val pages = remember(homeApps, columns, rows, firstPageRows) {
-        paginate(homeApps, columns, rows, firstPageRows)
+    val homeWidgets by vm.widgets.homeWidgets.collectAsStateWithLifecycle()
+    val pages = remember(homeApps, homeWidgets, columns, rows, firstPageRows) {
+        layoutHome(homeApps, homeWidgets, columns, rows, firstPageRows)
     }
+    var toast by remember { mutableStateOf<GlassToast?>(null) }
+    // Size of the pager, to turn a widget's size in dp into grid cells.
+    var pagerSize by remember { mutableStateOf(IntSize.Zero) }
+    val density = LocalDensity.current
     val libraryPages = if (settings.showAppLibrary) 1 else 0
     val widgetPages = if (settings.showWidgetPage) 1 else 0
     // Page order: [widgets] home pages… [App Library]; the launcher opens on the first home page.
@@ -178,9 +197,27 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val bindWidget = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         activity?.let { vm.widgets.onBindResult(result.resultCode == Activity.RESULT_OK, it) }
     }
+    // null: widget page; otherwise the home page the new widget goes to.
+    var widgetTarget by remember { mutableStateOf<Int?>(null) }
     val addWidget: (AppWidgetProviderInfo) -> Unit = { info ->
         widgetPickerOpen = false
-        val permission = vm.widgets.begin(info)
+        val slot = widgetTarget?.let { targetPage ->
+            val cellW = with(density) { pagerSize.width.toDp().value } / columns
+            val cellH = with(density) { pagerSize.height.toDp().value } / rows
+            val (minW, minH) = vm.widgets.minSizeDp(info)
+            val wantX = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && info.targetCellWidth > 0) {
+                info.targetCellWidth.coerceIn(1, columns)
+            } else {
+                spanFor(minW, cellW, columns)
+            }
+            val wantY = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && info.targetCellHeight > 0) {
+                info.targetCellHeight.coerceIn(1, rows)
+            } else {
+                spanFor(minH, cellH, rows)
+            }
+            findFreeSlot(homeWidgets, pages.size, targetPage, wantX, wantY, columns, rows, firstPageRows)
+        }
+        val permission = vm.widgets.begin(info, slot)
         if (permission == null) {
             activity?.let { vm.widgets.finishBinding(it) }
         } else {
@@ -233,7 +270,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
             items = listOf(
                 GlassMenuItem("Launcher-Einstellungen", Icons.Rounded.Settings) { settingsOpen = true },
                 GlassMenuItem("Kontrollzentrum", Icons.Rounded.Home) { controlOpen = true },
-                GlassMenuItem("Widget hinzufügen", Icons.Rounded.Add) { widgetPickerOpen = true },
+                GlassMenuItem("Widget hierher", Icons.Rounded.Add) {
+                    widgetTarget = (pagerState.currentPage - widgetPages).coerceAtLeast(0)
+                    widgetPickerOpen = true
+                },
                 GlassMenuItem("Apps auswählen", Icons.Rounded.CheckCircle) {
                     selecting = true
                     selected = emptySet()
@@ -281,6 +321,23 @@ fun LauncherScreen(vm: LauncherViewModel) {
             settingsOpen -> settingsOpen = false
             else -> searchOpen = false
         }
+    }
+
+    // Coming back to the home screen: icons and dock zoom in softly, like on iOS.
+    val reveal = remember { Animatable(1f) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, settings.animations) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP && settings.animations) {
+                // Set while hidden, so the zoom starts with the first visible frame.
+                scope.launch { reveal.snapTo(0f) }
+            }
+            if (event == Lifecycle.Event.ON_START) {
+                scope.launch { reveal.animateTo(1f, spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)) }
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
     }
 
     val light = rememberGlassLight(settings.glassMotion)
@@ -345,14 +402,38 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             onSwipeDown = onSwipeDown,
                         ),
                 ) {
-                    Column(Modifier.fillMaxSize().systemBarsPadding()) {
+                    Column(
+                        Modifier
+                            .fillMaxSize()
+                            .systemBarsPadding()
+                            .graphicsLayer {
+                                val r = reveal.value
+                                val s = 0.93f + 0.07f * r
+                                scaleX = s
+                                scaleY = s
+                                alpha = 0.35f + 0.65f * r
+                            },
+                    ) {
                         HorizontalPager(
                             state = pagerState,
                             beyondViewportPageCount = 1,
-                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .onSizeChanged { pagerSize = it },
                         ) { pagerPage ->
+                            val pageMotion = Modifier.pageTransition(settings.pageTransition) {
+                                (pagerState.currentPage - pagerPage) + pagerState.currentPageOffsetFraction
+                            }
                             if (pagerPage < widgetPages) {
-                                WidgetPage(repo = vm.widgets, onAddWidget = { widgetPickerOpen = true })
+                                WidgetPage(
+                                    repo = vm.widgets,
+                                    onAddWidget = {
+                                        widgetTarget = null
+                                        widgetPickerOpen = true
+                                    },
+                                    modifier = pageMotion,
+                                )
                                 return@HorizontalPager
                             }
                             val page = pagerPage - widgetPages
@@ -362,11 +443,11 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                     actions = actions,
                                     onOpenSearch = { searchOpen = true },
                                     onOpenFolder = { openFolder = it },
-                                    modifier = Modifier.fadingEdges(),
+                                    modifier = pageMotion.fadingEdges(),
                                 )
                                 return@HorizontalPager
                             }
-                            Box(Modifier.fillMaxSize()) {
+                            Box(Modifier.fillMaxSize().then(pageMotion)) {
                                 LongPressArea(onLongPress = homeMenu, modifier = Modifier.matchParentSize())
                                 Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
                                     if (page == 0) {
@@ -386,11 +467,41 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                     } else {
                                         Spacer(Modifier.padding(top = 12.dp))
                                     }
-                                    AppGrid(
-                                        apps = pages[page],
+                                    HomePageGrid(
+                                        page = pages[page],
                                         columns = columns,
-                                        rows = if (page == 0) firstPageRows else rows,
                                         actions = actions,
+                                        widgets = vm.widgets,
+                                        onWidgetMenu = { widget, bounds ->
+                                            menu = widgetMenu(
+                                                widget = widget,
+                                                bounds = bounds,
+                                                pageCount = pages.size,
+                                                tryPlace = { candidate ->
+                                                    val ok = canPlace(candidate, homeWidgets, columns, rows, firstPageRows)
+                                                    if (ok) vm.widgets.moveHome(candidate)
+                                                    ok
+                                                },
+                                                findSlot = { targetPage ->
+                                                    findFreeSlot(
+                                                        homeWidgets.filterNot { it.id == widget.id }, pages.size,
+                                                        targetPage, widget.spanX, widget.spanY, columns, rows, firstPageRows,
+                                                    ).takeIf { it.page == targetPage }
+                                                },
+                                                onRemove = {
+                                                    vm.widgets.removeHome(widget.id)
+                                                    toast = GlassToast("Widget entfernt")
+                                                },
+                                            )
+                                        },
+                                        onWidgetDrop = { widget, dCols, dRows ->
+                                            val moved = widget.copy(col = widget.col + dCols, row = widget.row + dRows)
+                                            if (canPlace(moved, homeWidgets, columns, rows, firstPageRows)) {
+                                                vm.widgets.moveHome(moved)
+                                            } else {
+                                                toast = GlassToast("Dort ist kein Platz")
+                                            }
+                                        },
                                         modifier = Modifier.weight(1f),
                                     )
                                 }
@@ -506,15 +617,21 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 visible = selecting,
                 count = selected.size,
                 onHide = {
-                    vm.hideAll(selected)
+                    val keys = selected
+                    vm.hideAll(keys)
+                    toast = GlassToast("${keys.size} ausgeblendet", "Rückgängig") { vm.unhide(keys) }
                     endSelection()
                 },
                 onRemoveFromHome = {
-                    vm.removeFromHome(selected)
+                    val keys = selected
+                    vm.removeFromHome(keys)
+                    toast = GlassToast("${keys.size} vom Startbildschirm entfernt", "Rückgängig") { vm.addToHome(keys) }
                     endSelection()
                 },
                 onDone = endSelection,
             )
+
+            GlassToastHost(toast = toast, onDismiss = { toast = null })
 
             GlassMenuOverlay(request = menu, onDismiss = { menu = null })
         }
@@ -546,13 +663,6 @@ private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Un
     add(GlassMenuItem("Auswählen", Icons.Rounded.CheckCircle, onClick = onSelect))
     add(GlassMenuItem("Ausblenden", Icons.Rounded.Clear) { vm.hide(app) })
     add(GlassMenuItem("Deinstallieren", Icons.Rounded.Delete, destructive = true) { vm.uninstall(app) })
-}
-
-/** First page holds the clock, so it has fewer rows of apps. */
-private fun paginate(apps: List<AppInfo>, columns: Int, rows: Int, firstPageRows: Int): List<List<AppInfo>> {
-    val firstPageSize = columns * firstPageRows
-    val rest = apps.drop(firstPageSize).chunked(columns * rows)
-    return listOf(apps.take(firstPageSize)) + rest
 }
 
 /**
@@ -682,7 +792,7 @@ private fun LargeClock(settings: LauncherSettings, modifier: Modifier = Modifier
                 style = OnWallpaperText,
             )
         }
-        Text(
+        RollingText(
             text = time,
             color = Color.White,
             fontFamily = FontFamily.Serif,
@@ -714,7 +824,7 @@ private fun ColorOSClock(settings: LauncherSettings, modifier: Modifier = Modifi
     val accent = settings.accent.color
 
     Column(modifier) {
-        Text(
+        RollingText(
             text = time,
             color = Color.White,
             fontWeight = FontWeight.Light,
@@ -850,7 +960,7 @@ private fun GlassClockCard(settings: LauncherSettings, modifier: Modifier = Modi
                         style = OnWallpaperText,
                     )
                 }
-                Text(
+                RollingText(
                     text = time,
                     color = Color.White,
                     fontFamily = FontFamily.Serif,
@@ -877,6 +987,11 @@ private fun GlassClockCard(settings: LauncherSettings, modifier: Modifier = Modi
 
 @Composable
 private fun BatteryRing(battery: BatteryState) {
+    val sweep by animateFloatAsState(
+        targetValue = battery.percent / 100f,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessVeryLow),
+        label = "batterySweep",
+    )
     val accent = LocalSettings.current.accent.color
     val color = when {
         battery.charging -> Color(0xFF34C759)
@@ -900,7 +1015,7 @@ private fun BatteryRing(battery: BatteryState) {
             drawArc(
                 color = color,
                 startAngle = -90f,
-                sweepAngle = 360f * battery.percent / 100f,
+                sweepAngle = 360f * sweep,
                 useCenter = false,
                 topLeft = Offset(inset, inset),
                 size = arcSize,
@@ -917,36 +1032,6 @@ private fun BatteryRing(battery: BatteryState) {
     }
 }
 
-/** Always [rows] rows high, so icons sit in the same places on every page. */
-@Composable
-private fun AppGrid(
-    apps: List<AppInfo>,
-    columns: Int,
-    rows: Int,
-    actions: AppActions,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier.fillMaxWidth()) {
-        repeat(rows) { r ->
-            Row(
-                Modifier.weight(1f).fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                repeat(columns) { c ->
-                    val app = apps.getOrNull(r * columns + c)
-                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        if (app != null) {
-                            key(app.key) {
-                                AppIcon(app, actions, fillCell = true)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 /** Page indicator on a small glass capsule. */
 @Composable
 private fun PageDots(count: Int, current: Int, modifier: Modifier = Modifier) {
@@ -956,11 +1041,19 @@ private fun PageDots(count: Int, current: Int, modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(7.dp),
         ) {
             repeat(count) { index ->
+                // The current page's dot stretches into a little capsule.
+                val active = index == current
+                val width by animateDpAsState(
+                    targetValue = if (active) 18.dp else 6.dp,
+                    animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium),
+                    label = "dotWidth",
+                )
+                val alpha by animateFloatAsState(if (active) 0.95f else 0.4f, tween(220), label = "dotAlpha")
                 Box(
                     Modifier
-                        .size(if (index == current) 7.dp else 6.dp)
+                        .size(width = width, height = 6.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = if (index == current) 0.95f else 0.4f)),
+                        .background(Color.White.copy(alpha = alpha)),
                 )
             }
         }
@@ -1079,4 +1172,43 @@ private fun SelectionBar(
             }
         }
     }
+}
+
+/** Long press on a home screen widget: resize it, send it to another page, or remove it. */
+private fun widgetMenu(
+    widget: HomeWidget,
+    bounds: Rect,
+    pageCount: Int,
+    tryPlace: (HomeWidget) -> Boolean,
+    findSlot: (Int) -> HomeWidget?,
+    onRemove: () -> Unit,
+): GlassMenuRequest {
+    val items = buildList {
+        add(GlassMenuItem("Breiter", Icons.AutoMirrored.Rounded.KeyboardArrowRight) {
+            tryPlace(widget.copy(spanX = widget.spanX + 1)) || tryPlace(widget.copy(col = widget.col - 1, spanX = widget.spanX + 1))
+        })
+        if (widget.spanX > 1) {
+            add(GlassMenuItem("Schmaler", Icons.AutoMirrored.Rounded.KeyboardArrowLeft) { tryPlace(widget.copy(spanX = widget.spanX - 1)) })
+        }
+        add(GlassMenuItem("Höher", Icons.Rounded.KeyboardArrowDown) {
+            tryPlace(widget.copy(spanY = widget.spanY + 1)) || tryPlace(widget.copy(row = widget.row - 1, spanY = widget.spanY + 1))
+        })
+        if (widget.spanY > 1) {
+            add(GlassMenuItem("Niedriger", Icons.Rounded.KeyboardArrowUp) { tryPlace(widget.copy(spanY = widget.spanY - 1)) })
+        }
+        if (widget.page > 0) {
+            add(GlassMenuItem("Auf vorige Seite", Icons.AutoMirrored.Rounded.KeyboardArrowLeft) {
+                findSlot(widget.page - 1)?.let { tryPlace(it.copy(id = widget.id)) }
+            })
+        }
+        add(GlassMenuItem("Auf nächste Seite", Icons.AutoMirrored.Rounded.KeyboardArrowRight) {
+            findSlot(widget.page + 1)?.let { tryPlace(it.copy(id = widget.id)) }
+        })
+        add(GlassMenuItem("Entfernen", Icons.Rounded.Delete, destructive = true, onClick = onRemove))
+    }
+    return GlassMenuRequest(
+        anchor = bounds,
+        items = items,
+        title = "Widget (Seite ${widget.page + 1}/${pageCount.coerceAtLeast(widget.page + 1)}): halten und ziehen verschiebt",
+    )
 }

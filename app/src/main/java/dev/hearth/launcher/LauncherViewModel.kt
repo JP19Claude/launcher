@@ -227,6 +227,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         settingsRepo.update { it.copy(removedFromHome = it.removedFromHome - key) }
     }
 
+    fun addToHome(keys: Collection<String>) {
+        settingsRepo.update { it.copy(removedFromHome = it.removedFromHome - keys.toSet()) }
+    }
+
+    fun unhide(keys: Collection<String>) {
+        settingsRepo.update { it.copy(hiddenApps = it.hiddenApps - keys.toSet()) }
+    }
+
     fun restoreHome() {
         settingsRepo.update { it.copy(removedFromHome = emptySet()) }
     }

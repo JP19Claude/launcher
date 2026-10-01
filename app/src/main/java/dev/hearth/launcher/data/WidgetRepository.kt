@@ -20,6 +20,24 @@ import kotlin.math.roundToInt
 @Immutable
 data class PlacedWidget(val id: Int, val heightDp: Int)
 
+/** A widget on a home screen page, covering [spanX] × [spanY] grid cells from ([col], [row]). */
+@Immutable
+data class HomeWidget(
+    val id: Int,
+    val page: Int,
+    val col: Int,
+    val row: Int,
+    val spanX: Int,
+    val spanY: Int,
+) {
+    fun covers(c: Int, r: Int): Boolean = c in col until col + spanX && r in row until row + spanY
+
+    fun overlaps(other: HomeWidget): Boolean =
+        page == other.page &&
+            col < other.col + other.spanX && other.col < col + spanX &&
+            row < other.row + other.spanY && other.row < row + spanY
+}
+
 /** An installable widget, for the picker. */
 @Immutable
 class WidgetChoice(
@@ -45,8 +63,18 @@ class WidgetRepository(private val context: Context) {
     private val _widgets = MutableStateFlow(read())
     val widgets: StateFlow<List<PlacedWidget>> = _widgets.asStateFlow()
 
+    private val _homeWidgets = MutableStateFlow(readHome())
+    val homeWidgets: StateFlow<List<HomeWidget>> = _homeWidgets.asStateFlow()
+
     private var pendingId = -1
     private var pendingInfo: AppWidgetProviderInfo? = null
+
+    /** Where the widget being added goes on the home screen; null = widget page. */
+    private var pendingHomeSlot: HomeWidget? = null
+
+    /** The widget's preferred size in dp, to work out how many grid cells it needs. */
+    fun minSizeDp(info: AppWidgetProviderInfo): Pair<Int, Int> =
+        (info.minWidth / density).roundToInt() to (info.minHeight / density).roundToInt()
 
     /** Previews can be huge; keep them at most 480 px wide for the list. */
     private fun toImage(drawable: Drawable): ImageBitmap {
@@ -82,11 +110,12 @@ class WidgetRepository(private val context: Context) {
      * Starts adding a widget. Returns an intent the caller must launch to ask the user for
      * permission, or null if the widget could be bound right away (then call [finishBinding]).
      */
-    fun begin(info: AppWidgetProviderInfo): Intent? {
+    fun begin(info: AppWidgetProviderInfo, homeSlot: HomeWidget? = null): Intent? {
         cancelPending()
         val id = host.allocateAppWidgetId()
         pendingId = id
         pendingInfo = info
+        pendingHomeSlot = homeSlot
         val bound = runCatching { manager.bindAppWidgetIdIfAllowed(id, info.profile, info.provider, null) }
             .getOrDefault(false)
         if (bound) return null
@@ -123,8 +152,14 @@ class WidgetRepository(private val context: Context) {
     }
 
     private fun place(id: Int, info: AppWidgetProviderInfo) {
+        val slot = pendingHomeSlot
         pendingId = -1
         pendingInfo = null
+        pendingHomeSlot = null
+        if (slot != null) {
+            updateHome(_homeWidgets.value + slot.copy(id = id))
+            return
+        }
         val minHeightDp = (info.minHeight / density).roundToInt()
         val height = minHeightDp.coerceIn(MIN_HEIGHT, 320).coerceAtLeast(110)
         update(_widgets.value + PlacedWidget(id, height))
@@ -134,7 +169,33 @@ class WidgetRepository(private val context: Context) {
         if (pendingId >= 0) runCatching { host.deleteAppWidgetId(pendingId) }
         pendingId = -1
         pendingInfo = null
+        pendingHomeSlot = null
     }
+
+    /** Replaces a home widget's position or size (the caller checks that it fits). */
+    fun moveHome(widget: HomeWidget) {
+        updateHome(_homeWidgets.value.map { if (it.id == widget.id) widget else it })
+    }
+
+    fun removeHome(id: Int) {
+        runCatching { host.deleteAppWidgetId(id) }
+        updateHome(_homeWidgets.value.filterNot { it.id == id })
+    }
+
+    private fun updateHome(list: List<HomeWidget>) {
+        _homeWidgets.value = list
+        prefs.edit()
+            .putString(KEY_HOME, list.joinToString(";") { "${it.id},${it.page},${it.col},${it.row},${it.spanX},${it.spanY}" })
+            .apply()
+    }
+
+    private fun readHome(): List<HomeWidget> = prefs.getString(KEY_HOME, null)
+        ?.split(';')
+        ?.mapNotNull { entry ->
+            val n = entry.split(',').mapNotNull { it.toIntOrNull() }
+            if (n.size != 6) null else HomeWidget(n[0], n[1], n[2], n[3], n[4].coerceAtLeast(1), n[5].coerceAtLeast(1))
+        }
+        ?: emptyList()
 
     fun remove(id: Int) {
         runCatching { host.deleteAppWidgetId(id) }
@@ -183,6 +244,7 @@ class WidgetRepository(private val context: Context) {
         const val HOST_ID = 0x4845
         const val REQUEST_CONFIGURE = 0x4846
         private const val KEY = "widgets"
+        private const val KEY_HOME = "homeWidgets"
         const val MIN_HEIGHT = 80
         const val MAX_HEIGHT = 520
     }

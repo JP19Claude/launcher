@@ -73,6 +73,13 @@ enum class TriggerZone(val label: String, val fraction: Float) {
     Full("Ganze Breite", 1f),
 }
 
+/** How home pages move when swiping between them. */
+enum class PageTransition(val label: String) {
+    Depth("Tiefe"),
+    Cube("Würfel"),
+    Flat("Flach"),
+}
+
 /** Ready-made looks that set many options at once. */
 enum class DesignPreset(val label: String) {
     ColorOSClaude("ColorOS × Claude"),
@@ -123,6 +130,11 @@ data class LauncherSettings(
     val interceptSystemShade: Boolean = false,
     /** Apps taken off the home screen; they stay in the App Library and search. */
     val removedFromHome: Set<String> = emptySet(),
+    /** Specular sheen on every icon that follows the phone's tilt. */
+    val iconGloss: Boolean = true,
+    /** Entrance, page and text animations throughout the launcher. */
+    val animations: Boolean = true,
+    val pageTransition: PageTransition = PageTransition.Depth,
     // Dock
     val dockSize: Int = 4,
     val dockCustomized: Boolean = false,
@@ -236,6 +248,9 @@ class SettingsRepository(context: Context) {
             triggerZone = enumOf("triggerZone", d.triggerZone),
             interceptSystemShade = prefs.getBoolean(KEY_INTERCEPT, d.interceptSystemShade),
             removedFromHome = prefs.getStringSet("removedFromHome", null)?.toSet() ?: d.removedFromHome,
+            iconGloss = prefs.getBoolean("iconGloss", d.iconGloss),
+            animations = prefs.getBoolean("animations", d.animations),
+            pageTransition = enumOf("pageTransition", d.pageTransition),
             dockSize = prefs.getInt("dockSize", d.dockSize),
             dockCustomized = prefs.getBoolean("dockCustomized", d.dockCustomized),
             dockApps = prefs.getString("dockApps", null)
@@ -282,6 +297,9 @@ class SettingsRepository(context: Context) {
             .putString("triggerZone", s.triggerZone.name)
             .putBoolean(KEY_INTERCEPT, s.interceptSystemShade)
             .putStringSet("removedFromHome", s.removedFromHome)
+            .putBoolean("iconGloss", s.iconGloss)
+            .putBoolean("animations", s.animations)
+            .putString("pageTransition", s.pageTransition.name)
             .putInt("dockSize", s.dockSize)
             .putBoolean("dockCustomized", s.dockCustomized)
             .putString("dockApps", s.dockApps.joinToString("\n"))

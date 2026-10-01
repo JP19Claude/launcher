@@ -133,7 +133,7 @@ fun ControlCenter(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Header: time and date on the left, launcher settings on the right.
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.staggeredEntrance(0).padding(horizontal = 6.dp)) {
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = now.format(DateTimeFormatter.ofPattern("HH:mm", locale)),
@@ -177,7 +177,7 @@ fun ControlCenter(
             }
 
             // Connectivity + media
-            Row(Modifier.fillMaxWidth().height(164.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.staggeredEntrance(1).fillMaxWidth().height(164.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 GlassCard(Modifier.weight(1f).fillMaxHeight()) {
                     Column(
                         Modifier.fillMaxSize().padding(10.dp),
@@ -197,7 +197,7 @@ fun ControlCenter(
             }
 
             // Toggles + vertical sliders
-            Row(Modifier.fillMaxWidth().height(212.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.staggeredEntrance(2).fillMaxWidth().height(212.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 GlassCard(Modifier.weight(1f).fillMaxHeight()) {
                     Column(
                         Modifier.fillMaxSize().padding(8.dp),
@@ -261,7 +261,7 @@ fun ControlCenter(
             }
 
             // Shortcuts
-            GlassCard(Modifier.fillMaxWidth()) {
+            GlassCard(Modifier.staggeredEntrance(3).fillMaxWidth()) {
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -277,7 +277,7 @@ fun ControlCenter(
 
             // Way out to the system's own panels (notifications, and anything only the system can switch).
             if (onShowNotifications != null || onShowSystemQuickSettings != null) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.staggeredEntrance(4).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (onShowNotifications != null) {
                         GlassPill(Glyph.Bell, "Mitteilungen", Modifier.weight(1f), onShowNotifications)
                     }

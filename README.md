@@ -30,6 +30,13 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   schließt Hearth es und zeigt seins (braucht den Bedienungshilfe-Dienst)
 - „Vom Startbildschirm entfernen“: App verschwindet vom Homescreen, bleibt aber
   in App-Mediathek und Suche (einzeln im Menü oder mehrere per „Auswählen“)
+- Widgets direkt auf dem Startbildschirm: lange auf eine freie Stelle → „Widget hierher“;
+  Widgets belegen Rasterfelder auf Glas, Apps fließen drumherum; Widget lange drücken
+  für Größe/Seite/Entfernen, halten und ziehen zum Verschieben
+- Animationen: Zoom beim Zurückkehren, Seitenwechsel „Tiefe“ oder „Würfel“, rollende
+  Uhrziffern, gestaffelt erscheinende Karten und Ordner, gleitende Icons beim Umordnen,
+  Seitenpunkte als Kapsel, Glas-Hinweise mit „Rückgängig“
+- Mehr Glas: Glanz auf jedem Icon (folgt dem Kippen), Suchergebnisse auf einer Glasplatte
 - Widgets: eigene Widget-Seite links neben dem Homescreen (wie die Heute-Ansicht),
   jedes Widget auf einer Glas-Karte; „Bearbeiten“ zum Verschieben, Vergrößern, Entfernen
 - Mehrere Apps markieren: lange drücken → „Auswählen“ (Icons wackeln, Haken antippen),

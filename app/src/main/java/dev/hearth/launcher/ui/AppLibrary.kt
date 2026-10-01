@@ -34,6 +34,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Search
@@ -92,16 +93,22 @@ fun AppLibraryPage(
         }
         if (library.suggestions.isNotEmpty()) {
             item(key = "suggestions") {
-                LibraryFolder("Vorschläge", library.suggestions, actions, onOpenFolder)
+                Box(Modifier.staggeredEntrance(0)) {
+                    LibraryFolder("Vorschläge", library.suggestions, actions, onOpenFolder)
+                }
             }
         }
         if (library.recent.isNotEmpty()) {
             item(key = "recent") {
-                LibraryFolder("Neu hinzugefügt", library.recent, actions, onOpenFolder)
+                Box(Modifier.staggeredEntrance(1)) {
+                    LibraryFolder("Neu hinzugefügt", library.recent, actions, onOpenFolder)
+                }
             }
         }
-        items(library.folders, key = { it.first.name }) { (category, apps) ->
-            LibraryFolder(category.title, apps, actions, onOpenFolder)
+        itemsIndexed(library.folders, key = { _, folder -> folder.first.name }) { index, (category, apps) ->
+            Box(Modifier.staggeredEntrance(index + 2)) {
+                LibraryFolder(category.title, apps, actions, onOpenFolder)
+            }
         }
     }
 }
@@ -296,8 +303,8 @@ fun LibraryFolderOverlay(folder: LibraryFolderContent?, actions: AppActions, onD
                         columns = GridCells.Fixed(4),
                         contentPadding = PaddingValues(10.dp),
                     ) {
-                        items(apps, key = { it.key }) { app ->
-                            Box(contentAlignment = Alignment.Center) {
+                        itemsIndexed(apps, key = { _, app -> app.key }) { index, app ->
+                            Box(Modifier.staggeredEntrance(index / 4), contentAlignment = Alignment.Center) {
                                 AppIcon(app, actions, fillCell = true)
                             }
                         }
