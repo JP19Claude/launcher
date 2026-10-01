@@ -58,11 +58,25 @@ object NotificationHub {
     /** New, important messages, to flash briefly. */
     val incoming: SharedFlow<LiveNotice> = _incoming.asSharedFlow()
 
+    private val _badges = MutableStateFlow<Map<String, Int>>(emptyMap())
+
+    /** Unread notifications per app package, for the badges on the icons. */
+    val badges: StateFlow<Map<String, Int>> = _badges.asStateFlow()
+
     private val iconCache = HashMap<String, ImageBitmap?>()
 
     fun refresh(service: NotificationListenerService) {
         val all = runCatching { service.activeNotifications }.getOrNull().orEmpty()
         _active.value = all.mapNotNull { parse(service, it) }.filter { it.kind != NoticeKind.Message }
+        _badges.value = all
+            .filter { sbn ->
+                val n = sbn.notification
+                sbn.packageName != service.packageName &&
+                    !sbn.isOngoing &&
+                    n.flags and Notification.FLAG_GROUP_SUMMARY == 0
+            }
+            .groupBy { it.packageName }
+            .mapValues { (_, list) -> list.sumOf { it.notification.number.coerceAtLeast(1) } }
     }
 
     fun onPosted(service: NotificationListenerService, sbn: StatusBarNotification) {
@@ -80,6 +94,7 @@ object NotificationHub {
 
     fun clear() {
         _active.value = emptyList()
+        _badges.value = emptyMap()
     }
 
     private fun parse(service: NotificationListenerService, sbn: StatusBarNotification): LiveNotice? {

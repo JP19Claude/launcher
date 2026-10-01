@@ -63,6 +63,7 @@ fun SearchOverlay(
     onOpenSettings: () -> Unit,
     onAskClaude: (String) -> Unit,
     onDismiss: () -> Unit,
+    suggestions: List<AppInfo> = emptyList(),
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
@@ -137,6 +138,7 @@ fun SearchOverlay(
         Text(
             text = when {
                 trimmed.isEmpty() -> "Alle Apps"
+                calculate(trimmed) != null -> "Rechner"
                 results.isEmpty() -> "Keine App gefunden"
                 else -> "Apps"
             },
@@ -161,6 +163,37 @@ fun SearchOverlay(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 24.dp),
         ) {
+            if (trimmed.isEmpty() && suggestions.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }, key = "suggestions") {
+                    Column(Modifier.padding(top = 4.dp, bottom = 8.dp)) {
+                        Text(
+                            "Vorschläge",
+                            color = colors.onSurfaceVariant,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(start = 12.dp, bottom = 2.dp),
+                        )
+                        Row(Modifier.fillMaxWidth()) {
+                            suggestions.take(LocalSettings.current.columns).forEach { app ->
+                                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                    AppIcon(app, actions, onWallpaper = false, fillCell = true, onLaunch = onLaunch)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (trimmed.isNotEmpty()) {
+                calculate(trimmed)?.let { result ->
+                    item(span = { GridItemSpan(maxLineSpan) }, key = "calculator") {
+                        CalculatorRow(trimmed, result, onDone = onDismiss)
+                    }
+                }
+                matchingSettings(trimmed).forEach { setting ->
+                    item(span = { GridItemSpan(maxLineSpan) }, key = "setting-${setting.label}") {
+                        SettingRow(setting, onDone = onDismiss)
+                    }
+                }
+            }
             items(results, key = { it.key }) { app ->
                 // Results glide into place while typing.
                 Box(Modifier.animateItem(), contentAlignment = Alignment.Center) {

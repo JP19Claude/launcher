@@ -1,6 +1,7 @@
 package dev.hearth.launcher.ui
 
 import android.Manifest
+import android.accessibilityservice.AccessibilityService
 import android.app.Activity
 import android.app.ActivityOptions
 import android.appwidget.AppWidgetProviderInfo
@@ -67,6 +68,7 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -108,6 +110,16 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.imePadding
+import dev.hearth.launcher.data.NotificationHub
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import dev.hearth.launcher.data.HomeWidget
@@ -188,9 +200,23 @@ fun LauncherScreen(vm: LauncherViewModel) {
     }
     val homeWidgets by vm.widgets.homeWidgets.collectAsStateWithLifecycle()
     val pinned by vm.homePositions.collectAsStateWithLifecycle()
-    val laidOut = remember(homeApps, homeWidgets, pinned, columns, rows, firstPageRows) {
-        layoutHome(homeApps, homeWidgets, pinned, columns, rows, firstPageRows)
+    val folders by vm.folders.collectAsStateWithLifecycle()
+    val badges by NotificationHub.badges.collectAsStateWithLifecycle()
+    // Apps in a folder show up as the folder; everything else as itself.
+    val homeItems = remember(homeApps, folders) {
+        val byKey = homeApps.associateBy { it.key }
+        val folderItems = folders.mapNotNull { f ->
+            val inside = f.apps.mapNotNull { byKey[it] }
+            if (inside.isEmpty()) null else FolderItem(f.id, f.name, inside)
+        }
+        val foldered = folderItems.flatMap { f -> f.apps.map { it.key } }.toSet()
+        homeApps.filterNot { it.key in foldered }.map { AppItem(it) } + folderItems
     }
+    val laidOut = remember(homeItems, homeWidgets, pinned, columns, rows, firstPageRows) {
+        layoutHome(homeItems, homeWidgets, pinned, columns, rows, firstPageRows)
+    }
+    var openHomeFolder by remember { mutableStateOf<FolderItem?>(null) }
+    var renaming by remember { mutableStateOf<FolderItem?>(null) }
     // Dragging an app: where the finger is, and an extra empty page to drop onto.
     var drag by remember { mutableStateOf<AppDrag?>(null) }
     var dragPos by remember { mutableStateOf(Offset.Zero) }
@@ -297,7 +323,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
             },
             dragStart = { app, finger, iconBounds ->
                 menu = null
-                drag = AppDrag(app, vm.isInDock(app), finger - iconBounds.topLeft, iconBounds.size)
+                drag = AppDrag(AppItem(app), vm.isInDock(app), finger - iconBounds.topLeft, iconBounds.size)
                 dragPos = finger
             },
         )
@@ -363,6 +389,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
     BackHandler {
         when {
             menu != null -> menu = null
+            renaming != null -> renaming = null
+            openHomeFolder != null -> openHomeFolder = null
             widgetPickerOpen -> widgetPickerOpen = false
             selecting -> endSelection()
             openFolder != null -> openFolder = null
@@ -377,7 +405,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val menuBlur by animateDpAsState(
         targetValue = when {
             controlOpen -> 24.dp
-            menu != null || openFolder != null -> 16.dp
+            menu != null || openFolder != null || openHomeFolder != null -> 16.dp
             else -> 0.dp
         },
         animationSpec = tween(260),
@@ -417,30 +445,53 @@ fun LauncherScreen(vm: LauncherViewModel) {
             when {
                 dockBounds.contains(point) -> when {
                     d.fromDock -> Unit
+                    d.item !is AppItem -> toast = GlassToast("Ordner passen nicht ins Dock")
                     vm.canAddToDock() -> {
-                        vm.forgetHomePosition(d.app.key)
-                        vm.addToDock(d.app)
+                        val app = (d.item as AppItem).app
+                        vm.forgetHomePosition(app.key)
+                        vm.addToDock(app)
                     }
                     else -> toast = GlassToast("Das Dock ist voll")
                 }
                 target != null -> {
                     val (page, col, row) = target
-                    if (pages[page].widgets.any { it.covers(col, row) }) {
-                        toast = GlassToast("Dort ist ein Widget")
-                    } else {
-                        // From now on every app keeps its place; the dragged one takes the new
-                        // cell and an app already there swaps over to the old one.
-                        val positions = HashMap<String, CellPos>()
-                        laidOut.forEachIndexed { p, hp -> hp.apps.forEach { positions[it.app.key] = CellPos(p, it.col, it.row) } }
-                        val old = positions[d.app.key]
-                        val newPos = CellPos(page, col, row)
-                        val occupant = positions.entries.firstOrNull { it.value == newPos && it.key != d.app.key }?.key
-                        if (occupant != null) {
-                            if (old != null) positions[occupant] = old else positions.remove(occupant)
+                    val draggedKey = d.item.key
+                    val occupant = laidOut.getOrNull(page)?.apps
+                        ?.firstOrNull { it.col == col && it.row == row && it.item.key != draggedKey }?.item
+                    // From now on everything keeps its place.
+                    val positions = HashMap<String, CellPos>()
+                    laidOut.forEachIndexed { p, hp -> hp.apps.forEach { positions[it.item.key] = CellPos(p, it.col, it.row) } }
+                    val newPos = CellPos(page, col, row)
+                    val dragged = d.item
+                    when {
+                        pages[page].widgets.any { it.covers(col, row) } -> toast = GlassToast("Dort ist ein Widget")
+                        // App on app: a new folder in that place.
+                        dragged is AppItem && occupant is AppItem -> {
+                            val folder = vm.createFolder(occupant.app, dragged.app)
+                            positions.remove(occupant.key)
+                            positions.remove(dragged.key)
+                            positions[folder.key] = newPos
+                            vm.setHomePositions(positions)
+                            if (d.fromDock) vm.removeFromDock(dragged.app)
+                            toast = GlassToast("Ordner „${folder.name}“ erstellt")
                         }
-                        positions[d.app.key] = newPos
-                        vm.setHomePositions(positions)
-                        if (d.fromDock) vm.removeFromDock(d.app)
+                        // App on folder: into the folder.
+                        dragged is AppItem && occupant is FolderItem -> {
+                            vm.addToFolder(occupant.id, dragged.app)
+                            positions.remove(dragged.key)
+                            vm.setHomePositions(positions)
+                            if (d.fromDock) vm.removeFromDock(dragged.app)
+                        }
+                        // Free cell, or a folder dropped on something: move (and swap).
+                        else -> {
+                            val old = positions[draggedKey]
+                            if (occupant != null) {
+                                if (old != null) positions[occupant.key] = old else positions.remove(occupant.key)
+                            }
+                            positions[draggedKey] = newPos
+                            vm.setHomePositions(positions)
+                            if (d.fromDock && dragged is AppItem) vm.removeFromDock(dragged.app)
+                        }
                     }
                 }
             }
@@ -471,6 +522,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
         LocalGlassStyle provides glassStyle,
         LocalGlassLight provides light,
         LocalPhotoPicker provides requestPhotos,
+        LocalBadges provides badges,
         // Remembered, so icons don't all recompose whenever the home screen does.
         LocalSelection provides remember(selecting, selected) {
             SelectionState(selecting, selected) { app ->
@@ -561,7 +613,20 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                 return@HorizontalPager
                             }
                             Box(Modifier.fillMaxSize().then(pageMotion)) {
-                                LongPressArea(onLongPress = homeMenu, modifier = Modifier.matchParentSize())
+                                LongPressArea(
+                                    onLongPress = homeMenu,
+                                    onDoubleTap = {
+                                        if (settings.doubleTapLock) {
+                                            val service = ControlCenterService.instance
+                                            if (service != null) {
+                                                service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
+                                            } else {
+                                                toast = GlassToast("Zum Sperren per Doppeltippen: Bedienungshilfe „Hearth Kontrollzentrum“ einschalten")
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.matchParentSize(),
+                                )
                                 Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
                                     if (page == 0) {
                                         HomeHeader(settings, Modifier.padding(start = 4.dp, end = 4.dp, top = 20.dp, bottom = 12.dp))
@@ -584,7 +649,26 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                         page = pages[page],
                                         pageIndex = page,
                                         onGeometry = { index, rect -> gridGeometry[index] = rect },
-                                        draggingKey = drag?.app?.key,
+                                        draggingKey = drag?.item?.key,
+                                        onOpenFolder = { openHomeFolder = it },
+                                        onFolderMenu = { folder, bounds ->
+                                            menu = GlassMenuRequest(
+                                                anchor = bounds,
+                                                title = folder.name,
+                                                items = listOf(
+                                                    GlassMenuItem("Öffnen", Icons.Rounded.Search) { openHomeFolder = folder },
+                                                    GlassMenuItem("Umbenennen", Icons.Rounded.Edit) { renaming = folder },
+                                                    GlassMenuItem("Ordner auflösen", Icons.Rounded.Clear, destructive = true) {
+                                                        vm.dissolveFolder(folder.id)
+                                                    },
+                                                ),
+                                            )
+                                        },
+                                        onFolderDragStart = { folder, finger, bounds ->
+                                            menu = null
+                                            drag = AppDrag(folder, false, finger - bounds.topLeft, bounds.size)
+                                            dragPos = finger
+                                        },
                                         columns = columns,
                                         actions = actions,
                                         widgets = vm.widgets,
@@ -649,7 +733,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         Dock(
                             apps = dock,
                             actions = actions,
-                            draggingKey = drag?.app?.key,
+                            draggingKey = drag?.item?.key,
                             modifier = Modifier
                                 .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 10.dp)
                                 .onGloballyPositioned { dockBounds = it.boundsInRoot() },
@@ -682,6 +766,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             searchOpen = false
                         },
                         onDismiss = { searchOpen = false },
+                        suggestions = library.suggestions,
                     )
                 }
 
@@ -742,6 +827,38 @@ fun LauncherScreen(vm: LauncherViewModel) {
 
             LibraryFolderOverlay(folder = openFolder, actions = folderActions, onDismiss = { openFolder = null })
 
+            // A home screen folder opens like an App Library folder.
+            val homeFolderContent = openHomeFolder?.let { f ->
+                val current = folders.firstOrNull { it.id == f.id }
+                val apps = current?.apps?.mapNotNull { key -> homeApps.firstOrNull { it.key == key } }.orEmpty()
+                if (current == null || apps.isEmpty()) null else current.name to apps
+            }
+            LaunchedEffect(homeFolderContent == null) { if (homeFolderContent == null) openHomeFolder = null }
+            LibraryFolderOverlay(
+                folder = homeFolderContent,
+                actions = remember(actions) {
+                    AppActions(
+                        launch = { app, bounds ->
+                            openHomeFolder = null
+                            actions.launch(app, bounds)
+                        },
+                        menu = actions.menu,
+                    )
+                },
+                onDismiss = { openHomeFolder = null },
+            )
+
+            renaming?.let { folder ->
+                RenameDialog(
+                    initial = folder.name,
+                    onConfirm = { name ->
+                        vm.renameFolder(folder.id, name)
+                        renaming = null
+                    },
+                    onDismiss = { renaming = null },
+                )
+            }
+
             SelectionBar(
                 visible = selecting,
                 count = selected.size,
@@ -789,6 +906,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
 }
 
 private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Unit): List<GlassMenuItem> = buildList {
+    // The app's own shortcuts first, like on One UI and iOS.
+    vm.shortcuts(app).forEach { shortcut ->
+        add(GlassMenuItem(shortcut.label, Icons.Rounded.Star, image = shortcut.icon) { vm.startShortcut(shortcut) })
+    }
     add(GlassMenuItem("App-Info", Icons.Rounded.Info) { vm.openAppInfo(app) })
     if (vm.isInDock(app)) {
         val dockKeys = vm.dock.value.map { it.key }
@@ -809,6 +930,9 @@ private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Un
         }
     } else {
         add(GlassMenuItem("Zum Startbildschirm hinzufügen", Icons.Rounded.Home) { vm.addToHome(app.key) })
+    }
+    if (vm.folderOf(app.key) != null) {
+        add(GlassMenuItem("Aus dem Ordner nehmen", Icons.Rounded.Close) { vm.removeFromFolder(app.key) })
     }
     add(GlassMenuItem("Auswählen", Icons.Rounded.CheckCircle, onClick = onSelect))
     add(GlassMenuItem("Ausblenden", Icons.Rounded.Clear) { vm.hide(app) })
@@ -845,13 +969,18 @@ private fun Modifier.homeSwipes(onSwipeUp: () -> Unit, onSwipeDown: (leftHalf: B
 
 /** Empty space behind the icons: a long press opens the home screen menu. */
 @Composable
-private fun LongPressArea(onLongPress: (Offset) -> Unit, modifier: Modifier = Modifier) {
+private fun LongPressArea(onLongPress: (Offset) -> Unit, onDoubleTap: () -> Unit, modifier: Modifier = Modifier) {
     var origin by remember { mutableStateOf(Offset.Zero) }
+    val longPress by rememberUpdatedState(onLongPress)
+    val doubleTap by rememberUpdatedState(onDoubleTap)
     Box(
         modifier
             .onGloballyPositioned { origin = it.positionInRoot() }
             .pointerInput(Unit) {
-                detectTapGestures(onLongPress = { onLongPress(origin + it) })
+                detectTapGestures(
+                    onLongPress = { longPress(origin + it) },
+                    onDoubleTap = { doubleTap() },
+                )
             },
     )
 }
@@ -1367,7 +1496,7 @@ private fun widgetMenu(
 
 /** An app being dragged on the home screen. */
 @Immutable
-class AppDrag(val app: AppInfo, val fromDock: Boolean, val grabOffset: Offset, val iconSize: Size)
+class AppDrag(val item: HomeItem, val fromDock: Boolean, val grabOffset: Offset, val iconSize: Size)
 
 /** The dragged icon under the finger, and a glass cell where it will land. */
 @Composable
@@ -1404,6 +1533,62 @@ private fun DragOverlay(drag: AppDrag, finger: Offset, target: Rect?, overDock: 
                 alpha = 0.95f
             },
     ) {
-        AppIconImage(drag.app, with(density) { drag.iconSize.width.toDp() })
+        val size = with(density) { drag.iconSize.width.toDp() }
+        when (val item = drag.item) {
+            is AppItem -> AppIconImage(item.app, size)
+            is FolderItem -> FolderTile(item, size)
+        }
+    }
+}
+
+/** Small glass dialog to rename a folder. */
+@Composable
+private fun RenameDialog(initial: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
+    var text by remember { mutableStateOf(initial) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.4f))
+            .pointerInput(Unit) { detectTapGestures { onDismiss() } }
+            .imePadding(),
+        contentAlignment = Alignment.Center,
+    ) {
+        LiquidGlass(
+            cornerRadius = 28.dp,
+            refraction = 18.dp,
+            tint = Color.Black.copy(alpha = 0.3f),
+            modifier = Modifier
+                .padding(24.dp)
+                .fillMaxWidth()
+                .pointerInput(Unit) { detectTapGestures { } },
+        ) {
+            Column(Modifier.padding(20.dp)) {
+                Text("Ordner umbenennen", color = Color.White, fontFamily = FontFamily.Serif, fontSize = 22.sp)
+                Spacer(Modifier.padding(top = 12.dp))
+                BasicTextField(
+                    value = text,
+                    onValueChange = { text = it.take(40) },
+                    singleLine = true,
+                    textStyle = TextStyle(color = Color.White, fontSize = 18.sp),
+                    cursorBrush = SolidColor(Color.White),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { onConfirm(text) }),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color.White.copy(alpha = 0.12f))
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                        .focusRequester(focus),
+                )
+                Spacer(Modifier.padding(top = 14.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    GlassChip("Abbrechen", onClick = onDismiss)
+                    Spacer(Modifier.width(8.dp))
+                    GlassChip("Fertig") { onConfirm(text) }
+                }
+            }
+        }
     }
 }

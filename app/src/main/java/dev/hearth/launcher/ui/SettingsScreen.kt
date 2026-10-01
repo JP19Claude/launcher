@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hearth.launcher.LauncherViewModel
 import dev.hearth.launcher.data.AccentColor
+import dev.hearth.launcher.data.BadgeStyle
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.GlimmerStyle
@@ -284,6 +285,15 @@ fun SettingsScreen(
                     SwitchRow(label = "Beschriftung anzeigen", checked = s.showLabels) { v ->
                         update { it.copy(showLabels = v) }
                     }
+                    RowDivider()
+                    ChoiceRow(
+                        label = "Benachrichtigungs-Badges",
+                        options = BadgeStyle.entries,
+                        selected = s.badgeStyle,
+                        optionLabel = { it.label },
+                        onSelect = { style -> update { it.copy(badgeStyle = style) } },
+                    )
+                    Note("Braucht den Benachrichtigungszugriff (siehe Glimmer).")
                 }
             }
 
@@ -350,6 +360,11 @@ fun SettingsScreen(
                         description = "Hinter der letzten Seite: alle Apps in Glas-Ordnern",
                         checked = s.showAppLibrary,
                     ) { v -> update { it.copy(showAppLibrary = v) } }
+                    SwitchRow(
+                        label = "Doppeltippen sperrt den Bildschirm",
+                        description = "Auf eine freie Stelle; braucht die Bedienungshilfe",
+                        checked = s.doubleTapLock,
+                    ) { v -> update { it.copy(doubleTapLock = v) } }
                     ActionRow(
                         label = "Anordnung zurücksetzen",
                         description = "Apps wieder automatisch sortieren (frei verschobene Plätze vergessen)",

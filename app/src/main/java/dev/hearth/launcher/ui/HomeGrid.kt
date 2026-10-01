@@ -7,6 +7,14 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,9 +56,25 @@ import dev.hearth.launcher.data.WidgetRepository
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
-/** An app at a grid cell. */
+/** Something on the home screen grid: an app or a folder of apps. */
 @Immutable
-data class HomeCell(val app: AppInfo, val col: Int, val row: Int)
+sealed interface HomeItem {
+    val key: String
+}
+
+@Immutable
+data class AppItem(val app: AppInfo) : HomeItem {
+    override val key: String get() = app.key
+}
+
+@Immutable
+data class FolderItem(val id: String, val name: String, val apps: List<AppInfo>) : HomeItem {
+    override val key: String get() = "folder:$id"
+}
+
+/** An app or folder at a grid cell. */
+@Immutable
+data class HomeCell(val item: HomeItem, val col: Int, val row: Int)
 
 /** One home screen page: widgets at fixed cells, apps flowing around them. */
 @Immutable
@@ -69,7 +93,7 @@ private fun HomeWidget.fitInto(columns: Int, rows: Int): HomeWidget {
  * The first page has fewer rows (clock on top).
  */
 fun layoutHome(
-    apps: List<AppInfo>,
+    apps: List<HomeItem>,
     widgets: List<HomeWidget>,
     pinned: Map<String, CellPos>,
     columns: Int,
@@ -93,7 +117,7 @@ fun layoutHome(
 
     // 2. Apps with a place of their own
     val cells = HashMap<Int, MutableList<HomeCell>>()
-    val flowing = ArrayList<AppInfo>()
+    val flowing = ArrayList<HomeItem>()
     apps.forEach { app ->
         val pos = pinned[app.key]
         val ok = pos != null && pos.page in 0 until MAX_PAGES && pos.col in 0 until columns &&
@@ -227,6 +251,9 @@ fun HomePageGrid(
     onWidgetDrop: (HomeWidget, Int, Int) -> Unit,
     onGeometry: (Int, Rect) -> Unit,
     draggingKey: String?,
+    onOpenFolder: (FolderItem) -> Unit,
+    onFolderMenu: (FolderItem, Rect) -> Unit,
+    onFolderDragStart: (FolderItem, Offset, Rect) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
@@ -242,11 +269,11 @@ fun HomePageGrid(
             }
         }
         page.apps.forEach { cell ->
-            key(cell.app.key) {
+            key(cell.item.key) {
                 val spec = spring<Dp>(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)
                 val x by animateDpAsState(cellW * cell.col, spec, label = "iconX")
                 val y by animateDpAsState(cellH * cell.row, spec, label = "iconY")
-                val beingDragged = cell.app.key == draggingKey
+                val beingDragged = cell.item.key == draggingKey
                 Box(
                     Modifier
                         .offset(x, y)
@@ -255,7 +282,10 @@ fun HomePageGrid(
                         .graphicsLayer { alpha = if (beingDragged) 0f else 1f },
                     contentAlignment = Alignment.Center,
                 ) {
-                    AppIcon(cell.app, actions, fillCell = true, draggable = true)
+                    when (val item = cell.item) {
+                        is AppItem -> AppIcon(item.app, actions, fillCell = true, draggable = true)
+                        is FolderItem -> FolderIcon(item, onOpen = { onOpenFolder(item) }, onMenu = onFolderMenu, onDragStart = onFolderDragStart)
+                    }
                 }
             }
         }
@@ -343,6 +373,94 @@ private fun HomeWidgetView(
             } else {
                 HostedWidget(repo, widget.id, info, Modifier.fillMaxSize().padding(4.dp))
             }
+        }
+    }
+}
+
+/** The folder's glass tile: up to four small icons of the apps inside. */
+@Composable
+fun FolderTile(folder: FolderItem, size: Dp, modifier: Modifier = Modifier) {
+    val shape = LocalSettings.current.iconShape
+    LiquidGlass(
+        cornerRadius = shape.glassCorner(size),
+        refraction = size * 0.2f,
+        tint = Color.White.copy(alpha = 0.16f),
+        modifier = modifier.size(size),
+    ) {
+        val pad = size * 0.13f
+        val gap = size * 0.06f
+        val mini = (size - pad * 2 - gap) / 2
+        Column(Modifier.padding(pad), verticalArrangement = Arrangement.spacedBy(gap)) {
+            for (row in 0 until 2) {
+                Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    for (col in 0 until 2) {
+                        Box(Modifier.size(mini)) {
+                            folder.apps.getOrNull(row * 2 + col)?.let { AppIconImage(it, mini) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A folder on the home screen: tap opens it, hold for its menu, hold and move to drag it. */
+@Composable
+fun FolderIcon(
+    folder: FolderItem,
+    onOpen: () -> Unit,
+    onMenu: (FolderItem, Rect) -> Unit,
+    onDragStart: (FolderItem, Offset, Rect) -> Unit,
+) {
+    val settings = LocalSettings.current
+    val haptics = LocalHapticFeedback.current
+    var pressed by remember { mutableStateOf(false) }
+    var bounds by remember { mutableStateOf(Rect.Zero) }
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    val current by rememberUpdatedState(folder)
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.88f else 1f,
+        animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow),
+        label = "folderPress",
+    )
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { origin = it.positionInRoot() }
+            .tapMenuOrDrag(
+                onTap = onOpen,
+                onLongPress = {
+                    if (settings.haptics) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onMenu(current, bounds)
+                },
+                onDragStart = { local -> onDragStart(current, origin + local, bounds) },
+                onPressChange = { pressed = it },
+            )
+            .padding(vertical = 6.dp),
+    ) {
+        FolderTile(
+            folder = folder,
+            size = settings.iconSize.dp,
+            modifier = Modifier
+                .onGloballyPositioned { bounds = it.boundsInRoot() }
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                },
+        )
+        if (settings.showLabels) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = folder.name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                fontSize = 12.sp,
+                color = Color.White,
+                style = OnWallpaperText,
+                modifier = Modifier.padding(horizontal = 2.dp),
+            )
         }
     }
 }

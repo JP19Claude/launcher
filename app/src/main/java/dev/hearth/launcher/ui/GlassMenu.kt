@@ -36,6 +36,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.foundation.Image
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
@@ -53,6 +55,8 @@ class GlassMenuItem(
     val label: String,
     val icon: ImageVector,
     val destructive: Boolean = false,
+    /** App shortcuts bring their own picture, shown instead of [icon]. */
+    val image: ImageBitmap? = null,
     val onClick: () -> Unit,
 )
 
@@ -173,7 +177,12 @@ private fun MenuRow(item: GlassMenuItem, onClick: () -> Unit) {
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f),
         )
-        Icon(item.icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+        val image = item.image
+        if (image != null) {
+            Image(image, contentDescription = null, modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)))
+        } else {
+            Icon(item.icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+        }
     }
 }
 

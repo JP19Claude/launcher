@@ -73,6 +73,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.AccentColor
 import dev.hearth.launcher.data.AppInfo
+import dev.hearth.launcher.data.BadgeStyle
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.text.font.FontWeight
 import dev.hearth.launcher.data.IconKind
 import dev.hearth.launcher.data.IconShape
 import dev.hearth.launcher.data.IconStyle
@@ -98,6 +101,48 @@ class SelectionState(
 )
 
 val LocalSelection = compositionLocalOf { SelectionState() }
+
+/** Unread notifications per package, from the notification listener. */
+val LocalBadges = compositionLocalOf<Map<String, Int>> { emptyMap() }
+
+/** Red badge with the number of unread notifications (or a dot), popping in with a spring. */
+@Composable
+fun NotificationBadge(app: AppInfo, modifier: Modifier = Modifier) {
+    val style = LocalSettings.current.badgeStyle
+    val count = LocalBadges.current[app.packageName] ?: 0
+    if (style == BadgeStyle.Off) return
+    val shown by animateFloatAsState(
+        targetValue = if (count > 0) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium),
+        label = "badge",
+    )
+    if (shown <= 0.01f) return
+    val dot = style == BadgeStyle.Dot
+    Box(
+        modifier
+            .graphicsLayer {
+                scaleX = shown
+                scaleY = shown
+            }
+            .then(if (dot) Modifier.size(12.dp) else Modifier.height(20.dp).widthIn(min = 20.dp))
+            .shadow(3.dp, CircleShape)
+            .clip(CircleShape)
+            .background(Color(0xFFFF453A))
+            .border(1.5.dp, Color.White.copy(alpha = 0.9f), CircleShape)
+            .padding(horizontal = if (dot) 0.dp else 5.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (!dot) {
+            Text(
+                text = if (count > 99) "99+" else count.coerceAtLeast(1).toString(),
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+        }
+    }
+}
 
 /** Gentle iOS-style wiggle while selecting. */
 @Composable
@@ -190,7 +235,7 @@ class AppActions(
  * Tap, long press (menu) and long press + move (drag) on one icon.
  * Nothing is consumed before the long press, so swiping pages still works from an icon.
  */
-private fun Modifier.tapMenuOrDrag(
+internal fun Modifier.tapMenuOrDrag(
     onTap: () -> Unit,
     onLongPress: () -> Unit,
     onDragStart: (Offset) -> Unit,
@@ -386,6 +431,8 @@ fun AppIcon(
                 )
                 if (selection.active) {
                     SelectionBadge(isSelected, Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp))
+                } else {
+                    NotificationBadge(app, Modifier.align(Alignment.TopEnd).offset(x = 7.dp, y = (-7).dp))
                 }
             }
             if (showLabel && settings.showLabels) {

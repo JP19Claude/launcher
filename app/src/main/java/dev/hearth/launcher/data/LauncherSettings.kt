@@ -80,6 +80,13 @@ enum class PageTransition(val label: String) {
     Flat("Flach"),
 }
 
+/** How unread notifications show on app icons. */
+enum class BadgeStyle(val label: String) {
+    Number("Zahl"),
+    Dot("Punkt"),
+    Off("Aus"),
+}
+
 /** Look of Glimmer, the island around the front camera. */
 enum class GlimmerStyle(val label: String) {
     Black("Schwarz wie die Kamera"),
@@ -146,6 +153,9 @@ data class LauncherSettings(
     val glimmerStyle: GlimmerStyle = GlimmerStyle.Black,
     val glimmerIdlePill: Boolean = true,
     val glimmerMessages: Boolean = true,
+    val badgeStyle: BadgeStyle = BadgeStyle.Number,
+    /** Double tap on empty home screen space locks the phone (needs the accessibility service). */
+    val doubleTapLock: Boolean = true,
     // Dock
     val dockSize: Int = 4,
     val dockCustomized: Boolean = false,
@@ -266,6 +276,8 @@ class SettingsRepository(context: Context) {
             glimmerStyle = enumOf("glimmerStyle", d.glimmerStyle),
             glimmerIdlePill = prefs.getBoolean("glimmerIdlePill", d.glimmerIdlePill),
             glimmerMessages = prefs.getBoolean("glimmerMessages", d.glimmerMessages),
+            badgeStyle = enumOf("badgeStyle", d.badgeStyle),
+            doubleTapLock = prefs.getBoolean("doubleTapLock", d.doubleTapLock),
             dockSize = prefs.getInt("dockSize", d.dockSize),
             dockCustomized = prefs.getBoolean("dockCustomized", d.dockCustomized),
             dockApps = prefs.getString("dockApps", null)
@@ -319,6 +331,8 @@ class SettingsRepository(context: Context) {
             .putString("glimmerStyle", s.glimmerStyle.name)
             .putBoolean("glimmerIdlePill", s.glimmerIdlePill)
             .putBoolean("glimmerMessages", s.glimmerMessages)
+            .putString("badgeStyle", s.badgeStyle.name)
+            .putBoolean("doubleTapLock", s.doubleTapLock)
             .putInt("dockSize", s.dockSize)
             .putBoolean("dockCustomized", s.dockCustomized)
             .putString("dockApps", s.dockApps.joinToString("\n"))

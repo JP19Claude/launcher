@@ -31,6 +31,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/** A shortcut into an app, for its long-press menu. */
+class AppShortcut(
+    val label: String,
+    val icon: androidx.compose.ui.graphics.ImageBitmap?,
+    val info: android.content.pm.ShortcutInfo,
+)
+
 /** Which icons to render: icon pack, and full icons or symbols for glass tiles. */
 data class IconConfig(
     val iconPack: String? = null,
@@ -220,6 +227,40 @@ class AppRepository(
         val inner = drawable.toBitmap(size - 2 * pad, size - 2 * pad)
         canvas.drawBitmap(inner, pad.toFloat(), pad.toFloat(), null)
         return bitmap
+    }
+
+    /**
+     * The app's shortcuts ("New chat", "Incognito tab", …), as offered in its long-press
+     * menu. Only the default home app may read them.
+     */
+    fun shortcuts(app: AppInfo): List<AppShortcut> = runCatching {
+        if (!launcherApps.hasShortcutHostPermission()) return emptyList()
+        val query = LauncherApps.ShortcutQuery()
+            .setPackage(app.packageName)
+            .setActivity(app.component)
+            .setQueryFlags(
+                LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC or
+                    LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST,
+            )
+        launcherApps.getShortcuts(query, app.user).orEmpty()
+            .filter { it.isEnabled }
+            .sortedWith(compareBy({ !it.isDeclaredInManifest }, { it.rank }))
+            .take(4)
+            .map { info ->
+                val icon = runCatching {
+                    launcherApps.getShortcutIconDrawable(info, densityDpi)?.toBitmap(96, 96)?.asImageBitmap()
+                }.getOrNull()
+                AppShortcut(
+                    label = (info.shortLabel ?: info.longLabel)?.toString().orEmpty(),
+                    icon = icon,
+                    info = info,
+                )
+            }
+            .filter { it.label.isNotBlank() }
+    }.getOrDefault(emptyList())
+
+    fun startShortcut(shortcut: AppShortcut, sourceBounds: Rect? = null) {
+        runCatching { launcherApps.startShortcut(shortcut.info, sourceBounds, null) }
     }
 
     /** [options] carries the launch animation (zoom out of the icon). */

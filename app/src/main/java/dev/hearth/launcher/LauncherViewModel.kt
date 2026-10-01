@@ -12,6 +12,7 @@ import dev.hearth.launcher.data.AppInfo
 import dev.hearth.launcher.data.AppRepository
 import dev.hearth.launcher.data.AppUsage
 import dev.hearth.launcher.data.CellPos
+import dev.hearth.launcher.data.HomeFolderData
 import dev.hearth.launcher.data.HomeLayoutRepository
 import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.IconConfig
@@ -71,6 +72,59 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     /** Places the user dragged apps to on the home screen. */
     val homePositions: StateFlow<Map<String, CellPos>> = homeLayout.positions
+
+    /** Folders on the home screen. */
+    val folders: StateFlow<List<HomeFolderData>> = homeLayout.folders
+
+    fun folderOf(appKey: String): HomeFolderData? = folders.value.firstOrNull { appKey in it.apps }
+
+    /** A new folder from two apps; it is named after the first app's App Library category. */
+    fun createFolder(first: AppInfo, second: AppInfo): HomeFolderData {
+        val folder = HomeFolderData(
+            id = System.currentTimeMillis().toString(36),
+            name = first.category.title.substringBefore(" &"),
+            apps = listOf(first.key, second.key),
+        )
+        homeLayout.setFolders(folders.value.map { it.copy(apps = it.apps - first.key - second.key) }.filter { it.apps.isNotEmpty() } + folder)
+        return folder
+    }
+
+    fun addToFolder(folderId: String, app: AppInfo) {
+        homeLayout.setFolders(
+            folders.value.map { f ->
+                when {
+                    f.id == folderId -> if (app.key in f.apps) f else f.copy(apps = f.apps + app.key)
+                    else -> f.copy(apps = f.apps - app.key)
+                }
+            }.filter { it.apps.isNotEmpty() },
+        )
+    }
+
+    /** Takes an app out of its folder; a folder left with one app turns back into that app. */
+    fun removeFromFolder(appKey: String) {
+        val folder = folderOf(appKey) ?: return
+        val rest = folder.apps - appKey
+        if (rest.size <= 1) {
+            dissolveFolder(folder.id)
+        } else {
+            homeLayout.setFolders(folders.value.map { if (it.id == folder.id) it.copy(apps = rest) else it })
+        }
+    }
+
+    /** Removes the folder; its apps go back onto the home screen, the first one in its place. */
+    fun dissolveFolder(folderId: String) {
+        val folder = folders.value.firstOrNull { it.id == folderId } ?: return
+        homeLayout.setFolders(folders.value.filterNot { it.id == folderId })
+        val positions = homePositions.value
+        val place = positions[folder.key]
+        val updated = positions - folder.key
+        homeLayout.set(if (place != null && folder.apps.isNotEmpty()) updated + (folder.apps.first() to place) else updated)
+    }
+
+    fun renameFolder(folderId: String, name: String) {
+        val clean = name.trim().ifBlank { return }
+        homeLayout.setFolders(folders.value.map { if (it.id == folderId) it.copy(name = clean) else it })
+    }
 
     val settings: StateFlow<LauncherSettings> = settingsRepo.settings
 
@@ -307,6 +361,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         repo.launch(app, sourceBounds, options)
     }
     fun openAppInfo(app: AppInfo) = repo.openAppInfo(app)
+    fun shortcuts(app: AppInfo) = repo.shortcuts(app)
+    fun startShortcut(shortcut: dev.hearth.launcher.data.AppShortcut) = repo.startShortcut(shortcut)
     fun uninstall(app: AppInfo) = repo.uninstall(app)
     fun webSearch(query: String) = repo.webSearch(query, settings.value.searchEngine)
     fun askClaude(question: String? = null) = controls.openClaude(question)

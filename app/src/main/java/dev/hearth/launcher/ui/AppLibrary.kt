@@ -229,6 +229,8 @@ private fun LibraryIcon(app: AppInfo, size: Dp, actions: AppActions) {
         )
         if (selection.active) {
             SelectionBadge(isSelected, Modifier.align(Alignment.TopEnd))
+        } else {
+            NotificationBadge(app, Modifier.align(Alignment.TopEnd))
         }
     }
 }
