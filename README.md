@@ -30,6 +30,11 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   schließt Hearth es und zeigt seins (braucht den Bedienungshilfe-Dienst)
 - „Vom Startbildschirm entfernen“: App verschwindet vom Homescreen, bleibt aber
   in App-Mediathek und Suche (einzeln im Menü oder mehrere per „Auswählen“)
+- Apps frei anordnen: Icon lange drücken und ziehen (Menü verschwindet beim Ziehen),
+  Glas-Feld zeigt den Zielplatz, belegte Plätze tauschen, am Rand blättert die Seite,
+  ins Dock ziehen und aus dem Dock heraus; „Anordnung zurücksetzen“ in den Einstellungen
+- Schneller nach dem Zurückkehren: Icons werden zwischengespeichert und brauchen weniger
+  Speicher, damit Android den Launcher seltener schließt und er sofort wieder da ist
 - Widgets direkt auf dem Startbildschirm: lange auf eine freie Stelle → „Widget hierher“;
   Widgets belegen Rasterfelder auf Glas, Apps fließen drumherum; Widget lange drücken
   für Größe/Seite/Entfernen, halten und ziehen zum Verschieben

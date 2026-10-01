@@ -8,11 +8,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import dev.hearth.launcher.data.AppInfo
 
 @Composable
-fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier) {
+fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier, draggingKey: String? = null) {
     if (apps.isEmpty()) return
     LiquidGlass(
         cornerRadius = 34.dp,
@@ -29,7 +30,13 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
         ) {
             apps.forEach { app ->
                 key(app.key) {
-                    AppIcon(app, actions, showLabel = false)
+                    AppIcon(
+                        app = app,
+                        actions = actions,
+                        showLabel = false,
+                        draggable = true,
+                        modifier = Modifier.graphicsLayer { alpha = if (app.key == draggingKey) 0f else 1f },
+                    )
                 }
             }
         }

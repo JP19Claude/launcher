@@ -11,6 +11,8 @@ import androidx.lifecycle.viewModelScope
 import dev.hearth.launcher.data.AppInfo
 import dev.hearth.launcher.data.AppRepository
 import dev.hearth.launcher.data.AppUsage
+import dev.hearth.launcher.data.CellPos
+import dev.hearth.launcher.data.HomeLayoutRepository
 import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.IconConfig
 import dev.hearth.launcher.data.IconPackInfo
@@ -64,6 +66,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     /** What is playing, for the control center. */
     val media = MediaRepository(application)
+
+    private val homeLayout = HomeLayoutRepository(application)
+
+    /** Places the user dragged apps to on the home screen. */
+    val homePositions: StateFlow<Map<String, CellPos>> = homeLayout.positions
 
     val settings: StateFlow<LauncherSettings> = settingsRepo.settings
 
@@ -238,6 +245,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun restoreHome() {
         settingsRepo.update { it.copy(removedFromHome = emptySet()) }
     }
+
+    fun setHomePositions(positions: Map<String, CellPos>) = homeLayout.set(positions)
+
+    fun forgetHomePosition(key: String) = homeLayout.forget(key)
+
+    /** Back to automatic order on the home screen. */
+    fun resetHomeLayout() = homeLayout.reset()
 
     fun isOnHome(app: AppInfo): Boolean = app.key !in settings.value.removedFromHome
 

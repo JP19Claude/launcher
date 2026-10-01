@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import dev.hearth.launcher.data.AppInfo
+import dev.hearth.launcher.data.CellPos
 import dev.hearth.launcher.data.HomeWidget
 import dev.hearth.launcher.data.WidgetRepository
 import kotlin.math.ceil
@@ -63,38 +64,71 @@ private fun HomeWidget.fitInto(columns: Int, rows: Int): HomeWidget {
 }
 
 /**
- * Lays out the home screen: widgets keep their cells, apps fill the free cells
- * row by row, page after page. The first page has fewer rows (clock on top).
+ * Lays out the home screen. Widgets keep their cells, apps the user placed keep theirs,
+ * and all other apps fill the free cells row by row, page after page.
+ * The first page has fewer rows (clock on top).
  */
 fun layoutHome(
     apps: List<AppInfo>,
     widgets: List<HomeWidget>,
+    pinned: Map<String, CellPos>,
     columns: Int,
     rows: Int,
     firstPageRows: Int,
 ): List<HomePage> {
-    val pages = ArrayList<HomePage>()
-    val lastWidgetPage = widgets.maxOfOrNull { it.page } ?: 0
-    var next = 0
+    val taken = HashMap<Int, Array<BooleanArray>>()
+    fun grid(page: Int) = taken.getOrPut(page) { Array(pageRows(page, rows, firstPageRows)) { BooleanArray(columns) } }
+
+    // 1. Widgets
+    val placedWidgets = HashMap<Int, MutableList<HomeWidget>>()
+    widgets.filter { it.page in 0 until MAX_PAGES }.forEach { raw ->
+        val w = raw.fitInto(columns, pageRows(raw.page, rows, firstPageRows))
+        val onPage = placedWidgets.getOrPut(w.page) { ArrayList() }
+        if (onPage.none { it.overlaps(w) }) {
+            onPage += w
+            val g = grid(w.page)
+            for (r in w.row until w.row + w.spanY) for (c in w.col until w.col + w.spanX) g[r][c] = true
+        }
+    }
+
+    // 2. Apps with a place of their own
+    val cells = HashMap<Int, MutableList<HomeCell>>()
+    val flowing = ArrayList<AppInfo>()
+    apps.forEach { app ->
+        val pos = pinned[app.key]
+        val ok = pos != null && pos.page in 0 until MAX_PAGES && pos.col in 0 until columns &&
+            pos.row in 0 until pageRows(pos.page, rows, firstPageRows) && !grid(pos.page)[pos.row][pos.col]
+        if (ok && pos != null) {
+            grid(pos.page)[pos.row][pos.col] = true
+            cells.getOrPut(pos.page) { ArrayList() } += HomeCell(app, pos.col, pos.row)
+        } else {
+            flowing += app
+        }
+    }
+
+    // 3. Everything else fills the gaps
     var page = 0
-    while ((page == 0 || next < apps.size || page <= lastWidgetPage) && page < MAX_PAGES) {
-        val pageRows = if (page == 0) firstPageRows else rows
-        val taken = Array(pageRows) { BooleanArray(columns) }
-        val placed = ArrayList<HomeWidget>()
-        widgets.filter { it.page == page }.map { it.fitInto(columns, pageRows) }.forEach { w ->
-            if (placed.none { it.overlaps(w) }) {
-                placed += w
-                for (r in w.row until w.row + w.spanY) for (c in w.col until w.col + w.spanX) taken[r][c] = true
+    var next = 0
+    while (next < flowing.size && page < MAX_PAGES) {
+        val g = grid(page)
+        for (r in g.indices) for (c in 0 until columns) {
+            if (!g[r][c] && next < flowing.size) {
+                g[r][c] = true
+                cells.getOrPut(page) { ArrayList() } += HomeCell(flowing[next++], c, r)
             }
         }
-        val cells = ArrayList<HomeCell>()
-        for (r in 0 until pageRows) for (c in 0 until columns) {
-            if (!taken[r][c] && next < apps.size) cells += HomeCell(apps[next++], c, r)
-        }
-        pages += HomePage(pageRows, cells, placed)
         page++
     }
-    return pages
+
+    val lastPage = maxOf(0, taken.keys.maxOrNull() ?: 0, cells.keys.maxOrNull() ?: 0)
+    // Pages that ended up empty in the middle are kept, so pinned apps don't jump pages.
+    return (0..lastPage).map { p ->
+        HomePage(
+            rows = pageRows(p, rows, firstPageRows),
+            apps = cells[p].orEmpty(),
+            widgets = placedWidgets[p].orEmpty(),
+        )
+    }
 }
 
 private const val MAX_PAGES = 40
@@ -185,14 +219,21 @@ fun Modifier.longPressDrag(
 @Composable
 fun HomePageGrid(
     page: HomePage,
+    pageIndex: Int,
     columns: Int,
     actions: AppActions,
     widgets: WidgetRepository,
     onWidgetMenu: (HomeWidget, Rect) -> Unit,
     onWidgetDrop: (HomeWidget, Int, Int) -> Unit,
+    onGeometry: (Int, Rect) -> Unit,
+    draggingKey: String?,
     modifier: Modifier = Modifier,
 ) {
-    BoxWithConstraints(modifier.fillMaxWidth()) {
+    BoxWithConstraints(
+        modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { onGeometry(pageIndex, it.boundsInRoot()) },
+    ) {
         val cellW = maxWidth / columns
         val cellH = maxHeight / page.rows
         page.widgets.forEach { widget ->
@@ -205,13 +246,16 @@ fun HomePageGrid(
                 val spec = spring<Dp>(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)
                 val x by animateDpAsState(cellW * cell.col, spec, label = "iconX")
                 val y by animateDpAsState(cellH * cell.row, spec, label = "iconY")
+                val beingDragged = cell.app.key == draggingKey
                 Box(
                     Modifier
                         .offset(x, y)
-                        .size(cellW, cellH),
+                        .size(cellW, cellH)
+                        // The dragged icon follows the finger in an overlay; its cell stays empty.
+                        .graphicsLayer { alpha = if (beingDragged) 0f else 1f },
                     contentAlignment = Alignment.Center,
                 ) {
-                    AppIcon(cell.app, actions, fillCell = true)
+                    AppIcon(cell.app, actions, fillCell = true, draggable = true)
                 }
             }
         }

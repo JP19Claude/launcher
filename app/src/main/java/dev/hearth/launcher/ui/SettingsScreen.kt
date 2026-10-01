@@ -349,6 +349,11 @@ fun SettingsScreen(
                         description = "Hinter der letzten Seite: alle Apps in Glas-Ordnern",
                         checked = s.showAppLibrary,
                     ) { v -> update { it.copy(showAppLibrary = v) } }
+                    ActionRow(
+                        label = "Anordnung zurücksetzen",
+                        description = "Apps wieder automatisch sortieren (frei verschobene Plätze vergessen)",
+                        onClick = vm::resetHomeLayout,
+                    )
                     if (s.removedFromHome.isNotEmpty()) {
                         ActionRow(
                             label = "Alle Apps zurück auf den Startbildschirm",

@@ -51,7 +51,11 @@ class AppRepository(
 ) {
 
     private val launcherApps = context.getSystemService(LauncherApps::class.java)
-    private val iconSizePx = (context.resources.displayMetrics.density * 96).toInt()
+    // 72 dp is the largest icon size in the settings; bigger bitmaps only cost memory,
+    // and a launcher that uses less memory is closed less often in the background.
+    private val iconSizePx = (context.resources.displayMetrics.density * 72).toInt()
+    private val cache = IconCache(context)
+    @Volatile private var cacheChecked = false
     private val densityDpi = context.resources.displayMetrics.densityDpi
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var loadJob: Job? = null
@@ -101,6 +105,12 @@ class AppRepository(
         val current = config ?: return
         loadJob?.cancel()
         loadJob = scope.launch {
+            val signature = "v2|$current|$iconSizePx"
+            // First start after the launcher was closed: show the saved icons at once.
+            if (!cacheChecked) {
+                cacheChecked = true
+                if (_apps.value.isEmpty()) cache.read(signature)?.let { _apps.value = it }
+            }
             if (!packLoaded) {
                 pack = current.iconPack?.let(iconPacks::load)
                 packLoaded = true
@@ -108,6 +118,7 @@ class AppRepository(
             val list = loadApps(current, pack)
             ensureActive()
             _apps.value = list
+            cache.write(signature, list)
         }
     }
 

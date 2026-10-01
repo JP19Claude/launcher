@@ -18,6 +18,14 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
@@ -172,7 +180,61 @@ class AppActions(
     val launch: (AppInfo, Rect?) -> Unit,
     /** Long press: opens the context menu next to the icon (bounds in root coordinates). */
     val menu: (AppInfo, Rect) -> Unit,
+    /** Long press and move on a home screen or dock icon: start dragging (finger in root coordinates). */
+    val dragStart: (AppInfo, Offset, Rect) -> Unit = { _, _, _ -> },
 )
+
+/**
+ * Tap, long press (menu) and long press + move (drag) on one icon.
+ * Nothing is consumed before the long press, so swiping pages still works from an icon.
+ */
+private fun Modifier.tapMenuOrDrag(
+    onTap: () -> Unit,
+    onLongPress: () -> Unit,
+    onDragStart: (Offset) -> Unit,
+    onPressChange: (Boolean) -> Unit,
+): Modifier = pointerInput(Unit) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        onPressChange(true)
+        // 1 = lifted (tap), 2 = moved or taken over by scrolling, null = long press.
+        val early = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+            var outcome = 0
+            while (outcome == 0) {
+                val event = awaitPointerEvent()
+                val change = event.changes.firstOrNull { it.id == down.id }
+                outcome = when {
+                    change == null -> 2
+                    !change.pressed -> 1
+                    change.isConsumed -> 2
+                    (change.position - down.position).getDistance() > viewConfiguration.touchSlop -> 2
+                    else -> 0
+                }
+            }
+            outcome
+        }
+        when (early) {
+            1 -> {
+                onPressChange(false)
+                onTap()
+            }
+            2 -> onPressChange(false)
+            else -> {
+                onLongPress()
+                while (true) {
+                    val event = awaitPointerEvent()
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                    if (!change.pressed) break
+                    if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop * 1.5f) {
+                        onDragStart(change.position)
+                        break
+                    }
+                }
+                onPressChange(false)
+            }
+        }
+    }
+}
 
 /** Turns a colored symbol into a single color, keeping its shading. */
 private fun monoTint(color: Color, gain: Float = 1.25f): ColorFilter {
@@ -250,6 +312,8 @@ fun AppIcon(
     showLabel: Boolean = true,
     onWallpaper: Boolean = true,
     fillCell: Boolean = false,
+    /** Home screen and dock icons can be dragged to another place. */
+    draggable: Boolean = false,
     onLaunch: (AppInfo, Rect?) -> Unit = actions.launch,
 ) {
     val settings = LocalSettings.current
@@ -257,29 +321,50 @@ fun AppIcon(
     val haptics = LocalHapticFeedback.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
+    var pressedByHand by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.86f else 1f,
+        targetValue = if (pressed || pressedByHand) 0.86f else 1f,
         animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow),
         label = "iconPress",
     )
     var bounds by remember { mutableStateOf(Rect.Zero) }
+    var cellOrigin by remember { mutableStateOf(Offset.Zero) }
     val selection = LocalSelection.current
     val isSelected = selection.active && app.key in selection.selected
+    val launch by rememberUpdatedState(onLaunch)
+    val currentActions by rememberUpdatedState(actions)
+    val longPress = {
+        if (settings.haptics) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        if (selection.active) selection.toggle(app) else currentActions.menu(app, bounds)
+    }
+    val gestures = if (draggable && !selection.active) {
+        Modifier
+            .onGloballyPositioned { cellOrigin = it.positionInRoot() }
+            .semantics(mergeDescendants = true) {
+                onClick { launch(app, bounds); true }
+                onLongClick { longPress(); true }
+            }
+            .tapMenuOrDrag(
+                onTap = { launch(app, bounds) },
+                onLongPress = longPress,
+                onDragStart = { local -> currentActions.dragStart(app, cellOrigin + local, bounds) },
+                onPressChange = { pressedByHand = it },
+            )
+    } else {
+        Modifier.combinedClickable(
+            interactionSource = interaction,
+            indication = null,
+            onClick = { if (selection.active) selection.toggle(app) else launch(app, bounds) },
+            onLongClick = longPress,
+        )
+    }
 
     Box(modifier.wiggle(selection.active, app.key.hashCode())) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .then(if (fillCell) Modifier.fillMaxWidth() else Modifier.width(iconSize + 18.dp))
-                .combinedClickable(
-                    interactionSource = interaction,
-                    indication = null,
-                    onClick = { if (selection.active) selection.toggle(app) else onLaunch(app, bounds) },
-                    onLongClick = {
-                        if (settings.haptics) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        if (selection.active) selection.toggle(app) else actions.menu(app, bounds)
-                    },
-                )
+                .then(gestures)
                 .padding(vertical = 6.dp),
         ) {
             Box {

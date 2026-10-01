@@ -78,6 +78,8 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -96,6 +98,11 @@ import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.layout.offset
+import dev.hearth.launcher.data.CellPos
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.onSizeChanged
@@ -179,9 +186,17 @@ fun LauncherScreen(vm: LauncherViewModel) {
         apps.filterNot { it.key in dockKeys || it.key in settings.removedFromHome }
     }
     val homeWidgets by vm.widgets.homeWidgets.collectAsStateWithLifecycle()
-    val pages = remember(homeApps, homeWidgets, columns, rows, firstPageRows) {
-        layoutHome(homeApps, homeWidgets, columns, rows, firstPageRows)
+    val pinned by vm.homePositions.collectAsStateWithLifecycle()
+    val laidOut = remember(homeApps, homeWidgets, pinned, columns, rows, firstPageRows) {
+        layoutHome(homeApps, homeWidgets, pinned, columns, rows, firstPageRows)
     }
+    // Dragging an app: where the finger is, and an extra empty page to drop onto.
+    var drag by remember { mutableStateOf<AppDrag?>(null) }
+    var dragPos by remember { mutableStateOf(Offset.Zero) }
+    val gridGeometry = remember { mutableStateMapOf<Int, Rect>() }
+    var dockBounds by remember { mutableStateOf(Rect.Zero) }
+    var rootWidth by remember { mutableStateOf(0) }
+    val pages = if (drag != null) laidOut + HomePage(rows, emptyList(), emptyList()) else laidOut
     var toast by remember { mutableStateOf<GlassToast?>(null) }
     // Size of the pager, to turn a widget's size in dp into grid cells.
     var pagerSize by remember { mutableStateOf(IntSize.Zero) }
@@ -250,6 +265,11 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     selected = setOf(app.key)
                 }
                 menu = GlassMenuRequest(bounds, items, app)
+            },
+            dragStart = { app, finger, iconBounds ->
+                menu = null
+                drag = AppDrag(app, vm.isInDock(app), finger - iconBounds.topLeft, iconBounds.size)
+                dragPos = finger
             },
         )
     }
@@ -323,23 +343,6 @@ fun LauncherScreen(vm: LauncherViewModel) {
         }
     }
 
-    // Coming back to the home screen: icons and dock zoom in softly, like on iOS.
-    val reveal = remember { Animatable(1f) }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    DisposableEffect(lifecycle, settings.animations) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP && settings.animations) {
-                // Set while hidden, so the zoom starts with the first visible frame.
-                scope.launch { reveal.snapTo(0f) }
-            }
-            if (event == Lifecycle.Event.ON_START) {
-                scope.launch { reveal.animateTo(1f, spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)) }
-            }
-        }
-        lifecycle.addObserver(observer)
-        onDispose { lifecycle.removeObserver(observer) }
-    }
-
     val light = rememberGlassLight(settings.glassMotion)
     val glassStyle = remember(settings) { GlassStyle.from(settings) }
     val menuBlur by animateDpAsState(
@@ -362,6 +365,77 @@ fun LauncherScreen(vm: LauncherViewModel) {
         Unit
     }
 
+    // Where a dragged app would land: (home page, column, row), or null.
+    fun dropCell(d: AppDrag, finger: Offset): Triple<Int, Int, Int>? {
+        val point = finger - d.grabOffset + Offset(d.iconSize.width / 2f, d.iconSize.height / 2f)
+        val homePage = pagerState.currentPage - widgetPages
+        if (homePage !in pages.indices) return null
+        val rect = gridGeometry[homePage] ?: return null
+        if (!rect.contains(point)) return null
+        val pageRows = pages[homePage].rows
+        val col = ((point.x - rect.left) / (rect.width / columns)).toInt().coerceIn(0, columns - 1)
+        val row = ((point.y - rect.top) / (rect.height / pageRows)).toInt().coerceIn(0, pageRows - 1)
+        return Triple(homePage, col, row)
+    }
+
+    val finishDrag: () -> Unit = {
+        val d = drag
+        val finger = dragPos
+        drag = null
+        if (d != null) {
+            val point = finger - d.grabOffset + Offset(d.iconSize.width / 2f, d.iconSize.height / 2f)
+            val target = dropCell(d, finger)
+            when {
+                dockBounds.contains(point) -> when {
+                    d.fromDock -> Unit
+                    vm.canAddToDock() -> {
+                        vm.forgetHomePosition(d.app.key)
+                        vm.addToDock(d.app)
+                    }
+                    else -> toast = GlassToast("Das Dock ist voll")
+                }
+                target != null -> {
+                    val (page, col, row) = target
+                    if (pages[page].widgets.any { it.covers(col, row) }) {
+                        toast = GlassToast("Dort ist ein Widget")
+                    } else {
+                        // From now on every app keeps its place; the dragged one takes the new
+                        // cell and an app already there swaps over to the old one.
+                        val positions = HashMap<String, CellPos>()
+                        laidOut.forEachIndexed { p, hp -> hp.apps.forEach { positions[it.app.key] = CellPos(p, it.col, it.row) } }
+                        val old = positions[d.app.key]
+                        val newPos = CellPos(page, col, row)
+                        val occupant = positions.entries.firstOrNull { it.value == newPos && it.key != d.app.key }?.key
+                        if (occupant != null) {
+                            if (old != null) positions[occupant] = old else positions.remove(occupant)
+                        }
+                        positions[d.app.key] = newPos
+                        vm.setHomePositions(positions)
+                        if (d.fromDock) vm.removeFromDock(d.app)
+                    }
+                }
+            }
+        }
+        Unit
+    }
+
+    // Holding a dragged app at the screen edge turns the page.
+    val edgeZone = with(density) { 28.dp.toPx() }
+    val edge = when {
+        drag == null || rootWidth == 0 -> 0
+        dragPos.x < edgeZone -> -1
+        dragPos.x > rootWidth - edgeZone -> 1
+        else -> 0
+    }
+    LaunchedEffect(edge) {
+        while (edge != 0) {
+            delay(650)
+            val target = pagerState.currentPage + edge
+            if (target < widgetPages || target >= widgetPages + pages.size) break
+            pagerState.animateScrollToPage(target)
+        }
+    }
+
     CompositionLocalProvider(
         LocalBackdrop provides backdrop,
         LocalSettings provides settings,
@@ -371,7 +445,24 @@ fun LauncherScreen(vm: LauncherViewModel) {
             selected = if (app.key in selected) selected - app.key else selected + app.key
         },
     ) {
-        Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .onSizeChanged { rootWidth = it.width }
+                // While an app is dragged, this follows the finger everywhere and keeps the touch
+                // away from pages and icons below.
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (drag == null) continue
+                            val change = event.changes.firstOrNull() ?: continue
+                            event.changes.forEach { it.consume() }
+                            if (change.pressed) dragPos = change.position else finishDrag()
+                        }
+                    }
+                },
+        ) {
             Box(
                 Modifier
                     .fillMaxSize()
@@ -402,18 +493,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             onSwipeDown = onSwipeDown,
                         ),
                 ) {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .systemBarsPadding()
-                            .graphicsLayer {
-                                val r = reveal.value
-                                val s = 0.93f + 0.07f * r
-                                scaleX = s
-                                scaleY = s
-                                alpha = 0.35f + 0.65f * r
-                            },
-                    ) {
+                    Column(Modifier.fillMaxSize().systemBarsPadding()) {
                         HorizontalPager(
                             state = pagerState,
                             beyondViewportPageCount = 1,
@@ -469,6 +549,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                     }
                                     HomePageGrid(
                                         page = pages[page],
+                                        pageIndex = page,
+                                        onGeometry = { index, rect -> gridGeometry[index] = rect },
+                                        draggingKey = drag?.app?.key,
                                         columns = columns,
                                         actions = actions,
                                         widgets = vm.widgets,
@@ -528,7 +611,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         Dock(
                             apps = dock,
                             actions = actions,
-                            modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 10.dp),
+                            draggingKey = drag?.app?.key,
+                            modifier = Modifier
+                                .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 10.dp)
+                                .onGloballyPositioned { dockBounds = it.boundsInRoot() },
                         )
                     }
                 }
@@ -634,6 +720,27 @@ fun LauncherScreen(vm: LauncherViewModel) {
             GlassToastHost(toast = toast, onDismiss = { toast = null })
 
             GlassMenuOverlay(request = menu, onDismiss = { menu = null })
+
+            drag?.let { d ->
+                DragOverlay(
+                    drag = d,
+                    finger = dragPos,
+                    target = dropCell(d, dragPos)?.let { (page, col, row) ->
+                        val rect = gridGeometry[page]
+                        if (rect == null) {
+                            null
+                        } else {
+                            val cellW = rect.width / columns
+                            val cellH = rect.height / pages[page].rows
+                            Rect(Offset(rect.left + col * cellW, rect.top + row * cellH), Size(cellW, cellH))
+                        }
+                    },
+                    overDock = dockBounds.contains(
+                        dragPos - d.grabOffset + Offset(d.iconSize.width / 2f, d.iconSize.height / 2f),
+                    ),
+                    dockBounds = dockBounds,
+                )
+            }
         }
     }
 }
@@ -1211,4 +1318,47 @@ private fun widgetMenu(
         items = items,
         title = "Widget (Seite ${widget.page + 1}/${pageCount.coerceAtLeast(widget.page + 1)}): halten und ziehen verschiebt",
     )
+}
+
+/** An app being dragged on the home screen. */
+@Immutable
+class AppDrag(val app: AppInfo, val fromDock: Boolean, val grabOffset: Offset, val iconSize: Size)
+
+/** The dragged icon under the finger, and a glass cell where it will land. */
+@Composable
+private fun DragOverlay(drag: AppDrag, finger: Offset, target: Rect?, overDock: Boolean, dockBounds: Rect) {
+    val density = LocalDensity.current
+    val highlight = if (overDock) dockBounds else target
+    if (highlight != null) {
+        val inset = with(density) { 4.dp.toPx() }
+        val glow by animateFloatAsState(1f, tween(200), label = "dropGlow")
+        Box(
+            Modifier
+                .offset { IntOffset((highlight.left + inset).roundToInt(), (highlight.top + inset).roundToInt()) }
+                .size(
+                    with(density) { (highlight.width - 2 * inset).coerceAtLeast(0f).toDp() },
+                    with(density) { (highlight.height - 2 * inset).coerceAtLeast(0f).toDp() },
+                )
+                .graphicsLayer { alpha = glow },
+        ) {
+            LiquidGlass(
+                cornerRadius = 22.dp,
+                refraction = 14.dp,
+                tint = Color.White.copy(alpha = 0.12f),
+                modifier = Modifier.fillMaxSize(),
+            ) { }
+        }
+    }
+    val topLeft = finger - drag.grabOffset
+    Box(
+        Modifier
+            .offset { IntOffset(topLeft.x.roundToInt(), topLeft.y.roundToInt()) }
+            .graphicsLayer {
+                scaleX = 1.15f
+                scaleY = 1.15f
+                alpha = 0.95f
+            },
+    ) {
+        AppIconImage(drag.app, with(density) { drag.iconSize.width.toDp() })
+    }
 }
