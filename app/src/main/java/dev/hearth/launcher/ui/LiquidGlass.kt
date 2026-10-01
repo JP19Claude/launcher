@@ -239,7 +239,7 @@ private class GlassEffect {
         light: Offset,
         touch: Offset,
         glow: Float,
-    ): RenderEffect {
+    ): RenderEffect? = runCatching {
         shader.setFloatUniform("size", width, height)
         shader.setFloatUniform("cornerRadius", radius)
         shader.setFloatUniform("depth", depth.coerceAtLeast(1f))
@@ -249,11 +249,14 @@ private class GlassEffect {
         shader.setFloatUniform("touch", touch.x, touch.y)
         shader.setFloatUniform("glow", glow)
         val glass = RenderEffect.createRuntimeShaderEffect(shader, "content")
-        if (blur < 0.5f) return glass
-        val blurEffect = RenderEffect.createBlurEffect(blur, blur, Shader.TileMode.CLAMP)
-        // Inner effect runs first: blur, then bend and light.
-        return RenderEffect.createChainEffect(glass, blurEffect)
-    }
+        if (blur < 0.5f) {
+            glass
+        } else {
+            val blurEffect = RenderEffect.createBlurEffect(blur, blur, Shader.TileMode.CLAMP)
+            // Inner effect runs first: blur, then bend and light.
+            RenderEffect.createChainEffect(glass, blurEffect)
+        }
+    }.getOrNull()
 }
 
 private fun DrawScope.drawBackdrop(backdrop: WallpaperBackdrop, origin: Offset) {
@@ -386,7 +389,8 @@ fun LiquidGlass(
                                     light = light.value,
                                     touch = touch,
                                     glow = glow,
-                                ).asComposeRenderEffect()
+                                )?.asComposeRenderEffect()
+                                    ?: if (blurPx >= 0.5f) BlurEffect(blurPx, blurPx, TileMode.Clamp) else null
 
                             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && blurPx >= 0.5f ->
                                 BlurEffect(blurPx, blurPx, TileMode.Clamp)
