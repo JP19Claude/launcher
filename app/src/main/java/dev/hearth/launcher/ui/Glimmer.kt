@@ -75,6 +75,16 @@ import dev.hearth.launcher.data.NowPlaying
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.min
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.TransformOrigin
+import kotlinx.coroutines.launch
 
 /** What Glimmer shows right now. */
 @Immutable
@@ -161,7 +171,14 @@ fun GlimmerIsland(
     screenWidthDp: Float,
     topInset: Dp,
     media: MediaRepository,
+    /** Tap opens the app (iPhone), holding unfolds; otherwise the other way round. */
+    tapOpens: Boolean = false,
+    /** Shimmer in the activity's color when something new shows up. */
+    glow: Boolean = true,
     onToggle: () -> Unit,
+    onExpand: () -> Unit = onToggle,
+    onSwap: () -> Unit = {},
+    onFocus: (IslandContent) -> Unit = {},
     onCollapse: () -> Unit,
     onOpen: (IslandContent) -> Unit,
     onTargetSize: (DpSize) -> Unit,
@@ -184,27 +201,99 @@ fun GlimmerIsland(
     val height by animateDpAsState(target.height, morph, label = "islandHeight")
     val corner = if (expanded) 38.dp else height / 2
 
+    // Something new arrives: a little hop and a shimmer in its color, like a drop landing.
+    val animations = LocalSettings.current.animations
+    val hop = remember { Animatable(1f) }
+    val shimmer = remember { Animatable(0f) }
+    val key = islandKey(content)
+    LaunchedEffect(key) {
+        if (!animations || content is IslandContent.Idle || content is IslandContent.Hidden) return@LaunchedEffect
+        launch {
+            hop.snapTo(1f)
+            hop.animateTo(1.07f, tween(120))
+            hop.animateTo(1f, spring(dampingRatio = 0.38f, stiffness = 420f))
+        }
+        if (glow) {
+            shimmer.snapTo(0f)
+            shimmer.animateTo(1f, tween(260))
+            shimmer.animateTo(0f, tween(1400))
+        }
+    }
+    val glowColor = glowColorOf(content, LocalSettings.current.accent.color)
+    val tap: () -> Unit = {
+        if (content !is IslandContent.Idle) {
+            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            if (tapOpens && !expanded) onOpen(content) else onToggle()
+        }
+    }
+    val hold: () -> Unit = {
+        if (content !is IslandContent.Idle) {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            if (tapOpens && !expanded) onExpand() else onOpen(content)
+        }
+    }
+
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         if (content is IslandContent.Hidden) return@Box
-        Row(Modifier.padding(top = topInset), verticalAlignment = Alignment.Top) {
+        Row(
+            Modifier
+                .padding(top = topInset)
+                .graphicsLayer {
+                    val s = if (expanded) 1f else hop.value
+                    scaleX = s
+                    scaleY = s
+                    transformOrigin = TransformOrigin(0.5f, 0f)
+                },
+            verticalAlignment = Alignment.Top,
+        ) {
             IslandShape(
                 style = style,
                 corner = corner,
                 modifier = Modifier
+                    .drawBehind {
+                        val a = shimmer.value
+                        if (a > 0.01f && !expanded) {
+                            // Soft rings growing outwards, fading: the "glimmer".
+                            for (i in 1..4) {
+                                val spread = i * 1.6.dp.toPx()
+                                drawRoundRect(
+                                    color = glowColor.copy(alpha = a * 0.32f / i),
+                                    topLeft = Offset(-spread, -spread),
+                                    size = Size(size.width + spread * 2, size.height + spread * 2),
+                                    cornerRadius = CornerRadius(size.height / 2 + spread),
+                                )
+                            }
+                        }
+                    }
                     .size(width, height)
-                    .pointerInput(content) {
-                        detectTapGestures(
-                            onTap = {
-                                if (content !is IslandContent.Idle) {
-                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    onToggle()
+                    .pointerInput(content, expanded, tapOpens) {
+                        detectTapGestures(onTap = { tap() }, onLongPress = { hold() })
+                    }
+                    // Pull down to unfold, push up to fold, sideways to switch activities.
+                    .pointerInput(content, expanded) {
+                        var total = Offset.Zero
+                        detectDragGestures(
+                            onDragStart = { total = Offset.Zero },
+                            onDragEnd = {
+                                val threshold = 18.dp.toPx()
+                                val vertical = abs(total.y) > abs(total.x)
+                                when {
+                                    content is IslandContent.Idle -> Unit
+                                    vertical && total.y > threshold && !expanded -> {
+                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onExpand()
+                                    }
+                                    vertical && total.y < -threshold && expanded -> onCollapse()
+                                    !vertical && abs(total.x) > threshold * 2 && !expanded -> {
+                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onSwap()
+                                    }
                                 }
                             },
-                            onLongPress = {
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onOpen(content)
-                            },
-                        )
+                        ) { change, amount ->
+                            change.consume()
+                            total += amount
+                        }
                     },
             ) {
                 AnimatedContent(
@@ -230,7 +319,16 @@ fun GlimmerIsland(
                     corner = 15.dp,
                     modifier = Modifier
                         .size(ISLAND_HEIGHT_DP.dp)
-                        .pointerInput(secondary) { detectTapGestures(onTap = { onOpen(secondary) }) },
+                        // Tap: bring it to the front and unfold it; hold: open its app.
+                        .pointerInput(secondary) {
+                            detectTapGestures(
+                                onTap = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onFocus(secondary)
+                                },
+                                onLongPress = { onOpen(secondary) },
+                            )
+                        },
                 ) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LeadingBadge(secondary, 18.dp) }
                 }
@@ -239,7 +337,16 @@ fun GlimmerIsland(
     }
 }
 
-private fun islandKey(content: IslandContent): String = when (content) {
+/** The color Glimmer shimmers in for an activity. */
+private fun glowColorOf(content: IslandContent, accent: Color): Color = when (content) {
+    is IslandContent.Alert -> content.color
+    is IslandContent.Message -> accent
+    is IslandContent.Media -> content.playing.artColor ?: Color.White
+    is IslandContent.Live -> noticeColor(content.notice.kind)
+    else -> Color.White
+}
+
+internal fun islandKey(content: IslandContent): String = when (content) {
     is IslandContent.Media -> "media"
     is IslandContent.Live -> "live-${content.notice.key}"
     is IslandContent.Message -> "msg-${content.notice.key}"
@@ -367,6 +474,8 @@ private fun CompactContent(content: IslandContent) {
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 96.dp),
             )
             else -> Unit
         }
@@ -429,9 +538,11 @@ private fun ExpandedContent(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(formatDuration(position), color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
                         Spacer(Modifier.width(8.dp))
-                        Box(Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.2f))) {
-                            Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(Color.White))
-                        }
+                        SeekBar(
+                            fraction = fraction,
+                            onSeek = { f -> media.seekTo((f * p.durationMs).toLong()) },
+                            modifier = Modifier.weight(1f),
+                        )
                         Spacer(Modifier.width(8.dp))
                         Text("-" + formatDuration(p.durationMs - position), color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
                     }
@@ -501,6 +612,49 @@ private fun ExpandedContent(
                 content.level?.let { LevelBar(it, content.color, Modifier.size(52.dp, 24.dp)) }
             }
             else -> Unit
+        }
+    }
+}
+
+/** Progress you can drag or tap to jump; grows a little under the finger, like on iOS. */
+@Composable
+private fun SeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = Modifier) {
+    var dragging by remember { mutableStateOf(false) }
+    var dragFraction by remember { mutableFloatStateOf(fraction) }
+    val shown = if (dragging) dragFraction else fraction
+    val thickness by animateDpAsState(if (dragging) 8.dp else 4.dp, label = "seekThickness")
+    Box(
+        modifier
+            .height(22.dp)
+            .pointerInput(Unit) {
+                detectTapGestures { offset -> onSeek((offset.x / size.width).coerceIn(0f, 1f)) }
+            }
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragStart = { offset ->
+                        dragging = true
+                        dragFraction = (offset.x / size.width).coerceIn(0f, 1f)
+                    },
+                    onDragEnd = {
+                        onSeek(dragFraction)
+                        dragging = false
+                    },
+                    onDragCancel = { dragging = false },
+                ) { change, amount ->
+                    change.consume()
+                    dragFraction = (dragFraction + amount / size.width).coerceIn(0f, 1f)
+                }
+            },
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(thickness)
+                .clip(RoundedCornerShape(thickness / 2))
+                .background(Color.White.copy(alpha = 0.2f)),
+        ) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(shown).background(Color.White))
         }
     }
 }

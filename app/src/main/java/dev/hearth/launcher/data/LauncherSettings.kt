@@ -229,6 +229,12 @@ data class LauncherSettings(
     val glimmerStyle: GlimmerStyle = GlimmerStyle.Black,
     val glimmerIdlePill: Boolean = true,
     val glimmerMessages: Boolean = true,
+    /** Tap opens the app (like the iPhone) instead of unfolding; holding does the other. */
+    val glimmerTapOpens: Boolean = false,
+    /** Short moments: earbuds connected, Do not disturb, fully charged. */
+    val glimmerAlerts: Boolean = true,
+    /** A soft glow in the activity's color when something new appears. */
+    val glimmerGlow: Boolean = true,
     val badgeStyle: BadgeStyle = BadgeStyle.Number,
     /** Double tap on empty home screen space locks the phone (needs the accessibility service). */
     val doubleTapLock: Boolean = true,
@@ -397,6 +403,9 @@ class SettingsRepository(context: Context) {
             glimmerStyle = enumOf("glimmerStyle", d.glimmerStyle),
             glimmerIdlePill = prefs.getBoolean("glimmerIdlePill", d.glimmerIdlePill),
             glimmerMessages = prefs.getBoolean("glimmerMessages", d.glimmerMessages),
+            glimmerTapOpens = prefs.getBoolean("glimmerTapOpens", d.glimmerTapOpens),
+            glimmerAlerts = prefs.getBoolean("glimmerAlerts", d.glimmerAlerts),
+            glimmerGlow = prefs.getBoolean("glimmerGlow", d.glimmerGlow),
             badgeStyle = enumOf("badgeStyle", d.badgeStyle),
             doubleTapLock = prefs.getBoolean("doubleTapLock", d.doubleTapLock),
             dockSize = prefs.getInt("dockSize", d.dockSize),
@@ -473,6 +482,9 @@ class SettingsRepository(context: Context) {
             .putString("glimmerStyle", s.glimmerStyle.name)
             .putBoolean("glimmerIdlePill", s.glimmerIdlePill)
             .putBoolean("glimmerMessages", s.glimmerMessages)
+            .putBoolean("glimmerTapOpens", s.glimmerTapOpens)
+            .putBoolean("glimmerAlerts", s.glimmerAlerts)
+            .putBoolean("glimmerGlow", s.glimmerGlow)
             .putString("badgeStyle", s.badgeStyle.name)
             .putBoolean("doubleTapLock", s.doubleTapLock)
             .putInt("dockSize", s.dockSize)
@@ -490,7 +502,10 @@ class SettingsRepository(context: Context) {
         const val PREFS_NAME = "hearth_settings"
         const val KEY_INTERCEPT = "interceptSystemShade"
         const val KEY_GLIMMER = "glimmerEnabled"
-        val GLIMMER_KEYS = setOf(KEY_GLIMMER, "glimmerStyle", "glimmerIdlePill", "glimmerMessages")
+        val GLIMMER_KEYS = setOf(
+            KEY_GLIMMER, "glimmerStyle", "glimmerIdlePill", "glimmerMessages",
+            "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
+        )
         const val KEY_LOCK_LAYOUT = "lockNotifications"
         const val KEY_LOCK_CONTENT = "lockShowContent"
     }

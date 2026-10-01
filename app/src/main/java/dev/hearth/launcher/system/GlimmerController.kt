@@ -8,6 +8,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.Configuration
 import android.graphics.PixelFormat
+import android.app.NotificationManager
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.BatteryManager
 import android.os.Build
@@ -40,6 +43,7 @@ import dev.hearth.launcher.ui.GlimmerIsland
 import dev.hearth.launcher.ui.Glyph
 import dev.hearth.launcher.ui.ISLAND_HEIGHT_DP
 import dev.hearth.launcher.ui.IslandContent
+import dev.hearth.launcher.ui.islandKey
 import dev.hearth.launcher.ui.LocalGlassStyle
 import dev.hearth.launcher.ui.LocalSettings
 import dev.hearth.launcher.ui.sendIntent
@@ -67,6 +71,20 @@ class GlimmerController(private val service: ControlCenterService) {
     private val message = MutableStateFlow<LiveNotice?>(null)
     private val landscape = MutableStateFlow(false)
 
+    /** The activity brought to the front by a swipe or a tap on the small bubble. */
+    private val focusKey = MutableStateFlow<String?>(null)
+    private var lastOrder: List<String> = emptyList()
+
+    private var batteryFull = false
+    private var dndOn: Boolean? = null
+
+    /** Earbuds and headphones coming and going (the first report lists what's already there). */
+    private var audioCallback: AudioDeviceCallback? = null
+    private var audioCallbackPrimed = false
+    private fun headphones(devices: Array<out AudioDeviceInfo>): List<AudioDeviceInfo> = devices.filter { d ->
+        d.isSink && d.type in HeadphoneTypes
+    }
+
     /** On the lock screen Glimmer shows live activities, but no empty idle pill. */
     private val locked = MutableStateFlow(false)
     private fun updateLocked() {
@@ -93,6 +111,28 @@ class GlimmerController(private val service: ControlCenterService) {
                 Intent.ACTION_POWER_CONNECTED -> {
                     val level = batteryLevel()
                     flash(IslandContent.Alert(Glyph.Spark, "Lädt", "$level %", GREEN, level / 100f))
+                }
+                Intent.ACTION_BATTERY_CHANGED -> {
+                    val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                    val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
+                    val plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0
+                    val full = plugged && (
+                        intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_FULL ||
+                            level * 100 / scale >= 100
+                        )
+                    if (full && !batteryFull && settings.glimmerAlerts) {
+                        flash(IslandContent.Alert(Glyph.Battery, "Vollständig geladen", "100 %", GREEN, 1f))
+                    }
+                    batteryFull = full
+                }
+                NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED -> {
+                    val filter = service.getSystemService(NotificationManager::class.java)?.currentInterruptionFilter
+                    val on = filter != null && filter != NotificationManager.INTERRUPTION_FILTER_ALL &&
+                        filter != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
+                    if (dndOn != null && dndOn != on && settings.glimmerAlerts) {
+                        flash(IslandContent.Alert(Glyph.Moon, "Nicht stören", if (on) "An" else "Aus", PURPLE))
+                    }
+                    dndOn = on
                 }
                 Intent.ACTION_BATTERY_LOW -> {
                     val level = batteryLevel()
@@ -144,8 +184,16 @@ class GlimmerController(private val service: ControlCenterService) {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_USER_PRESENT)
+            addAction(Intent.ACTION_BATTERY_CHANGED)
+            addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
         }
         updateLocked()
+        // Start from how things are, so only real changes flash.
+        dndOn = service.getSystemService(NotificationManager::class.java)?.currentInterruptionFilter?.let { f ->
+            f != NotificationManager.INTERRUPTION_FILTER_ALL && f != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
+        }
+        batteryFull = true
+        startHeadphoneWatch()
         ContextCompat.registerReceiver(service, systemReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         receiverRegistered = true
         scope = MainScope().also { s ->
@@ -156,7 +204,37 @@ class GlimmerController(private val service: ControlCenterService) {
         addWindow()
     }
 
+    private fun startHeadphoneWatch() {
+        val audio = service.getSystemService(AudioManager::class.java) ?: return
+        audioCallbackPrimed = false
+        val callback = object : AudioDeviceCallback() {
+            override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
+                // The first call lists everything already connected; that's no news.
+                if (!audioCallbackPrimed) {
+                    audioCallbackPrimed = true
+                    return
+                }
+                val name = headphones(addedDevices).firstOrNull()?.productName?.toString()?.takeIf { it.isNotBlank() }
+                    ?: if (headphones(addedDevices).isNotEmpty()) "Kopfhörer" else return
+                if (settings.glimmerAlerts) flash(IslandContent.Alert(Glyph.Headphones, name, "Verbunden", Color.White))
+            }
+
+            override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {
+                val name = headphones(removedDevices).firstOrNull()?.productName?.toString()?.takeIf { it.isNotBlank() }
+                    ?: if (headphones(removedDevices).isNotEmpty()) "Kopfhörer" else return
+                if (settings.glimmerAlerts) flash(IslandContent.Alert(Glyph.Headphones, name, "Getrennt", Color.White.copy(alpha = 0.7f)))
+            }
+        }
+        audioCallback = callback
+        runCatching { audio.registerAudioDeviceCallback(callback, handler) }
+    }
+
     fun stop() {
+        audioCallback?.let { cb ->
+            runCatching { service.getSystemService(AudioManager::class.java)?.unregisterAudioDeviceCallback(cb) }
+        }
+        audioCallback = null
+        focusKey.value = null
         handler.removeCallbacksAndMessages(null)
         root?.let { view -> runCatching { windowManager.removeView(view) } }
         root = null
@@ -221,17 +299,26 @@ class GlimmerController(private val service: ControlCenterService) {
                 val currentAlert by alert.collectAsStateWithLifecycle()
                 val currentMessage by message.collectAsStateWithLifecycle()
                 val isExpanded by expanded.collectAsStateWithLifecycle()
+                val focus by focusKey.collectAsStateWithLifecycle()
                 val sideways by landscape.collectAsStateWithLifecycle()
                 val onLockScreen by locked.collectAsStateWithLifecycle()
 
                 val ongoing = live.sortedBy { priority(it.kind) }
-                val activities = buildList<IslandContent> {
+                val ordered = buildList<IslandContent> {
                     currentAlert?.let { add(it) }
                     currentMessage?.let { add(IslandContent.Message(it)) }
                     ongoing.firstOrNull { it.kind == NoticeKind.Call }?.let { add(IslandContent.Live(it)) }
                     playing?.takeIf { it.playing }?.let { add(IslandContent.Media(it)) }
                     ongoing.filter { it.kind != NoticeKind.Call }.forEach { add(IslandContent.Live(it)) }
                 }
+                // What was brought to the front stays there (alerts and messages still come first).
+                val focused = ordered.firstOrNull { islandKey(it) == focus }
+                val activities = if (focused != null && ordered.first() !is IslandContent.Alert && ordered.first() !is IslandContent.Message) {
+                    listOf(focused) + ordered.filter { it !== focused }
+                } else {
+                    ordered
+                }
+                lastOrder = activities.map { islandKey(it) }
                 // On the lock screen too, but without the empty idle pill there.
                 val main = activities.firstOrNull()
                     ?: if (settings.glimmerIdlePill && !sideways && !onLockScreen) IslandContent.Idle else IslandContent.Hidden
@@ -250,7 +337,15 @@ class GlimmerController(private val service: ControlCenterService) {
                             screenWidthDp = service.resources.configuration.screenWidthDp.toFloat(),
                             topInset = (topInset / density).dp,
                             media = media,
+                            tapOpens = settings.glimmerTapOpens,
+                            glow = settings.glimmerGlow,
                             onToggle = { expanded.value = !expanded.value },
+                            onExpand = { expanded.value = true },
+                            onSwap = this@GlimmerController::swap,
+                            onFocus = { item ->
+                                focusKey.value = islandKey(item)
+                                expanded.value = true
+                            },
                             onCollapse = this@GlimmerController::collapse,
                             onOpen = this@GlimmerController::open,
                             onTargetSize = this@GlimmerController::resizeTo,
@@ -321,6 +416,12 @@ class GlimmerController(private val service: ControlCenterService) {
         }
     }
 
+    /** Sideways swipe: the second activity comes to the front. */
+    private fun swap() {
+        val next = lastOrder.getOrNull(1) ?: return
+        focusKey.value = next
+    }
+
     private fun collapse() {
         if (!expanded.value) return
         expanded.value = false
@@ -362,5 +463,13 @@ class GlimmerController(private val service: ControlCenterService) {
         val GREEN = Color(0xFF34C759)
         val ORANGE = Color(0xFFFF9F0A)
         val RED = Color(0xFFFF453A)
+        val PURPLE = Color(0xFF8E7CFF)
+        val HeadphoneTypes = buildSet {
+            add(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)
+            add(AudioDeviceInfo.TYPE_WIRED_HEADSET)
+            add(AudioDeviceInfo.TYPE_WIRED_HEADPHONES)
+            add(AudioDeviceInfo.TYPE_USB_HEADSET)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) add(AudioDeviceInfo.TYPE_BLE_HEADSET)
+        }
     }
 }

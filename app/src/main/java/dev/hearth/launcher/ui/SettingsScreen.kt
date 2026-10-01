@@ -395,7 +395,7 @@ fun SettingsScreen(
 
             item {
                 Section("Glimmer") {
-                    Note("Hearths Insel um die Frontkamera, in jeder App: Musik mit Cover und tanzenden Balken, Anrufe, Timer, Navigation, Downloads, neue Nachrichten, Laden und Lautlos. Tippen klappt sie auf, lange drücken öffnet die App.")
+                    Note("Hearths Insel um die Frontkamera, in jeder App: Musik mit Cover und tanzenden Balken, Anrufe, Timer, Navigation, Downloads, neue Nachrichten, Laden, Lautlos, Kopfhörer, Nicht stören und voller Akku. Nach unten ziehen klappt sie auf, nach oben schließt sie, zur Seite wechselt zwischen zwei Aktivitäten; der kleine Kreis daneben holt die zweite nach vorn. In der Musik-Ansicht spult der Balken.")
                     SwitchRow(label = "Glimmer anzeigen", checked = s.glimmerEnabled) { v -> update { it.copy(glimmerEnabled = v) } }
                     ChoiceRow(
                         label = "Aussehen",
@@ -411,6 +411,19 @@ fun SettingsScreen(
                     ) { v -> update { it.copy(glimmerIdlePill = v) } }
                     SwitchRow(label = "Neue Nachrichten kurz zeigen", checked = s.glimmerMessages) { v ->
                         update { it.copy(glimmerMessages = v) }
+                    }
+                    SwitchRow(
+                        label = "Kopfhörer, Nicht stören, Akku voll",
+                        description = "Kurz anzeigen, wenn Kopfhörer sich verbinden, „Nicht stören“ umschaltet oder der Akku voll ist",
+                        checked = s.glimmerAlerts,
+                    ) { v -> update { it.copy(glimmerAlerts = v) } }
+                    SwitchRow(
+                        label = "Antippen öffnet die App",
+                        description = if (s.glimmerTapOpens) "Wie beim iPhone; gedrückt halten klappt auf" else "Aus: Antippen klappt auf, gedrückt halten öffnet die App",
+                        checked = s.glimmerTapOpens,
+                    ) { v -> update { it.copy(glimmerTapOpens = v) } }
+                    SwitchRow(label = "Leuchten bei Neuem", description = "Glimmer schimmert kurz in der Farbe der Aktivität", checked = s.glimmerGlow) { v ->
+                        update { it.copy(glimmerGlow = v) }
                     }
                     RowDivider()
                     ActionRow(

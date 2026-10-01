@@ -77,6 +77,12 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   Ring, neue Nachrichten, Laden, Lautlos, niedriger Akku; zwei Aktivitäten gleichzeitig
   als Pille + Blase; Tippen klappt auf (mit den Knöpfen der App), lange drücken öffnet
   die App; Schwarz oder Liquid Glass (braucht Bedienungshilfe + Benachrichtigungszugriff)
+  - Gesten: nach unten ziehen klappt auf, nach oben schließt, zur Seite wechselt zwischen
+    zwei Aktivitäten, die kleine Blase holt die zweite nach vorn; wahlweise öffnet
+    Antippen die App wie beim iPhone
+  - Neues hüpft kurz auf und schimmert in seiner Farbe (Cover-Farbe, Grün für Anrufe…)
+  - Kopfhörer verbunden/getrennt mit Gerätename, „Nicht stören“ an/aus, Akku voll
+  - Musik: Fortschrittsbalken zum Spulen (ziehen oder tippen)
 - Foto-Widget: eigene Bilder als Diashow mit langsamem Zoom auf Glas, für Homescreen
   und Widget-Seite
 - Apps frei anordnen: Icon lange drücken und ziehen (Menü verschwindet beim Ziehen),
