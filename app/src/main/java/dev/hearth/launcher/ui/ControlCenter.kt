@@ -1,6 +1,7 @@
 package dev.hearth.launcher.ui
 
 import android.media.AudioManager
+import android.annotation.SuppressLint
 import android.os.Build
 import android.os.SystemClock
 import android.view.KeyEvent
@@ -41,6 +42,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.PaddingValues
+import dev.hearth.launcher.data.ControlState
+import kotlin.math.abs
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.material3.Slider
@@ -108,9 +114,22 @@ fun ControlCenter(
     onShowNotifications: (() -> Unit)? = null,
     onShowSystemQuickSettings: (() -> Unit)? = null,
     scrim: Color = Color.Black.copy(alpha = 0.28f),
+    /** Explicit room for status and navigation bar; overlay windows don't always get insets. */
+    barPadding: PaddingValues? = null,
 ) {
     val accent = LocalSettings.current.accent.color
-    var state by remember { mutableStateOf(controls.state()) }
+    // Filled right away off the main thread (several system calls), so opening doesn't stutter.
+    var state by remember { mutableStateOf(ControlState()) }
+    LaunchedEffect(Unit) { state = withContext(Dispatchers.Default) { controls.state() } }
+
+    // Whatever opens a system screen or app from here closes the control center,
+    // otherwise it would stay on top of what just opened.
+    val closeNow by rememberUpdatedState(onClose)
+    DisposableEffect(controls) {
+        val hook: () -> Unit = { closeNow() }
+        controls.onOpenedScreen = hook
+        onDispose { if (controls.onOpenedScreen === hook) controls.onOpenedScreen = null }
+    }
     val torch by controls.torchOn.collectAsStateWithLifecycle()
     var brightness by remember { mutableFloatStateOf(controls.brightness()) }
     var volume by remember { mutableFloatStateOf(controls.volume()) }
@@ -182,7 +201,7 @@ fun ControlCenter(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .systemBarsPadding()
+                .then(if (barPadding != null) Modifier.padding(barPadding) else Modifier.systemBarsPadding())
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -247,7 +266,7 @@ fun ControlCenter(
                         }
                     }
                 }
-                MediaCard(media, controls, accent, Modifier.weight(1f).fillMaxHeight())
+                MediaCard(media, controls, accent, onClose, Modifier.weight(1f).fillMaxHeight())
             }
 
             // Toggles + vertical sliders
@@ -492,6 +511,7 @@ private fun MediaCard(
     media: MediaRepository,
     controls: SystemControls,
     accent: Color,
+    onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     DisposableEffect(media) {
@@ -540,7 +560,16 @@ private fun MediaCard(
                     fontSize = 12.sp,
                     modifier = Modifier
                         .padding(top = 4.dp)
-                        .then(if (hasAccess) Modifier else Modifier.clickable { media.requestAccess() }),
+                        .then(
+                            if (hasAccess) {
+                                Modifier
+                            } else {
+                                Modifier.clickable {
+                                    media.requestAccess()
+                                    onClose()
+                                }
+                            },
+                        ),
                 )
                 Spacer(Modifier.weight(1f))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -554,7 +583,10 @@ private fun MediaCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .clickable { media.openPlayer() },
+                        .clickable {
+                            media.openPlayer()
+                            onClose()
+                        },
                 ) {
                     val art = item.art
                     if (art != null) {
@@ -661,17 +693,57 @@ fun GlassVerticalSlider(
         interactive = true,
         modifier = modifier
             .clip(RoundedCornerShape(28.dp))
+            // One gesture decides: move = drag the level, lift = jump to the tapped spot,
+            // hold still = long press. Separate detectors used to fight over the same touch.
             .pointerInput(Unit) {
-                detectVerticalDragGestures { change, amount ->
-                    change.consume()
-                    onChange((current - amount / size.height).coerceIn(0f, 1f))
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    val height = size.height.toFloat().coerceAtLeast(1f)
+                    val outcome = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis + 150) {
+                        var result = 0 // 1 = tap, 2 = drag
+                        while (result == 0) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id }
+                            result = when {
+                                change == null -> 1
+                                !change.pressed -> 1
+                                abs(change.position.y - down.position.y) > viewConfiguration.touchSlop -> 2
+                                else -> 0
+                            }
+                            // Keep the surrounding scroll view from taking over the slider's touch.
+                            if (result != 1) change?.consume()
+                        }
+                        result
+                    }
+                    when (outcome) {
+                        1 -> onChange((1f - down.position.y / height).coerceIn(0f, 1f))
+                        2 -> {
+                            // Track the level here: several moves can arrive before the
+                            // screen updates, and reading the shown value would lose them.
+                            var level = current
+                            var last = down.position.y
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) break
+                                val delta = change.position.y - last
+                                last = change.position.y
+                                change.consume()
+                                level = (level - delta / height).coerceIn(0f, 1f)
+                                onChange(level)
+                            }
+                        }
+                        else -> {
+                            longPress?.invoke()
+                            // Swallow the rest of this touch.
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                event.changes.forEach { it.consume() }
+                                if (event.changes.none { it.pressed }) break
+                            }
+                        }
+                    }
                 }
-            }
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onLongPress = { longPress?.invoke() },
-                    onTap = { offset -> onChange((1f - offset.y / size.height).coerceIn(0f, 1f)) },
-                )
             },
     ) {
         Box(
@@ -746,6 +818,21 @@ fun OverlayControlCenter(
     }
     val light = rememberGlassLight(settings.glassMotion)
     val appear = remember { MutableTransitionState(false).apply { targetState = true } }
+    // Room for status bar (with the camera) and navigation bar, measured directly.
+    val density = LocalDensity.current
+    val barPadding = remember(context, density) {
+        @SuppressLint("DiscouragedApi", "InternalInsetResource")
+        fun bar(name: String): Int {
+            val id = context.resources.getIdentifier(name, "dimen", "android")
+            return if (id != 0) context.resources.getDimensionPixelSize(id) else 0
+        }
+        with(density) {
+            PaddingValues(
+                top = (bar("status_bar_height").toDp() + 8.dp).coerceAtLeast(32.dp),
+                bottom = bar("navigation_bar_height").toDp() + 4.dp,
+            )
+        }
+    }
     HearthTheme(dark = true) {
         CompositionLocalProvider(
             LocalSettings provides settings,
@@ -765,6 +852,7 @@ fun OverlayControlCenter(
                     onShowNotifications = onShowNotifications,
                     onShowSystemQuickSettings = onShowSystemQuickSettings,
                     scrim = Color.Black.copy(alpha = if (blurBehind) 0.35f else 0.72f),
+                    barPadding = barPadding,
                 )
             }
         }

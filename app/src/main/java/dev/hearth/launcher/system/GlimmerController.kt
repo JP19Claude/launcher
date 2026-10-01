@@ -67,11 +67,10 @@ class GlimmerController(private val service: ControlCenterService) {
     private val message = MutableStateFlow<LiveNotice?>(null)
     private val landscape = MutableStateFlow(false)
 
-    /** On the lock screen the phone shows its own media player and hints; Glimmer steps aside. */
+    /** On the lock screen Glimmer shows live activities, but no empty idle pill. */
     private val locked = MutableStateFlow(false)
     private fun updateLocked() {
         locked.value = service.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
-        if (locked.value) expanded.value = false
     }
 
     private var root: View? = null
@@ -233,12 +232,10 @@ class GlimmerController(private val service: ControlCenterService) {
                     playing?.takeIf { it.playing }?.let { add(IslandContent.Media(it)) }
                     ongoing.filter { it.kind != NoticeKind.Call }.forEach { add(IslandContent.Live(it)) }
                 }
-                val main = when {
-                    onLockScreen -> IslandContent.Hidden
-                    else -> activities.firstOrNull()
-                        ?: if (settings.glimmerIdlePill && !sideways) IslandContent.Idle else IslandContent.Hidden
-                }
-                val second = if (onLockScreen) null else activities.drop(1).firstOrNull()
+                // On the lock screen too, but without the empty idle pill there.
+                val main = activities.firstOrNull()
+                    ?: if (settings.glimmerIdlePill && !sideways && !onLockScreen) IslandContent.Idle else IslandContent.Hidden
+                val second = activities.drop(1).firstOrNull()
 
                 HearthTheme(dark = true) {
                     CompositionLocalProvider(

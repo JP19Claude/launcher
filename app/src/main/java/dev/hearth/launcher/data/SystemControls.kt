@@ -16,6 +16,7 @@ import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.AlarmClock
@@ -217,7 +218,10 @@ class SystemControls(private val context: Context) {
         val dialog = Intent("com.android.systemui.action.LAUNCH_MEDIA_OUTPUT_DIALOG")
             .setPackage("com.android.systemui")
             .putExtra("package_name", context.packageName)
-        if (runCatching { context.sendBroadcast(dialog) }.isSuccess) return
+        if (runCatching { context.sendBroadcast(dialog) }.isSuccess) {
+            onOpenedScreen?.invoke()
+            return
+        }
         start(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
     }
 
@@ -261,25 +265,61 @@ class SystemControls(private val context: Context) {
         return sqrt(raw.toFloat() / max).coerceIn(0f, 1f)
     }
 
+    // Sliders send a value for every finger movement (up to 120 per second). Writing each one
+    // into the system settings made them stutter, so values are handed to a background thread
+    // that writes the newest one at most every 40 ms.
+    private val writerThread = HandlerThread("hearth-controls").apply { start() }
+    private val writer = Handler(writerThread.looper)
+    @Volatile private var pendingBrightness = -1
+    @Volatile private var pendingVolume = -1
+    @Volatile private var flushScheduled = false
+    @Volatile private var manualModeSet = false
+    private val flush = Runnable {
+        flushScheduled = false
+        val raw = pendingBrightness
+        if (raw >= 0) {
+            pendingBrightness = -1
+            runCatching {
+                if (!manualModeSet) {
+                    Settings.System.putInt(
+                        resolver,
+                        Settings.System.SCREEN_BRIGHTNESS_MODE,
+                        Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL,
+                    )
+                    manualModeSet = true
+                }
+                Settings.System.putInt(resolver, Settings.System.SCREEN_BRIGHTNESS, raw)
+            }
+        }
+        val volumeIndex = pendingVolume
+        if (volumeIndex >= 0) {
+            pendingVolume = -1
+            runCatching { audio?.setStreamVolume(AudioManager.STREAM_MUSIC, volumeIndex, 0) }
+        }
+    }
+
+    private fun scheduleFlush() {
+        if (flushScheduled) return
+        flushScheduled = true
+        writer.postDelayed(flush, 40)
+    }
+
     /** Returns false when the permission is missing. */
     fun setBrightness(level: Float): Boolean {
         if (!Settings.System.canWrite(context)) return false
-        return runCatching {
-            Settings.System.putInt(
-                resolver,
-                Settings.System.SCREEN_BRIGHTNESS_MODE,
-                Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL,
-            )
-            val l = level.coerceIn(0f, 1f)
-            val raw = (l * l * maxBrightness).roundToInt().coerceIn(1, maxBrightness)
-            Settings.System.putInt(resolver, Settings.System.SCREEN_BRIGHTNESS, raw)
-        }.isSuccess
+        val l = level.coerceIn(0f, 1f)
+        pendingBrightness = (l * l * maxBrightness).roundToInt().coerceIn(1, maxBrightness)
+        scheduleFlush()
+        return true
     }
 
-    fun setAutoBrightness(on: Boolean): Boolean = writeSystem(
-        Settings.System.SCREEN_BRIGHTNESS_MODE,
-        if (on) Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC else Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL,
-    )
+    fun setAutoBrightness(on: Boolean): Boolean {
+        manualModeSet = !on
+        return writeSystem(
+            Settings.System.SCREEN_BRIGHTNESS_MODE,
+            if (on) Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC else Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL,
+        )
+    }
 
     fun setAutoRotate(on: Boolean): Boolean = writeSystem(Settings.System.ACCELEROMETER_ROTATION, if (on) 1 else 0)
 
@@ -302,7 +342,8 @@ class SystemControls(private val context: Context) {
     fun setVolume(level: Float) {
         val a = audio ?: return
         val max = a.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-        runCatching { a.setStreamVolume(AudioManager.STREAM_MUSIC, (level.coerceIn(0f, 1f) * max).roundToInt(), 0) }
+        pendingVolume = (level.coerceIn(0f, 1f) * max).roundToInt()
+        scheduleFlush()
     }
 
     fun setTorch(on: Boolean) {
@@ -389,11 +430,22 @@ class SystemControls(private val context: Context) {
     }
 
     /** Starts the first intent that works. */
-    private fun start(vararg intents: Intent): Boolean = intents.any { intent ->
-        runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+    /**
+     * Called whenever a system screen or app was opened from here. The control center closes
+     * then; otherwise it would stay on top and hide what just opened.
+     */
+    var onOpenedScreen: (() -> Unit)? = null
+
+    private fun start(vararg intents: Intent): Boolean {
+        val opened = intents.any { intent ->
+            runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+        }
+        if (opened) onOpenedScreen?.invoke()
+        return opened
     }
 
     fun close() {
+        writerThread.quitSafely()
         runCatching { camera?.unregisterTorchCallback(torchCallback) }
     }
 

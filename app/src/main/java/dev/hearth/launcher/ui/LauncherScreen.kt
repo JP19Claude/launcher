@@ -366,6 +366,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
         vm.homeEvents.collect { alreadyInFront ->
             menu = null
             openFolder = null
+            openHomeFolder = null
+            renaming = null
+            drag = null
             searchOpen = false
             settingsOpen = false
             controlOpen = false
