@@ -1,5 +1,6 @@
 package dev.hearth.launcher.ui
 
+import androidx.compose.runtime.mutableIntStateOf
 import android.Manifest
 import android.accessibilityservice.AccessibilityService
 import android.app.Activity
@@ -160,6 +161,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     var controlOpen by rememberSaveable { mutableStateOf(false) }
+    var controlPage by remember { mutableIntStateOf(0) }
     var menu by remember { mutableStateOf<GlassMenuRequest?>(null) }
     var widgetPickerOpen by remember { mutableStateOf(false) }
     var selecting by remember { mutableStateOf(false) }
@@ -344,7 +346,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
             title = "Hearth",
             items = listOf(
                 GlassMenuItem("Launcher-Einstellungen", Icons.Rounded.Settings) { settingsOpen = true },
-                GlassMenuItem("Kontrollzentrum", Icons.Rounded.Home) { controlOpen = true },
+                GlassMenuItem("Kontrollzentrum", Icons.Rounded.Home) {
+                    controlPage = 0
+                    controlOpen = true
+                },
                 GlassMenuItem("Widget hierher", Icons.Rounded.Add) {
                     widgetTarget = (pagerState.currentPage - widgetPages).coerceAtLeast(0)
                     widgetPickerOpen = true
@@ -414,13 +419,31 @@ fun LauncherScreen(vm: LauncherViewModel) {
         animationSpec = tween(260),
         label = "menuBlur",
     )
+    // Hearth's own notification page (one swipe left in the control center), when it can show them.
+    val ownNotifications = settings.ccNotifications && NotificationHub.connected.collectAsStateWithLifecycle().value
+    val openNotifications: () -> Unit = {
+        if (ownNotifications) {
+            controlPage = 1
+            controlOpen = true
+        } else if (!vm.controls.expandNotifications()) {
+            controlPage = 0
+            controlOpen = true
+        }
+    }
     val onSwipeDown: (Boolean) -> Unit = { leftHalf ->
         when (settings.swipeDownAction) {
-            SwipeDownAction.ControlCenter -> controlOpen = true
+            SwipeDownAction.ControlCenter -> {
+                controlPage = 0
+                controlOpen = true
+            }
             SwipeDownAction.Search -> searchOpen = true
-            SwipeDownAction.Notifications -> if (!vm.controls.expandNotifications()) controlOpen = true
-            SwipeDownAction.Split ->
-                if (!(leftHalf && vm.controls.expandNotifications())) controlOpen = true
+            SwipeDownAction.Notifications -> openNotifications()
+            SwipeDownAction.Split -> if (leftHalf) {
+                openNotifications()
+            } else {
+                controlPage = 0
+                controlOpen = true
+            }
         }
         Unit
     }
@@ -795,6 +818,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 ControlCenter(
                     controls = vm.controls,
                     media = vm.media,
+                    initialPage = controlPage,
                     onClose = { controlOpen = false },
                     onOpenLauncherSettings = {
                         controlOpen = false

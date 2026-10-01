@@ -34,6 +34,14 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   runde Schalter mit leuchtender Kontur, hohe Regler für Helligkeit und Lautstärke.
   Es folgt beim Herunterziehen dem Finger, die Reihen klappen nacheinander auf,
   die Unschärfe dahinter wächst mit; loslassen öffnet es ganz oder schiebt es zurück
+- Mitteilungen im Kontrollzentrum: nach links wischen zeigt eine eigene Glas-Seite mit
+  allen Mitteilungen (antippen öffnet, nach links wischen löscht, „Alle löschen“,
+  Aktions-Knöpfe). Mit „System-Kontrollzentrum ersetzen“ öffnet die linke Hälfte der
+  Statusleiste direkt die Mitteilungen, die rechte die Schalter
+- Kontrollzentrum anpassen (Einstellungen → „Kontrollzentrum: Aussehen“): Farbe der
+  Schalter (Akzent, bunt wie ColorOS 16, weiß), Form (rund/abgerundet), hohe oder
+  breite Regler, leuchtende Kontur, Beschriftungen, große Kacheln, Medien-Karte, Uhr,
+  Schnellstart und wie stark der Hintergrund abgedunkelt wird
 - „Vom Startbildschirm entfernen“: App verschwindet vom Homescreen, bleibt aber
   in App-Mediathek und Suche (einzeln im Menü oder mehrere per „Auswählen“)
 - Ordner: App auf eine andere ziehen erstellt einen Glas-Ordner, weitere Apps darauf

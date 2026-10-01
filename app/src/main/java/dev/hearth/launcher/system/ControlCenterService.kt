@@ -370,6 +370,12 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     startY = event.rawY
+                    // Like ColorOS: pulled from the left, the notifications come first.
+                    val settings = SettingsRepository(this).settings.value
+                    reveal.startPage = if (
+                        interceptShade && settings.ccNotifications &&
+                        event.rawX < resources.displayMetrics.widthPixels / 2f
+                    ) 1 else 0
                     pulling = false
                     tracker?.recycle()
                     tracker = VelocityTracker.obtain().also { it.addMovement(event) }
@@ -396,7 +402,7 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
                     if (pulling) {
                         endPull(velocity, distance)
                     } else if (event.actionMasked == MotionEvent.ACTION_UP && event.rawY - startY > dp(2)) {
-                        showPanel()
+                        showPanel(reveal.startPage)
                     }
                     pulling = false
                 }
@@ -548,7 +554,8 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         reveal.dragging = false
     }
 
-    fun showPanel() {
+    fun showPanel(page: Int = 0) {
+        if (!panelVisible) reveal.startPage = page
         reveal.flingVelocity = 0f
         reveal.dragging = false
         reveal.target = 1f

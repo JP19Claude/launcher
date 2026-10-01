@@ -106,6 +106,20 @@ import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.ui.graphics.luminance
+import dev.hearth.launcher.data.CcColorMode
+import dev.hearth.launcher.data.CcSliderStyle
+import dev.hearth.launcher.data.CcToggleShape
+import dev.hearth.launcher.data.NoticeAction
+import dev.hearth.launcher.data.NotificationHub
+import dev.hearth.launcher.data.ShadeNotice
+import java.time.Instant
+import java.time.ZoneId
 
 private val OnGlass = Color.White
 private val OnGlassDim = Color.White.copy(alpha = 0.7f)
@@ -124,6 +138,9 @@ class PanelReveal {
 
     /** Speed of the finger on release, in panel heights per second. */
     var flingVelocity = 0f
+
+    /** Page to open on: 0 = switches, 1 = notifications (pulled from the left side). */
+    var startPage = 0
 
     fun close() {
         flingVelocity = 0f
@@ -147,11 +164,23 @@ private fun Modifier.unfold(index: Int, reveal: () -> Float): Modifier = graphic
     alpha = ((p - index * 0.05f) / 0.6f).coerceIn(0f, 1f)
 }
 
+/** One switch in the control center, described once and placed by the chosen layout. */
+private class ToggleSpec(
+    val glyph: Glyph,
+    val label: String,
+    val active: Boolean,
+    val enabled: Boolean = true,
+    val onLongClick: (() -> Unit)? = null,
+    val onClick: () -> Unit,
+)
+
 /**
  * The launcher's own control center, in the style of ColorOS 17, made of liquid glass:
- * big connectivity tiles, the media card, round toggles that glow while on, and tall
- * sliders for brightness and volume.
+ * big connectivity tiles, the media card, round toggles that glow while on, and sliders
+ * for brightness and volume. Swipe left for the notifications. The look is set in the
+ * settings ("Kontrollzentrum: Aussehen").
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ControlCenter(
     controls: SystemControls,
@@ -165,8 +194,11 @@ fun ControlCenter(
     barPadding: PaddingValues? = null,
     /** How far the panel is out (0..1), read while drawing; 1 when it simply appears. */
     reveal: () -> Float = { 1f },
+    /** 0 = switches, 1 = notifications. */
+    initialPage: Int = 0,
 ) {
-    val accent = LocalSettings.current.accent.color
+    val settings = LocalSettings.current
+    val accent = settings.accent.color
     // Starts with the last known state (no toggles flickering on), refreshed off the main thread.
     var state by remember { mutableStateOf(controls.lastState ?: ControlState()) }
     LaunchedEffect(Unit) { state = withContext(Dispatchers.Default) { controls.state() } }
@@ -205,6 +237,10 @@ fun ControlCenter(
     val locale = Locale.getDefault()
     var audioOpen by remember { mutableStateOf(false) }
 
+    val pageCount = if (settings.ccNotifications) 2 else 1
+    val pagerState = rememberPagerState(initialPage = initialPage.coerceIn(0, pageCount - 1)) { pageCount }
+    val showNotificationPage: () -> Unit = { scope.launch { pagerState.animateScrollToPage(1) } }
+
     // Scrolls when it doesn't fit; pulling up past the end closes it.
     val density = LocalDensity.current
     val closeAfter = with(density) { 90.dp.toPx() }
@@ -239,16 +275,82 @@ fun ControlCenter(
         }
     }
 
-    val toggleTorch = { controls.setTorch(!torch) }
-    val toggleDnd = {
-        controls.toggleDoNotDisturb()
-        refresh()
+    // All switches, described once; the chosen look decides where they go.
+    val wifi = ToggleSpec(Glyph.Wifi, "WLAN", state.wifi, onClick = controls::openWifi)
+    val mobile = ToggleSpec(Glyph.Cellular, "Mobile Daten", state.mobileData, onClick = controls::openInternet)
+    val quadA = listOf(
+        ToggleSpec(Glyph.Bluetooth, "Bluetooth", state.bluetooth, onClick = controls::openBluetooth),
+        ToggleSpec(Glyph.Airplane, "Flugmodus", state.airplane, onClick = controls::openAirplane),
+        ToggleSpec(Glyph.Torch, "Taschenlampe", torch, enabled = controls.hasTorch, onClick = { controls.setTorch(!torch) }),
+        ToggleSpec(Glyph.Location, "Standort", state.location, onClick = controls::openLocation),
+    )
+    val quadB = listOf(
+        ToggleSpec(Glyph.Moon, "Nicht stören", state.doNotDisturb, onClick = {
+            controls.toggleDoNotDisturb()
+            refresh()
+        }),
+        ToggleSpec(Glyph.Vibrate, "Vibration", state.vibrate, onLongClick = { audioOpen = true }, onClick = {
+            controls.toggleVibrate()
+            refresh()
+        }),
+        ToggleSpec(Glyph.Rotate, "Drehen", state.autoRotate, onClick = {
+            controls.setAutoRotate(!state.autoRotate)
+            refresh()
+        }),
+        ToggleSpec(Glyph.AutoSun, "Auto-Hell", state.autoBrightness, onLongClick = { controls.openDisplay() }, onClick = {
+            controls.setAutoBrightness(!state.autoBrightness)
+            refresh()
+        }),
+    )
+    val extras = buildList {
+        if (!settings.ccBigTiles) {
+            add(wifi)
+            add(mobile)
+        }
+        add(ToggleSpec(Glyph.Battery, "Energie sparen", state.batterySaver, onClick = controls::openBatterySaver))
+        add(ToggleSpec(Glyph.Hotspot, "Hotspot", false, onClick = controls::openHotspot))
+        add(ToggleSpec(Glyph.Nfc, "NFC", state.nfc, onClick = controls::openNfc))
+        add(ToggleSpec(Glyph.Contrast, "Dunkel", state.darkMode, onClick = controls::openDisplay))
+        add(ToggleSpec(Glyph.Cast, "Smart View", false, onClick = controls::openCast))
+        add(ToggleSpec(Glyph.Screenshot, "Screenshot", false, onClick = {
+            onClose()
+            controls.takeScreenshot()
+        }))
+        add(ToggleSpec(Glyph.Lock, "Sperren", false, onClick = {
+            onClose()
+            controls.lockScreen()
+        }))
+        add(ToggleSpec(Glyph.Power, "Ein/Aus", false, onClick = {
+            onClose()
+            controls.powerMenu()
+        }))
     }
+
+    val onBrightness: (Float) -> Unit = { v ->
+        lastTouch = System.currentTimeMillis()
+        brightness = v
+        if (controls.setBrightness(v)) {
+            if (state.autoBrightness) state = state.copy(autoBrightness = false)
+        } else if (!state.canWriteSettings && !askedForPermission) {
+            askedForPermission = true
+            controls.requestWriteSettings()
+        }
+    }
+    val onVolume: (Float) -> Unit = { v ->
+        lastTouch = System.currentTimeMillis()
+        volume = v
+        controls.setVolume(v)
+    }
+    val tall = settings.ccSliders == CcSliderStyle.Tall
+    val dim = 0.4f + 1.2f * settings.ccDim.coerceIn(0f, 1f)
 
     Box(
         Modifier
             .fillMaxSize()
-            .drawBehind { drawRect(scrim.copy(alpha = scrim.alpha * reveal().coerceIn(0f, 1f))) }
+            .drawBehind {
+                val alpha = (scrim.alpha * dim).coerceIn(0f, 0.95f) * reveal().coerceIn(0f, 1f)
+                drawRect(scrim.copy(alpha = alpha))
+            }
             // Tap or swipe up on the empty area: close.
             .pointerInput(Unit) { detectTapGestures { onClose() } }
             .pointerInput(Unit) {
@@ -267,234 +369,227 @@ fun ControlCenter(
             }
             .nestedScroll(pullToClose),
     ) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .then(if (barPadding != null) Modifier.padding(barPadding) else Modifier.systemBarsPadding())
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            // Header: date over a big light clock, like ColorOS; settings on the right.
-            Row(
-                verticalAlignment = Alignment.Bottom,
-                modifier = Modifier.unfold(0, reveal).padding(horizontal = 6.dp),
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale)),
-                        color = OnGlassDim,
-                        fontSize = 14.sp,
-                        style = OnWallpaperText,
-                    )
-                    Text(
-                        text = now.format(DateTimeFormatter.ofPattern("HH:mm", locale)),
-                        color = OnGlass,
-                        fontSize = 50.sp,
-                        fontWeight = FontWeight.Light,
-                        style = OnWallpaperText,
-                    )
-                }
-                if (onShowSystemQuickSettings != null) {
-                    GlassCircleButton(size = 40.dp, onClick = onShowSystemQuickSettings) {
-                        GlyphIcon(Glyph.Tiles, OnGlass, Modifier.size(20.dp))
-                    }
-                    Spacer(Modifier.width(10.dp))
-                }
-                GlassCircleButton(size = 40.dp, onClick = onOpenLauncherSettings) {
-                    Icon(Icons.Rounded.Settings, contentDescription = "Launcher-Einstellungen", tint = OnGlass, modifier = Modifier.size(22.dp))
-                }
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+            if (page == 1) {
+                NotificationPage(
+                    barPadding = barPadding,
+                    reveal = reveal,
+                    onClose = onClose,
+                    onShowSystemNotifications = onShowNotifications,
+                    onRequestAccess = {
+                        media.requestAccess()
+                        onClose()
+                    },
+                )
+                return@HorizontalPager
             }
-
-            if (!state.canWriteSettings) {
-                GlassCard(
-                    modifier = Modifier
-                        .unfold(0, reveal)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(24.dp))
-                        .clickable { controls.requestWriteSettings() },
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .then(if (barPadding != null) Modifier.padding(barPadding) else Modifier.systemBarsPadding())
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // Header: date over a big light clock, like ColorOS; settings on the right.
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    modifier = Modifier.unfold(0, reveal).padding(horizontal = 6.dp),
                 ) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        GlyphIcon(Glyph.Sun, accent, Modifier.size(26.dp))
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text("Helligkeit freischalten", color = OnGlass, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Column(Modifier.weight(1f)) {
+                        if (settings.ccShowClock) {
                             Text(
-                                "Tippen und „Systemeinstellungen ändern“ erlauben, damit Helligkeit und Drehung hier gehen.",
+                                text = now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale)),
                                 color = OnGlassDim,
-                                fontSize = 13.sp,
+                                fontSize = 14.sp,
+                                style = OnWallpaperText,
+                            )
+                            Text(
+                                text = now.format(DateTimeFormatter.ofPattern("HH:mm", locale)),
+                                color = OnGlass,
+                                fontSize = 50.sp,
+                                fontWeight = FontWeight.Light,
+                                style = OnWallpaperText,
                             )
                         }
                     }
-                }
-            }
-
-            // Two big tiles: WLAN and mobile data.
-            Row(Modifier.unfold(1, reveal).fillMaxWidth().height(70.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                BigTile(
-                    glyph = Glyph.Wifi,
-                    label = "WLAN",
-                    status = if (state.wifi) "An" else "Aus",
-                    active = state.wifi,
-                    accent = accent,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    onClick = controls::openWifi,
-                )
-                BigTile(
-                    glyph = Glyph.Cellular,
-                    label = "Mobile Daten",
-                    status = if (state.airplane) "Flugmodus" else if (state.mobileData) "Verbunden" else "Aus",
-                    active = state.mobileData,
-                    accent = accent,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    onClick = controls::openInternet,
-                )
-            }
-
-            // Media card next to four round toggles.
-            Row(Modifier.unfold(2, reveal).fillMaxWidth().height(168.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MediaCard(media, controls, accent, onClose, Modifier.weight(1f).fillMaxHeight())
-                ToggleGrid(Modifier.weight(1f).fillMaxHeight()) {
-                    ToggleRow {
-                        ControlToggle(Glyph.Bluetooth, "Bluetooth", state.bluetooth, accent, onClick = controls::openBluetooth)
-                        ControlToggle(Glyph.Airplane, "Flugmodus", state.airplane, accent, onClick = controls::openAirplane)
+                    if (onShowSystemQuickSettings != null) {
+                        GlassCircleButton(size = 40.dp, onClick = onShowSystemQuickSettings) {
+                            GlyphIcon(Glyph.Tiles, OnGlass, Modifier.size(20.dp))
+                        }
+                        Spacer(Modifier.width(10.dp))
                     }
-                    ToggleRow {
-                        ControlToggle(
-                            Glyph.Torch, "Taschenlampe", torch, accent,
-                            enabled = controls.hasTorch,
-                            onClick = toggleTorch,
-                        )
-                        ControlToggle(Glyph.Location, "Standort", state.location, accent, onClick = controls::openLocation)
+                    GlassCircleButton(size = 40.dp, onClick = onOpenLauncherSettings) {
+                        Icon(Icons.Rounded.Settings, contentDescription = "Launcher-Einstellungen", tint = OnGlass, modifier = Modifier.size(22.dp))
                     }
                 }
-            }
 
-            // Four more toggles next to the tall brightness and volume sliders.
-            Row(Modifier.unfold(3, reveal).fillMaxWidth().height(196.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ToggleGrid(Modifier.weight(1f).fillMaxHeight()) {
-                    ToggleRow {
-                        ControlToggle(Glyph.Moon, "Nicht stören", state.doNotDisturb, accent, onClick = toggleDnd)
-                        ControlToggle(Glyph.Vibrate, "Vibration", state.vibrate, accent, onClick = {
-                            controls.toggleVibrate()
-                            refresh()
-                        }, onLongClick = { audioOpen = true })
-                    }
-                    ToggleRow {
-                        ControlToggle(Glyph.Rotate, "Drehen", state.autoRotate, accent, onClick = {
-                            controls.setAutoRotate(!state.autoRotate)
-                            refresh()
-                        })
-                        ControlToggle(Glyph.AutoSun, "Auto-Hell", state.autoBrightness, accent, onClick = {
-                            controls.setAutoBrightness(!state.autoBrightness)
-                            refresh()
-                        }, onLongClick = { controls.openDisplay() })
-                    }
-                }
-                Row(Modifier.weight(1f).fillMaxHeight(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    GlassVerticalSlider(
-                        value = brightness,
-                        glyph = Glyph.Sun,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        onLongPress = { controls.openDisplay() },
-                        onValueChange = { v ->
-                            lastTouch = System.currentTimeMillis()
-                            brightness = v
-                            if (controls.setBrightness(v)) {
-                                if (state.autoBrightness) state = state.copy(autoBrightness = false)
-                            } else if (!state.canWriteSettings && !askedForPermission) {
-                                askedForPermission = true
-                                controls.requestWriteSettings()
+                if (!state.canWriteSettings) {
+                    GlassCard(
+                        modifier = Modifier
+                            .unfold(0, reveal)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(24.dp))
+                            .clickable { controls.requestWriteSettings() },
+                    ) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            GlyphIcon(Glyph.Sun, accent, Modifier.size(26.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text("Helligkeit freischalten", color = OnGlass, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                                Text(
+                                    "Tippen und „Systemeinstellungen ändern“ erlauben, damit Helligkeit und Drehung hier gehen.",
+                                    color = OnGlassDim,
+                                    fontSize = 13.sp,
+                                )
                             }
-                        },
-                    )
-                    GlassVerticalSlider(
-                        value = volume,
-                        glyph = Glyph.Speaker,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        // Hold for all volumes, the output device and the earbuds.
-                        onLongPress = { audioOpen = true },
-                        onValueChange = { v ->
-                            lastTouch = System.currentTimeMillis()
-                            volume = v
-                            controls.setVolume(v)
-                        },
-                    )
-                }
-            }
-
-            // Everything else, four to a row, like the lower part of the ColorOS panel.
-            GlassCard(Modifier.unfold(4, reveal).fillMaxWidth()) {
-                Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        ControlToggle(Glyph.Battery, "Energie sparen", state.batterySaver, accent, onClick = controls::openBatterySaver)
-                        ControlToggle(Glyph.Hotspot, "Hotspot", false, accent, onClick = controls::openHotspot)
-                        ControlToggle(Glyph.Nfc, "NFC", state.nfc, accent, onClick = controls::openNfc)
-                        ControlToggle(Glyph.Contrast, "Dunkel", state.darkMode, accent, onClick = controls::openDisplay)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        ControlToggle(Glyph.Cast, "Smart View", false, accent, onClick = controls::openCast)
-                        ControlToggle(Glyph.Screenshot, "Screenshot", false, accent, onClick = {
-                            onClose()
-                            controls.takeScreenshot()
-                        })
-                        ControlToggle(Glyph.Lock, "Sperren", false, accent, onClick = {
-                            onClose()
-                            controls.lockScreen()
-                        })
-                        ControlToggle(Glyph.Power, "Ein/Aus", false, accent, onClick = {
-                            onClose()
-                            controls.powerMenu()
-                        })
+                        }
                     }
                 }
-            }
 
-            // Shortcuts
+                // Two big tiles: WLAN and mobile data.
+                if (settings.ccBigTiles) {
+                    Row(Modifier.unfold(1, reveal).fillMaxWidth().height(70.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        BigTile(
+                            spec = wifi,
+                            status = if (state.wifi) "An" else "Aus",
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                        )
+                        BigTile(
+                            spec = mobile,
+                            status = if (state.airplane) "Flugmodus" else if (state.mobileData) "Verbunden" else "Aus",
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                        )
+                    }
+                }
+
+                // Media card next to four switches (or the switches alone).
+                if (settings.ccShowMedia) {
+                    Row(Modifier.unfold(2, reveal).fillMaxWidth().height(168.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        MediaCard(media, controls, accent, onClose, Modifier.weight(1f).fillMaxHeight())
+                        ToggleCard(quadA, columns = 2, modifier = Modifier.weight(1f).fillMaxHeight(), fill = true)
+                    }
+                } else {
+                    ToggleCard(quadA, columns = 4, modifier = Modifier.unfold(2, reveal).fillMaxWidth())
+                }
+
+                // Four more switches and the sliders: tall beside them, or wide below.
+                if (tall) {
+                    Row(Modifier.unfold(3, reveal).fillMaxWidth().height(196.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ToggleCard(quadB, columns = 2, modifier = Modifier.weight(1f).fillMaxHeight(), fill = true)
+                        Row(Modifier.weight(1f).fillMaxHeight(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            GlassVerticalSlider(
+                                value = brightness,
+                                glyph = Glyph.Sun,
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                onLongPress = { controls.openDisplay() },
+                                onValueChange = onBrightness,
+                            )
+                            GlassVerticalSlider(
+                                value = volume,
+                                glyph = Glyph.Speaker,
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                // Hold for all volumes, the output device and the earbuds.
+                                onLongPress = { audioOpen = true },
+                                onValueChange = onVolume,
+                            )
+                        }
+                    }
+                } else {
+                    ToggleCard(quadB, columns = 4, modifier = Modifier.unfold(3, reveal).fillMaxWidth())
+                    Column(Modifier.unfold(3, reveal).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        GlassVerticalSlider(
+                            value = brightness,
+                            glyph = Glyph.Sun,
+                            vertical = false,
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            onLongPress = { controls.openDisplay() },
+                            onValueChange = onBrightness,
+                        )
+                        GlassVerticalSlider(
+                            value = volume,
+                            glyph = Glyph.Speaker,
+                            vertical = false,
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            onLongPress = { audioOpen = true },
+                            onValueChange = onVolume,
+                        )
+                    }
+                }
+
+                // Everything else, four to a row, like the lower part of the ColorOS panel.
+                ToggleCard(extras, columns = 4, modifier = Modifier.unfold(4, reveal).fillMaxWidth())
+
+                if (settings.ccShowShortcuts) {
+                    Row(
+                        Modifier
+                            .unfold(5, reveal)
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                    ) {
+                        Shortcut(Glyph.Camera, "Kamera") { controls.openCamera(); onClose() }
+                        Shortcut(Glyph.Alarm, "Wecker") { controls.openAlarms(); onClose() }
+                        Shortcut(Glyph.Calculator, "Rechner") { controls.openCalculator(); onClose() }
+                        Shortcut(Glyph.Spark, "Claude", tint = accent) { controls.openClaude(); onClose() }
+                    }
+                }
+
+                // Notifications: Hearth's own page next door, or the system's shade.
+                if (settings.ccNotifications) {
+                    GlassPill(Glyph.Bell, "Mitteilungen", Modifier.unfold(6, reveal).fillMaxWidth(), showNotificationPage)
+                } else if (onShowNotifications != null) {
+                    GlassPill(Glyph.Bell, "Mitteilungen anzeigen", Modifier.unfold(6, reveal).fillMaxWidth(), onShowNotifications)
+                }
+
+                // A small Claude-flavored footer, and the handle to push it back up.
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp, bottom = 26.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ClaudeSpark(accent, Modifier.size(14.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (settings.ccNotifications) "Nach links: Mitteilungen · nach oben: schließen" else "Nach oben wischen zum Schließen",
+                            color = OnGlassDim,
+                            fontFamily = FontFamily.Serif,
+                            fontStyle = FontStyle.Italic,
+                            fontSize = 13.sp,
+                            style = OnWallpaperText,
+                        )
+                    }
+                }
+            }
+        }
+
+        // Which page: switches or notifications.
+        if (pageCount > 1) {
             Row(
                 Modifier
-                    .unfold(5, reveal)
-                    .fillMaxWidth()
-                    .padding(vertical = 2.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                    .align(Alignment.BottomCenter)
+                    .then(
+                        if (barPadding != null) {
+                            Modifier.padding(bottom = barPadding.calculateBottomPadding())
+                        } else {
+                            Modifier.navigationBarsPadding()
+                        },
+                    )
+                    .padding(bottom = 10.dp)
+                    .graphicsLayer { alpha = reveal().coerceIn(0f, 1f) },
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Shortcut(Glyph.Camera, "Kamera") { controls.openCamera(); onClose() }
-                Shortcut(Glyph.Alarm, "Wecker") { controls.openAlarms(); onClose() }
-                Shortcut(Glyph.Calculator, "Rechner") { controls.openCalculator(); onClose() }
-                Shortcut(Glyph.Spark, "Claude", tint = accent) { controls.openClaude(); onClose() }
-            }
-
-            // Notifications live in the system shade; one tap away.
-            if (onShowNotifications != null) {
-                GlassPill(Glyph.Bell, "Mitteilungen anzeigen", Modifier.unfold(6, reveal).fillMaxWidth(), onShowNotifications)
-            }
-
-            // A small Claude-flavored footer, and the handle to push it back up.
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(top = 2.dp, bottom = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    ClaudeSpark(accent, Modifier.size(14.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "Nach oben wischen zum Schließen",
-                        color = OnGlassDim,
-                        fontFamily = FontFamily.Serif,
-                        fontStyle = FontStyle.Italic,
-                        fontSize = 13.sp,
-                        style = OnWallpaperText,
+                repeat(pageCount) { index ->
+                    val selected = pagerState.currentPage == index
+                    Box(
+                        Modifier
+                            .size(width = if (selected) 18.dp else 6.dp, height = 6.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = if (selected) 0.9f else 0.4f)),
                     )
                 }
-                Spacer(Modifier.height(10.dp))
-                Box(
-                    Modifier
-                        .size(width = 40.dp, height = 5.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.55f)),
-                )
             }
         }
 
@@ -508,6 +603,283 @@ fun ControlCenter(
     }
 }
 
+/** Hearth's own notification list, one swipe left of the switches. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun NotificationPage(
+    barPadding: PaddingValues?,
+    reveal: () -> Float,
+    onClose: () -> Unit,
+    onShowSystemNotifications: (() -> Unit)?,
+    onRequestAccess: () -> Unit,
+) {
+    val context = LocalContext.current
+    val connected by NotificationHub.connected.collectAsStateWithLifecycle()
+    val notices by NotificationHub.all.collectAsStateWithLifecycle()
+    val accent = LocalSettings.current.accent.color
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000)
+            now = System.currentTimeMillis()
+        }
+    }
+
+    LazyColumn(
+        Modifier
+            .fillMaxSize()
+            .then(if (barPadding != null) Modifier.padding(barPadding) else Modifier.systemBarsPadding())
+            .padding(horizontal = 14.dp),
+        contentPadding = PaddingValues(top = 10.dp, bottom = 40.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item(key = "header") {
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                modifier = Modifier.unfold(0, reveal).padding(horizontal = 6.dp, vertical = 4.dp),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = when {
+                            !connected -> "Kein Zugriff"
+                            notices.isEmpty() -> "Keine neuen"
+                            notices.size == 1 -> "1 Mitteilung"
+                            else -> "${notices.size} Mitteilungen"
+                        },
+                        color = OnGlassDim,
+                        fontSize = 14.sp,
+                        style = OnWallpaperText,
+                    )
+                    Text("Mitteilungen", color = OnGlass, fontSize = 34.sp, fontWeight = FontWeight.Light, style = OnWallpaperText)
+                }
+                if (notices.any { it.clearable }) {
+                    Box(
+                        Modifier
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.16f))
+                            .clickable { NotificationHub.dismissAll() }
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                    ) {
+                        Text("Alle löschen", color = OnGlass, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+        }
+
+        if (!connected) {
+            item(key = "access") {
+                GlassCard(
+                    Modifier
+                        .unfold(1, reveal)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(28.dp))
+                        .clickable(onClick = onRequestAccess),
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        GlyphIcon(Glyph.Bell, accent, Modifier.size(26.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("Mitteilungen hier zeigen", color = OnGlass, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            Text(
+                                "Tippen und Hearth den „Benachrichtigungszugriff“ erlauben.",
+                                color = OnGlassDim,
+                                fontSize = 13.sp,
+                            )
+                        }
+                    }
+                }
+            }
+        } else if (notices.isEmpty()) {
+            item(key = "empty") {
+                Column(
+                    Modifier
+                        .unfold(1, reveal)
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    ClaudeSpark(accent, Modifier.size(30.dp))
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Alles erledigt",
+                        color = OnGlass,
+                        fontFamily = FontFamily.Serif,
+                        fontStyle = FontStyle.Italic,
+                        fontSize = 18.sp,
+                        style = OnWallpaperText,
+                    )
+                }
+            }
+        }
+
+        items(notices, key = { it.key }) { notice ->
+            NotificationCard(
+                notice = notice,
+                now = now,
+                modifier = Modifier.animateItem().unfold(1, reveal),
+                onOpen = { if (NotificationHub.open(context, notice)) onClose() },
+                onAction = { action ->
+                    NotificationHub.send(context, action.intent)
+                    onClose()
+                },
+                onDismiss = { NotificationHub.dismiss(notice.key) },
+            )
+        }
+
+        if (onShowSystemNotifications != null) {
+            item(key = "system") {
+                GlassPill(Glyph.Tiles, "System-Mitteilungen öffnen", Modifier.fillMaxWidth(), onShowSystemNotifications)
+            }
+        }
+    }
+}
+
+private fun noticeTime(time: Long, now: Long): String {
+    val diff = now - time
+    val zoned = Instant.ofEpochMilli(time).atZone(ZoneId.systemDefault())
+    return when {
+        diff < 60_000L -> "jetzt"
+        diff < 3_600_000L -> "vor ${diff / 60_000L} Min."
+        diff < 86_400_000L -> zoned.format(DateTimeFormatter.ofPattern("HH:mm"))
+        else -> zoned.format(DateTimeFormatter.ofPattern("d.M., HH:mm"))
+    }
+}
+
+/**
+ * One notification on glass: tap opens it, swipe left removes it (a swipe to the right
+ * belongs to the page and goes back to the switches).
+ */
+@Composable
+private fun NotificationCard(
+    notice: ShadeNotice,
+    now: Long,
+    modifier: Modifier = Modifier,
+    onOpen: () -> Unit,
+    onAction: (NoticeAction) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val offset = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val dismiss by rememberUpdatedState(onDismiss)
+    var expanded by remember { mutableStateOf(false) }
+    LiquidGlass(
+        cornerRadius = 24.dp,
+        refraction = 16.dp,
+        blur = 18.dp,
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                translationX = offset.value
+                alpha = (1f - abs(offset.value) / (size.width.coerceAtLeast(1f) * 0.9f)).coerceIn(0f, 1f)
+            }
+            .clip(RoundedCornerShape(24.dp))
+            .pointerInput(notice.key) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    var dragging = false
+                    var totalX = 0f
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) break
+                        val dx = change.position.x - change.previousPosition.x
+                        if (!dragging) {
+                            totalX += dx
+                            val dy = abs(change.position.y - down.position.y)
+                            val slop = viewConfiguration.touchSlop
+                            when {
+                                dy > slop && dy > abs(totalX) -> break // scrolling the list
+                                totalX < -slop -> dragging = true
+                                totalX > slop -> break // back to the switches
+                            }
+                        }
+                        if (dragging) {
+                            change.consume()
+                            val target = (offset.value + dx).coerceAtMost(0f)
+                            scope.launch { offset.snapTo(target) }
+                        }
+                    }
+                    if (dragging) {
+                        val width = size.width.toFloat()
+                        scope.launch {
+                            if (notice.clearable && offset.value < -width * 0.33f) {
+                                offset.animateTo(-width * 1.2f, tween(180))
+                                dismiss()
+                            } else {
+                                offset.animateTo(0f, spring(dampingRatio = 0.7f, stiffness = 500f))
+                            }
+                        }
+                    }
+                }
+            }
+            .clickable(onClick = onOpen),
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val icon = notice.icon
+                if (icon != null) {
+                    Image(
+                        bitmap = icon,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(RoundedCornerShape(6.dp)),
+                    )
+                } else {
+                    GlyphIcon(Glyph.Bell, OnGlass, Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = notice.appLabel,
+                    color = OnGlassDim,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(noticeTime(notice.time, now), color = OnGlassDim, fontSize = 12.sp)
+            }
+            Spacer(Modifier.height(6.dp))
+            if (notice.title.isNotBlank()) {
+                Text(
+                    text = notice.title,
+                    color = OnGlass,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (notice.text.isNotBlank()) {
+                Text(
+                    text = notice.text,
+                    color = OnGlass.copy(alpha = 0.85f),
+                    fontSize = 14.sp,
+                    maxLines = if (expanded) 12 else 3,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.clickable(enabled = notice.text.length > 120) { expanded = !expanded },
+                )
+            }
+            if (notice.actions.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    notice.actions.forEach { action ->
+                        Box(
+                            Modifier
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.14f))
+                                .clickable { onAction(action) }
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                        ) {
+                            Text(action.title, color = OnGlass, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** Glass card that swallows taps, so tapping inside doesn't close the control center. */
 @Composable
 private fun GlassCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
@@ -515,28 +887,12 @@ private fun GlassCard(modifier: Modifier = Modifier, content: @Composable () -> 
         cornerRadius = 28.dp,
         refraction = 20.dp,
         blur = 22.dp,
-        modifier = modifier.pointerInput(Unit) { detectTapGestures { } },
+        // The swallowing comes first (outermost): a click set on the card itself still wins,
+        // only taps nothing inside wanted don't fall through and close everything.
+        modifier = Modifier.pointerInput(Unit) { detectTapGestures { } }.then(modifier),
     ) {
         content()
     }
-}
-
-/** Glass card holding two rows of round toggles. */
-@Composable
-private fun ToggleGrid(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    GlassCard(modifier) {
-        Column(
-            Modifier.fillMaxSize().padding(vertical = 6.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            content()
-        }
-    }
-}
-
-@Composable
-private fun ToggleRow(content: @Composable () -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) { content() }
 }
 
 @Composable
@@ -583,83 +939,134 @@ private fun Modifier.onGlow(active: Boolean, color: Color, cornerRadius: Dp? = n
         }
     }
 
-/** Round glass toggle; filled with the accent color and glowing while on. */
-@OptIn(ExperimentalFoundationApi::class)
+/** Glass card with switches in rows of [columns]; [fill] spreads the rows over its height. */
 @Composable
-private fun ControlToggle(
-    glyph: Glyph,
-    label: String,
-    active: Boolean,
-    accent: Color,
-    enabled: Boolean = true,
-    onLongClick: (() -> Unit)? = null,
-    onClick: () -> Unit,
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(70.dp)) {
-        LiquidGlass(
-            cornerRadius = 26.dp,
-            refraction = 14.dp,
-            blur = 10.dp,
-            interactive = true,
-            tint = if (active) accent.copy(alpha = 0.92f) else null,
-            modifier = Modifier
-                .onGlow(active, accent)
-                .size(52.dp)
-                .clip(CircleShape)
-                .combinedClickable(enabled = enabled, onClick = onClick, onLongClick = onLongClick),
+private fun ToggleCard(specs: List<ToggleSpec>, columns: Int, modifier: Modifier = Modifier, fill: Boolean = false) {
+    GlassCard(modifier) {
+        Column(
+            (if (fill) Modifier.fillMaxSize() else Modifier.fillMaxWidth())
+                .padding(vertical = if (fill) 6.dp else 12.dp),
+            verticalArrangement = if (fill) Arrangement.SpaceEvenly else Arrangement.spacedBy(10.dp),
         ) {
-            GlyphIcon(
-                glyph = glyph,
-                tint = if (enabled) OnGlass else OnGlassDim,
-                modifier = Modifier.align(Alignment.Center).size(24.dp),
-            )
+            specs.chunked(columns).forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    row.forEach { ControlToggle(it) }
+                    repeat(columns - row.size) { Spacer(Modifier.width(ToggleWidth)) }
+                }
+            }
         }
-        Spacer(Modifier.height(5.dp))
-        Text(
-            text = label,
-            color = if (active) OnGlass else OnGlassDim,
-            fontSize = 11.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            style = OnWallpaperText,
-        )
     }
 }
 
-/** Wide ColorOS tile: icon in a circle, name and state; lit with the accent while on. */
+private val ToggleWidth = 70.dp
+
+/** ColorOS 16's multicolor switches: every switch has its own color while on. */
+private fun multicolor(glyph: Glyph): Color? = when (glyph) {
+    Glyph.Wifi -> Color(0xFF3B82F6)
+    Glyph.Cellular -> Color(0xFF22C55E)
+    Glyph.Bluetooth -> Color(0xFF2563EB)
+    Glyph.Airplane -> Color(0xFFF59E0B)
+    Glyph.Torch -> Color(0xFFFACC15)
+    Glyph.Location -> Color(0xFF14B8A6)
+    Glyph.Moon -> Color(0xFF8B5CF6)
+    Glyph.Vibrate -> Color(0xFFEC4899)
+    Glyph.Rotate -> Color(0xFF06B6D4)
+    Glyph.AutoSun -> Color(0xFFF97316)
+    Glyph.Battery -> Color(0xFF84CC16)
+    Glyph.Hotspot -> Color(0xFF0EA5E9)
+    Glyph.Nfc -> Color(0xFF6366F1)
+    Glyph.Contrast -> Color(0xFF64748B)
+    Glyph.Cast -> Color(0xFFA855F7)
+    else -> null
+}
+
+/** The color a switch shows while on, as chosen under "Kontrollzentrum: Aussehen". */
+private fun onColor(glyph: Glyph, accent: Color, mode: CcColorMode): Color = when (mode) {
+    CcColorMode.Accent -> accent
+    CcColorMode.White -> Color.White
+    CcColorMode.Multicolor -> multicolor(glyph) ?: accent
+}
+
+/** Dark icons on light colors (white mode, yellow torch), white ones otherwise. */
+private fun iconOn(color: Color): Color = if (color.luminance() > 0.6f) Color(0xFF1F1E1D) else OnGlass
+
+/** Round glass switch; filled with its color and glowing while on. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ControlToggle(spec: ToggleSpec) {
+    val settings = LocalSettings.current
+    val color = onColor(spec.glyph, settings.accent.color, settings.ccColors)
+    val corner = if (settings.ccShape == CcToggleShape.Circle) 26.dp else 17.dp
+    val shape = RoundedCornerShape(corner)
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(ToggleWidth)) {
+        LiquidGlass(
+            cornerRadius = corner,
+            refraction = 14.dp,
+            blur = 10.dp,
+            interactive = true,
+            tint = if (spec.active) color.copy(alpha = 0.92f) else null,
+            modifier = Modifier
+                .onGlow(spec.active && settings.ccGlow, color, cornerRadius = if (settings.ccShape == CcToggleShape.Circle) null else corner)
+                .size(52.dp)
+                .clip(shape)
+                .combinedClickable(enabled = spec.enabled, onClick = spec.onClick, onLongClick = spec.onLongClick),
+        ) {
+            GlyphIcon(
+                glyph = spec.glyph,
+                tint = when {
+                    !spec.enabled -> OnGlassDim
+                    spec.active -> iconOn(color)
+                    else -> OnGlass
+                },
+                modifier = Modifier.align(Alignment.Center).size(24.dp),
+            )
+        }
+        if (settings.ccLabels) {
+            Spacer(Modifier.height(5.dp))
+            Text(
+                text = spec.label,
+                color = if (spec.active) OnGlass else OnGlassDim,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = OnWallpaperText,
+            )
+        }
+    }
+}
+
+/** Wide ColorOS tile: icon in a circle, name and state; lit with its color while on. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BigTile(
-    glyph: Glyph,
-    label: String,
+    spec: ToggleSpec,
     status: String,
-    active: Boolean,
-    accent: Color,
     modifier: Modifier = Modifier,
-    onLongClick: (() -> Unit)? = null,
-    onClick: () -> Unit,
 ) {
+    val settings = LocalSettings.current
+    val color = onColor(spec.glyph, settings.accent.color, settings.ccColors)
+    val active = spec.active
     LiquidGlass(
         cornerRadius = 26.dp,
         refraction = 18.dp,
         blur = 18.dp,
         interactive = true,
-        tint = if (active) accent.copy(alpha = 0.32f) else null,
+        tint = if (active) color.copy(alpha = 0.32f) else null,
         modifier = modifier
-            .onGlow(active, accent, cornerRadius = 26.dp)
+            .onGlow(active && settings.ccGlow, color, cornerRadius = 26.dp)
             .clip(RoundedCornerShape(26.dp))
             .then(
-                if (active) {
+                if (active && settings.ccGlow) {
                     Modifier.border(
                         width = 1.dp,
-                        brush = Brush.linearGradient(listOf(accent.copy(alpha = 0.9f), Color.White.copy(alpha = 0.25f), accent.copy(alpha = 0.6f))),
+                        brush = Brush.linearGradient(listOf(color.copy(alpha = 0.9f), Color.White.copy(alpha = 0.25f), color.copy(alpha = 0.6f))),
                         shape = RoundedCornerShape(26.dp),
                     )
                 } else {
                     Modifier
                 },
             )
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+            .combinedClickable(onClick = spec.onClick, onLongClick = spec.onLongClick),
     ) {
         Row(
             Modifier
@@ -670,15 +1077,15 @@ private fun BigTile(
             Box(
                 Modifier
                     .size(42.dp)
-                    .clip(CircleShape)
-                    .background(if (active) accent else Color.White.copy(alpha = 0.16f)),
+                    .clip(if (settings.ccShape == CcToggleShape.Circle) CircleShape else RoundedCornerShape(14.dp))
+                    .background(if (active) color else Color.White.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center,
             ) {
-                GlyphIcon(glyph, OnGlass, Modifier.size(22.dp))
+                GlyphIcon(spec.glyph, if (active) iconOn(color) else OnGlass, Modifier.size(22.dp))
             }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text(label, color = OnGlass, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(spec.label, color = OnGlass, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(status, color = OnGlassDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -863,13 +1270,15 @@ private fun MediaButton(glyph: Glyph, big: Boolean = false, onClick: () -> Unit)
 }
 
 /**
- * Tall glass slider like on ColorOS and iOS: drag anywhere on it, it fills from the bottom.
+ * Glass slider like on ColorOS and iOS: drag anywhere on it, it fills from the bottom
+ * (or, with [vertical] off, from the left like One UI).
  */
 @Composable
 fun GlassVerticalSlider(
     value: Float,
     glyph: Glyph,
     modifier: Modifier = Modifier,
+    vertical: Boolean = true,
     onLongPress: (() -> Unit)? = null,
     onValueChange: (Float) -> Unit,
 ) {
@@ -877,53 +1286,59 @@ fun GlassVerticalSlider(
     val onChange by rememberUpdatedState(onValueChange)
     val longPress by rememberUpdatedState(onLongPress)
     val level = value.coerceIn(0f, 1f)
+    val corner = if (vertical) 28.dp else 22.dp
     LiquidGlass(
-        cornerRadius = 28.dp,
+        cornerRadius = corner,
         refraction = 22.dp,
         blur = 22.dp,
         interactive = true,
         modifier = modifier
-            .clip(RoundedCornerShape(28.dp))
+            .clip(RoundedCornerShape(corner))
             // One gesture decides: move = drag the level, lift = jump to the tapped spot,
             // hold still = long press. Separate detectors used to fight over the same touch.
-            .pointerInput(Unit) {
+            .pointerInput(vertical) {
+                fun along(p: Offset) = if (vertical) p.y else p.x
+                fun across(p: Offset) = if (vertical) p.x else p.y
                 awaitEachGesture {
                     val down = awaitFirstDown()
-                    val height = size.height.toFloat().coerceAtLeast(1f)
+                    val extent = (if (vertical) size.height else size.width).toFloat().coerceAtLeast(1f)
+                    fun levelAt(p: Offset) = (if (vertical) 1f - p.y / extent else p.x / extent).coerceIn(0f, 1f)
                     val outcome = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis + 150) {
-                        var result = 0 // 1 = tap, 2 = drag
+                        var result = 0 // 1 = tap, 2 = drag, 3 = moved the other way (not for us)
                         while (result == 0) {
                             val event = awaitPointerEvent()
                             val change = event.changes.firstOrNull { it.id == down.id }
                             result = when {
                                 change == null -> 1
                                 !change.pressed -> 1
-                                abs(change.position.y - down.position.y) > viewConfiguration.touchSlop -> 2
+                                abs(along(change.position) - along(down.position)) > viewConfiguration.touchSlop -> 2
+                                abs(across(change.position) - across(down.position)) > viewConfiguration.touchSlop * 2 -> 3
                                 else -> 0
                             }
                             // Keep the surrounding scroll view from taking over the slider's touch.
-                            if (result != 1) change?.consume()
+                            if (result == 0 || result == 2) change?.consume()
                         }
                         result
                     }
                     when (outcome) {
-                        1 -> onChange((1f - down.position.y / height).coerceIn(0f, 1f))
+                        1 -> onChange(levelAt(down.position))
                         2 -> {
                             // Track the level here: several moves can arrive before the
                             // screen updates, and reading the shown value would lose them.
                             var level = current
-                            var last = down.position.y
+                            var last = along(down.position)
                             while (true) {
                                 val event = awaitPointerEvent()
                                 val change = event.changes.firstOrNull { it.id == down.id } ?: break
                                 if (!change.pressed) break
-                                val delta = change.position.y - last
-                                last = change.position.y
+                                val delta = along(change.position) - last
+                                last = along(change.position)
                                 change.consume()
-                                level = (level - delta / height).coerceIn(0f, 1f)
+                                level = (if (vertical) level - delta / extent else level + delta / extent).coerceIn(0f, 1f)
                                 onChange(level)
                             }
                         }
+                        3 -> Unit
                         else -> {
                             longPress?.invoke()
                             // Swallow the rest of this touch.
@@ -937,30 +1352,58 @@ fun GlassVerticalSlider(
                 }
             },
     ) {
-        Box(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .fillMaxHeight(level)
-                .background(Color.White.copy(alpha = 0.9f)),
-        )
-        GlyphIcon(
-            glyph = glyph,
-            tint = if (level > 0.14f) Color(0xFF3D3929) else OnGlass,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp)
-                .size(26.dp),
-        )
-        Text(
-            text = "${(level * 100).toInt()}",
-            color = if (level > 0.9f) Color(0xFF3D3929) else OnGlass,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 12.dp),
-        )
+        val dark = Color(0xFF3D3929)
+        if (vertical) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .fillMaxHeight(level)
+                    .background(Color.White.copy(alpha = 0.9f)),
+            )
+            GlyphIcon(
+                glyph = glyph,
+                tint = if (level > 0.14f) dark else OnGlass,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp)
+                    .size(26.dp),
+            )
+            Text(
+                text = "${(level * 100).toInt()}",
+                color = if (level > 0.9f) dark else OnGlass,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 12.dp),
+            )
+        } else {
+            Box(
+                Modifier
+                    .align(Alignment.CenterStart)
+                    .fillMaxHeight()
+                    .fillMaxWidth(level)
+                    .background(Color.White.copy(alpha = 0.9f)),
+            )
+            GlyphIcon(
+                glyph = glyph,
+                tint = if (level > 0.12f) dark else OnGlass,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 16.dp)
+                    .size(24.dp),
+            )
+            Text(
+                text = "${(level * 100).toInt()} %",
+                color = if (level > 0.88f) dark else OnGlass,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 16.dp),
+            )
+        }
     }
 }
 
@@ -1066,6 +1509,7 @@ fun OverlayControlCenter(
                 scrim = Color.Black.copy(alpha = if (blurBehind) 0.38f else 0.74f),
                 barPadding = barPadding,
                 reveal = { shown.value },
+                initialPage = reveal.startPage,
             )
         }
     }

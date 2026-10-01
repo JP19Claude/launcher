@@ -93,6 +93,25 @@ enum class GlimmerStyle(val label: String) {
     Glass("Liquid Glass"),
 }
 
+/** Brightness and volume sliders in the control center. */
+enum class CcSliderStyle(val label: String) {
+    Tall("Hoch (ColorOS)"),
+    Wide("Breit (One UI)"),
+}
+
+/** Color of switches that are on in the control center. */
+enum class CcColorMode(val label: String) {
+    Accent("Akzentfarbe"),
+    Multicolor("Bunt (ColorOS 16)"),
+    White("Weiß"),
+}
+
+/** Shape of the round switches in the control center. */
+enum class CcToggleShape(val label: String) {
+    Circle("Rund"),
+    Rounded("Abgerundet"),
+}
+
 /** Ready-made looks that set many options at once. */
 enum class DesignPreset(val label: String) {
     ColorOSClaude("ColorOS × Claude"),
@@ -148,6 +167,20 @@ data class LauncherSettings(
     /** Entrance, page and text animations throughout the launcher. */
     val animations: Boolean = true,
     val pageTransition: PageTransition = PageTransition.Depth,
+    // Control center look
+    val ccBigTiles: Boolean = true,
+    val ccSliders: CcSliderStyle = CcSliderStyle.Tall,
+    val ccColors: CcColorMode = CcColorMode.Accent,
+    val ccShape: CcToggleShape = CcToggleShape.Circle,
+    val ccGlow: Boolean = true,
+    val ccLabels: Boolean = true,
+    val ccShowClock: Boolean = true,
+    val ccShowMedia: Boolean = true,
+    val ccShowShortcuts: Boolean = true,
+    /** How much the control center darkens what's behind it (0..1). */
+    val ccDim: Float = 0.5f,
+    /** Swipe left in the control center for Hearth's own notification list. */
+    val ccNotifications: Boolean = true,
     // Glimmer: live activities around the front camera, in every app
     val glimmerEnabled: Boolean = true,
     val glimmerStyle: GlimmerStyle = GlimmerStyle.Black,
@@ -272,6 +305,17 @@ class SettingsRepository(context: Context) {
             iconGloss = prefs.getBoolean("iconGloss", d.iconGloss),
             animations = prefs.getBoolean("animations", d.animations),
             pageTransition = enumOf("pageTransition", d.pageTransition),
+            ccBigTiles = prefs.getBoolean("ccBigTiles", d.ccBigTiles),
+            ccSliders = enumOf("ccSliders", d.ccSliders),
+            ccColors = enumOf("ccColors", d.ccColors),
+            ccShape = enumOf("ccShape", d.ccShape),
+            ccGlow = prefs.getBoolean("ccGlow", d.ccGlow),
+            ccLabels = prefs.getBoolean("ccLabels", d.ccLabels),
+            ccShowClock = prefs.getBoolean("ccShowClock", d.ccShowClock),
+            ccShowMedia = prefs.getBoolean("ccShowMedia", d.ccShowMedia),
+            ccShowShortcuts = prefs.getBoolean("ccShowShortcuts", d.ccShowShortcuts),
+            ccDim = prefs.getFloat("ccDim", d.ccDim),
+            ccNotifications = prefs.getBoolean("ccNotifications", d.ccNotifications),
             glimmerEnabled = prefs.getBoolean(KEY_GLIMMER, d.glimmerEnabled),
             glimmerStyle = enumOf("glimmerStyle", d.glimmerStyle),
             glimmerIdlePill = prefs.getBoolean("glimmerIdlePill", d.glimmerIdlePill),
@@ -327,6 +371,17 @@ class SettingsRepository(context: Context) {
             .putBoolean("iconGloss", s.iconGloss)
             .putBoolean("animations", s.animations)
             .putString("pageTransition", s.pageTransition.name)
+            .putBoolean("ccBigTiles", s.ccBigTiles)
+            .putString("ccSliders", s.ccSliders.name)
+            .putString("ccColors", s.ccColors.name)
+            .putString("ccShape", s.ccShape.name)
+            .putBoolean("ccGlow", s.ccGlow)
+            .putBoolean("ccLabels", s.ccLabels)
+            .putBoolean("ccShowClock", s.ccShowClock)
+            .putBoolean("ccShowMedia", s.ccShowMedia)
+            .putBoolean("ccShowShortcuts", s.ccShowShortcuts)
+            .putFloat("ccDim", s.ccDim)
+            .putBoolean("ccNotifications", s.ccNotifications)
             .putBoolean(KEY_GLIMMER, s.glimmerEnabled)
             .putString("glimmerStyle", s.glimmerStyle.name)
             .putBoolean("glimmerIdlePill", s.glimmerIdlePill)

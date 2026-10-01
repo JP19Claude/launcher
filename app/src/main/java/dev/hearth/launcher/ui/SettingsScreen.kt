@@ -59,6 +59,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hearth.launcher.LauncherViewModel
 import dev.hearth.launcher.data.AccentColor
 import dev.hearth.launcher.data.BadgeStyle
+import dev.hearth.launcher.data.CcColorMode
+import dev.hearth.launcher.data.CcSliderStyle
+import dev.hearth.launcher.data.CcToggleShape
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.GlimmerStyle
@@ -479,7 +482,62 @@ fun SettingsScreen(
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         runCatching { context.startActivity(intent) }
                     }
-                    Note("Ganz entfernen lässt sich das System-Kontrollzentrum nur mit Root. Mit dem Dienst fängt Hearth aber das Wischen im gewählten Bereich ab; der Rest der Leiste öffnet weiter die Mitteilungen. Über „System-Schalter“ im Hearth-Kontrollzentrum kommst du jederzeit an die Original-Schalter.")
+                    Note("Ganz entfernen lässt sich das System-Kontrollzentrum nur mit Root. Mit dem Dienst fängt Hearth aber das Wischen über der Statusleiste ab, und mit „ersetzen“ schließt es das System-Kontrollzentrum, sobald es doch aufgeht. Über den Kacheln-Knopf oben im Hearth-Kontrollzentrum kommst du jederzeit an die Original-Schalter.")
+                }
+            }
+
+            item {
+                Section("Kontrollzentrum: Aussehen") {
+                    SwitchRow(
+                        label = "Nach links wischen: Mitteilungen",
+                        description = "Eigene Glas-Seite mit deinen Mitteilungen neben den Schaltern; antippen öffnet, nach links wischen löscht. Mit „System-Kontrollzentrum ersetzen“ öffnet die linke Hälfte der Statusleiste gleich die Mitteilungen.",
+                        checked = s.ccNotifications,
+                    ) { v -> update { it.copy(ccNotifications = v) } }
+                    RowDivider()
+                    ChoiceRow(
+                        label = "Farbe eingeschalteter Schalter",
+                        options = CcColorMode.entries,
+                        selected = s.ccColors,
+                        optionLabel = { it.label },
+                        onSelect = { mode -> update { it.copy(ccColors = mode) } },
+                    )
+                    ChoiceRow(
+                        label = "Form der Schalter",
+                        options = CcToggleShape.entries,
+                        selected = s.ccShape,
+                        optionLabel = { it.label },
+                        onSelect = { shape -> update { it.copy(ccShape = shape) } },
+                    )
+                    ChoiceRow(
+                        label = "Regler für Helligkeit und Lautstärke",
+                        options = CcSliderStyle.entries,
+                        selected = s.ccSliders,
+                        optionLabel = { it.label },
+                        onSelect = { style -> update { it.copy(ccSliders = style) } },
+                    )
+                    SwitchRow(label = "Leuchtende Kontur", description = "Eingeschaltete Schalter glühen wie bei ColorOS 17", checked = s.ccGlow) { v ->
+                        update { it.copy(ccGlow = v) }
+                    }
+                    SwitchRow(label = "Beschriftungen unter den Schaltern", checked = s.ccLabels) { v ->
+                        update { it.copy(ccLabels = v) }
+                    }
+                    RowDivider()
+                    SwitchRow(label = "Große WLAN- und Mobil-Kacheln", checked = s.ccBigTiles) { v ->
+                        update { it.copy(ccBigTiles = v) }
+                    }
+                    SwitchRow(label = "Medien-Karte", checked = s.ccShowMedia) { v ->
+                        update { it.copy(ccShowMedia = v) }
+                    }
+                    SwitchRow(label = "Uhr und Datum oben", checked = s.ccShowClock) { v ->
+                        update { it.copy(ccShowClock = v) }
+                    }
+                    SwitchRow(label = "Schnellstart (Kamera, Wecker, Rechner, Claude)", checked = s.ccShowShortcuts) { v ->
+                        update { it.copy(ccShowShortcuts = v) }
+                    }
+                    PercentSlider("Hintergrund abdunkeln", s.ccDim, 0f..1f) { v ->
+                        update { it.copy(ccDim = v) }
+                    }
+                    Note("Änderungen gelten beim nächsten Öffnen des Kontrollzentrums, in Hearth und über anderen Apps.")
                 }
             }
 

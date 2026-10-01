@@ -1,8 +1,12 @@
 package dev.hearth.launcher.data
 
+import android.app.ActivityOptions
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.compose.runtime.Immutable
@@ -42,6 +46,22 @@ class LiveNotice(
     val actions: List<NoticeAction>,
 )
 
+/** A notification as listed on the control center's notification page. */
+@Immutable
+class ShadeNotice(
+    val key: String,
+    val packageName: String,
+    val appLabel: String,
+    val title: String,
+    val text: String,
+    val time: Long,
+    val icon: ImageBitmap?,
+    val contentIntent: PendingIntent?,
+    val actions: List<NoticeAction>,
+    val clearable: Boolean,
+    val autoCancel: Boolean,
+)
+
 /**
  * Collects live notifications (calls, timers, navigation, downloads) and new messages for
  * Glimmer. Filled by the notification listener, which needs "notification access".
@@ -63,10 +83,36 @@ object NotificationHub {
     /** Unread notifications per app package, for the badges on the icons. */
     val badges: StateFlow<Map<String, Int>> = _badges.asStateFlow()
 
+    private val _all = MutableStateFlow<List<ShadeNotice>>(emptyList())
+
+    /** Every notification worth listing, newest first, for the control center. */
+    val all: StateFlow<List<ShadeNotice>> = _all.asStateFlow()
+
+    private val _connected = MutableStateFlow(false)
+
+    /** Whether Hearth has notification access right now. */
+    val connected: StateFlow<Boolean> = _connected.asStateFlow()
+
+    @Volatile
+    private var listener: NotificationListenerService? = null
+
     private val iconCache = HashMap<String, ImageBitmap?>()
 
     fun refresh(service: NotificationListenerService) {
+        listener = service
+        _connected.value = true
         val all = runCatching { service.activeNotifications }.getOrNull().orEmpty()
+        // Group summaries only repeat their children; keep one only if it stands alone.
+        val groupsWithChildren = all
+            .filter { it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 }
+            .mapNotNull { it.groupKey }
+            .toSet()
+        _all.value = all
+            .filter { sbn ->
+                sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 || sbn.groupKey !in groupsWithChildren
+            }
+            .mapNotNull { shadeNotice(service, it) }
+            .sortedByDescending { it.time }
         _active.value = all.mapNotNull { parse(service, it) }.filter { it.kind != NoticeKind.Message }
         _badges.value = all
             .filter { sbn ->
@@ -93,8 +139,95 @@ object NotificationHub {
     }
 
     fun clear() {
+        listener = null
+        _connected.value = false
         _active.value = emptyList()
+        _all.value = emptyList()
         _badges.value = emptyMap()
+    }
+
+    /** Swiped away in the control center. */
+    fun dismiss(key: String) {
+        val service = listener ?: return
+        runCatching { service.cancelNotification(key) }
+        _all.value = _all.value.filterNot { it.key == key }
+    }
+
+    /** "Clear all": everything that can be cleared. */
+    fun dismissAll() {
+        val service = listener ?: return
+        runCatching { service.cancelAllNotifications() }
+        _all.value = _all.value.filterNot { it.clearable }
+    }
+
+    /** Opens what the notification points to, like tapping it in the system shade. */
+    fun open(context: Context, notice: ShadeNotice): Boolean {
+        val intent = notice.contentIntent
+        val sent = if (intent != null) {
+            send(context, intent)
+        } else {
+            context.packageManager.getLaunchIntentForPackage(notice.packageName)?.let { launch ->
+                runCatching { context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+            } ?: false
+        }
+        if (sent && notice.autoCancel && notice.clearable) dismiss(notice.key)
+        return sent
+    }
+
+    /** Sends a notification's intent; Android 14+ wants the sender to allow starting a screen. */
+    fun send(context: Context, intent: PendingIntent): Boolean {
+        val options = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            ActivityOptions.makeBasic()
+                .setPendingIntentBackgroundActivityStartMode(ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
+                .toBundle()
+        } else {
+            null
+        }
+        return runCatching { intent.send(context, 0, null, null, null, null, options) }.isSuccess ||
+            runCatching { intent.send() }.isSuccess
+    }
+
+    private fun appIcon(service: NotificationListenerService, packageName: String): ImageBitmap? =
+        iconCache.getOrPut(packageName) {
+            runCatching { service.packageManager.getApplicationIcon(packageName).toBitmap(96, 96).asImageBitmap() }.getOrNull()
+        }
+
+    private fun shadeNotice(service: NotificationListenerService, sbn: StatusBarNotification): ShadeNotice? {
+        if (sbn.packageName == service.packageName) return null
+        val n = sbn.notification
+        val extras = n.extras ?: return null
+        // What is playing is on the media card already.
+        if (extras.containsKey(Notification.EXTRA_MEDIA_SESSION)) return null
+        val title = (extras.getCharSequence(Notification.EXTRA_TITLE_BIG) ?: extras.getCharSequence(Notification.EXTRA_TITLE))
+            ?.toString().orEmpty()
+        val text = (
+            extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
+                ?: extras.getCharSequence(Notification.EXTRA_TEXT)
+                ?: extras.getCharSequence(Notification.EXTRA_SUB_TEXT)
+            )?.toString().orEmpty()
+        if (title.isBlank() && text.isBlank()) return null
+        val pm = service.packageManager
+        val appLabel = runCatching {
+            pm.getApplicationLabel(pm.getApplicationInfo(sbn.packageName, 0)).toString()
+        }.getOrDefault(sbn.packageName)
+        return ShadeNotice(
+            key = sbn.key,
+            packageName = sbn.packageName,
+            appLabel = appLabel,
+            title = title,
+            text = text,
+            time = if (n.`when` > 0) n.`when` else sbn.postTime,
+            icon = appIcon(service, sbn.packageName),
+            contentIntent = n.contentIntent,
+            // Replies need typed text; those open the app instead.
+            actions = n.actions.orEmpty().mapNotNull { a ->
+                val intent = a.actionIntent ?: return@mapNotNull null
+                if (!a.remoteInputs.isNullOrEmpty()) return@mapNotNull null
+                NoticeAction(a.title?.toString().orEmpty(), intent)
+            }.filter { it.title.isNotBlank() }.take(3),
+            clearable = sbn.isClearable,
+            autoCancel = n.flags and Notification.FLAG_AUTO_CANCEL != 0,
+        )
     }
 
     private fun parse(service: NotificationListenerService, sbn: StatusBarNotification): LiveNotice? {
@@ -122,9 +255,7 @@ object NotificationHub {
         val appLabel = runCatching {
             pm.getApplicationLabel(pm.getApplicationInfo(sbn.packageName, 0)).toString()
         }.getOrDefault(sbn.packageName)
-        val icon = iconCache.getOrPut(sbn.packageName) {
-            runCatching { pm.getApplicationIcon(sbn.packageName).toBitmap(96, 96).asImageBitmap() }.getOrNull()
-        }
+        val icon = appIcon(service, sbn.packageName)
         return LiveNotice(
             key = sbn.key,
             packageName = sbn.packageName,
