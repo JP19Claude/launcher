@@ -11,6 +11,9 @@ import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -30,6 +33,7 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import dev.hearth.launcher.MainActivity
+import dev.hearth.launcher.data.MediaRepository
 import dev.hearth.launcher.data.SettingsRepository
 import dev.hearth.launcher.data.SystemControls
 import dev.hearth.launcher.ui.OverlayControlCenter
@@ -54,9 +58,20 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
     private var trigger: View? = null
     private var panel: View? = null
     private var controls: SystemControls? = null
+    private var media: MediaRepository? = null
+    private val handler = Handler(Looper.getMainLooper())
 
-    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == "triggerZone") addTrigger()
+    /** Read from the settings; see [onAccessibilityEvent]. */
+    @Volatile private var interceptShade = false
+
+    /** While Hearth itself opened the system shade, it must not be closed again right away. */
+    private var allowSystemShadeUntil = 0L
+
+    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+        when (key) {
+            "triggerZone" -> if (trigger != null) addTrigger()
+            SettingsRepository.KEY_INTERCEPT -> interceptShade = prefs.getBoolean(key, false)
+        }
     }
 
     // Hide the strip on the lock screen, bring it back once unlocked.
@@ -84,8 +99,9 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         instance = this
         windowManager = getSystemService(WindowManager::class.java)
         lifecycleRegistry.currentState = Lifecycle.State.RESUMED
-        getSharedPreferences(SettingsRepository.PREFS_NAME, MODE_PRIVATE)
-            .registerOnSharedPreferenceChangeListener(prefsListener)
+        val prefs = getSharedPreferences(SettingsRepository.PREFS_NAME, MODE_PRIVATE)
+        prefs.registerOnSharedPreferenceChangeListener(prefsListener)
+        interceptShade = prefs.getBoolean(SettingsRepository.KEY_INTERCEPT, false)
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_USER_PRESENT)
@@ -95,7 +111,35 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         if (!locked) addTrigger()
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
+    /**
+     * "Replace the system control center": when the system's notification shade or quick
+     * settings open (from a swipe the strip didn't catch), close them and show Hearth's
+     * control center instead. Only window changes of the system UI are delivered here.
+     */
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (!interceptShade || event == null) return
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (event.packageName?.toString() != SYSTEM_UI) return
+        if (SystemClock.elapsedRealtime() < allowSystemShadeUntil) return
+        if (getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true) return
+        val text = buildString {
+            event.text?.forEach { append(it).append(' ') }
+            append(event.contentDescription ?: "").append(' ')
+            append(event.className ?: "")
+        }.lowercase()
+        if (ShadeWords.none { it in text }) return
+
+        dismissSystemShade()
+        handler.postDelayed({ showPanel() }, 150)
+    }
+
+    private fun dismissSystemShade() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            performGlobalAction(GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE)
+        } else {
+            performGlobalAction(GLOBAL_ACTION_BACK)
+        }
+    }
 
     override fun onInterrupt() = Unit
 
@@ -125,13 +169,20 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
             .unregisterOnSharedPreferenceChangeListener(prefsListener)
         controls?.close()
         controls = null
+        handler.removeCallbacksAndMessages(null)
     }
 
     /** Pulls down the normal notification shade. */
-    fun showNotifications(): Boolean = performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+    fun showNotifications(): Boolean {
+        allowSystemShadeUntil = SystemClock.elapsedRealtime() + SYSTEM_SHADE_GRACE_MS
+        return performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+    }
 
     /** Opens the system's own quick settings, in case something is only there. */
-    fun showSystemQuickSettings(): Boolean = performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+    fun showSystemQuickSettings(): Boolean {
+        allowSystemShadeUntil = SystemClock.elapsedRealtime() + SYSTEM_SHADE_GRACE_MS
+        return performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+    }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).roundToInt()
 
@@ -194,6 +245,7 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         if (panel != null) return
         val settings = SettingsRepository(this).settings.value
         val systemControls = controls ?: SystemControls(this).also { controls = it }
+        val mediaRepository = media ?: MediaRepository(this).also { media = it }
 
         val root = object : FrameLayout(this) {
             override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -213,6 +265,7 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
                 OverlayControlCenter(
                     settings = settings,
                     controls = systemControls,
+                    media = mediaRepository,
                     onClose = this@ControlCenterService::hidePanel,
                     onOpenLauncherSettings = {
                         hidePanel()
@@ -268,5 +321,16 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
             private set
 
         val isEnabled: Boolean get() = instance != null
+
+        private const val SYSTEM_UI = "com.android.systemui"
+        private const val SYSTEM_SHADE_GRACE_MS = 20_000L
+
+        /** How the system names its shade (Android, One UI, ColorOS; German and English). */
+        private val ShadeWords = listOf(
+            "notification shade", "quick settings", "quick panel", "notification panel",
+            "benachrichtigungsfeld", "benachrichtigungsleiste", "benachrichtigungsbereich",
+            "benachrichtigungsfenster", "schnelleinstellungen", "schnellzugriff", "schnellfeld",
+            "mitteilungszentrale", "kontrollzentrum", "statusleiste erweitert",
+        )
     }
 }

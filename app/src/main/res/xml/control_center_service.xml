@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Accessibility service used only to draw the control center over other apps.
-     It reads no screen content and listens to no events. -->
+<!-- Accessibility service that draws the control center over other apps and, if turned on,
+     replaces the system shade. It reads no screen content and only hears about window
+     changes of the system UI. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault"
+    android:packageNames="com.android.systemui"
     android:canRetrieveWindowContent="false"
     android:description="@string/control_center_service_description"
     android:notificationTimeout="1000"

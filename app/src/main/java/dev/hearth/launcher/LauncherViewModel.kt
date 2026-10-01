@@ -18,6 +18,7 @@ import dev.hearth.launcher.data.IconPackRepository
 import dev.hearth.launcher.data.IconStyle
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.LibraryCategory
+import dev.hearth.launcher.data.MediaRepository
 import dev.hearth.launcher.data.UsageRepository
 import dev.hearth.launcher.data.SettingsRepository
 import dev.hearth.launcher.data.SystemControls
@@ -60,6 +61,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     /** Android widgets on the widget page. */
     val widgets = WidgetRepository(application)
+
+    /** What is playing, for the control center. */
+    val media = MediaRepository(application)
 
     val settings: StateFlow<LauncherSettings> = settingsRepo.settings
 
@@ -212,6 +216,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun unhideAll() {
         settingsRepo.update { it.copy(hiddenApps = emptySet()) }
     }
+
+    /** Takes apps off the home screen; they stay in the App Library and in search. */
+    fun removeFromHome(keys: Collection<String>) {
+        if (keys.isEmpty()) return
+        settingsRepo.update { it.copy(removedFromHome = it.removedFromHome + keys) }
+    }
+
+    fun addToHome(key: String) {
+        settingsRepo.update { it.copy(removedFromHome = it.removedFromHome - key) }
+    }
+
+    fun restoreHome() {
+        settingsRepo.update { it.copy(removedFromHome = emptySet()) }
+    }
+
+    fun isOnHome(app: AppInfo): Boolean = app.key !in settings.value.removedFromHome
 
     fun refreshIconPacks() {
         viewModelScope.launch(Dispatchers.Default) {

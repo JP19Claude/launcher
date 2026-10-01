@@ -326,6 +326,13 @@ fun SettingsScreen(
                         description = "Hinter der letzten Seite: alle Apps in Glas-Ordnern",
                         checked = s.showAppLibrary,
                     ) { v -> update { it.copy(showAppLibrary = v) } }
+                    if (s.removedFromHome.isNotEmpty()) {
+                        ActionRow(
+                            label = "Alle Apps zurück auf den Startbildschirm",
+                            description = "${s.removedFromHome.size} Apps sind nur in der App-Mediathek",
+                            onClick = vm::restoreHome,
+                        )
+                    }
                     SwitchRow(
                         label = "Widget-Seite",
                         description = "Links neben dem Homescreen: deine Widgets auf Glas",
@@ -361,6 +368,16 @@ fun SettingsScreen(
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         runCatching { context.startActivity(intent) }
                     }
+                    SwitchRow(
+                        label = "System-Kontrollzentrum ersetzen",
+                        description = "Geht das Kontrollzentrum von One UI, ColorOS & Co. auf, schließt Hearth es und zeigt seins. Braucht den Dienst oben.",
+                        checked = s.interceptSystemShade,
+                    ) { v -> update { it.copy(interceptSystemShade = v) } }
+                    ActionRow(
+                        label = "Medienanzeige erlauben",
+                        description = "Benachrichtigungszugriff, damit das Kontrollzentrum zeigt, was gerade läuft",
+                        onClick = vm.media::requestAccess,
+                    )
                     ChoiceRow(
                         label = "Bereich oben, der es öffnet",
                         options = TriggerZone.entries,

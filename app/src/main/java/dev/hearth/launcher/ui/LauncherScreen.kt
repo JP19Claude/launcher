@@ -160,9 +160,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val clockRows = if (settings.clockStyle == ClockStyle.Hidden) 0 else 2
     val claudeRows = if (settings.showClaudeCard) 1 else 0
     val firstPageRows = (rows - clockRows - claudeRows).coerceAtLeast(1)
-    val homeApps = remember(apps, dock) {
+    val homeApps = remember(apps, dock, settings.removedFromHome) {
         val dockKeys = dock.map { it.key }.toSet()
-        apps.filterNot { it.key in dockKeys }
+        apps.filterNot { it.key in dockKeys || it.key in settings.removedFromHome }
     }
     val pages = remember(homeApps, columns, rows, firstPageRows) {
         paginate(homeApps, columns, rows, firstPageRows)
@@ -471,6 +471,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
             ) {
                 ControlCenter(
                     controls = vm.controls,
+                    media = vm.media,
                     onClose = { controlOpen = false },
                     onOpenLauncherSettings = {
                         controlOpen = false
@@ -508,6 +509,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     vm.hideAll(selected)
                     endSelection()
                 },
+                onRemoveFromHome = {
+                    vm.removeFromHome(selected)
+                    endSelection()
+                },
                 onDone = endSelection,
             )
 
@@ -530,6 +535,13 @@ private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Un
         add(GlassMenuItem("Aus dem Dock entfernen", Icons.Rounded.Close) { vm.removeFromDock(app) })
     } else if (vm.canAddToDock()) {
         add(GlassMenuItem("Zum Dock hinzufügen", Icons.Rounded.Add) { vm.addToDock(app) })
+    }
+    if (vm.isOnHome(app)) {
+        if (!vm.isInDock(app)) {
+            add(GlassMenuItem("Vom Startbildschirm entfernen", Icons.Rounded.Home) { vm.removeFromHome(listOf(app.key)) })
+        }
+    } else {
+        add(GlassMenuItem("Zum Startbildschirm hinzufügen", Icons.Rounded.Home) { vm.addToHome(app.key) })
     }
     add(GlassMenuItem("Auswählen", Icons.Rounded.CheckCircle, onClick = onSelect))
     add(GlassMenuItem("Ausblenden", Icons.Rounded.Clear) { vm.hide(app) })
@@ -1020,7 +1032,13 @@ private fun WallpaperAccessHint(onClick: () -> Unit, modifier: Modifier = Modifi
 
 /** Glass bar while selecting several apps: count, hide them, or finish. */
 @Composable
-private fun SelectionBar(visible: Boolean, count: Int, onHide: () -> Unit, onDone: () -> Unit) {
+private fun SelectionBar(
+    visible: Boolean,
+    count: Int,
+    onHide: () -> Unit,
+    onRemoveFromHome: () -> Unit,
+    onDone: () -> Unit,
+) {
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(tween(180)) + slideInVertically(tween(260)) { -it },
@@ -1043,15 +1061,18 @@ private fun SelectionBar(visible: Boolean, count: Int, onHide: () -> Unit, onDon
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = if (count == 0) "Apps antippen zum Auswählen" else "$count ausgewählt",
+                        text = if (count == 0) "Apps antippen" else "$count ausgewählt",
+                        maxLines = 1,
                         color = Color.White,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.weight(1f),
                     )
                     if (count > 0) {
+                        GlassChip("Vom Home", onClick = onRemoveFromHome)
+                        Spacer(Modifier.width(6.dp))
                         GlassChip("Ausblenden", onClick = onHide)
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(6.dp))
                     }
                     GlassChip("Fertig", onClick = onDone)
                 }

@@ -24,6 +24,12 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
 - App-Mediathek wie bei iOS (hinter der letzten Seite): Glas-Ordner nach Kategorie,
   „Vorschläge“ aus deinen meistgenutzten Apps, „Neu hinzugefügt“; die kleinen Icons
   in der Ecke öffnen den ganzen Ordner
+- Kontrollzentrum zeigt, was gerade läuft: Cover, Titel, Interpret, Fortschritt,
+  Glas in der Farbe des Covers (braucht einmal „Benachrichtigungszugriff“)
+- „System-Kontrollzentrum ersetzen“: geht das Panel von One UI/ColorOS doch auf,
+  schließt Hearth es und zeigt seins (braucht den Bedienungshilfe-Dienst)
+- „Vom Startbildschirm entfernen“: App verschwindet vom Homescreen, bleibt aber
+  in App-Mediathek und Suche (einzeln im Menü oder mehrere per „Auswählen“)
 - Widgets: eigene Widget-Seite links neben dem Homescreen (wie die Heute-Ansicht),
   jedes Widget auf einer Glas-Karte; „Bearbeiten“ zum Verschieben, Vergrößern, Entfernen
 - Mehrere Apps markieren: lange drücken → „Auswählen“ (Icons wackeln, Haken antippen),

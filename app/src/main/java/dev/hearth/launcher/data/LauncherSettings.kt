@@ -119,6 +119,10 @@ data class LauncherSettings(
     val showAppLibrary: Boolean = true,
     val showWidgetPage: Boolean = true,
     val triggerZone: TriggerZone = TriggerZone.RightHalf,
+    /** Close the system's own shade whenever it opens and show Hearth's instead. */
+    val interceptSystemShade: Boolean = false,
+    /** Apps taken off the home screen; they stay in the App Library and search. */
+    val removedFromHome: Set<String> = emptySet(),
     // Dock
     val dockSize: Int = 4,
     val dockCustomized: Boolean = false,
@@ -230,6 +234,8 @@ class SettingsRepository(context: Context) {
             showAppLibrary = prefs.getBoolean("showAppLibrary", d.showAppLibrary),
             showWidgetPage = prefs.getBoolean("showWidgetPage", d.showWidgetPage),
             triggerZone = enumOf("triggerZone", d.triggerZone),
+            interceptSystemShade = prefs.getBoolean(KEY_INTERCEPT, d.interceptSystemShade),
+            removedFromHome = prefs.getStringSet("removedFromHome", null)?.toSet() ?: d.removedFromHome,
             dockSize = prefs.getInt("dockSize", d.dockSize),
             dockCustomized = prefs.getBoolean("dockCustomized", d.dockCustomized),
             dockApps = prefs.getString("dockApps", null)
@@ -274,6 +280,8 @@ class SettingsRepository(context: Context) {
             .putBoolean("showAppLibrary", s.showAppLibrary)
             .putBoolean("showWidgetPage", s.showWidgetPage)
             .putString("triggerZone", s.triggerZone.name)
+            .putBoolean(KEY_INTERCEPT, s.interceptSystemShade)
+            .putStringSet("removedFromHome", s.removedFromHome)
             .putInt("dockSize", s.dockSize)
             .putBoolean("dockCustomized", s.dockCustomized)
             .putString("dockApps", s.dockApps.joinToString("\n"))
@@ -287,5 +295,6 @@ class SettingsRepository(context: Context) {
 
     companion object {
         const val PREFS_NAME = "hearth_settings"
+        const val KEY_INTERCEPT = "interceptSystemShade"
     }
 }

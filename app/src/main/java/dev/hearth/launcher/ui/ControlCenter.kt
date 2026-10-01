@@ -1,6 +1,7 @@
 package dev.hearth.launcher.ui
 
 import android.os.Build
+import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.compose.animation.AnimatedVisibility
@@ -33,7 +34,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.layout.ContentScale
+import dev.hearth.launcher.data.MediaRepository
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -75,6 +80,7 @@ private val OnGlassDim = Color.White.copy(alpha = 0.7f)
 @Composable
 fun ControlCenter(
     controls: SystemControls,
+    media: MediaRepository,
     onClose: () -> Unit,
     onOpenLauncherSettings: () -> Unit,
     onShowNotifications: (() -> Unit)? = null,
@@ -187,7 +193,7 @@ fun ControlCenter(
                         }
                     }
                 }
-                MediaCard(controls, accent, Modifier.weight(1f).fillMaxHeight())
+                MediaCard(media, controls, accent, Modifier.weight(1f).fillMaxHeight())
             }
 
             // Toggles + vertical sliders
@@ -385,26 +391,140 @@ private fun Shortcut(glyph: Glyph, label: String, tint: Color = OnGlass, onClick
     }
 }
 
+/** What is playing, with cover and progress; the glass takes on the cover's color. */
 @Composable
-private fun MediaCard(controls: SystemControls, accent: Color, modifier: Modifier = Modifier) {
-    GlassCard(modifier) {
-        Column(Modifier.fillMaxSize().padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ClaudeSpark(accent, Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Medien", color = OnGlass, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+private fun MediaCard(
+    media: MediaRepository,
+    controls: SystemControls,
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
+    DisposableEffect(media) {
+        media.start()
+        onDispose { media.stop() }
+    }
+    val playing by media.nowPlaying.collectAsStateWithLifecycle()
+    var hasAccess by remember { mutableStateOf(media.hasAccess()) }
+    // Picks up the permission when coming back from the system settings.
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            val access = media.hasAccess()
+            if (access != hasAccess) {
+                hasAccess = access
+                media.refreshSessions()
             }
-            Text(
-                "Steuert die zuletzt aktive Wiedergabe",
-                color = OnGlassDim,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            Spacer(Modifier.weight(1f))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                MediaButton(Glyph.Previous) { controls.mediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS) }
-                MediaButton(Glyph.Play, big = true) { controls.mediaKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
-                MediaButton(Glyph.Next) { controls.mediaKey(KeyEvent.KEYCODE_MEDIA_NEXT) }
+        }
+    }
+    var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
+    LaunchedEffect(playing?.playing) {
+        while (playing?.playing == true) {
+            now = SystemClock.elapsedRealtime()
+            delay(500)
+        }
+    }
+    val item = playing
+
+    LiquidGlass(
+        cornerRadius = 28.dp,
+        refraction = 20.dp,
+        blur = 22.dp,
+        tint = item?.artColor?.copy(alpha = 0.45f),
+        modifier = modifier.pointerInput(Unit) { detectTapGestures { } },
+    ) {
+        Column(Modifier.fillMaxSize().padding(12.dp)) {
+            if (item == null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ClaudeSpark(accent, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Medien", color = OnGlass, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                }
+                Text(
+                    text = if (hasAccess) "Gerade läuft nichts" else "Tippen, um zu sehen, was gerade läuft",
+                    color = OnGlassDim,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .then(if (hasAccess) Modifier else Modifier.clickable { media.requestAccess() }),
+                )
+                Spacer(Modifier.weight(1f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    MediaButton(Glyph.Previous) { controls.mediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS) }
+                    MediaButton(Glyph.Play, big = true) { controls.mediaKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
+                    MediaButton(Glyph.Next) { controls.mediaKey(KeyEvent.KEYCODE_MEDIA_NEXT) }
+                }
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { media.openPlayer() },
+                ) {
+                    val art = item.art
+                    if (art != null) {
+                        Image(
+                            bitmap = art,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(10.dp)),
+                        )
+                    } else {
+                        Box(
+                            Modifier
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color.White.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            GlyphIcon(Glyph.Speaker, OnGlass, Modifier.size(22.dp))
+                        }
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = item.title.ifBlank { item.appLabel },
+                            color = OnGlass,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = item.artist.ifBlank { item.appLabel },
+                            color = OnGlassDim,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                if (item.durationMs > 0) {
+                    val fraction = (item.currentPosition(now).toFloat() / item.durationMs).coerceIn(0f, 1f)
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(Color.White.copy(alpha = 0.22f)),
+                    ) {
+                        Box(
+                            Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(fraction)
+                                .background(Color.White.copy(alpha = 0.92f)),
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    MediaButton(Glyph.Previous) { media.previous() }
+                    MediaButton(if (item.playing) Glyph.Pause else Glyph.Play, big = true) { media.playPause() }
+                    MediaButton(Glyph.Next) { media.next() }
+                }
             }
         }
     }
@@ -513,6 +633,7 @@ private fun GlassPill(glyph: Glyph, label: String, modifier: Modifier = Modifier
 fun OverlayControlCenter(
     settings: LauncherSettings,
     controls: SystemControls,
+    media: MediaRepository,
     onClose: () -> Unit,
     onOpenLauncherSettings: () -> Unit,
     onShowNotifications: () -> Unit,
@@ -538,6 +659,7 @@ fun OverlayControlCenter(
             ) {
                 ControlCenter(
                     controls = controls,
+                    media = media,
                     onClose = onClose,
                     onOpenLauncherSettings = onOpenLauncherSettings,
                     onShowNotifications = onShowNotifications,
