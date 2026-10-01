@@ -93,6 +93,12 @@ enum class BadgeStyle(val label: String) {
     Off("Aus"),
 }
 
+/** How Glimmer shows music. */
+enum class GlimmerMusicStyle(val label: String) {
+    Hyper("Hyper Island (Xiaomi)"),
+    Classic("Klassisch"),
+}
+
 /** Look of Glimmer, the island around the front camera. */
 enum class GlimmerStyle(val label: String) {
     Black("Schwarz wie die Kamera"),
@@ -244,6 +250,7 @@ data class LauncherSettings(
     val glimmerGlow: Boolean = true,
     /** Closing an app: it shrinks and flies into Glimmer, like on the iPhone. */
     val glimmerFlyIn: Boolean = true,
+    val glimmerMusicStyle: GlimmerMusicStyle = GlimmerMusicStyle.Hyper,
     val badgeStyle: BadgeStyle = BadgeStyle.Number,
     /** Double tap on empty home screen space locks the phone (needs the accessibility service). */
     val doubleTapLock: Boolean = true,
@@ -417,6 +424,7 @@ class SettingsRepository(context: Context) {
             glimmerAlerts = prefs.getBoolean("glimmerAlerts", d.glimmerAlerts),
             glimmerGlow = prefs.getBoolean("glimmerGlow", d.glimmerGlow),
             glimmerFlyIn = prefs.getBoolean("glimmerFlyIn", d.glimmerFlyIn),
+            glimmerMusicStyle = enumOf("glimmerMusicStyle", d.glimmerMusicStyle),
             badgeStyle = enumOf("badgeStyle", d.badgeStyle),
             doubleTapLock = prefs.getBoolean("doubleTapLock", d.doubleTapLock),
             dockSize = prefs.getInt("dockSize", d.dockSize),
@@ -498,6 +506,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("glimmerAlerts", s.glimmerAlerts)
             .putBoolean("glimmerGlow", s.glimmerGlow)
             .putBoolean("glimmerFlyIn", s.glimmerFlyIn)
+            .putString("glimmerMusicStyle", s.glimmerMusicStyle.name)
             .putString("badgeStyle", s.badgeStyle.name)
             .putBoolean("doubleTapLock", s.doubleTapLock)
             .putInt("dockSize", s.dockSize)
@@ -517,7 +526,7 @@ class SettingsRepository(context: Context) {
         const val KEY_GLIMMER = "glimmerEnabled"
         val GLIMMER_KEYS = setOf(
             KEY_GLIMMER, "glimmerStyle", "glimmerIdlePill", "glimmerMessages",
-            "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
+            "glimmerTapOpens", "glimmerAlerts", "glimmerGlow", "glimmerMusicStyle",
         )
         const val KEY_LOCK_LAYOUT = "lockNotifications"
         const val KEY_LOCK_CONTENT = "lockShowContent"

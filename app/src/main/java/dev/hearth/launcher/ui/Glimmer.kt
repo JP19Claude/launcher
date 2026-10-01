@@ -85,6 +85,11 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.TransformOrigin
 import kotlinx.coroutines.launch
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.ui.graphics.Brush
+import dev.hearth.launcher.data.GlimmerMusicStyle
+import kotlin.math.cos
+import kotlin.math.sin
 
 /** What Glimmer shows right now. */
 @Immutable
@@ -356,7 +361,7 @@ fun GlimmerIsland(
 private fun glowColorOf(content: IslandContent, accent: Color): Color = when (content) {
     is IslandContent.Alert -> content.color
     is IslandContent.Message -> accent
-    is IslandContent.Media -> content.playing.artColor ?: Color.White
+    is IslandContent.Media -> content.playing.artPalette.firstOrNull() ?: content.playing.artColor ?: Color.White
     is IslandContent.Live -> noticeColor(content.notice.kind)
     else -> Color.White
 }
@@ -454,6 +459,10 @@ private fun AppBadge(notice: LiveNotice, size: Dp) {
 @Composable
 private fun CompactContent(content: IslandContent) {
     if (content is IslandContent.Idle || content is IslandContent.Hidden) return
+    if (content is IslandContent.Media && LocalSettings.current.glimmerMusicStyle == GlimmerMusicStyle.Hyper) {
+        HyperCompact(content.playing)
+        return
+    }
     Row(
         Modifier
             .fillMaxSize()
@@ -533,7 +542,9 @@ private fun ExpandedContent(
             .padding(horizontal = 18.dp, vertical = 14.dp),
     ) {
         when (content) {
-            is IslandContent.Media -> {
+            is IslandContent.Media -> if (LocalSettings.current.glimmerMusicStyle == GlimmerMusicStyle.Hyper) {
+                HyperExpanded(content.playing, media, onOpen)
+            } else {
                 val p = content.playing
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable(onClick = onOpen)) {
                     val art = p.art
@@ -638,7 +649,7 @@ private fun ExpandedContent(
 
 /** Progress you can drag or tap to jump; grows a little under the finger, like on iOS. */
 @Composable
-private fun SeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = Modifier) {
+private fun SeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = Modifier, color: Color = Color.White) {
     var dragging by remember { mutableStateOf(false) }
     var dragFraction by remember { mutableFloatStateOf(fraction) }
     val shown = if (dragging) dragFraction else fraction
@@ -674,7 +685,196 @@ private fun SeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier
                 .clip(RoundedCornerShape(thickness / 2))
                 .background(Color.White.copy(alpha = 0.2f)),
         ) {
-            Box(Modifier.fillMaxHeight().fillMaxWidth(shown).background(Color.White))
+            Box(Modifier.fillMaxHeight().fillMaxWidth(shown).background(color))
+        }
+    }
+}
+
+/** The cover's colors for the Hyper Island look (at least two). */
+private fun paletteOf(p: NowPlaying): List<Color> {
+    val colors = p.artPalette.ifEmpty { listOfNotNull(p.artColor) }.ifEmpty { listOf(Color.White) }
+    return if (colors.size == 1) colors + colors.first() else colors
+}
+
+/**
+ * Hyper Island, compact: the cover on the left, colored waves on the right, and the
+ * cover's colors glowing softly through the black from both ends.
+ */
+@Composable
+private fun HyperCompact(p: NowPlaying) {
+    val colors = paletteOf(p)
+    val transition = rememberInfiniteTransition(label = "hyperGlow")
+    val breath by transition.animateFloat(0.55f, 1f, infiniteRepeatable(tween(1800), RepeatMode.Reverse), label = "breath")
+    Box(
+        Modifier
+            .fillMaxSize()
+            .drawBehind {
+                val a = if (p.playing) breath else 0.45f
+                drawRect(
+                    Brush.horizontalGradient(
+                        0f to colors.first().copy(alpha = 0.34f * a),
+                        0.38f to Color.Transparent,
+                        0.62f to Color.Transparent,
+                        1f to colors.last().copy(alpha = 0.30f * a),
+                    ),
+                )
+            },
+    ) {
+        Row(
+            Modifier
+                .fillMaxSize()
+                .padding(start = 5.dp, end = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val art = p.art
+            if (art != null) {
+                Image(art, null, contentScale = ContentScale.Crop, modifier = Modifier.size(21.dp).clip(RoundedCornerShape(7.dp)))
+            } else {
+                Box(
+                    Modifier
+                        .size(21.dp)
+                        .clip(RoundedCornerShape(7.dp))
+                        .background(Brush.linearGradient(colors)),
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            if (p.playing) {
+                HyperWave(colors, playing = true, modifier = Modifier.size(30.dp, 15.dp))
+            } else {
+                GlyphIcon(Glyph.Play, colors.first(), Modifier.size(15.dp))
+            }
+        }
+    }
+}
+
+/** Seven slim bars rising and falling like a sound wave, painted across the cover's colors. */
+@Composable
+private fun HyperWave(colors: List<Color>, playing: Boolean, modifier: Modifier) {
+    val transition = rememberInfiniteTransition(label = "hyperWave")
+    val phase by transition.animateFloat(
+        0f,
+        (2 * Math.PI).toFloat(),
+        infiniteRepeatable(tween(1400, easing = LinearEasing)),
+        label = "wavePhase",
+    )
+    Canvas(modifier) {
+        val bars = 7
+        val gap = size.width * 0.07f
+        val barWidth = (size.width - gap * (bars - 1)) / bars
+        val brush = Brush.horizontalGradient(colors)
+        for (i in 0 until bars) {
+            val level = if (playing) {
+                val a = abs(sin(phase * (1f + i * 0.17f) + i * 0.9f))
+                val b = 0.6f + 0.4f * sin(phase * 0.5f + i * 1.3f)
+                (0.22f + 0.78f * a * b).coerceIn(0.18f, 1f)
+            } else {
+                0.2f
+            }
+            val h = size.height * level
+            drawRoundRect(
+                brush = brush,
+                topLeft = Offset(i * (barWidth + gap), (size.height - h) / 2f),
+                size = Size(barWidth, h),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 2f),
+            )
+        }
+    }
+}
+
+/**
+ * Hyper Island, unfolded: the cover's colors drift as soft light behind everything,
+ * a big cover with a glow, title and artist, a progress line in the cover's color to
+ * drag, and the controls.
+ */
+@Composable
+private fun HyperExpanded(p: NowPlaying, media: MediaRepository, onOpen: () -> Unit) {
+    val colors = paletteOf(p)
+    val transition = rememberInfiniteTransition(label = "hyperAura")
+    val drift by transition.animateFloat(
+        0f,
+        (2 * Math.PI).toFloat(),
+        infiniteRepeatable(tween(9000, easing = LinearEasing)),
+        label = "drift",
+    )
+    Box(Modifier.fillMaxSize()) {
+        // Drifting color light, like the album art spilling into the island.
+        Canvas(Modifier.matchParentSize()) {
+            val w = size.width
+            val h = size.height
+            val strength = if (p.playing) 0.5f else 0.3f
+            listOf(
+                Offset(w * (0.18f + 0.08f * sin(drift)), h * (0.3f + 0.2f * cos(drift))) to colors[0],
+                Offset(w * (0.82f + 0.08f * cos(drift * 1.3f)), h * (0.7f + 0.2f * sin(drift * 0.8f))) to colors[1 % colors.size],
+                Offset(w * (0.5f + 0.25f * sin(drift * 0.7f)), h * (0.15f + 0.1f * cos(drift * 1.1f))) to colors[2 % colors.size],
+            ).forEach { (center, color) ->
+                drawCircle(
+                    Brush.radialGradient(
+                        0f to color.copy(alpha = strength),
+                        1f to Color.Transparent,
+                        center = center,
+                        radius = w * 0.55f,
+                    ),
+                    radius = w * 0.55f,
+                    center = center,
+                )
+            }
+        }
+        Column(Modifier.fillMaxSize()) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable(onClick = onOpen)) {
+                val art = p.art
+                Box(
+                    Modifier
+                        .size(60.dp)
+                        .drawBehind {
+                            // Soft glow of the cover under it.
+                            drawCircle(
+                                Brush.radialGradient(
+                                    0f to colors.first().copy(alpha = 0.55f),
+                                    1f to Color.Transparent,
+                                    center = center,
+                                    radius = size.minDimension * 0.9f,
+                                ),
+                                radius = size.minDimension * 0.9f,
+                            )
+                        },
+                ) {
+                    if (art != null) {
+                        Image(art, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)))
+                    } else {
+                        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)).background(Brush.linearGradient(colors)))
+                    }
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(p.title.ifBlank { p.appLabel }, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(p.artist.ifBlank { p.appLabel }, color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                HyperWave(colors, p.playing, Modifier.size(34.dp, 20.dp))
+            }
+            Spacer(Modifier.weight(1f))
+            if (p.durationMs > 0) {
+                val tick = rememberNowMillis()
+                val position = remember(tick, p) { p.currentPosition() }
+                val fraction = (position.toFloat() / p.durationMs).coerceIn(0f, 1f)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(formatDuration(position), color = Color.White.copy(alpha = 0.65f), fontSize = 11.sp)
+                    Spacer(Modifier.width(8.dp))
+                    SeekBar(
+                        fraction = fraction,
+                        onSeek = { f -> media.seekTo((f * p.durationMs).toLong()) },
+                        modifier = Modifier.weight(1f),
+                        color = colors.first(),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("-" + formatDuration(p.durationMs - position), color = Color.White.copy(alpha = 0.65f), fontSize = 11.sp)
+                }
+                Spacer(Modifier.height(6.dp))
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                IslandButton(Glyph.Previous) { media.previous() }
+                IslandButton(if (p.playing) Glyph.Pause else Glyph.Play, big = true) { media.playPause() }
+                IslandButton(Glyph.Next) { media.next() }
+            }
         }
     }
 }

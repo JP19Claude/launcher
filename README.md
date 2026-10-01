@@ -82,6 +82,10 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
     Antippen die App wie beim iPhone
   - Neues hüpft kurz auf und schimmert in seiner Farbe (Cover-Farbe, Grün für Anrufe…)
   - Kopfhörer verbunden/getrennt mit Gerätename, „Nicht stören“ an/aus, Akku voll
+  - Musik im Stil der Hyper Island von Xiaomi (oder klassisch): klein mit Cover links und
+    bunten Wellen rechts in den Farben des Covers, die von beiden Enden durch das Schwarz
+    leuchten; aufgeklappt mit wanderndem Farblicht aus dem Cover, großem Cover mit Glow,
+    Fortschritt in der Cover-Farbe und Steuerung
   - Musik: Fortschrittsbalken zum Spulen (ziehen oder tippen); pausierte Musik bleibt
     10 Minuten in Glimmer (mit Play-Zeichen), damit sie sich dort wieder starten lässt
   - Schließt du eine App, fließt sie wie bei HarmonyOS in Glimmer: sie schrumpft zu einer

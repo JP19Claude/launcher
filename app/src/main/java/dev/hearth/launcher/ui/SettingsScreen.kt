@@ -66,6 +66,7 @@ import dev.hearth.launcher.data.CcStyle
 import dev.hearth.launcher.data.CcToggleShape
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.DesignPreset
+import dev.hearth.launcher.data.GlimmerMusicStyle
 import dev.hearth.launcher.data.GlimmerStyle
 import dev.hearth.launcher.data.GlassQuality
 import dev.hearth.launcher.data.GlassTint
@@ -412,6 +413,13 @@ fun SettingsScreen(
                         selected = s.glimmerStyle,
                         optionLabel = { it.label },
                         onSelect = { style -> update { it.copy(glimmerStyle = style) } },
+                    )
+                    ChoiceRow(
+                        label = "Musik",
+                        options = GlimmerMusicStyle.entries,
+                        selected = s.glimmerMusicStyle,
+                        optionLabel = { it.label },
+                        onSelect = { style -> update { it.copy(glimmerMusicStyle = style) } },
                     )
                     SwitchRow(
                         label = "Kleine Pille, wenn nichts läuft",

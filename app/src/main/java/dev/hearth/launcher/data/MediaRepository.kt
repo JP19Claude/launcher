@@ -41,6 +41,8 @@ data class NowPlaying(
     /** When [positionMs] was measured (elapsedRealtime), to move the progress bar along. */
     val positionUpdated: Long,
     val speed: Float,
+    /** Two or three vivid colors from the cover (for Glimmer's Hyper Island look). */
+    val artPalette: List<Color> = emptyList(),
 ) {
     fun currentPosition(now: Long = SystemClock.elapsedRealtime()): Long {
         if (!playing) return positionMs
@@ -134,6 +136,7 @@ class MediaRepository(private val context: Context) {
 
     private var lastArtSource: Bitmap? = null
     private var lastArt: Pair<ImageBitmap, Color>? = null
+    private var lastPalette: List<Color> = emptyList()
 
     private fun publish() {
         val c = controller
@@ -153,9 +156,12 @@ class MediaRepository(private val context: Context) {
         val source = metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
             ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
             ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
-        val art = if (source === lastArtSource) lastArt else source?.let(::prepareArt)
+        val sameArt = source === lastArtSource
+        val art = if (sameArt) lastArt else source?.let(::prepareArt)
+        val palette = if (sameArt) lastPalette else source?.let(::vividColors).orEmpty()
         lastArtSource = source
         lastArt = art
+        lastPalette = palette
 
         val appLabel = runCatching {
             val pm = context.packageManager
@@ -173,8 +179,39 @@ class MediaRepository(private val context: Context) {
             positionMs = state?.position ?: 0L,
             positionUpdated = state?.lastPositionUpdateTime?.takeIf { it > 0 } ?: SystemClock.elapsedRealtime(),
             speed = state?.playbackSpeed?.takeIf { it > 0f } ?: 1f,
+            artPalette = palette,
         )
     }
+
+    /**
+     * The cover's most vivid colors, a few different hues, brightened so they glow on black.
+     * Grey covers give soft white and their average tone.
+     */
+    private fun vividColors(bitmap: Bitmap): List<Color> = runCatching {
+        val soft = if (bitmap.config == Bitmap.Config.HARDWARE) bitmap.copy(Bitmap.Config.ARGB_8888, false) else bitmap
+        val tiny = Bitmap.createScaledBitmap(soft, 12, 12, true)
+        val hsv = FloatArray(3)
+        val candidates = buildList {
+            for (y in 0 until tiny.height) for (x in 0 until tiny.width) {
+                android.graphics.Color.colorToHSV(tiny.getPixel(x, y), hsv)
+                add(Triple(hsv[0], hsv[1], hsv[2]))
+            }
+        }.sortedByDescending { (_, sat, value) -> sat * (0.35f + value) }
+        val picked = mutableListOf<Triple<Float, Float, Float>>()
+        for (c in candidates) {
+            if (c.second < 0.18f) break
+            val far = picked.all { p ->
+                val d = kotlin.math.abs(p.first - c.first)
+                minOf(d, 360f - d) > 28f
+            }
+            if (far) picked += c
+            if (picked.size == 3) break
+        }
+        if (picked.isEmpty()) return@runCatching listOf(Color(0xFFEDEDED), Color(0xFF9A9AA5))
+        picked.map { (hue, sat, value) ->
+            Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, sat.coerceIn(0.45f, 0.9f), value.coerceIn(0.8f, 1f))))
+        }.let { if (it.size == 1) it + it.first().copy(alpha = 1f) else it }
+    }.getOrDefault(emptyList())
 
     /** Small copy of the cover plus its average color. */
     private fun prepareArt(bitmap: Bitmap): Pair<ImageBitmap, Color>? = runCatching {
