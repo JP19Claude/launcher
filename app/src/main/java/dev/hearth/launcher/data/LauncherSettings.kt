@@ -93,6 +93,12 @@ enum class GlimmerStyle(val label: String) {
     Glass("Liquid Glass"),
 }
 
+/** Overall look of control center and notifications. */
+enum class CcStyle(val label: String) {
+    IOS("iOS 27"),
+    ColorOS("ColorOS 17"),
+}
+
 /** Brightness and volume sliders in the control center. */
 enum class CcSliderStyle(val label: String) {
     Tall("Hoch (ColorOS)"),
@@ -101,6 +107,7 @@ enum class CcSliderStyle(val label: String) {
 
 /** Color of switches that are on in the control center. */
 enum class CcColorMode(val label: String) {
+    IOS("iOS"),
     Accent("Akzentfarbe"),
     Multicolor("Bunt (ColorOS 16)"),
     White("Weiß"),
@@ -168,11 +175,12 @@ data class LauncherSettings(
     val animations: Boolean = true,
     val pageTransition: PageTransition = PageTransition.Depth,
     // Control center look
+    val ccStyle: CcStyle = CcStyle.IOS,
     val ccBigTiles: Boolean = true,
     val ccSliders: CcSliderStyle = CcSliderStyle.Tall,
-    val ccColors: CcColorMode = CcColorMode.Accent,
+    val ccColors: CcColorMode = CcColorMode.IOS,
     val ccShape: CcToggleShape = CcToggleShape.Circle,
-    val ccGlow: Boolean = true,
+    val ccGlow: Boolean = false,
     val ccLabels: Boolean = true,
     val ccShowClock: Boolean = true,
     val ccShowMedia: Boolean = true,
@@ -217,6 +225,9 @@ data class LauncherSettings(
             showGreeting = true,
             showClaudeCard = true,
             swipeDownAction = SwipeDownAction.Split,
+            ccStyle = CcStyle.ColorOS,
+            ccColors = CcColorMode.Accent,
+            ccGlow = true,
         )
         DesignPreset.IOSGlass -> copy(
             iconStyle = IconStyle.Glass,
@@ -232,6 +243,9 @@ data class LauncherSettings(
             clockStyle = ClockStyle.Glass,
             showClaudeCard = false,
             swipeDownAction = SwipeDownAction.ControlCenter,
+            ccStyle = CcStyle.IOS,
+            ccColors = CcColorMode.IOS,
+            ccGlow = false,
         )
         DesignPreset.Hearth -> copy(
             iconStyle = IconStyle.Original,
@@ -249,7 +263,7 @@ data class LauncherSettings(
         const val MAX_DOCK = 6
 
         /** Current default look; installs with a lower [designVersion] get it once. */
-        const val DESIGN_VERSION = 2
+        const val DESIGN_VERSION = 3
     }
 }
 
@@ -305,6 +319,7 @@ class SettingsRepository(context: Context) {
             iconGloss = prefs.getBoolean("iconGloss", d.iconGloss),
             animations = prefs.getBoolean("animations", d.animations),
             pageTransition = enumOf("pageTransition", d.pageTransition),
+            ccStyle = enumOf("ccStyle", d.ccStyle),
             ccBigTiles = prefs.getBoolean("ccBigTiles", d.ccBigTiles),
             ccSliders = enumOf("ccSliders", d.ccSliders),
             ccColors = enumOf("ccColors", d.ccColors),
@@ -371,6 +386,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("iconGloss", s.iconGloss)
             .putBoolean("animations", s.animations)
             .putString("pageTransition", s.pageTransition.name)
+            .putString("ccStyle", s.ccStyle.name)
             .putBoolean("ccBigTiles", s.ccBigTiles)
             .putString("ccSliders", s.ccSliders.name)
             .putString("ccColors", s.ccColors.name)

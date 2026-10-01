@@ -61,6 +61,7 @@ import dev.hearth.launcher.data.AccentColor
 import dev.hearth.launcher.data.BadgeStyle
 import dev.hearth.launcher.data.CcColorMode
 import dev.hearth.launcher.data.CcSliderStyle
+import dev.hearth.launcher.data.CcStyle
 import dev.hearth.launcher.data.CcToggleShape
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.DesignPreset
@@ -488,6 +489,23 @@ fun SettingsScreen(
 
             item {
                 Section("Kontrollzentrum: Aussehen") {
+                    ChoiceRow(
+                        label = "Stil",
+                        options = CcStyle.entries,
+                        selected = s.ccStyle,
+                        optionLabel = { it.label },
+                        onSelect = { style ->
+                            update {
+                                // The matching colors and glow come along; both can be changed below.
+                                when (style) {
+                                    CcStyle.IOS -> it.copy(ccStyle = style, ccColors = CcColorMode.IOS, ccGlow = false)
+                                    CcStyle.ColorOS -> it.copy(ccStyle = style, ccColors = CcColorMode.Accent, ccGlow = true)
+                                }
+                            }
+                        },
+                    )
+                    Note("iOS 27: klares Glas, iOS-Farben, Verbindungen neben der Medien-Karte, Mitteilungen gestapelt wie auf dem iPhone. ColorOS 17: große Kacheln, leuchtende Schalter.")
+                    RowDivider()
                     SwitchRow(
                         label = "Nach rechts wischen: Mitteilungen",
                         description = "Eigene Glas-Seite mit deinen Mitteilungen links neben den Schaltern; antippen öffnet, nach rechts wischen löscht. Mit „System-Kontrollzentrum ersetzen“ öffnet die linke Hälfte der Statusleiste gleich die Mitteilungen.",
@@ -522,7 +540,7 @@ fun SettingsScreen(
                         update { it.copy(ccLabels = v) }
                     }
                     RowDivider()
-                    SwitchRow(label = "Große WLAN- und Mobil-Kacheln", checked = s.ccBigTiles) { v ->
+                    SwitchRow(label = "Große WLAN- und Mobil-Kacheln (ColorOS)", checked = s.ccBigTiles) { v ->
                         update { it.copy(ccBigTiles = v) }
                     }
                     SwitchRow(label = "Medien-Karte", checked = s.ccShowMedia) { v ->

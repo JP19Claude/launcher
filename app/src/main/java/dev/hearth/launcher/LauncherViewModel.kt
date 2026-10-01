@@ -14,6 +14,8 @@ import dev.hearth.launcher.data.AppUsage
 import dev.hearth.launcher.data.CellPos
 import dev.hearth.launcher.data.HomeFolderData
 import dev.hearth.launcher.data.HomeLayoutRepository
+import dev.hearth.launcher.data.CcColorMode
+import dev.hearth.launcher.data.CcStyle
 import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.IconConfig
 import dev.hearth.launcher.data.IconPackInfo
@@ -167,10 +169,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val homeEvents: SharedFlow<Boolean> = _homeEvents.asSharedFlow()
 
     init {
-        // New default look (ColorOS × Claude), applied once to existing installs.
+        // New default looks, each applied once to existing installs:
+        // 2 = ColorOS × Claude, 3 = control center and notifications in iOS 27 glass.
         if (settingsRepo.settings.value.designVersion < LauncherSettings.DESIGN_VERSION) {
             settingsRepo.update {
-                it.withPreset(DesignPreset.ColorOSClaude).copy(designVersion = LauncherSettings.DESIGN_VERSION)
+                var s = it
+                if (s.designVersion < 2) s = s.withPreset(DesignPreset.ColorOSClaude)
+                if (s.designVersion < 3) s = s.copy(ccStyle = CcStyle.IOS, ccColors = CcColorMode.IOS, ccGlow = false)
+                s.copy(designVersion = LauncherSettings.DESIGN_VERSION)
             }
         }
 

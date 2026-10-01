@@ -113,6 +113,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.ui.graphics.luminance
 import dev.hearth.launcher.data.CcColorMode
+import dev.hearth.launcher.data.CcStyle
 import dev.hearth.launcher.data.CcSliderStyle
 import dev.hearth.launcher.data.CcToggleShape
 import dev.hearth.launcher.data.NoticeAction
@@ -120,6 +121,8 @@ import dev.hearth.launcher.data.NotificationHub
 import dev.hearth.launcher.data.ShadeNotice
 import java.time.Instant
 import java.time.ZoneId
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.text.style.TextAlign
 
 private val OnGlass = Color.White
 private val OnGlassDim = Color.White.copy(alpha = 0.7f)
@@ -280,35 +283,38 @@ fun ControlCenter(
         }
     }
 
-    // All switches, described once; the chosen look decides where they go.
+    // All switches, described once; the chosen look (iOS or ColorOS) decides where they go.
+    val ios = settings.ccStyle == CcStyle.IOS
     val wifi = ToggleSpec(Glyph.Wifi, "WLAN", state.wifi, onClick = controls::openWifi)
     val mobile = ToggleSpec(Glyph.Cellular, "Mobile Daten", state.mobileData, onClick = controls::openInternet)
-    val quadA = listOf(
-        ToggleSpec(Glyph.Bluetooth, "Bluetooth", state.bluetooth, onClick = controls::openBluetooth),
-        ToggleSpec(Glyph.Airplane, "Flugmodus", state.airplane, onClick = controls::openAirplane),
-        ToggleSpec(Glyph.Torch, "Taschenlampe", torch, enabled = controls.hasTorch, onClick = { controls.setTorch(!torch) }),
-        ToggleSpec(Glyph.Location, "Standort", state.location, onClick = controls::openLocation),
-    )
-    val quadB = listOf(
-        ToggleSpec(Glyph.Moon, "Nicht stören", state.doNotDisturb, onClick = {
-            controls.toggleDoNotDisturb()
-            refresh()
-        }),
-        ToggleSpec(Glyph.Vibrate, "Vibration", state.vibrate, onLongClick = { audioOpen = true }, onClick = {
-            controls.toggleVibrate()
-            refresh()
-        }),
-        ToggleSpec(Glyph.Rotate, "Drehen", state.autoRotate, onClick = {
-            controls.setAutoRotate(!state.autoRotate)
-            refresh()
-        }),
-        ToggleSpec(Glyph.AutoSun, "Auto-Hell", state.autoBrightness, onLongClick = { controls.openDisplay() }, onClick = {
-            controls.setAutoBrightness(!state.autoBrightness)
-            refresh()
-        }),
-    )
+    val bluetooth = ToggleSpec(Glyph.Bluetooth, "Bluetooth", state.bluetooth, onClick = controls::openBluetooth)
+    val airplane = ToggleSpec(Glyph.Airplane, "Flugmodus", state.airplane, onClick = controls::openAirplane)
+    val torchSpec = ToggleSpec(Glyph.Torch, "Taschenlampe", torch, enabled = controls.hasTorch, onClick = { controls.setTorch(!torch) })
+    val location = ToggleSpec(Glyph.Location, "Standort", state.location, onClick = controls::openLocation)
+    val dnd = ToggleSpec(Glyph.Moon, "Nicht stören", state.doNotDisturb, onClick = {
+        controls.toggleDoNotDisturb()
+        refresh()
+    })
+    val vibrate = ToggleSpec(Glyph.Vibrate, "Vibration", state.vibrate, onLongClick = { audioOpen = true }, onClick = {
+        controls.toggleVibrate()
+        refresh()
+    })
+    val rotate = ToggleSpec(Glyph.Rotate, "Drehen", state.autoRotate, onClick = {
+        controls.setAutoRotate(!state.autoRotate)
+        refresh()
+    })
+    val autoSun = ToggleSpec(Glyph.AutoSun, "Auto-Hell", state.autoBrightness, onLongClick = { controls.openDisplay() }, onClick = {
+        controls.setAutoBrightness(!state.autoBrightness)
+        refresh()
+    })
+    // iOS: the connectivity platter next to the media; ColorOS: four switches next to it.
+    val quadA = if (ios) listOf(airplane, mobile, wifi, bluetooth) else listOf(bluetooth, airplane, torchSpec, location)
+    val quadB = if (ios) listOf(dnd, rotate, torchSpec, vibrate) else listOf(dnd, vibrate, rotate, autoSun)
     val extras = buildList {
-        if (!settings.ccBigTiles) {
+        if (ios) {
+            add(location)
+            add(autoSun)
+        } else if (!settings.ccBigTiles) {
             add(wifi)
             add(mobile)
         }
@@ -349,6 +355,21 @@ fun ControlCenter(
     val tall = settings.ccSliders == CcSliderStyle.Tall
     val dim = 0.4f + 1.2f * settings.ccDim.coerceIn(0f, 1f)
 
+    // iOS 27: clear, bright glass with strong rims, whatever the launcher's own tint is.
+    val baseGlass = LocalGlassStyle.current
+    val glass = remember(baseGlass, ios) {
+        if (ios) {
+            baseGlass.copy(
+                tint = Color.White.copy(alpha = 0.10f),
+                specular = 1.35f,
+                refraction = baseGlass.refraction.coerceAtLeast(1.4f),
+                dispersion = 0.9f,
+            )
+        } else {
+            baseGlass
+        }
+    }
+    CompositionLocalProvider(LocalGlassStyle provides glass) {
     Box(
         Modifier
             .fillMaxSize()
@@ -453,7 +474,7 @@ fun ControlCenter(
                 }
 
                 // Two big tiles: WLAN and mobile data.
-                if (settings.ccBigTiles) {
+                if (!ios && settings.ccBigTiles) {
                     Row(Modifier.unfold(1, reveal).fillMaxWidth().height(70.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         BigTile(
                             spec = wifi,
@@ -471,8 +492,13 @@ fun ControlCenter(
                 // Media card next to four switches (or the switches alone).
                 if (settings.ccShowMedia) {
                     Row(Modifier.unfold(2, reveal).fillMaxWidth().height(168.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        MediaCard(media, controls, accent, onClose, Modifier.weight(1f).fillMaxHeight())
-                        ToggleCard(quadA, columns = 2, modifier = Modifier.weight(1f).fillMaxHeight(), fill = true)
+                        if (ios) {
+                            ToggleCard(quadA, columns = 2, modifier = Modifier.weight(1f).fillMaxHeight(), fill = true)
+                            MediaCard(media, controls, accent, onClose, Modifier.weight(1f).fillMaxHeight())
+                        } else {
+                            MediaCard(media, controls, accent, onClose, Modifier.weight(1f).fillMaxHeight())
+                            ToggleCard(quadA, columns = 2, modifier = Modifier.weight(1f).fillMaxHeight(), fill = true)
+                        }
                     }
                 } else {
                     ToggleCard(quadA, columns = 4, modifier = Modifier.unfold(2, reveal).fillMaxWidth())
@@ -522,8 +548,8 @@ fun ControlCenter(
                     }
                 }
 
-                // Everything else, four to a row, like the lower part of the ColorOS panel.
-                ToggleCard(extras, columns = 4, modifier = Modifier.unfold(4, reveal).fillMaxWidth())
+                // Everything else, four to a row: loose glass buttons on iOS, a card on ColorOS.
+                ToggleCard(extras, columns = 4, modifier = Modifier.unfold(4, reveal).fillMaxWidth(), card = !ios)
 
                 if (settings.ccShowShortcuts) {
                     Row(
@@ -606,9 +632,15 @@ fun ControlCenter(
             AudioSheet(controls, onClose = { audioOpen = false })
         }
     }
+    }
 }
 
-/** Hearth's own notification list, one swipe right from the switches. */
+/**
+ * Hearth's own notification center, one swipe right from the switches, working like the
+ * iPhone's: the big clock on top, notifications stacked per app (tap a stack to fan it out),
+ * swipe a notification left for "Optionen" and "Löschen" (all the way: gone), hold it for
+ * the whole text and its buttons, and the ✕ to clear everything.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NotificationPage(
@@ -622,51 +654,94 @@ private fun NotificationPage(
     val connected by NotificationHub.connected.collectAsStateWithLifecycle()
     val notices by NotificationHub.all.collectAsStateWithLifecycle()
     val accent = LocalSettings.current.accent.color
+    val locale = Locale.getDefault()
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
-            delay(30_000)
+            delay(15_000)
             now = System.currentTimeMillis()
         }
+    }
+    val clock = remember(now) { Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()) }
+    // Stacks per app, the app with the newest notification first.
+    val groups = remember(notices) { notices.groupBy { it.packageName }.values.toList() }
+    val expanded = remember { mutableStateMapOf<String, Boolean>() }
+    // Read here, so opening a stack recomposes the list.
+    val openApps = expanded.filterValues { it }.keys
+    var confirmClear by remember { mutableStateOf(false) }
+    LaunchedEffect(confirmClear) {
+        if (confirmClear) {
+            delay(3000)
+            confirmClear = false
+        }
+    }
+    val openSettingsFor: (ShadeNotice) -> Unit = { notice ->
+        val intent = android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, notice.packageName)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (runCatching { context.startActivity(intent) }.isSuccess) onClose()
     }
 
     LazyColumn(
         Modifier
             .fillMaxSize()
             .then(if (barPadding != null) Modifier.padding(barPadding) else Modifier.systemBarsPadding())
-            .padding(horizontal = 14.dp),
-        contentPadding = PaddingValues(top = 10.dp, bottom = 40.dp),
+            .padding(horizontal = 12.dp),
+        contentPadding = PaddingValues(top = 6.dp, bottom = 48.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item(key = "header") {
-            Row(
-                verticalAlignment = Alignment.Bottom,
-                modifier = Modifier.unfold(0, reveal).padding(horizontal = 6.dp, vertical = 4.dp),
+        // The lock screen clock, like the iPhone's notification center.
+        item(key = "clock") {
+            Column(
+                Modifier
+                    .unfold(0, reveal)
+                    .fillMaxWidth()
+                    .padding(top = 10.dp, bottom = 18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = when {
-                            !connected -> "Kein Zugriff"
-                            notices.isEmpty() -> "Keine neuen"
-                            notices.size == 1 -> "1 Mitteilung"
-                            else -> "${notices.size} Mitteilungen"
-                        },
-                        color = OnGlassDim,
-                        fontSize = 14.sp,
-                        style = OnWallpaperText,
-                    )
-                    Text("Mitteilungen", color = OnGlass, fontSize = 34.sp, fontWeight = FontWeight.Light, style = OnWallpaperText)
-                }
+                Text(
+                    text = clock.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale)),
+                    color = OnGlass.copy(alpha = 0.9f),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    style = OnWallpaperText,
+                )
+                Text(
+                    text = clock.format(DateTimeFormatter.ofPattern("HH:mm", locale)),
+                    color = OnGlass.copy(alpha = 0.92f),
+                    fontSize = 88.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    style = OnWallpaperText,
+                )
+            }
+        }
+
+        item(key = "title") {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.unfold(1, reveal).padding(start = 6.dp, end = 2.dp),
+            ) {
+                Text(
+                    "Mitteilungszentrale",
+                    color = OnGlass,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    style = OnWallpaperText,
+                    modifier = Modifier.weight(1f),
+                )
                 if (notices.any { it.clearable }) {
-                    Box(
-                        Modifier
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.16f))
-                            .clickable { NotificationHub.dismissAll() }
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                    ) {
-                        Text("Alle löschen", color = OnGlass, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                    }
+                    // First tap: "Alle löschen", second tap clears (like the iPhone's ✕).
+                    IosClearButton(
+                        label = if (confirmClear) "Alle löschen" else null,
+                        onClick = {
+                            if (confirmClear) {
+                                NotificationHub.dismissAll()
+                                confirmClear = false
+                            } else {
+                                confirmClear = true
+                            }
+                        },
+                    )
                 }
             }
         }
@@ -675,9 +750,9 @@ private fun NotificationPage(
             item(key = "access") {
                 GlassCard(
                     Modifier
-                        .unfold(1, reveal)
+                        .unfold(2, reveal)
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(28.dp))
+                        .clip(RoundedCornerShape(24.dp))
                         .clickable(onClick = onRequestAccess),
                 ) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -696,46 +771,167 @@ private fun NotificationPage(
             }
         } else if (notices.isEmpty()) {
             item(key = "empty") {
-                Column(
-                    Modifier
-                        .unfold(1, reveal)
+                Text(
+                    "Keine älteren Mitteilungen",
+                    color = OnGlassDim,
+                    fontSize = 15.sp,
+                    style = OnWallpaperText,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .unfold(2, reveal)
                         .fillMaxWidth()
-                        .padding(vertical = 48.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    ClaudeSpark(accent, Modifier.size(30.dp))
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        "Alles erledigt",
-                        color = OnGlass,
-                        fontFamily = FontFamily.Serif,
-                        fontStyle = FontStyle.Italic,
-                        fontSize = 18.sp,
-                        style = OnWallpaperText,
+                        .padding(vertical = 36.dp),
+                )
+            }
+        }
+
+        groups.forEach { group ->
+            val app = group.first().packageName
+            val open = group.size > 1 && app in openApps
+            if (group.size > 1 && open) {
+                item(key = "head:$app") {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.animateItem().unfold(2, reveal).padding(start = 6.dp, end = 2.dp, top = 4.dp),
+                    ) {
+                        Text(
+                            group.first().appLabel,
+                            color = OnGlass,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = OnWallpaperText,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IosPill("Weniger anzeigen") { expanded[app] = false }
+                        if (group.any { it.clearable }) {
+                            Spacer(Modifier.width(8.dp))
+                            IosClearButton(label = null) {
+                                group.filter { it.clearable }.forEach { NotificationHub.dismiss(it.key) }
+                                expanded.remove(app)
+                            }
+                        }
+                    }
+                }
+                items(group, key = { it.key }) { notice ->
+                    NotificationCard(
+                        notice = notice,
+                        now = now,
+                        modifier = Modifier.animateItem().unfold(2, reveal),
+                        onOpen = { if (NotificationHub.open(context, notice)) onClose() },
+                        onAction = { action ->
+                            NotificationHub.send(context, action.intent)
+                            onClose()
+                        },
+                        onOptions = { openSettingsFor(notice) },
+                        onDismiss = { NotificationHub.dismiss(notice.key) },
                     )
+                }
+            } else {
+                // One notification, or the newest of a stack with the others peeking out below.
+                val top = group.first()
+                item(key = "stack:$app") {
+                    Box(
+                        Modifier
+                            .animateItem()
+                            .unfold(2, reveal)
+                            .padding(bottom = if (group.size > 2) 16.dp else if (group.size > 1) 8.dp else 0.dp),
+                    ) {
+                        if (group.size > 2) StackLayer(Modifier.matchParentSize().padding(horizontal = 26.dp).offset(y = 16.dp))
+                        if (group.size > 1) StackLayer(Modifier.matchParentSize().padding(horizontal = 13.dp).offset(y = 8.dp))
+                        NotificationCard(
+                            notice = top,
+                            now = now,
+                            more = group.size - 1,
+                            onOpen = {
+                                if (group.size > 1) {
+                                    expanded[app] = true
+                                } else if (NotificationHub.open(context, top)) {
+                                    onClose()
+                                }
+                            },
+                            onAction = { action ->
+                                NotificationHub.send(context, action.intent)
+                                onClose()
+                            },
+                            onOptions = { openSettingsFor(top) },
+                            onDismiss = {
+                                // Clearing a stack clears the whole app, like on the iPhone.
+                                group.filter { it.clearable }.forEach { NotificationHub.dismiss(it.key) }
+                            },
+                        )
+                    }
                 }
             }
         }
 
-        items(notices, key = { it.key }) { notice ->
-            NotificationCard(
-                notice = notice,
-                now = now,
-                modifier = Modifier.animateItem().unfold(1, reveal),
-                onOpen = { if (NotificationHub.open(context, notice)) onClose() },
-                onAction = { action ->
-                    NotificationHub.send(context, action.intent)
-                    onClose()
-                },
-                onDismiss = { NotificationHub.dismiss(notice.key) },
-            )
-        }
-
         if (onShowSystemNotifications != null) {
             item(key = "system") {
-                GlassPill(Glyph.Tiles, "System-Mitteilungen öffnen", Modifier.fillMaxWidth(), onShowSystemNotifications)
+                GlassPill(Glyph.Tiles, "System-Mitteilungen öffnen", Modifier.animateItem().fillMaxWidth(), onShowSystemNotifications)
             }
         }
+        item(key = "hint") {
+            Text(
+                "Nach links wischen: Kontrollzentrum",
+                color = OnGlassDim,
+                fontFamily = FontFamily.Serif,
+                fontStyle = FontStyle.Italic,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                style = OnWallpaperText,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            )
+        }
+    }
+}
+
+/** The glass edge of a notification lying under the top one of a stack. */
+@Composable
+private fun StackLayer(modifier: Modifier) {
+    Box(
+        modifier
+            .clip(RoundedCornerShape(22.dp))
+            .background(Color.White.copy(alpha = 0.13f))
+            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(22.dp)),
+    )
+}
+
+/** Small round glass ✕; shows [label] next to it when set (the iPhone's "clear" step). */
+@Composable
+private fun IosClearButton(label: String?, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .height(30.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.2f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = if (label != null) 12.dp else 0.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        if (label != null) {
+            Text(label, color = OnGlass, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        } else {
+            Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
+                Text("✕", color = OnGlass, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun IosPill(text: String, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .height(30.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.2f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, color = OnGlass, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 
@@ -750,138 +946,196 @@ private fun noticeTime(time: Long, now: Long): String {
     }
 }
 
+private val SwipeButtonWidth = 78.dp
+
 /**
- * One notification on glass: tap opens it, swipe right removes it (a swipe to the left
- * belongs to the page and goes back to the switches).
+ * One notification on glass, like on the iPhone: tap opens it, hold shows all of it with its
+ * buttons, swipe left uncovers "Optionen" and "Löschen" (swiped all the way, it's cleared).
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NotificationCard(
     notice: ShadeNotice,
     now: Long,
     modifier: Modifier = Modifier,
+    /** Further notifications of the same app under this one (collapsed stack). */
+    more: Int = 0,
     onOpen: () -> Unit,
     onAction: (NoticeAction) -> Unit,
+    onOptions: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val offset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val dismiss by rememberUpdatedState(onDismiss)
     var expanded by remember { mutableStateOf(false) }
-    LiquidGlass(
-        cornerRadius = 24.dp,
-        refraction = 16.dp,
-        blur = 18.dp,
-        modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                translationX = offset.value
-                alpha = (1f - abs(offset.value) / (size.width.coerceAtLeast(1f) * 0.9f)).coerceIn(0f, 1f)
+    val density = LocalDensity.current
+    val buttons = if (notice.clearable) 2 else 1
+    val revealPx = with(density) { (SwipeButtonWidth * buttons + 10.dp * buttons).toPx() }
+    val settle: (Float) -> Unit = { target ->
+        scope.launch { offset.animateTo(target, spring(dampingRatio = 0.82f, stiffness = 520f)) }
+    }
+
+    Box(modifier.fillMaxWidth()) {
+        // Uncovered by swiping left.
+        Row(
+            Modifier
+                .matchParentSize()
+                .graphicsLayer { alpha = (-offset.value / revealPx).coerceIn(0f, 1f) },
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SwipeButton("Optionen", Color.White.copy(alpha = 0.22f)) {
+                settle(0f)
+                onOptions()
             }
-            .clip(RoundedCornerShape(24.dp))
-            .pointerInput(notice.key) {
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    var dragging = false
-                    var totalX = 0f
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                        if (!change.pressed) break
-                        val dx = change.position.x - change.previousPosition.x
-                        if (!dragging) {
-                            totalX += dx
-                            val dy = abs(change.position.y - down.position.y)
-                            val slop = viewConfiguration.touchSlop
-                            when {
-                                dy > slop && dy > abs(totalX) -> break // scrolling the list
-                                totalX > slop -> dragging = true
-                                totalX < -slop -> break // back to the switches
+            if (notice.clearable) {
+                Spacer(Modifier.width(10.dp))
+                SwipeButton("Löschen", Color.White.copy(alpha = 0.22f)) {
+                    scope.launch {
+                        offset.animateTo(-revealPx * 4f, tween(160))
+                        dismiss()
+                    }
+                }
+            }
+        }
+
+        LiquidGlass(
+            cornerRadius = 22.dp,
+            refraction = 16.dp,
+            blur = 18.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer { translationX = offset.value }
+                .clip(RoundedCornerShape(22.dp))
+                .pointerInput(notice.key) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var dragging = false
+                        var totalX = 0f
+                        val start = offset.value
+                        var current = start
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!change.pressed) break
+                            val dx = change.position.x - change.previousPosition.x
+                            if (!dragging) {
+                                totalX += dx
+                                val dy = abs(change.position.y - down.position.y)
+                                val slop = viewConfiguration.touchSlop
+                                when {
+                                    dy > slop && dy > abs(totalX) -> break // scrolling the list
+                                    totalX < -slop -> dragging = true
+                                    // Right only closes uncovered buttons.
+                                    totalX > slop -> if (start < 0f) dragging = true else break
+                                }
+                            }
+                            if (dragging) {
+                                change.consume()
+                                current = (current + dx).coerceIn(-size.width.toFloat(), 0f)
+                                val target = current
+                                scope.launch { offset.snapTo(target) }
                             }
                         }
                         if (dragging) {
-                            change.consume()
-                            val target = (offset.value + dx).coerceAtLeast(0f)
-                            scope.launch { offset.snapTo(target) }
-                        }
-                    }
-                    if (dragging) {
-                        val width = size.width.toFloat()
-                        scope.launch {
-                            if (notice.clearable && offset.value > width * 0.33f) {
-                                offset.animateTo(width * 1.2f, tween(180))
-                                dismiss()
-                            } else {
-                                offset.animateTo(0f, spring(dampingRatio = 0.7f, stiffness = 500f))
+                            val width = size.width.toFloat()
+                            when {
+                                notice.clearable && current < -width * 0.6f -> scope.launch {
+                                    offset.animateTo(-width * 1.2f, tween(170))
+                                    dismiss()
+                                }
+                                current < -revealPx / 2f -> settle(-revealPx)
+                                else -> settle(0f)
                             }
                         }
                     }
                 }
-            }
-            .clickable(onClick = onOpen),
-    ) {
-        Column(Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+                .combinedClickable(
+                    onClick = { if (offset.value < -1f) settle(0f) else onOpen() },
+                    onLongClick = { expanded = !expanded },
+                ),
+        ) {
+            Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
                 val icon = notice.icon
                 if (icon != null) {
                     Image(
                         bitmap = icon,
                         contentDescription = null,
                         modifier = Modifier
-                            .size(20.dp)
-                            .clip(RoundedCornerShape(6.dp)),
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp)),
                     )
                 } else {
-                    GlyphIcon(Glyph.Bell, OnGlass, Modifier.size(18.dp))
+                    Box(
+                        Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        GlyphIcon(Glyph.Bell, OnGlass, Modifier.size(20.dp))
+                    }
                 }
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = notice.appLabel,
-                    color = OnGlassDim,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(noticeTime(notice.time, now), color = OnGlassDim, fontSize = 12.sp)
-            }
-            Spacer(Modifier.height(6.dp))
-            if (notice.title.isNotBlank()) {
-                Text(
-                    text = notice.title,
-                    color = OnGlass,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            if (notice.text.isNotBlank()) {
-                Text(
-                    text = notice.text,
-                    color = OnGlass.copy(alpha = 0.85f),
-                    fontSize = 14.sp,
-                    maxLines = if (expanded) 12 else 3,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.clickable(enabled = notice.text.length > 120) { expanded = !expanded },
-                )
-            }
-            if (notice.actions.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    notice.actions.forEach { action ->
-                        Box(
-                            Modifier
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.14f))
-                                .clickable { onAction(action) }
-                                .padding(horizontal = 12.dp, vertical = 7.dp),
-                        ) {
-                            Text(action.title, color = OnGlass, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = notice.title.ifBlank { notice.appLabel },
+                            color = OnGlass,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(noticeTime(notice.time, now), color = OnGlassDim, fontSize = 13.sp)
+                    }
+                    if (notice.text.isNotBlank()) {
+                        Text(
+                            text = notice.text,
+                            color = OnGlass.copy(alpha = 0.88f),
+                            fontSize = 15.sp,
+                            maxLines = if (expanded) 14 else 4,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (more > 0) {
+                        Text(
+                            text = if (more == 1) "1 weitere Mitteilung" else "$more weitere Mitteilungen",
+                            color = OnGlassDim,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                    if (expanded && notice.actions.isNotEmpty()) {
+                        Spacer(Modifier.height(10.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            notice.actions.forEach { action ->
+                                IosPill(action.title) { onAction(action) }
+                            }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SwipeButton(text: String, color: Color, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .width(SwipeButtonWidth)
+            .fillMaxHeight()
+            .padding(vertical = 4.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(color)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, color = OnGlass, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 
@@ -946,12 +1200,19 @@ private fun Modifier.onGlow(active: Boolean, color: Color, cornerRadius: Dp? = n
 
 /** Glass card with switches in rows of [columns]; [fill] spreads the rows over its height. */
 @Composable
-private fun ToggleCard(specs: List<ToggleSpec>, columns: Int, modifier: Modifier = Modifier, fill: Boolean = false) {
-    GlassCard(modifier) {
+private fun ToggleCard(
+    specs: List<ToggleSpec>,
+    columns: Int,
+    modifier: Modifier = Modifier,
+    fill: Boolean = false,
+    /** Without the card the buttons float on their own, like iOS. */
+    card: Boolean = true,
+) {
+    val grid = @Composable {
         Column(
             (if (fill) Modifier.fillMaxSize() else Modifier.fillMaxWidth())
-                .padding(vertical = if (fill) 6.dp else 12.dp),
-            verticalArrangement = if (fill) Arrangement.SpaceEvenly else Arrangement.spacedBy(10.dp),
+                .padding(vertical = if (fill) 6.dp else if (card) 12.dp else 2.dp),
+            verticalArrangement = if (fill) Arrangement.SpaceEvenly else Arrangement.spacedBy(if (card) 10.dp else 14.dp),
         ) {
             specs.chunked(columns).forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -961,6 +1222,7 @@ private fun ToggleCard(specs: List<ToggleSpec>, columns: Int, modifier: Modifier
             }
         }
     }
+    if (card) GlassCard(modifier) { grid() } else Box(modifier) { grid() }
 }
 
 private val ToggleWidth = 70.dp
@@ -985,8 +1247,20 @@ private fun multicolor(glyph: Glyph): Color? = when (glyph) {
     else -> null
 }
 
+/** iOS colors: blue for radios and location, green for mobile, orange for airplane... */
+private fun iosColor(glyph: Glyph): Color = when (glyph) {
+    Glyph.Wifi, Glyph.Bluetooth, Glyph.Location, Glyph.Nfc, Glyph.Cast -> Color(0xFF0A84FF)
+    Glyph.Cellular, Glyph.Hotspot -> Color(0xFF30D158)
+    Glyph.Airplane -> Color(0xFFFF9F0A)
+    Glyph.Moon -> Color(0xFF5E5CE6)
+    Glyph.Vibrate -> Color(0xFFFF453A)
+    Glyph.Battery -> Color(0xFFFFD60A)
+    else -> Color.White
+}
+
 /** The color a switch shows while on, as chosen under "Kontrollzentrum: Aussehen". */
 private fun onColor(glyph: Glyph, accent: Color, mode: CcColorMode): Color = when (mode) {
+    CcColorMode.IOS -> iosColor(glyph)
     CcColorMode.Accent -> accent
     CcColorMode.White -> Color.White
     CcColorMode.Multicolor -> multicolor(glyph) ?: accent
