@@ -79,7 +79,7 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         when (key) {
             "triggerZone" -> if (trigger != null) addTrigger()
             SettingsRepository.KEY_INTERCEPT -> interceptShade = prefs.getBoolean(key, false)
-            in LauncherSettings.GLIMMER_KEYS -> restartGlimmer()
+            in SettingsRepository.GLIMMER_KEYS -> restartGlimmer()
         }
     }
 
