@@ -220,7 +220,7 @@ data class LauncherSettings(
     /** Swipe right in the control center for Hearth's own notification list. */
     val ccNotifications: Boolean = true,
     // Lock screen notifications, iOS style
-    val lockNotifications: LockLayout = LockLayout.Stack,
+    val lockNotifications: LockLayout = LockLayout.Off,
     /** Show what notifications say on the lock screen (private ones always stay hidden). */
     val lockShowContent: Boolean = true,
     // Control center glass
@@ -338,7 +338,7 @@ data class LauncherSettings(
         const val MAX_DOCK = 6
 
         /** Current default look; installs with a lower [designVersion] get it once. */
-        const val DESIGN_VERSION = 5
+        const val DESIGN_VERSION = 6
     }
 }
 

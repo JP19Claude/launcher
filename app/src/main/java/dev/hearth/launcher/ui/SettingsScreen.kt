@@ -629,7 +629,7 @@ fun SettingsScreen(
                         description = "Aus: nur App und „Mitteilung“. Mitteilungen, die Apps als geheim markieren, erscheinen nie.",
                         checked = s.lockShowContent,
                     ) { v -> update { it.copy(lockShowContent = v) } }
-                    Note("Stapel: die neueste unten, die anderen dahinter, antippen fächert sie auf. Anzahl: „3 Mitteilungen“, antippen zeigt sie. Liste: alle untereinander. Nach links wischen löscht, antippen öffnet nach dem Entsperren. Braucht den Dienst „Hearth Kontrollzentrum“ und den Benachrichtigungszugriff. Damit nichts doppelt erscheint, stell die Mitteilungen des Systems auf dem Sperrbildschirm auf „Nur Symbole“ oder aus.")
+                    Note("Standard ist „Aus“: dann zeigt der Sperrbildschirm die normalen Mitteilungen des Systems. Stapel: die neueste unten, die anderen dahinter, antippen fächert sie auf. Anzahl: „3 Mitteilungen“, antippen zeigt sie. Liste: alle untereinander. Nach links wischen löscht, antippen öffnet nach dem Entsperren. Braucht den Dienst „Hearth Kontrollzentrum“ und den Benachrichtigungszugriff. Damit nichts doppelt erscheint, stell die Mitteilungen des Systems auf dem Sperrbildschirm auf „Nur Symbole“ oder aus.")
                 }
             }
 

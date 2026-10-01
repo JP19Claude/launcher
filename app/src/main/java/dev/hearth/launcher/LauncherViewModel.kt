@@ -21,6 +21,7 @@ import dev.hearth.launcher.data.IconPackInfo
 import dev.hearth.launcher.data.IconPackRepository
 import dev.hearth.launcher.data.IconStyle
 import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.data.LockLayout
 import dev.hearth.launcher.data.LibraryCategory
 import dev.hearth.launcher.data.MediaRepository
 import dev.hearth.launcher.data.UsageRepository
@@ -185,6 +186,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                         ccRefraction = s.ccRefraction.coerceAtLeast(1.6f),
                     )
                 }
+                // 6: the lock screen shows the system's own notifications again.
+                if (s.designVersion < 6) s = s.copy(lockNotifications = LockLayout.Off)
                 s.copy(designVersion = LauncherSettings.DESIGN_VERSION)
             }
         }
