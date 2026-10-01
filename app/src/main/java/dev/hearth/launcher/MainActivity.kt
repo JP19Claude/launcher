@@ -26,6 +26,7 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
+        if (intent?.getBooleanExtra(EXTRA_OPEN_SETTINGS, false) == true) viewModel.requestSettings()
         setContent {
             val settings by viewModel.settings.collectAsStateWithLifecycle()
             val dark = when (settings.theme) {
@@ -55,7 +56,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_OPEN_SETTINGS, false)) {
+            viewModel.requestSettings()
+            return
+        }
         // Home button: either pressed on the home screen itself, or on the way back from an app.
         viewModel.onHomePressed(alreadyInFront = !wasInBackground)
+    }
+
+    companion object {
+        /** Opens the launcher settings right away (used by the control center overlay). */
+        const val EXTRA_OPEN_SETTINGS = "dev.hearth.launcher.OPEN_SETTINGS"
     }
 }

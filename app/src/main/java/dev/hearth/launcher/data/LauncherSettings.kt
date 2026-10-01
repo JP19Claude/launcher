@@ -66,6 +66,13 @@ enum class SwipeDownAction(val label: String) {
     Search("Suche"),
 }
 
+/** Strip along the top edge that opens the Hearth control center in every app. */
+enum class TriggerZone(val label: String, val fraction: Float) {
+    RightHalf("Rechte Hälfte", 0.5f),
+    RightThird("Rechtes Drittel", 0.34f),
+    Full("Ganze Breite", 1f),
+}
+
 /** Ready-made looks that set many options at once. */
 enum class DesignPreset(val label: String) {
     ColorOSClaude("ColorOS × Claude"),
@@ -110,6 +117,7 @@ data class LauncherSettings(
     val swipeDownAction: SwipeDownAction = SwipeDownAction.Split,
     val showClaudeCard: Boolean = true,
     val showAppLibrary: Boolean = true,
+    val triggerZone: TriggerZone = TriggerZone.RightHalf,
     // Dock
     val dockSize: Int = 4,
     val dockCustomized: Boolean = false,
@@ -177,7 +185,7 @@ data class LauncherSettings(
 /** Keeps the launcher settings in SharedPreferences and exposes them as a flow. */
 class SettingsRepository(context: Context) {
 
-    private val prefs = context.getSharedPreferences("hearth_settings", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val _settings = MutableStateFlow(read())
     val settings: StateFlow<LauncherSettings> = _settings.asStateFlow()
@@ -219,6 +227,7 @@ class SettingsRepository(context: Context) {
             swipeDownAction = enumOf("swipeDownAction", d.swipeDownAction),
             showClaudeCard = prefs.getBoolean("showClaudeCard", d.showClaudeCard),
             showAppLibrary = prefs.getBoolean("showAppLibrary", d.showAppLibrary),
+            triggerZone = enumOf("triggerZone", d.triggerZone),
             dockSize = prefs.getInt("dockSize", d.dockSize),
             dockCustomized = prefs.getBoolean("dockCustomized", d.dockCustomized),
             dockApps = prefs.getString("dockApps", null)
@@ -261,6 +270,7 @@ class SettingsRepository(context: Context) {
             .putString("swipeDownAction", s.swipeDownAction.name)
             .putBoolean("showClaudeCard", s.showClaudeCard)
             .putBoolean("showAppLibrary", s.showAppLibrary)
+            .putString("triggerZone", s.triggerZone.name)
             .putInt("dockSize", s.dockSize)
             .putBoolean("dockCustomized", s.dockCustomized)
             .putString("dockApps", s.dockApps.joinToString("\n"))
@@ -270,5 +280,9 @@ class SettingsRepository(context: Context) {
             .putStringSet("hiddenApps", s.hiddenApps)
             .putInt("designVersion", s.designVersion)
             .apply()
+    }
+
+    companion object {
+        const val PREFS_NAME = "hearth_settings"
     }
 }

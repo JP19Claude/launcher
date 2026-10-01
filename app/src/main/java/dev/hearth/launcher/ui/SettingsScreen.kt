@@ -38,6 +38,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +61,9 @@ import dev.hearth.launcher.data.IconStyle
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.SearchEngine
 import dev.hearth.launcher.data.SwipeDownAction
+import dev.hearth.launcher.data.TriggerZone
+import dev.hearth.launcher.system.ControlCenterService
+import kotlinx.coroutines.delay
 import dev.hearth.launcher.data.ThemeMode
 import kotlin.math.roundToInt
 
@@ -96,6 +102,15 @@ fun SettingsScreen(
     val update: ((LauncherSettings) -> LauncherSettings) -> Unit = vm::updateSettings
 
     LaunchedEffect(Unit) { vm.refreshIconPacks() }
+
+    // Picks up the accessibility switch when coming back from the system settings.
+    var serviceOn by remember { mutableStateOf(ControlCenterService.isEnabled) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            serviceOn = ControlCenterService.isEnabled
+            delay(1000)
+        }
+    }
 
     Box(Modifier.fillMaxSize()) {
         GlassBackdropFill(blur = 36.dp, modifier = Modifier.matchParentSize())
@@ -323,6 +338,26 @@ fun SettingsScreen(
                     }
                     RowDivider()
                     ActionRow(
+                        label = "Hearth-Kontrollzentrum in allen Apps",
+                        description = if (serviceOn) {
+                            "An: in jeder App oben im gewählten Bereich nach unten wischen"
+                        } else {
+                            "Aus: tippen und unter Bedienungshilfen „Hearth Kontrollzentrum“ einschalten"
+                        },
+                    ) {
+                        val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        runCatching { context.startActivity(intent) }
+                    }
+                    ChoiceRow(
+                        label = "Bereich oben, der es öffnet",
+                        options = TriggerZone.entries,
+                        selected = s.triggerZone,
+                        optionLabel = { it.label },
+                        onSelect = { zone -> update { it.copy(triggerZone = zone) } },
+                    )
+                    RowDivider()
+                    ActionRow(
                         label = "Helligkeit & Drehung erlauben",
                         description = "„Systemeinstellungen ändern“ für das Kontrollzentrum",
                         onClick = vm.controls::requestWriteSettings,
@@ -335,7 +370,7 @@ fun SettingsScreen(
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         runCatching { context.startActivity(intent) }
                     }
-                    Note("Das echte Kontrollzentrum von Android lässt sich von einer App nicht ersetzen. Hearth hat ein eigenes, das du auf dem Homescreen per Wischen nach unten öffnest.")
+                    Note("Ganz entfernen lässt sich das System-Kontrollzentrum nur mit Root. Mit dem Dienst fängt Hearth aber das Wischen im gewählten Bereich ab; der Rest der Leiste öffnet weiter die Mitteilungen. Über „System-Schalter“ im Hearth-Kontrollzentrum kommst du jederzeit an die Original-Schalter.")
                 }
             }
 

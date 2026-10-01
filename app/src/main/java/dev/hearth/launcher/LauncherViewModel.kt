@@ -199,6 +199,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    private val _settingsRequests = MutableSharedFlow<Unit>(replay = 1, extraBufferCapacity = 1)
+
+    /** Someone outside the home screen (the control center overlay) wants the settings opened. */
+    val settingsRequests: SharedFlow<Unit> = _settingsRequests.asSharedFlow()
+
+    fun requestSettings() {
+        _settingsRequests.tryEmit(Unit)
+    }
+
+    fun consumeSettingsRequest() {
+        _settingsRequests.resetReplayCache()
+    }
+
     fun onHomePressed(alreadyInFront: Boolean) {
         _homeEvents.tryEmit(alreadyInFront)
     }

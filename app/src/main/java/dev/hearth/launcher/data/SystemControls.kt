@@ -21,6 +21,7 @@ import android.provider.AlarmClock
 import android.provider.MediaStore
 import android.provider.Settings
 import android.view.KeyEvent
+import dev.hearth.launcher.system.ControlCenterService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -208,6 +209,8 @@ class SystemControls(private val context: Context) {
      */
     @SuppressLint("WrongConstant", "PrivateApi")
     fun expandNotifications(): Boolean = runCatching {
+        // The accessibility service can do this officially; use it when it's on.
+        if (ControlCenterService.instance?.showNotifications() == true) return true
         val service = context.getSystemService("statusbar") ?: return false
         Class.forName("android.app.StatusBarManager").getMethod("expandNotificationsPanel").invoke(service)
         true

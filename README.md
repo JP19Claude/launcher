@@ -13,7 +13,13 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   - WLAN, Mobile Daten, Bluetooth, Flugmodus (öffnen die System-Panels)
   - Medien-Tasten, Kamera, Wecker, Rechner, Claude
   - Helligkeit/Drehung brauchen „Systemeinstellungen ändern“, Nicht stören den
-    Zugriff auf „Bitte nicht stören“; das System-Kontrollzentrum bleibt unverändert
+    Zugriff auf „Bitte nicht stören“
+- Kontrollzentrum in allen Apps (Bedienungshilfe „Hearth Kontrollzentrum“ einschalten):
+  ein unsichtbarer Streifen über dem rechten Teil der Statusleiste fängt das Wischen
+  nach unten ab und öffnet das Glas-Kontrollzentrum über der App (ab Android 12 mit
+  echter Unschärfe dahinter). Links öffnet weiter die normale Mitteilungsleiste.
+  Bereich einstellbar: rechte Hälfte, rechtes Drittel, ganze Breite. Ganz entfernen
+  lässt sich das System-Kontrollzentrum nur mit Root.
 - Suche: „Claude fragen“ übergibt die Frage an die Claude-App oder claude.ai
 - App-Mediathek wie bei iOS (hinter der letzten Seite): Glas-Ordner nach Kategorie,
   „Vorschläge“ aus deinen meistgenutzten Apps, „Neu hinzugefügt“; die kleinen Icons

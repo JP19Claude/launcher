@@ -37,7 +37,7 @@ enum class Glyph {
     Wifi, Bluetooth, Airplane, Cellular, Location,
     Camera, Alarm, Calculator,
     Play, Pause, Next, Previous,
-    Spark,
+    Spark, Bell, Tiles,
 }
 
 @Composable
@@ -204,6 +204,30 @@ fun DrawScope.drawGlyph(glyph: Glyph, c: Color) {
         Glyph.Previous -> {
             drawPath(polygon(w, h, 0.8f to 0.22f, 0.38f to 0.5f, 0.8f to 0.78f), c)
             drawRoundRect(c, topLeft = p(0.22f, 0.22f), size = Size(w * 0.12f, h * 0.56f), cornerRadius = CornerRadius(w * 0.03f))
+        }
+        Glyph.Bell -> {
+            val bell = Path().apply {
+                moveTo(0.2f * w, 0.72f * h)
+                lineTo(0.8f * w, 0.72f * h)
+                lineTo(0.71f * w, 0.6f * h)
+                lineTo(0.71f * w, 0.42f * h)
+                cubicTo(0.71f * w, 0.18f * h, 0.29f * w, 0.18f * h, 0.29f * w, 0.42f * h)
+                lineTo(0.29f * w, 0.6f * h)
+                close()
+            }
+            drawPath(bell, c, style = stroke)
+            drawCircle(c, radius = w * 0.065f, center = p(0.5f, 0.84f))
+        }
+        Glyph.Tiles -> {
+            for (row in 0 until 2) for (col in 0 until 2) {
+                drawRoundRect(
+                    c,
+                    topLeft = p(0.16f + col * 0.38f, 0.16f + row * 0.38f),
+                    size = Size(w * 0.3f, h * 0.3f),
+                    cornerRadius = CornerRadius(w * 0.09f),
+                    style = stroke,
+                )
+            }
         }
         Glyph.Spark -> {
             drawPath(sparkPath(Size(w * 0.78f, h * 0.78f)).also { it.translate(p(0f, 0.22f)) }, c)

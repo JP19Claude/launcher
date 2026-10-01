@@ -1,6 +1,13 @@
 package dev.hearth.launcher.ui
 
+import android.os.Build
 import android.view.KeyEvent
+import android.view.WindowManager
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,6 +34,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -40,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -48,8 +57,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.hearth.launcher.data.ControlState
+import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.SystemControls
+import dev.hearth.launcher.ui.theme.HearthTheme
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -67,6 +77,9 @@ fun ControlCenter(
     controls: SystemControls,
     onClose: () -> Unit,
     onOpenLauncherSettings: () -> Unit,
+    onShowNotifications: (() -> Unit)? = null,
+    onShowSystemQuickSettings: (() -> Unit)? = null,
+    scrim: Color = Color.Black.copy(alpha = 0.28f),
 ) {
     val accent = LocalSettings.current.accent.color
     var state by remember { mutableStateOf(controls.state()) }
@@ -95,7 +108,7 @@ fun ControlCenter(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.28f))
+            .background(scrim)
             .pointerInput(Unit) { detectTapGestures { onClose() } }
             .pointerInput(Unit) {
                 var total = 0f
@@ -253,6 +266,18 @@ fun ControlCenter(
                     Shortcut(Glyph.Alarm, "Wecker") { controls.openAlarms(); onClose() }
                     Shortcut(Glyph.Calculator, "Rechner") { controls.openCalculator(); onClose() }
                     Shortcut(Glyph.Spark, "Claude", tint = accent) { controls.openClaude(); onClose() }
+                }
+            }
+
+            // Way out to the system's own panels (notifications, and anything only the system can switch).
+            if (onShowNotifications != null || onShowSystemQuickSettings != null) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (onShowNotifications != null) {
+                        GlassPill(Glyph.Bell, "Mitteilungen", Modifier.weight(1f), onShowNotifications)
+                    }
+                    if (onShowSystemQuickSettings != null) {
+                        GlassPill(Glyph.Tiles, "System-Schalter", Modifier.weight(1f), onShowSystemQuickSettings)
+                    }
                 }
             }
 
@@ -453,5 +478,73 @@ fun GlassVerticalSlider(
                 .align(Alignment.TopCenter)
                 .padding(top = 12.dp),
         )
+    }
+}
+
+@Composable
+private fun GlassPill(glyph: Glyph, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    LiquidGlass(
+        cornerRadius = 24.dp,
+        refraction = 14.dp,
+        interactive = true,
+        modifier = modifier
+            .clip(RoundedCornerShape(24.dp))
+            .clickable(onClick = onClick),
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            GlyphIcon(glyph, OnGlass, Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(label, color = OnGlass, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+        }
+    }
+}
+
+/**
+ * The control center as its own window over other apps (opened by [dev.hearth.launcher.system.ControlCenterService]).
+ * The wallpaper isn't behind it here, so the window blurs the app below instead (Android 12+).
+ */
+@Composable
+fun OverlayControlCenter(
+    settings: LauncherSettings,
+    controls: SystemControls,
+    onClose: () -> Unit,
+    onOpenLauncherSettings: () -> Unit,
+    onShowNotifications: () -> Unit,
+    onShowSystemQuickSettings: () -> Unit,
+) {
+    val context = LocalContext.current
+    val blurBehind = remember {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            context.getSystemService(WindowManager::class.java)?.isCrossWindowBlurEnabled == true
+    }
+    val light = rememberGlassLight(settings.glassMotion)
+    val appear = remember { MutableTransitionState(false).apply { targetState = true } }
+    HearthTheme(dark = true) {
+        CompositionLocalProvider(
+            LocalSettings provides settings,
+            LocalGlassStyle provides GlassStyle.from(settings),
+            LocalGlassLight provides light,
+            LocalBackdrop provides null,
+        ) {
+            AnimatedVisibility(
+                visibleState = appear,
+                enter = fadeIn(tween(180)) + slideInVertically(tween(300)) { -it / 6 },
+            ) {
+                ControlCenter(
+                    controls = controls,
+                    onClose = onClose,
+                    onOpenLauncherSettings = onOpenLauncherSettings,
+                    onShowNotifications = onShowNotifications,
+                    onShowSystemQuickSettings = onShowSystemQuickSettings,
+                    scrim = Color.Black.copy(alpha = if (blurBehind) 0.35f else 0.72f),
+                )
+            }
+        }
     }
 }

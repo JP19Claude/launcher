@@ -104,6 +104,7 @@ import dev.hearth.launcher.data.AppInfo
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.SwipeDownAction
+import dev.hearth.launcher.system.ControlCenterService
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -214,6 +215,16 @@ fun LauncherScreen(vm: LauncherViewModel) {
             settingsOpen = false
             controlOpen = false
             if (alreadyInFront && pagerState.currentPage != 0) pagerState.animateScrollToPage(0)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        vm.settingsRequests.collect {
+            vm.consumeSettingsRequest()
+            menu = null
+            searchOpen = false
+            controlOpen = false
+            settingsOpen = true
         }
     }
 
@@ -410,6 +421,18 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     onOpenLauncherSettings = {
                         controlOpen = false
                         settingsOpen = true
+                    },
+                    onShowNotifications = {
+                        controlOpen = false
+                        vm.controls.expandNotifications()
+                        Unit
+                    },
+                    onShowSystemQuickSettings = ControlCenterService.instance?.let { service ->
+                        val open: () -> Unit = {
+                            controlOpen = false
+                            service.showSystemQuickSettings()
+                        }
+                        open
                     },
                 )
             }
