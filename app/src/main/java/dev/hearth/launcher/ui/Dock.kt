@@ -14,7 +14,12 @@ import dev.hearth.launcher.data.AppInfo
 @Composable
 fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier) {
     if (apps.isEmpty()) return
-    LiquidGlass(cornerRadius = 34.dp, modifier = modifier.fillMaxWidth()) {
+    LiquidGlass(
+        cornerRadius = 34.dp,
+        refraction = 22.dp,
+        interactive = true,
+        modifier = modifier.fillMaxWidth(),
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

@@ -1,0 +1,617 @@
+package dev.hearth.launcher.ui
+
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.hearth.launcher.LauncherViewModel
+import dev.hearth.launcher.data.AccentColor
+import dev.hearth.launcher.data.ClockStyle
+import dev.hearth.launcher.data.GlassTint
+import dev.hearth.launcher.data.IconShape
+import dev.hearth.launcher.data.IconStyle
+import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.data.SearchEngine
+import dev.hearth.launcher.data.ThemeMode
+import kotlin.math.roundToInt
+
+private val TextPrimary = Color.White
+private val TextSecondary = Color.White.copy(alpha = 0.65f)
+private val SwitchOn = Color(0xFF34C759)
+
+private enum class GlassPreset(val label: String, val transform: (LauncherSettings) -> LauncherSettings) {
+    Subtle("Dezent", {
+        it.copy(glassRefraction = 0.7f, glassBlur = 0.8f, glassDispersion = 0.3f, glassSpecular = 0.7f, glassTintStrength = 1f)
+    }),
+    Apple("Apple", {
+        it.copy(glassRefraction = 1.3f, glassBlur = 1f, glassDispersion = 0.7f, glassSpecular = 1f, glassTintStrength = 1f)
+    }),
+    Extreme("Extrem", {
+        it.copy(glassRefraction = 2.4f, glassBlur = 0.6f, glassDispersion = 1.4f, glassSpecular = 1.7f, glassTintStrength = 0.6f)
+    }),
+    Frosted("Milchglas", {
+        it.copy(glassRefraction = 0.5f, glassBlur = 2.2f, glassDispersion = 0.2f, glassSpecular = 0.8f, glassTintStrength = 2f)
+    }),
+}
+
+/** All launcher settings, on glass cards over the blurred wallpaper. */
+@Composable
+fun SettingsScreen(
+    vm: LauncherViewModel,
+    needsWallpaperAccess: Boolean,
+    onRequestWallpaperAccess: () -> Unit,
+    onClose: () -> Unit,
+) {
+    val s = LocalSettings.current
+    val iconPacks by vm.iconPacks.collectAsStateWithLifecycle()
+    val allApps by vm.allApps.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val hasGlass = LocalBackdrop.current != null
+    val update: ((LauncherSettings) -> LauncherSettings) -> Unit = vm::updateSettings
+
+    LaunchedEffect(Unit) { vm.refreshIconPacks() }
+
+    Box(Modifier.fillMaxSize()) {
+        GlassBackdropFill(blur = 36.dp, modifier = Modifier.matchParentSize())
+        Box(
+            Modifier
+                .matchParentSize()
+                .background(Color.Black.copy(alpha = if (hasGlass) 0.30f else 0.88f)),
+        )
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        ) {
+            item {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 6.dp, top = 8.dp, bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Einstellungen",
+                        color = TextPrimary,
+                        fontFamily = FontFamily.Serif,
+                        fontSize = 34.sp,
+                        modifier = Modifier.weight(1f),
+                        style = OnWallpaperText,
+                    )
+                    LiquidGlass(
+                        cornerRadius = 22.dp,
+                        refraction = 12.dp,
+                        interactive = true,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .clickable(onClick = onClose),
+                    ) {
+                        Icon(
+                            Icons.Rounded.Close,
+                            contentDescription = "Schließen",
+                            tint = TextPrimary,
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                    }
+                }
+            }
+
+            item {
+                Section("Liquid Glass") {
+                    ChoiceRow(
+                        label = "Voreinstellung",
+                        options = GlassPreset.entries,
+                        selected = null,
+                        optionLabel = { it.label },
+                        onSelect = { preset -> update(preset.transform) },
+                    )
+                    RowDivider()
+                    PercentSlider("Lichtbrechung", s.glassRefraction, 0f..2.5f) { v -> update { it.copy(glassRefraction = v) } }
+                    PercentSlider("Unschärfe", s.glassBlur, 0f..2.5f) { v -> update { it.copy(glassBlur = v) } }
+                    PercentSlider("Farbsäume", s.glassDispersion, 0f..1.5f) { v -> update { it.copy(glassDispersion = v) } }
+                    PercentSlider("Glanz", s.glassSpecular, 0f..2f) { v -> update { it.copy(glassSpecular = v) } }
+                    PercentSlider("Tönung", s.glassTintStrength, 0f..2.5f) { v -> update { it.copy(glassTintStrength = v) } }
+                    RowDivider()
+                    ChoiceRow(
+                        label = "Glasfarbe",
+                        options = GlassTint.entries,
+                        selected = s.glassTint,
+                        optionLabel = { it.label },
+                        swatch = { it.color },
+                        onSelect = { tint -> update { it.copy(glassTint = tint) } },
+                    )
+                    RowDivider()
+                    SwitchRow(
+                        label = "Licht folgt der Bewegung",
+                        description = "Glanzlichter wandern, wenn du das Handy kippst",
+                        checked = s.glassMotion,
+                    ) { v -> update { it.copy(glassMotion = v) } }
+                    SwitchRow(
+                        label = "Glas reagiert auf Berührung",
+                        description = "Wölbt sich und leuchtet unter dem Finger",
+                        checked = s.glassInteractive,
+                    ) { v -> update { it.copy(glassInteractive = v) } }
+                    if (needsWallpaperAccess) {
+                        RowDivider()
+                        ActionRow(
+                            label = "Echtes Glas aktivieren",
+                            description = "Zugriff auf alle Dateien erlauben, damit das Glas dein Hintergrundbild zeigt",
+                            onClick = onRequestWallpaperAccess,
+                        )
+                    }
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                        Note("Lichtbrechung, Farbsäume und Glanzlichter brauchen Android 13. Auf diesem Gerät gibt es Unschärfe und Lichtkanten.")
+                    }
+                }
+            }
+
+            item {
+                Section("Icons") {
+                    ChoiceRow(
+                        label = "Stil",
+                        options = IconStyle.entries,
+                        selected = s.iconStyle,
+                        optionLabel = { it.label },
+                        onSelect = { style -> update { it.copy(iconStyle = style) } },
+                    )
+                    if (s.iconStyle == IconStyle.Tinted) {
+                        ChoiceRow(
+                            label = "Farbe",
+                            options = AccentColor.entries,
+                            selected = s.accent,
+                            optionLabel = { it.label },
+                            swatch = { it.color },
+                            onSelect = { accent -> update { it.copy(accent = accent) } },
+                        )
+                    }
+                    ChoiceRow(
+                        label = "Form",
+                        options = IconShape.entries,
+                        selected = s.iconShape,
+                        optionLabel = { it.label },
+                        onSelect = { shape -> update { it.copy(iconShape = shape) } },
+                    )
+                    RowDivider()
+                    IntSlider("Größe", s.iconSize, 40..72, unit = " dp") { v -> update { it.copy(iconSize = v) } }
+                    SwitchRow(label = "Beschriftung anzeigen", checked = s.showLabels) { v ->
+                        update { it.copy(showLabels = v) }
+                    }
+                }
+            }
+
+            item {
+                Section("Icon-Pack") {
+                    PackRow(label = "Keins (System-Icons)", icon = null, selected = s.iconPack == null) {
+                        update { it.copy(iconPack = null) }
+                    }
+                    iconPacks.forEach { pack ->
+                        RowDivider()
+                        PackRow(label = pack.label, icon = pack.icon, selected = s.iconPack == pack.packageName) {
+                            update { it.copy(iconPack = pack.packageName) }
+                        }
+                    }
+                    if (iconPacks.isEmpty()) {
+                        Note("Keine Icon-Packs gefunden. Es funktionieren Packs für Nova, ADW, Apex und ähnliche Launcher.")
+                    }
+                    RowDivider()
+                    ActionRow(label = "Icon-Packs im Play Store suchen") {
+                        val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=icon%20pack&c=apps"))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        runCatching { context.startActivity(market) }.onFailure {
+                            val web = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://play.google.com/store/search?q=icon%20pack&c=apps"),
+                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            runCatching { context.startActivity(web) }
+                        }
+                    }
+                    SwitchRow(
+                        label = "Fehlende Icons anpassen",
+                        description = "Apps ohne Icon im Pack bekommen dessen Rahmen",
+                        checked = s.adaptUnthemedIcons,
+                    ) { v -> update { it.copy(adaptUnthemedIcons = v) } }
+                }
+            }
+
+            item {
+                Section("Homescreen") {
+                    IntSlider("Spalten", s.columns, 3..6) { v -> update { it.copy(columns = v) } }
+                    IntSlider("Reihen", s.rows, 4..8) { v -> update { it.copy(rows = v) } }
+                    RowDivider()
+                    ChoiceRow(
+                        label = "Uhr",
+                        options = ClockStyle.entries,
+                        selected = s.clockStyle,
+                        optionLabel = { it.label },
+                        onSelect = { style -> update { it.copy(clockStyle = style) } },
+                    )
+                    SwitchRow(label = "Begrüßung", checked = s.showGreeting) { v -> update { it.copy(showGreeting = v) } }
+                    SwitchRow(label = "Akkustand in der Glas-Karte", checked = s.showBattery) { v ->
+                        update { it.copy(showBattery = v) }
+                    }
+                    RowDivider()
+                    PercentSlider("Hintergrund abdunkeln", s.dimWallpaper, 0f..0.7f) { v -> update { it.copy(dimWallpaper = v) } }
+                    SwitchRow(label = "Such-Pille anzeigen", checked = s.showSearchPill) { v ->
+                        update { it.copy(showSearchPill = v) }
+                    }
+                    SwitchRow(label = "Nach oben/unten wischen öffnet die Suche", checked = s.swipeOpensSearch) { v ->
+                        update { it.copy(swipeOpensSearch = v) }
+                    }
+                    RowDivider()
+                    ActionRow(label = "Hintergrundbild ändern", onClick = vm::openWallpaperPicker)
+                }
+            }
+
+            item {
+                Section("Dock") {
+                    IntSlider("Anzahl Apps", s.dockSize.coerceIn(1, LauncherSettings.MAX_DOCK), 1..LauncherSettings.MAX_DOCK) { v ->
+                        vm.setDockSize(v)
+                    }
+                    Note("Lange auf eine App drücken, um sie zum Dock hinzuzufügen, zu entfernen oder zu verschieben.")
+                    RowDivider()
+                    ActionRow(label = "Dock zurücksetzen", onClick = vm::resetDock)
+                }
+            }
+
+            item {
+                Section("Suche") {
+                    ChoiceRow(
+                        label = "Suchmaschine",
+                        options = SearchEngine.entries,
+                        selected = s.searchEngine,
+                        optionLabel = { it.label },
+                        onSelect = { engine -> update { it.copy(searchEngine = engine) } },
+                    )
+                }
+            }
+
+            item {
+                Section("Allgemein") {
+                    ChoiceRow(
+                        label = "Design der Suche",
+                        options = ThemeMode.entries,
+                        selected = s.theme,
+                        optionLabel = { it.label },
+                        onSelect = { mode -> update { it.copy(theme = mode) } },
+                    )
+                    SwitchRow(label = "Vibration", checked = s.haptics) { v -> update { it.copy(haptics = v) } }
+                    RowDivider()
+                    ActionRow(label = "Als Standard-Launcher festlegen", onClick = vm::openDefaultLauncherSettings)
+                }
+            }
+
+            item {
+                val hidden = allApps.filter { it.key in s.hiddenApps }
+                Section("Ausgeblendete Apps") {
+                    if (hidden.isEmpty()) {
+                        Note("Keine. Lange auf eine App drücken und „Ausblenden“ wählen.")
+                    }
+                    hidden.forEachIndexed { index, app ->
+                        if (index > 0) RowDivider()
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 18.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            AppIconImage(app, 36.dp)
+                            Spacer(Modifier.width(12.dp))
+                            Text(app.label, color = TextPrimary, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                            Chip(text = "Einblenden", selected = false, swatch = null) { vm.unhide(app.key) }
+                        }
+                    }
+                }
+            }
+
+            item {
+                Text(
+                    text = "Hearth",
+                    color = TextSecondary,
+                    fontFamily = FontFamily.Serif,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.padding(vertical = 8.dp)) {
+        Text(
+            text = title.uppercase(),
+            color = TextSecondary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 1.sp,
+            style = OnWallpaperText,
+            modifier = Modifier.padding(start = 10.dp, bottom = 8.dp),
+        )
+        LiquidGlass(
+            cornerRadius = 26.dp,
+            refraction = 16.dp,
+            blur = 20.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.padding(vertical = 6.dp), content = content)
+        }
+    }
+}
+
+@Composable
+private fun RowDivider() {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp)
+            .height(0.5.dp)
+            .background(Color.White.copy(alpha = 0.16f)),
+    )
+}
+
+@Composable
+private fun Note(text: String) {
+    Text(
+        text = text,
+        color = TextSecondary,
+        fontSize = 13.sp,
+        modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+    )
+}
+
+@Composable
+private fun SliderRow(
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    valueText: String,
+    steps: Int = 0,
+    onChange: (Float) -> Unit,
+) {
+    Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, color = TextPrimary, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Text(valueText, color = TextSecondary, fontSize = 14.sp)
+        }
+        Slider(
+            value = value.coerceIn(range.start, range.endInclusive),
+            onValueChange = onChange,
+            valueRange = range,
+            steps = steps,
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color.White.copy(alpha = 0.85f),
+                inactiveTrackColor = Color.White.copy(alpha = 0.18f),
+                activeTickColor = Color.Transparent,
+                inactiveTickColor = Color.Transparent,
+            ),
+        )
+    }
+}
+
+@Composable
+private fun PercentSlider(
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    onChange: (Float) -> Unit,
+) = SliderRow(label, value, range, "${(value * 100).roundToInt()} %", onChange = onChange)
+
+@Composable
+private fun IntSlider(
+    label: String,
+    value: Int,
+    range: IntRange,
+    unit: String = "",
+    onChange: (Int) -> Unit,
+) = SliderRow(
+    label = label,
+    value = value.toFloat(),
+    range = range.first.toFloat()..range.last.toFloat(),
+    valueText = "$value$unit",
+    steps = (range.last - range.first - 1).coerceAtLeast(0),
+    onChange = { v ->
+        val rounded = v.roundToInt()
+        if (rounded != value) onChange(rounded)
+    },
+)
+
+@Composable
+private fun SwitchRow(
+    label: String,
+    checked: Boolean,
+    description: String? = null,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable { onChange(!checked) }
+            .padding(horizontal = 18.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(label, color = TextPrimary, fontSize = 15.sp)
+            if (description != null) {
+                Text(description, color = TextSecondary, fontSize = 13.sp)
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = SwitchOn,
+                checkedBorderColor = Color.Transparent,
+                uncheckedThumbColor = Color.White.copy(alpha = 0.9f),
+                uncheckedTrackColor = Color.White.copy(alpha = 0.15f),
+                uncheckedBorderColor = Color.White.copy(alpha = 0.3f),
+            ),
+        )
+    }
+}
+
+@Composable
+private fun ActionRow(label: String, description: String? = null, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(label, color = TextPrimary, fontSize = 15.sp)
+            if (description != null) {
+                Text(description, color = TextSecondary, fontSize = 13.sp)
+            }
+        }
+        Icon(
+            Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+            contentDescription = null,
+            tint = TextSecondary,
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun <T> ChoiceRow(
+    label: String,
+    options: List<T>,
+    selected: T?,
+    optionLabel: (T) -> String,
+    swatch: ((T) -> Color)? = null,
+    onSelect: (T) -> Unit,
+) {
+    Column(Modifier.padding(horizontal = 18.dp, vertical = 10.dp)) {
+        Text(label, color = TextPrimary, fontSize = 15.sp)
+        Spacer(Modifier.height(8.dp))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            options.forEach { option ->
+                Chip(
+                    text = optionLabel(option),
+                    selected = option == selected,
+                    swatch = swatch?.invoke(option),
+                ) { onSelect(option) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Chip(text: String, selected: Boolean, swatch: Color?, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .clip(CircleShape)
+            .background(if (selected) Color.White.copy(alpha = 0.92f) else Color.White.copy(alpha = 0.10f))
+            .border(1.dp, Color.White.copy(alpha = if (selected) 0f else 0.25f), CircleShape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (swatch != null) {
+            Box(
+                Modifier
+                    .size(14.dp)
+                    .clip(CircleShape)
+                    .background(swatch.copy(alpha = 1f))
+                    .border(1.dp, Color.Black.copy(alpha = 0.2f), CircleShape),
+            )
+            Spacer(Modifier.width(6.dp))
+        }
+        Text(
+            text = text,
+            color = if (selected) Color.Black else TextPrimary,
+            fontSize = 14.sp,
+            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+        )
+    }
+}
+
+@Composable
+private fun PackRow(
+    label: String,
+    icon: androidx.compose.ui.graphics.ImageBitmap?,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            Image(icon, contentDescription = null, modifier = Modifier.size(36.dp))
+        } else {
+            Box(
+                Modifier
+                    .size(36.dp)
+                    .clip(SquircleShape)
+                    .background(Color.White.copy(alpha = 0.15f)),
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(label, color = TextPrimary, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        if (selected) {
+            Icon(Icons.Rounded.Check, contentDescription = "Ausgewählt", tint = SwitchOn)
+        }
+    }
+}

@@ -1,26 +1,31 @@
 package dev.hearth.launcher.ui
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
+import android.os.BatteryManager
 import android.os.Build
+import android.provider.AlarmClock
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,13 +41,24 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -55,31 +71,39 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import dev.hearth.launcher.LauncherViewModel
 import dev.hearth.launcher.data.AppInfo
+import dev.hearth.launcher.data.ClockStyle
+import dev.hearth.launcher.data.LauncherSettings
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
-
-private const val COLUMNS = 4
-private const val ROWS = 6
-private const val FIRST_PAGE_ROWS = 4
 
 @Composable
 fun LauncherScreen(vm: LauncherViewModel) {
@@ -87,7 +111,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val dock by vm.dock.collectAsStateWithLifecycle()
     val backdrop by vm.backdrop.collectAsStateWithLifecycle()
     val needsWallpaperAccess by vm.needsWallpaperAccess.collectAsStateWithLifecycle()
+    val settings by vm.settings.collectAsStateWithLifecycle()
     var searchOpen by rememberSaveable { mutableStateOf(false) }
+    var settingsOpen by rememberSaveable { mutableStateOf(false) }
+    var menu by remember { mutableStateOf<GlassMenuRequest?>(null) }
 
     val context = LocalContext.current
     val storagePermission = rememberLauncherForActivityResult(
@@ -108,112 +135,220 @@ fun LauncherScreen(vm: LauncherViewModel) {
         }
     }
 
+    val columns = settings.columns.coerceIn(3, 6)
+    val rows = settings.rows.coerceIn(3, 9)
+    val firstPageRows = when (settings.clockStyle) {
+        ClockStyle.Hidden -> rows
+        ClockStyle.Glass, ClockStyle.Large -> (rows - 2).coerceAtLeast(1)
+    }
     val homeApps = remember(apps, dock) {
         val dockKeys = dock.map { it.key }.toSet()
         apps.filterNot { it.key in dockKeys }
     }
-    val pages = remember(homeApps) { paginate(homeApps) }
+    val pages = remember(homeApps, columns, rows, firstPageRows) {
+        paginate(homeApps, columns, rows, firstPageRows)
+    }
     val pagerState = rememberPagerState(pageCount = { pages.size })
 
     val actions = remember(vm) {
-        AppActions(launch = vm::launch, info = vm::openAppInfo, uninstall = vm::uninstall)
+        AppActions(
+            launch = vm::launch,
+            menu = { app, bounds -> menu = GlassMenuRequest(bounds, appMenuItems(vm, app), app) },
+        )
+    }
+    val homeMenu: (Offset) -> Unit = { position ->
+        menu = GlassMenuRequest(
+            anchor = Rect(position, Size(1f, 1f)),
+            title = "Hearth",
+            items = listOf(
+                GlassMenuItem("Launcher-Einstellungen", Icons.Rounded.Settings) { settingsOpen = true },
+                GlassMenuItem("Hintergrundbild ändern", Icons.Rounded.Edit) { vm.openWallpaperPicker() },
+                GlassMenuItem("Suche öffnen", Icons.Rounded.Search) { searchOpen = true },
+            ),
+        )
     }
 
-    // Home button: close search and jump back to the first page.
+    // Home button: close everything and jump back to the first page.
     LaunchedEffect(Unit) {
         vm.homeEvents.collect {
+            menu = null
             searchOpen = false
+            settingsOpen = false
             pagerState.animateScrollToPage(0)
         }
     }
 
     // Always enabled: on the home screen, back does nothing (like every launcher).
-    BackHandler { searchOpen = false }
-
-    CompositionLocalProvider(LocalBackdrop provides backdrop) {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    0f to Color.Black.copy(alpha = 0.28f),
-                    0.35f to Color.Transparent,
-                    0.8f to Color.Transparent,
-                    1f to Color.Black.copy(alpha = 0.22f),
-                ),
-            )
-            .openSearchOnVerticalSwipe { searchOpen = true },
-    ) {
-        Column(Modifier.fillMaxSize().systemBarsPadding()) {
-            HorizontalPager(
-                state = pagerState,
-                beyondViewportPageCount = 1,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-            ) { page ->
-                Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
-                    if (page == 0) {
-                        HomeHeader(Modifier.padding(start = 12.dp, top = 28.dp, bottom = 20.dp))
-                        if (needsWallpaperAccess) {
-                            WallpaperAccessHint(
-                                onClick = requestWallpaperAccess,
-                                modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 16.dp),
-                            )
-                        }
-                    } else {
-                        Spacer(Modifier.padding(top = 16.dp))
-                    }
-                    AppGrid(pages[page], actions)
-                }
-            }
-
-            Column(
-                Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                if (pages.size > 1) {
-                    PageDots(
-                        count = pages.size,
-                        current = pagerState.currentPage,
-                        modifier = Modifier.padding(bottom = 10.dp),
-                    )
-                }
-                SearchPill(onClick = { searchOpen = true })
-            }
-
-            Dock(
-                apps = dock,
-                actions = actions,
-                modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 10.dp),
-            )
-        }
-
-        AnimatedVisibility(
-            visible = searchOpen,
-            enter = fadeIn(tween(180)) + slideInVertically(tween(260)) { -it / 10 },
-            exit = fadeOut(tween(160)) + slideOutVertically(tween(200)) { -it / 10 },
-        ) {
-            SearchOverlay(
-                apps = apps,
-                actions = actions,
-                onLaunch = {
-                    vm.launch(it)
-                    searchOpen = false
-                },
-                onWebSearch = {
-                    vm.webSearch(it)
-                    searchOpen = false
-                },
-                onDismiss = { searchOpen = false },
-            )
+    BackHandler {
+        when {
+            menu != null -> menu = null
+            settingsOpen -> settingsOpen = false
+            else -> searchOpen = false
         }
     }
+
+    val light = rememberGlassLight(settings.glassMotion)
+    val glassStyle = remember(settings) { GlassStyle.from(settings) }
+    val menuBlur by animateDpAsState(if (menu != null) 16.dp else 0.dp, tween(220), label = "menuBlur")
+
+    CompositionLocalProvider(
+        LocalBackdrop provides backdrop,
+        LocalSettings provides settings,
+        LocalGlassStyle provides glassStyle,
+        LocalGlassLight provides light,
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        // The home screen blurs away behind an open menu (Android 12+).
+                        val radius = menuBlur.toPx()
+                        renderEffect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && radius > 0.5f) {
+                            BlurEffect(radius, radius, TileMode.Decal)
+                        } else {
+                            null
+                        }
+                    },
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = settings.dimWallpaper.coerceIn(0f, 0.9f)))
+                        .background(
+                            Brush.verticalGradient(
+                                0f to Color.Black.copy(alpha = 0.22f),
+                                0.35f to Color.Transparent,
+                                0.8f to Color.Transparent,
+                                1f to Color.Black.copy(alpha = 0.18f),
+                            ),
+                        )
+                        .then(
+                            if (settings.swipeOpensSearch) Modifier.openSearchOnVerticalSwipe { searchOpen = true }
+                            else Modifier,
+                        ),
+                ) {
+                    Column(Modifier.fillMaxSize().systemBarsPadding()) {
+                        HorizontalPager(
+                            state = pagerState,
+                            beyondViewportPageCount = 1,
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                        ) { page ->
+                            Box(Modifier.fillMaxSize()) {
+                                LongPressArea(onLongPress = homeMenu, modifier = Modifier.matchParentSize())
+                                Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
+                                    if (page == 0) {
+                                        HomeHeader(settings, Modifier.padding(start = 4.dp, end = 4.dp, top = 20.dp, bottom = 12.dp))
+                                        if (needsWallpaperAccess) {
+                                            WallpaperAccessHint(
+                                                onClick = requestWallpaperAccess,
+                                                modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 12.dp),
+                                            )
+                                        }
+                                    } else {
+                                        Spacer(Modifier.padding(top = 12.dp))
+                                    }
+                                    AppGrid(
+                                        apps = pages[page],
+                                        columns = columns,
+                                        rows = if (page == 0) firstPageRows else rows,
+                                        actions = actions,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                            }
+                        }
+
+                        Column(
+                            Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            if (pages.size > 1) {
+                                PageDots(
+                                    count = pages.size,
+                                    current = pagerState.currentPage,
+                                    modifier = Modifier.padding(bottom = 10.dp),
+                                )
+                            }
+                            if (settings.showSearchPill) {
+                                SearchPill(onClick = { searchOpen = true })
+                            }
+                        }
+
+                        Dock(
+                            apps = dock,
+                            actions = actions,
+                            modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 10.dp),
+                        )
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = searchOpen,
+                    enter = fadeIn(tween(180)) + slideInVertically(tween(260)) { -it / 10 },
+                    exit = fadeOut(tween(160)) + slideOutVertically(tween(200)) { -it / 10 },
+                ) {
+                    SearchOverlay(
+                        apps = apps,
+                        actions = actions,
+                        onLaunch = {
+                            vm.launch(it)
+                            searchOpen = false
+                        },
+                        onWebSearch = {
+                            vm.webSearch(it)
+                            searchOpen = false
+                        },
+                        onOpenSettings = {
+                            searchOpen = false
+                            settingsOpen = true
+                        },
+                        onDismiss = { searchOpen = false },
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = settingsOpen,
+                    enter = fadeIn(tween(200)) + scaleIn(tween(260), initialScale = 0.94f),
+                    exit = fadeOut(tween(180)) + scaleOut(tween(200), targetScale = 0.94f),
+                ) {
+                    SettingsScreen(
+                        vm = vm,
+                        needsWallpaperAccess = needsWallpaperAccess,
+                        onRequestWallpaperAccess = requestWallpaperAccess,
+                        onClose = { settingsOpen = false },
+                    )
+                }
+            }
+
+            GlassMenuOverlay(request = menu, onDismiss = { menu = null })
+        }
     }
 }
 
+private fun appMenuItems(vm: LauncherViewModel, app: AppInfo): List<GlassMenuItem> = buildList {
+    add(GlassMenuItem("App-Info", Icons.Rounded.Info) { vm.openAppInfo(app) })
+    if (vm.isInDock(app)) {
+        val dockKeys = vm.dock.value.map { it.key }
+        val index = dockKeys.indexOf(app.key)
+        if (index > 0) {
+            add(GlassMenuItem("Im Dock nach links", Icons.AutoMirrored.Rounded.KeyboardArrowLeft) { vm.moveInDock(app, -1) })
+        }
+        if (index in 0 until dockKeys.lastIndex) {
+            add(GlassMenuItem("Im Dock nach rechts", Icons.AutoMirrored.Rounded.KeyboardArrowRight) { vm.moveInDock(app, 1) })
+        }
+        add(GlassMenuItem("Aus dem Dock entfernen", Icons.Rounded.Close) { vm.removeFromDock(app) })
+    } else if (vm.canAddToDock()) {
+        add(GlassMenuItem("Zum Dock hinzufügen", Icons.Rounded.Add) { vm.addToDock(app) })
+    }
+    add(GlassMenuItem("Ausblenden", Icons.Rounded.Clear) { vm.hide(app) })
+    add(GlassMenuItem("Deinstallieren", Icons.Rounded.Delete, destructive = true) { vm.uninstall(app) })
+}
+
 /** First page holds the clock, so it has fewer rows of apps. */
-private fun paginate(apps: List<AppInfo>): List<List<AppInfo>> {
-    val firstPageSize = COLUMNS * FIRST_PAGE_ROWS
-    val rest = apps.drop(firstPageSize).chunked(COLUMNS * ROWS)
+private fun paginate(apps: List<AppInfo>, columns: Int, rows: Int, firstPageRows: Int): List<List<AppInfo>> {
+    val firstPageSize = columns * firstPageRows
+    val rest = apps.drop(firstPageSize).chunked(columns * rows)
     return listOf(apps.take(firstPageSize)) + rest
 }
 
@@ -228,6 +363,19 @@ private fun Modifier.openSearchOnVerticalSwipe(onOpen: () -> Unit): Modifier =
             onVerticalDrag = { _, dragAmount -> total += dragAmount },
         )
     }
+
+/** Empty space behind the icons: a long press opens the home screen menu. */
+@Composable
+private fun LongPressArea(onLongPress: (Offset) -> Unit, modifier: Modifier = Modifier) {
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    Box(
+        modifier
+            .onGloballyPositioned { origin = it.positionInRoot() }
+            .pointerInput(Unit) {
+                detectTapGestures(onLongPress = { onLongPress(origin + it) })
+            },
+    )
+}
 
 @Composable
 private fun rememberNow(): State<LocalDateTime> {
@@ -244,8 +392,57 @@ private fun rememberNow(): State<LocalDateTime> {
     }
 }
 
+private class BatteryState(val percent: Int, val charging: Boolean)
+
 @Composable
-private fun HomeHeader(modifier: Modifier = Modifier) {
+private fun rememberBattery(): State<BatteryState?> {
+    val context = LocalContext.current
+    val state = remember { mutableStateOf<BatteryState?>(null) }
+    DisposableEffect(context) {
+        fun read(intent: Intent?) {
+            if (intent == null) return
+            val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
+            val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+            if (level < 0 || scale <= 0) return
+            state.value = BatteryState(
+                percent = level * 100 / scale,
+                charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL,
+            )
+        }
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) = read(intent)
+        }
+        val sticky = ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        read(sticky)
+        onDispose { runCatching { context.unregisterReceiver(receiver) } }
+    }
+    return state
+}
+
+private fun greetingFor(hour: Int) = when (hour) {
+    in 5..10 -> "Guten Morgen"
+    in 11..17 -> "Guten Tag"
+    in 18..22 -> "Guten Abend"
+    else -> "Gute Nacht"
+}
+
+@Composable
+private fun HomeHeader(settings: LauncherSettings, modifier: Modifier = Modifier) {
+    when (settings.clockStyle) {
+        ClockStyle.Hidden -> Spacer(modifier)
+        ClockStyle.Large -> LargeClock(settings, modifier.padding(start = 8.dp))
+        ClockStyle.Glass -> GlassClockCard(settings, modifier)
+    }
+}
+
+@Composable
+private fun LargeClock(settings: LauncherSettings, modifier: Modifier = Modifier) {
     val now by rememberNow()
     val locale = Locale.getDefault()
     val time = remember(now) { now.format(DateTimeFormatter.ofPattern("HH:mm", locale)) }
@@ -253,22 +450,18 @@ private fun HomeHeader(modifier: Modifier = Modifier) {
         now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale))
             .replaceFirstChar { it.titlecase(locale) }
     }
-    val greeting = when (now.hour) {
-        in 5..10 -> "Guten Morgen"
-        in 11..17 -> "Guten Tag"
-        in 18..22 -> "Guten Abend"
-        else -> "Gute Nacht"
-    }
 
     Column(modifier) {
-        Text(
-            text = greeting,
-            color = Color.White.copy(alpha = 0.85f),
-            fontFamily = FontFamily.Serif,
-            fontStyle = FontStyle.Italic,
-            fontSize = 20.sp,
-            style = OnWallpaperText,
-        )
+        if (settings.showGreeting) {
+            Text(
+                text = greetingFor(now.hour),
+                color = Color.White.copy(alpha = 0.85f),
+                fontFamily = FontFamily.Serif,
+                fontStyle = FontStyle.Italic,
+                fontSize = 20.sp,
+                style = OnWallpaperText,
+            )
+        }
         Text(
             text = time,
             color = Color.White,
@@ -287,61 +480,177 @@ private fun HomeHeader(modifier: Modifier = Modifier) {
     }
 }
 
+/** Clock, date and battery on a big liquid glass card. Tap opens the alarms. */
 @Composable
-private fun AppGrid(apps: List<AppInfo>, actions: AppActions) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        apps.chunked(COLUMNS).forEach { row ->
-            Row(Modifier.fillMaxWidth()) {
-                row.forEach { app ->
-                    key(app.key) {
-                        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                            AppIcon(app, actions)
+private fun GlassClockCard(settings: LauncherSettings, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val now by rememberNow()
+    val battery by rememberBattery()
+    val locale = Locale.getDefault()
+    val time = remember(now) { now.format(DateTimeFormatter.ofPattern("HH:mm", locale)) }
+    val date = remember(now) {
+        now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale))
+            .replaceFirstChar { it.titlecase(locale) }
+    }
+
+    LiquidGlass(
+        cornerRadius = 32.dp,
+        refraction = 26.dp,
+        blur = 18.dp,
+        interactive = true,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(32.dp))
+            .clickable {
+                val alarms = Intent(AlarmClock.ACTION_SHOW_ALARMS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                runCatching { context.startActivity(alarms) }
+            },
+    ) {
+        Row(
+            Modifier.padding(horizontal = 22.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                if (settings.showGreeting) {
+                    Text(
+                        text = greetingFor(now.hour),
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontFamily = FontFamily.Serif,
+                        fontStyle = FontStyle.Italic,
+                        fontSize = 17.sp,
+                        style = OnWallpaperText,
+                    )
+                }
+                Text(
+                    text = time,
+                    color = Color.White,
+                    fontFamily = FontFamily.Serif,
+                    fontWeight = FontWeight.Light,
+                    fontSize = 60.sp,
+                    lineHeight = 64.sp,
+                    style = OnWallpaperText,
+                )
+                Text(
+                    text = date,
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 15.sp,
+                    style = OnWallpaperText,
+                )
+            }
+            val level = battery
+            if (settings.showBattery && level != null) {
+                Spacer(Modifier.width(12.dp))
+                BatteryRing(level)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BatteryRing(battery: BatteryState) {
+    val accent = LocalSettings.current.accent.color
+    val color = when {
+        battery.charging -> Color(0xFF34C759)
+        battery.percent <= 15 -> Color(0xFFFF6B5E)
+        else -> accent
+    }
+    Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.matchParentSize()) {
+            val stroke = 6.dp.toPx()
+            val inset = stroke / 2
+            val arcSize = Size(size.width - stroke, size.height - stroke)
+            drawArc(
+                color = Color.White.copy(alpha = 0.18f),
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = Offset(inset, inset),
+                size = arcSize,
+                style = Stroke(width = stroke),
+            )
+            drawArc(
+                color = color,
+                startAngle = -90f,
+                sweepAngle = 360f * battery.percent / 100f,
+                useCenter = false,
+                topLeft = Offset(inset, inset),
+                size = arcSize,
+                style = Stroke(width = stroke, cap = StrokeCap.Round),
+            )
+        }
+        Text(
+            text = if (battery.charging) "⚡${battery.percent}" else "${battery.percent}",
+            color = Color.White,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            style = OnWallpaperText,
+        )
+    }
+}
+
+/** Always [rows] rows high, so icons sit in the same places on every page. */
+@Composable
+private fun AppGrid(
+    apps: List<AppInfo>,
+    columns: Int,
+    rows: Int,
+    actions: AppActions,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier.fillMaxWidth()) {
+        repeat(rows) { r ->
+            Row(
+                Modifier.weight(1f).fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                repeat(columns) { c ->
+                    val app = apps.getOrNull(r * columns + c)
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        if (app != null) {
+                            key(app.key) {
+                                AppIcon(app, actions, fillCell = true)
+                            }
                         }
                     }
                 }
-                repeat(COLUMNS - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
 }
 
+/** Page indicator on a small glass capsule. */
 @Composable
 private fun PageDots(count: Int, current: Int, modifier: Modifier = Modifier) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-        repeat(count) { index ->
-            Box(
-                Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = if (index == current) 0.95f else 0.4f)),
-            )
+    LiquidGlass(cornerRadius = 12.dp, refraction = 6.dp, blur = 10.dp, modifier = modifier) {
+        Row(
+            Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            repeat(count) { index ->
+                Box(
+                    Modifier
+                        .size(if (index == current) 7.dp else 6.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = if (index == current) 0.95f else 0.4f)),
+                )
+            }
         }
     }
 }
 
-/** Glass capsule; swells slightly while pressed, like liquid glass. */
+/** Glass capsule; swells and glows under the finger, like liquid glass. */
 @Composable
 private fun SearchPill(onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 1.08f else 1f,
-        animationSpec = spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMedium),
-        label = "pillPress",
-    )
     LiquidGlass(
         cornerRadius = 20.dp,
-        refraction = 8.dp,
+        refraction = 10.dp,
+        interactive = true,
         modifier = Modifier
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
             .clip(CircleShape)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+            .clickable(onClick = onClick),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp),
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -361,25 +670,33 @@ private fun SearchPill(onClick: () -> Unit) {
 private fun WallpaperAccessHint(onClick: () -> Unit, modifier: Modifier = Modifier) {
     LiquidGlass(
         cornerRadius = 20.dp,
+        interactive = true,
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick),
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Text(
-                text = "Echtes Glas aktivieren",
-                color = Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-                style = OnWallpaperText,
-            )
-            Text(
-                text = "Tippen und Zugriff auf alle Dateien erlauben, damit das Glas dein Hintergrundbild zeigen kann.",
-                color = Color.White.copy(alpha = 0.85f),
-                fontSize = 13.sp,
-                style = OnWallpaperText,
-            )
+        Row(
+            Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Rounded.Home, contentDescription = null, tint = Color.White)
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = "Echtes Glas aktivieren",
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    style = OnWallpaperText,
+                )
+                Text(
+                    text = "Tippen und Zugriff auf alle Dateien erlauben, damit das Glas dein Hintergrundbild zeigen kann.",
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 13.sp,
+                    style = OnWallpaperText,
+                )
+            }
         }
     }
 }

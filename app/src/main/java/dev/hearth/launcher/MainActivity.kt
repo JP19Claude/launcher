@@ -8,6 +8,10 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.hearth.launcher.data.ThemeMode
 import dev.hearth.launcher.ui.LauncherScreen
 import dev.hearth.launcher.ui.theme.HearthTheme
 
@@ -23,7 +27,13 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         setContent {
-            HearthTheme {
+            val settings by viewModel.settings.collectAsStateWithLifecycle()
+            val dark = when (settings.theme) {
+                ThemeMode.System -> isSystemInDarkTheme()
+                ThemeMode.Light -> false
+                ThemeMode.Dark -> true
+            }
+            HearthTheme(dark = dark) {
                 LauncherScreen(viewModel)
             }
         }

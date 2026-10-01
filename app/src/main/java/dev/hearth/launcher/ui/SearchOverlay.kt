@@ -18,12 +18,14 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -56,6 +58,7 @@ fun SearchOverlay(
     actions: AppActions,
     onLaunch: (AppInfo) -> Unit,
     onWebSearch: (String) -> Unit,
+    onOpenSettings: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -106,6 +109,23 @@ fun SearchOverlay(
                     .weight(1f)
                     .focusRequester(focusRequester),
             )
+            Spacer(Modifier.width(8.dp))
+            LiquidGlass(
+                cornerRadius = 23.dp,
+                refraction = 12.dp,
+                interactive = true,
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onOpenSettings),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Settings,
+                    contentDescription = "Einstellungen",
+                    tint = colors.onSurface,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
             TextButton(onClick = onDismiss) {
                 Text("Abbrechen", color = colors.primary, fontSize = 16.sp)
             }
@@ -124,13 +144,13 @@ fun SearchOverlay(
         )
 
         LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
+            columns = GridCells.Fixed(LocalSettings.current.columns),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp),
         ) {
             items(results, key = { it.key }) { app ->
                 Box(contentAlignment = Alignment.Center) {
-                    AppIcon(app, actions, onWallpaper = false, onLaunch = onLaunch)
+                    AppIcon(app, actions, onWallpaper = false, fillCell = true, onLaunch = onLaunch)
                 }
             }
             if (trimmed.isNotEmpty()) {
@@ -161,11 +181,13 @@ private fun SearchField(
         keyboardActions = KeyboardActions(onGo = { onSubmit() }),
         modifier = modifier,
         decorationBox = { innerTextField ->
+            LiquidGlass(
+                cornerRadius = 23.dp,
+                refraction = 14.dp,
+                tint = colors.surface.copy(alpha = 0.25f),
+            ) {
             Row(
-                Modifier
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(colors.surfaceVariant.copy(alpha = 0.75f))
-                    .padding(horizontal = 12.dp, vertical = 11.dp),
+                Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
@@ -182,6 +204,7 @@ private fun SearchField(
                     innerTextField()
                 }
             }
+            }
         },
     )
 }
@@ -189,14 +212,18 @@ private fun SearchField(
 @Composable
 private fun WebSearchRow(query: String, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    Row(
-        Modifier
-            .fillMaxWidth()
+    LiquidGlass(
+        cornerRadius = 20.dp,
+        interactive = true,
+        tint = colors.surface.copy(alpha = 0.25f),
+        modifier = Modifier
             .padding(horizontal = 12.dp, vertical = 12.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(colors.surface.copy(alpha = 0.7f))
-            .clickable(onClick = onClick)
-            .padding(16.dp),
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick),
+    ) {
+    Row(
+        Modifier.padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Rounded.Search, contentDescription = null, tint = colors.primary)
@@ -208,5 +235,6 @@ private fun WebSearchRow(query: String, onClick: () -> Unit) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
     }
 }

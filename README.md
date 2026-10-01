@@ -4,19 +4,27 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
 
 ## Funktionen
 
-- Liquid Glass für Dock, Such-Pille und Suche:
+- Liquid Glass im Stil von Apple, fast überall: Icons, Dock, Uhr, Seitenpunkte,
+  Such-Pille, Suche, Kontextmenüs und Einstellungen
+  - Linsenwölbung am Rand, leichte Vergrößerung in der Mitte, Farbsäume (Android 13+)
+  - Glanzlichter auf der Kante, die beim Kippen des Handys mitwandern
+  - Glas wölbt sich unter dem Finger und leuchtet an der Berührungsstelle
   - Unschärfe und verstärkte Farben des Hintergrundbilds
-  - Lichtbrechung an den Kanten mit leichter Farbaufspaltung (Android 13+)
-  - Glanz oben, Lichtkante am Rand, Such-Pille schwillt beim Drücken an
-- Homescreen mit Seiten zum Wischen und Punkt-Anzeige
-- Große Uhr mit Begrüßung und Datum auf der ersten Seite
-- Dock mit Telefon, Nachrichten, Browser und Kamera (deine Standard-Apps)
-- Squircle-Icons mit Feder-Animation beim Antippen
+- Icon-Stile: Original, Glas (Symbol auf Glas), Klar (weiß auf Glas), Getönt
+- Icon-Formen: Squircle, Kreis, abgerundetes Quadrat
+- Icon-Packs im ADW/Nova-Format, mit Rahmen für Apps, die das Pack nicht abdeckt
+- Einstellungen: lange auf eine freie Stelle drücken, oder Zahnrad in der Suche
+  - Glas: Lichtbrechung, Unschärfe, Farbsäume, Glanz, Tönung, Glasfarbe, Voreinstellungen
+  - Icons: Stil, Form, Farbe, Größe, Beschriftung, Icon-Pack
+  - Homescreen: Spalten, Reihen, Uhr (Glas-Karte, groß, aus), Begrüßung, Akku,
+    Abdunkeln, Such-Pille, Wischgeste
+  - Dock: Anzahl Apps, zurücksetzen
+  - Suchmaschine, Design der Suche, Vibration, ausgeblendete Apps
+- Lange drücken auf ein Icon: Glas-Menü mit App-Info, Dock hinzufügen/entfernen/verschieben,
+  Ausblenden, Deinstallieren
 - Suche: nach oben oder unten wischen oder auf "Suchen" tippen
   - Enter startet den ersten Treffer, sonst Websuche
-- Lange drücken auf ein Icon: App-Info oder Deinstallieren
-- Home-Taste schließt die Suche und springt zur ersten Seite
-- Hell- und Dunkelmodus folgen dem System
+- Home-Taste schließt Suche, Menü und Einstellungen und springt zur ersten Seite
 
 ## Liquid Glass und die Berechtigung
 
