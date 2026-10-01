@@ -65,6 +65,13 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
+import androidx.compose.animation.core.animateOffsetAsState
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 
 /** The wallpaper copy that glass surfaces look through. Null = frosted fallback. */
 val LocalBackdrop = compositionLocalOf<WallpaperBackdrop?> { null }
@@ -78,6 +85,8 @@ data class GlassStyle(
     val specular: Float = 1f,
     val tint: Color = Color.White.copy(alpha = 0.04f),
     val interactive: Boolean = true,
+    /** Smallest glass (dp) that gets the lens shader; "Glas-Qualität" in the settings. */
+    val lensMinDp: Float = 40f,
 ) {
     companion object {
         fun from(s: LauncherSettings) = GlassStyle(
@@ -87,6 +96,7 @@ data class GlassStyle(
             specular = s.glassSpecular,
             tint = s.glassTint.color.copy(alpha = (s.glassTint.color.alpha * s.glassTintStrength).coerceIn(0f, 1f)),
             interactive = s.glassInteractive,
+            lensMinDp = s.glassQuality.lensMinDp,
         )
     }
 }
@@ -162,15 +172,21 @@ fun rememberGlassLight(enabled: Boolean): State<Offset> {
 private val Vibrancy = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(1.6f) })
 
 /**
- * Liquid glass on the GPU (Android 13+):
- * - bends the image at the rim like the rounded edge of a thick lens, and magnifies the middle a little
- * - splits colors where the bend is strongest
- * - specular highlights on the rim that face the light (and a weaker one on the opposite side)
+ * Liquid glass on the GPU (Android 13+), drawn over a slightly larger piece of the backdrop
+ * than the glass itself ([inset] on every side), because a real lens shows what lies beyond
+ * its edge:
+ * - the rim is a rounded slab: the steeper it gets, the more it pulls in what's outside,
+ *   so lines behind it bend around the edge; the middle magnifies a little
+ * - colors split where the bend is strongest
+ * - Fresnel: the rim reflects more light the flatter you look at it
+ * - a thin bright line where the edge faces the light, a softer one on the far side,
+ *   and a little shade on the inside of the bevel for depth
  * - a soft glow where the finger touches
  */
 private const val GLASS_SHADER = """
 uniform shader content;
 uniform float2 size;
+uniform float2 inset;
 uniform float cornerRadius;
 uniform float depth;
 uniform float dispersion;
@@ -185,9 +201,13 @@ float sdRoundRect(float2 p, float2 halfSize, float r) {
 }
 
 half4 main(float2 coord) {
-    float2 halfSize = size * 0.5;
-    float2 p = coord - halfSize;
+    float2 inner = size - 2.0 * inset;
+    float2 halfSize = inner * 0.5;
+    float2 center = inset + halfSize;
+    float2 p = coord - center;
     float d = sdRoundRect(p, halfSize, cornerRadius);
+    if (d > 1.0) return half4(0.0);
+    float edgeAlpha = clamp(0.5 - d, 0.0, 1.0);
     float inside = max(-d, 0.0);
 
     float2 e = float2(1.0, 0.0);
@@ -197,34 +217,46 @@ half4 main(float2 coord) {
     );
     float2 n = grad / max(length(grad), 0.0001);
 
-    // Bevel: flat in the middle, curving down steeply towards the rim like a droplet.
-    float t = clamp(1.0 - inside / depth, 0.0, 1.0);
-    float bevel = 1.0 - sqrt(max(1.0 - t * t, 0.0));
-    float bend = bevel * depth;
+    // Rounded slab: x is 0 at the rim and 1 where the glass turns flat.
+    float x = clamp(inside / depth, 0.0, 1.0);
+    float h = sqrt(max(1.0 - (1.0 - x) * (1.0 - x), 0.0));
+    float slope = (1.0 - x) / max(h, 0.12);
+    float maxBend = min(depth, max(inset.x, 1.0)) * 0.92;
+    float bend = min(slope * depth * 0.30, maxBend);
 
-    float zoom = 0.07 * clamp(depth / 40.0, 0.0, 1.0);
-    float2 src = halfSize + p * (1.0 - zoom) - n * bend;
+    // What's beyond the edge bends into view; the middle is magnified a little.
+    float zoom = 0.055 * clamp(depth / 40.0, 0.0, 1.0);
+    float2 src = center + p * (1.0 - zoom) + n * bend;
 
     float4 base = float4(content.eval(src));
-    float split = bend * dispersion * 0.4;
-    float red = float4(content.eval(src - n * split)).r;
-    float blue = float4(content.eval(src + n * split)).b;
+    float split = min(bend * dispersion * 0.22, maxBend - bend + 1.0);
+    float red = float4(content.eval(src + n * split)).r;
+    float blue = float4(content.eval(src - n * split)).b;
     float3 col = float3(red, base.g, blue);
 
-    // Rim light: strong where the edge faces the light, weaker on the far side.
-    float rim = 1.0 - smoothstep(0.0, max(depth * 0.5, 2.0), inside);
+    // Fresnel: the steep rim mirrors more of the light.
+    float fresnel = pow(1.0 - h, 3.0);
+    col = mix(col, float3(1.0), fresnel * 0.22 * specular);
+
+    // Light on the edge: a thin bright line facing the light, a softer one on the far side.
     float facing = max(dot(n, light), 0.0);
     float away = max(dot(n, -light), 0.0);
-    float spec = rim * (pow(facing, 2.0) * 0.9 + pow(away, 3.0) * 0.4);
-    float sheen = t * t * facing * 0.2;
-    col += float3(spec + sheen) * specular;
+    float rimLine = 1.0 - smoothstep(0.0, 2.2, inside);
+    float band = 1.0 - smoothstep(0.0, max(depth * 0.55, 3.0), inside);
+    float spec = rimLine * (pow(facing, 1.4) * 0.95 + pow(away, 2.0) * 0.55)
+        + band * (pow(facing, 5.0) * 0.30 + pow(away, 5.0) * 0.14);
+    col += float3(spec) * specular;
+    // A touch of shade inside the bevel, away from the light: the glass has thickness.
+    col *= 1.0 - band * 0.10 * (1.0 - facing);
+    // Brighter towards the light across the whole face.
+    col += float3(0.05 * specular * clamp(dot(normalize(p + float2(0.001)), light) * (1.0 - x * 0.5), 0.0, 1.0));
 
     // Glow under the finger.
-    float radius = max(min(size.x, size.y) * 0.75, 1.0);
+    float radius = max(min(inner.x, inner.y) * 0.75, 1.0);
     float dist = length(coord - touch) / radius;
     col += float3(glow * 0.25 * exp(-dist * dist * 2.5));
 
-    return half4(half3(col), half(base.a));
+    return half4(half3(col * edgeAlpha), half(edgeAlpha));
 }
 """
 
@@ -235,6 +267,7 @@ private class GlassEffect {
     fun create(
         width: Float,
         height: Float,
+        inset: Float,
         radius: Float,
         depth: Float,
         blur: Float,
@@ -245,6 +278,7 @@ private class GlassEffect {
         glow: Float,
     ): RenderEffect? = runCatching {
         shader.setFloatUniform("size", width, height)
+        shader.setFloatUniform("inset", inset, inset)
         shader.setFloatUniform("cornerRadius", radius)
         shader.setFloatUniform("depth", depth.coerceAtLeast(1f))
         shader.setFloatUniform("dispersion", dispersion)
@@ -346,7 +380,8 @@ fun LiquidGlass(
     // blur only picks how frosted the glass is; the actual blur is precomputed.
     val frost = frostFor(style.blur * (blur.value / 14f).coerceIn(0.5f, 1.6f))
     val rimPx = with(density) { 1.dp.toPx() }
-    val shaderMinPx = with(density) { 90.dp.toPx() }
+    val shaderMinPx = with(density) { style.lensMinDp.dp.toPx() }
+    val maxPadPx = with(density) { 28.dp.toPx() }
     // One compiled shader for every glass surface, and none at all without the wallpaper.
     val glassEffect = if (backdrop != null) SharedGlassEffect else null
     var origin by remember { mutableStateOf(Offset.Zero) }
@@ -364,6 +399,14 @@ fun LiquidGlass(
         animationSpec = spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessMediumLow),
         label = "glassSwell",
     )
+    // Liquid: the glass is pulled along with the finger and wobbles back when let go.
+    var pressStart by remember { mutableStateOf(Offset.Zero) }
+    val pull by animateOffsetAsState(
+        targetValue = if (pressed) touch - pressStart else Offset.Zero,
+        animationSpec = spring(dampingRatio = 0.42f, stiffness = 340f),
+        label = "glassPull",
+    )
+    val maxPullPx = with(density) { 7.dp.toPx() }
 
     val baseTint = tint ?: style.tint
     val shaderActive = backdrop != null && glassEffect != null
@@ -375,9 +418,16 @@ fun LiquidGlass(
         Modifier
             .graphicsLayer {
                 if (isInteractive) {
-                    // Liquid: a bit wider than tall while pressed, then wobbles back.
-                    scaleX = 1f + 0.08f * swell
-                    scaleY = 1f + 0.05f * swell
+                    // Liquid: a bit wider than tall while pressed, stretched towards where the
+                    // finger pulls (thinner the other way, like a drop), then wobbles back.
+                    val w = size.width.coerceAtLeast(1f)
+                    val h = size.height.coerceAtLeast(1f)
+                    val px = (pull.x / w).coerceIn(-1f, 1f)
+                    val py = (pull.y / h).coerceIn(-1f, 1f)
+                    scaleX = 1f + 0.08f * swell + abs(px) * 0.12f - abs(py) * 0.04f
+                    scaleY = 1f + 0.05f * swell + abs(py) * 0.12f - abs(px) * 0.04f
+                    translationX = (pull.x * 0.12f).coerceIn(-maxPullPx, maxPullPx)
+                    translationY = (pull.y * 0.12f).coerceIn(-maxPullPx, maxPullPx)
                 }
             }
             .then(modifier)
@@ -385,7 +435,11 @@ fun LiquidGlass(
                 if (isInteractive) {
                     Modifier.pointerInput(Unit) {
                         trackPress(
-                            onPress = { pressed = true; touch = it },
+                            onPress = {
+                                pressed = true
+                                touch = it
+                                pressStart = it
+                            },
                             onMove = { touch = it },
                             onRelease = { pressed = false },
                         )
@@ -397,37 +451,52 @@ fun LiquidGlass(
             .onGloballyPositioned { origin = it.positionInWindow() },
     ) {
         if (backdrop != null) {
+            val lensAvailable = glassEffect != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            val lensPad = refractionPx.coerceIn(2f, maxPadPx).roundToInt()
+            // The lens draws a little more of the backdrop than its own size, because the rim
+            // shows what lies just beyond it. Small glass (below "Glas-Qualität") skips it.
+            fun padFor(innerW: Float, innerH: Float): Int =
+                if (lensAvailable && min(innerW, innerH) >= shaderMinPx) lensPad else 0
             Canvas(
                 Modifier
                     .matchParentSize()
+                    .layout { measurable, constraints ->
+                        val w = constraints.maxWidth
+                        val h = constraints.maxHeight
+                        val pad = padFor(w.toFloat(), h.toFloat())
+                        val placeable = measurable.measure(Constraints.fixed(w + 2 * pad, h + 2 * pad))
+                        layout(w, h) { placeable.place(-pad, -pad) }
+                    }
                     .graphicsLayer {
-                        clip = true
-                        shape = glassShape
-                        // The wallpaper is already blurred, so only the lens shader runs here,
-                        // and only on surfaces big enough for it to show (not on every icon).
-                        renderEffect = if (
-                            glassEffect != null &&
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                            size.minDimension >= shaderMinPx
-                        ) {
-                            glassEffect.create(
+                        val padded = lensPad * 2f
+                        val lens = lensAvailable && min(size.width - padded, size.height - padded) >= shaderMinPx
+                        if (lens && glassEffect != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            val innerMin = min(size.width, size.height) - padded
+                            // The shader cuts the shape out itself, with soft edges.
+                            clip = false
+                            renderEffect = glassEffect.create(
                                 width = size.width,
                                 height = size.height,
-                                radius = min(radiusPx, size.minDimension / 2f),
-                                depth = min(refractionPx, size.minDimension / 2f),
+                                inset = lensPad.toFloat(),
+                                radius = min(radiusPx, innerMin / 2f),
+                                depth = min(refractionPx, innerMin / 2f),
                                 blur = 0f,
                                 dispersion = style.dispersion,
                                 specular = specular,
                                 light = light.value,
-                                touch = touch,
+                                touch = touch + Offset(lensPad.toFloat(), lensPad.toFloat()),
                                 glow = glow,
                             )?.asComposeRenderEffect()
                         } else {
-                            null
+                            clip = true
+                            shape = glassShape
+                            renderEffect = null
                         }
                     },
             ) {
-                drawBackdrop(backdrop, origin, frost)
+                val padded = lensPad * 2f
+                val pad = if (lensAvailable && min(size.width - padded, size.height - padded) >= shaderMinPx) lensPad else 0
+                drawBackdrop(backdrop, origin - Offset(pad.toFloat(), pad.toFloat()), frost)
             }
         }
 
@@ -453,8 +522,56 @@ fun LiquidGlass(
                             end = shade,
                         ),
                     )
-                    val rimStrong = (if (shaderActive) 0.40f else 0.70f) * specular
-                    val rimWeak = (if (shaderActive) 0.18f else 0.35f) * specular
+                    // Does the lens shader do the edge here? Otherwise draw a thick, curved edge.
+                    val lensOn = shaderActive && size.minDimension >= shaderMinPx
+                    if (!lensOn) {
+                        val r = min(radiusPx, size.minDimension / 2f)
+                        val path = Path().apply {
+                            addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(r)))
+                        }
+                        val bevel = (refractionPx * 0.45f).coerceIn(rimPx * 2f, size.minDimension * 0.22f)
+                        clipPath(path) {
+                            // The rounded edge: light where it faces the light, a darker
+                            // fold on the far side, clear in between.
+                            drawPath(
+                                path,
+                                Brush.linearGradient(
+                                    0f to Color.White.copy(alpha = (0.30f * specular).coerceIn(0f, 1f)),
+                                    0.45f to Color.White.copy(alpha = 0.03f),
+                                    0.55f to Color.Transparent,
+                                    1f to Color.White.copy(alpha = (0.14f * specular).coerceIn(0f, 1f)),
+                                    start = lit,
+                                    end = shade,
+                                ),
+                                style = Stroke(width = bevel * 2f),
+                            )
+                            // A highlight pooled near the lit corner, like light inside a drop.
+                            drawCircle(
+                                Brush.radialGradient(
+                                    0f to Color.White.copy(alpha = (0.20f * specular).coerceIn(0f, 1f)),
+                                    1f to Color.Transparent,
+                                    center = center + Offset(l.x, l.y) * reach * 0.7f,
+                                    radius = size.minDimension * 0.55f,
+                                ),
+                                radius = size.minDimension * 0.55f,
+                                center = center + Offset(l.x, l.y) * reach * 0.7f,
+                            )
+                            // Thickness: a soft shade along the far edge.
+                            drawPath(
+                                path,
+                                Brush.linearGradient(
+                                    0f to Color.Transparent,
+                                    0.7f to Color.Transparent,
+                                    1f to Color.Black.copy(alpha = 0.10f),
+                                    start = lit,
+                                    end = shade,
+                                ),
+                                style = Stroke(width = bevel * 3f),
+                            )
+                        }
+                    }
+                    val rimStrong = (if (lensOn) 0.40f else 0.85f) * specular
+                    val rimWeak = (if (lensOn) 0.18f else 0.45f) * specular
                     drawOutline(
                         outline,
                         Brush.linearGradient(
@@ -467,7 +584,7 @@ fun LiquidGlass(
                         ),
                         style = Stroke(width = rimPx),
                     )
-                    if (!shaderActive && glow > 0.01f) {
+                    if (!lensOn && glow > 0.01f) {
                         drawOutline(
                             outline,
                             Brush.radialGradient(

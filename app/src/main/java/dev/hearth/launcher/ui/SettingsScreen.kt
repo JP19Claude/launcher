@@ -67,6 +67,7 @@ import dev.hearth.launcher.data.CcToggleShape
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.GlimmerStyle
+import dev.hearth.launcher.data.GlassQuality
 import dev.hearth.launcher.data.GlassTint
 import dev.hearth.launcher.data.IconShape
 import dev.hearth.launcher.data.IconStyle
@@ -198,6 +199,14 @@ fun SettingsScreen(
                         optionLabel = { it.label },
                         onSelect = { preset -> update(preset.transform) },
                     )
+                    ChoiceRow(
+                        label = "Glas-Qualität",
+                        options = GlassQuality.entries,
+                        selected = s.glassQuality,
+                        optionLabel = { it.label },
+                        onSelect = { q -> update { it.copy(glassQuality = q) } },
+                    )
+                    Note("Flüssig: auch Knöpfe, Schalter und Icons bekommen die echte Linse. Ruckelt es, nimm „Ausgewogen“.")
                     RowDivider()
                     PercentSlider("Lichtbrechung", s.glassRefraction, 0f..2.5f) { v -> update { it.copy(glassRefraction = v) } }
                     PercentSlider("Unschärfe", s.glassBlur, 0f..2.5f) { v -> update { it.copy(glassBlur = v) } }
@@ -226,7 +235,7 @@ fun SettingsScreen(
                     ) { v -> update { it.copy(iconGloss = v) } }
                     SwitchRow(
                         label = "Glas reagiert auf Berührung",
-                        description = "Wölbt sich und leuchtet unter dem Finger",
+                        description = "Wölbt sich, zieht sich wie ein Tropfen zum Finger und federt zurück",
                         checked = s.glassInteractive,
                     ) { v -> update { it.copy(glassInteractive = v) } }
                     if (needsWallpaperAccess) {

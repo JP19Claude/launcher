@@ -38,6 +38,12 @@ enum class GlassTint(val label: String, val color: Color) {
     Blue("Blau", Color(0xFF6FA8FF).copy(alpha = 0.18f)),
 }
 
+/** Which glass gets the real lens (bending, color split); smaller glass gets the drawn edge. */
+enum class GlassQuality(val label: String, val lensMinDp: Float) {
+    High("Flüssig (alles)", 40f),
+    Balanced("Ausgewogen (große Flächen)", 90f),
+}
+
 /** Color for tinted icons and highlights. */
 enum class AccentColor(val label: String, val color: Color) {
     Claude("Claude", Color(0xFFD97757)),
@@ -153,13 +159,14 @@ enum class ThemeMode(val label: String) {
 data class LauncherSettings(
     // Liquid glass
     val glassBlur: Float = 1f,
-    val glassRefraction: Float = 1.3f,
-    val glassDispersion: Float = 0.7f,
-    val glassSpecular: Float = 1f,
+    val glassRefraction: Float = 1.6f,
+    val glassDispersion: Float = 0.8f,
+    val glassSpecular: Float = 1.15f,
     val glassTintStrength: Float = 1f,
     val glassTint: GlassTint = GlassTint.Clear,
     val glassMotion: Boolean = true,
     val glassInteractive: Boolean = true,
+    val glassQuality: GlassQuality = GlassQuality.High,
     // Icons
     val iconStyle: IconStyle = IconStyle.Glass,
     val iconShape: IconShape = IconShape.Squircle,
@@ -322,7 +329,7 @@ data class LauncherSettings(
         const val MAX_DOCK = 6
 
         /** Current default look; installs with a lower [designVersion] get it once. */
-        const val DESIGN_VERSION = 4
+        const val DESIGN_VERSION = 5
     }
 }
 
@@ -353,6 +360,7 @@ class SettingsRepository(context: Context) {
             glassTint = enumOf("glassTint", d.glassTint),
             glassMotion = prefs.getBoolean("glassMotion", d.glassMotion),
             glassInteractive = prefs.getBoolean("glassInteractive", d.glassInteractive),
+            glassQuality = enumOf("glassQuality", d.glassQuality),
             iconStyle = enumOf("iconStyle", d.iconStyle),
             iconShape = enumOf("iconShape", d.iconShape),
             iconSize = prefs.getInt("iconSize", d.iconSize),
@@ -432,6 +440,7 @@ class SettingsRepository(context: Context) {
             .putString("glassTint", s.glassTint.name)
             .putBoolean("glassMotion", s.glassMotion)
             .putBoolean("glassInteractive", s.glassInteractive)
+            .putString("glassQuality", s.glassQuality.name)
             .putString("iconStyle", s.iconStyle.name)
             .putString("iconShape", s.iconShape.name)
             .putInt("iconSize", s.iconSize)

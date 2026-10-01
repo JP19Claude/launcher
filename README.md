@@ -105,9 +105,14 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   ersten Seite (das hat den ersten Tipp verschluckt), Apps starten mit Zoom aus dem Icon
 - Liquid Glass im Stil von Apple, fast überall: Icons, Dock, Uhr, Seitenpunkte,
   Such-Pille, Suche, Kontextmenüs und Einstellungen
-  - Linsenwölbung am Rand, leichte Vergrößerung in der Mitte, Farbsäume (Android 13+)
+  - Echte Linse (Android 13+): der Rand zieht sichtbar herein, was hinter der Kante liegt,
+    die Mitte vergrößert leicht, Farbsäume, Fresnel-Glanz, dünne Lichtkante zum Licht hin,
+    weichere auf der Gegenseite, leichter Schatten in der Wölbung
+  - „Glas-Qualität“: Flüssig (auch Knöpfe, Schalter, Icons) oder Ausgewogen
+  - Ohne Hintergrundbild (über anderen Apps, Sperrbildschirm, Glimmer): gezeichnete dicke
+    Kante mit Glanzpunkt und Schatten
   - Glanzlichter auf der Kante, die beim Kippen des Handys mitwandern
-  - Glas wölbt sich unter dem Finger und leuchtet an der Berührungsstelle
+  - Glas wölbt sich unter dem Finger, zieht sich wie ein Tropfen mit und federt zurück
   - Unschärfe und verstärkte Farben des Hintergrundbilds
 - Icon-Stile: Original, Glas (Symbol auf Glas), Klar (weiß auf Glas), Getönt
 - Icon-Formen: Squircle, Kreis, abgerundetes Quadrat

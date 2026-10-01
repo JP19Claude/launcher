@@ -176,6 +176,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 if (s.designVersion < 2) s = s.withPreset(DesignPreset.ColorOSClaude)
                 // 3 and 4: control center and notifications as on iOS 27.
                 if (s.designVersion < 4) s = s.withCcStyle(CcStyle.IOS)
+                // 5: more liquid glass everywhere.
+                if (s.designVersion < 5) {
+                    s = s.copy(
+                        glassRefraction = s.glassRefraction.coerceAtLeast(1.6f),
+                        glassDispersion = s.glassDispersion.coerceAtLeast(0.8f),
+                        glassSpecular = s.glassSpecular.coerceAtLeast(1.15f),
+                        ccRefraction = s.ccRefraction.coerceAtLeast(1.6f),
+                    )
+                }
                 s.copy(designVersion = LauncherSettings.DESIGN_VERSION)
             }
         }
