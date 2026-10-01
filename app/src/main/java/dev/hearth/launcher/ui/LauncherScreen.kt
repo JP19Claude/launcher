@@ -349,8 +349,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
             items = listOf(
                 GlassMenuItem("Launcher-Einstellungen", Icons.Rounded.Settings) { settingsOpen = true },
                 GlassMenuItem("Kontrollzentrum", Icons.Rounded.Home) {
-                    controlPage = 0
-                    controlOpen = true
+                    if (settings.ccEnabled) {
+                        controlPage = 0
+                        controlOpen = true
+                    } else {
+                        vm.controls.expandQuickSettings()
+                    }
                 },
                 GlassMenuItem("Widget hierher", Icons.Rounded.Add) {
                     widgetTarget = (pagerState.currentPage - widgetPages).coerceAtLeast(0)
@@ -430,30 +434,32 @@ fun LauncherScreen(vm: LauncherViewModel) {
         label = "menuBlur",
     )
     // Hearth's own notification page (one swipe left in the control center), when it can show them.
-    val ownNotifications = settings.ccNotifications && NotificationHub.connected.collectAsStateWithLifecycle().value
+    val ownNotifications = settings.ccEnabled && settings.ccNotifications &&
+        NotificationHub.connected.collectAsStateWithLifecycle().value
+    // With Hearth's control center switched off, One UI's own panel opens instead.
+    val openControlCenter: () -> Unit = {
+        if (settings.ccEnabled) {
+            controlPage = 0
+            controlOpen = true
+        } else {
+            vm.controls.expandQuickSettings()
+        }
+    }
     val openNotifications: () -> Unit = {
         if (ownNotifications) {
             controlPage = 1
             controlOpen = true
-        } else if (!vm.controls.expandNotifications()) {
+        } else if (!vm.controls.expandNotifications() && settings.ccEnabled) {
             controlPage = 0
             controlOpen = true
         }
     }
     val onSwipeDown: (Boolean) -> Unit = { leftHalf ->
         when (settings.swipeDownAction) {
-            SwipeDownAction.ControlCenter -> {
-                controlPage = 0
-                controlOpen = true
-            }
+            SwipeDownAction.ControlCenter -> openControlCenter()
             SwipeDownAction.Search -> searchOpen = true
             SwipeDownAction.Notifications -> openNotifications()
-            SwipeDownAction.Split -> if (leftHalf) {
-                openNotifications()
-            } else {
-                controlPage = 0
-                controlOpen = true
-            }
+            SwipeDownAction.Split -> if (leftHalf) openNotifications() else openControlCenter()
         }
         Unit
     }

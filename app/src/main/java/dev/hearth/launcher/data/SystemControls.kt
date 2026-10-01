@@ -410,6 +410,14 @@ class SystemControls(private val context: Context) {
         true
     }.getOrDefault(false)
 
+    /** The system's own quick settings (One UI's control center). */
+    fun expandQuickSettings(): Boolean = runCatching {
+        if (ControlCenterService.instance?.showSystemQuickSettings() == true) return true
+        val service = context.getSystemService("statusbar") ?: return false
+        Class.forName("android.app.StatusBarManager").getMethod("expandSettingsPanel").invoke(service)
+        true
+    }.getOrDefault(false)
+
     fun openWifi() = start(Intent(Settings.Panel.ACTION_WIFI), Intent(Settings.ACTION_WIFI_SETTINGS))
     fun openInternet() = start(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY), Intent(Settings.ACTION_DATA_ROAMING_SETTINGS))
     fun openBluetooth() = start(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))

@@ -204,6 +204,8 @@ data class LauncherSettings(
     /** Entrance, page and text animations throughout the launcher. */
     val animations: Boolean = true,
     val pageTransition: PageTransition = PageTransition.Depth,
+    /** Hearth's own control center; off = only the system's (One UI) panel. */
+    val ccEnabled: Boolean = true,
     // Control center look
     val ccStyle: CcStyle = CcStyle.IOS,
     val ccBigTiles: Boolean = true,
@@ -395,6 +397,7 @@ class SettingsRepository(context: Context) {
             iconGloss = prefs.getBoolean("iconGloss", d.iconGloss),
             animations = prefs.getBoolean("animations", d.animations),
             pageTransition = enumOf("pageTransition", d.pageTransition),
+            ccEnabled = prefs.getBoolean(KEY_CC_ENABLED, d.ccEnabled),
             ccStyle = enumOf("ccStyle", d.ccStyle),
             ccBigTiles = prefs.getBoolean("ccBigTiles", d.ccBigTiles),
             ccSliders = enumOf("ccSliders", d.ccSliders),
@@ -477,6 +480,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("iconGloss", s.iconGloss)
             .putBoolean("animations", s.animations)
             .putString("pageTransition", s.pageTransition.name)
+            .putBoolean(KEY_CC_ENABLED, s.ccEnabled)
             .putString("ccStyle", s.ccStyle.name)
             .putBoolean("ccBigTiles", s.ccBigTiles)
             .putString("ccSliders", s.ccSliders.name)
@@ -529,6 +533,7 @@ class SettingsRepository(context: Context) {
             "glimmerTapOpens", "glimmerAlerts", "glimmerGlow", "glimmerMusicStyle",
         )
         const val KEY_LOCK_LAYOUT = "lockNotifications"
+        const val KEY_CC_ENABLED = "ccEnabled"
         const val KEY_LOCK_CONTENT = "lockShowContent"
     }
 }

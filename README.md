@@ -14,6 +14,9 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   - Medien-Tasten, Kamera, Wecker, Rechner, Claude
   - Helligkeit/Drehung brauchen „Systemeinstellungen ändern“, Nicht stören den
     Zugriff auf „Bitte nicht stören“
+- „Hearth-Kontrollzentrum verwenden“ (Gesten & Kontrollzentrum): aus = überall das normale
+  Kontrollzentrum von One UI (auch beim Herunterwischen auf dem Homescreen), Glimmer und
+  der Rest laufen weiter
 - Kontrollzentrum in allen Apps (Bedienungshilfe „Hearth Kontrollzentrum“ einschalten):
   ein unsichtbarer Streifen über der Statusleiste fängt das Wischen
   nach unten ab und öffnet das Glas-Kontrollzentrum über der App (ab Android 12 mit

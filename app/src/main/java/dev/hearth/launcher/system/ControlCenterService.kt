@@ -92,6 +92,15 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
     /** Read from the settings; see [onAccessibilityEvent]. */
     @Volatile private var interceptShade = false
 
+    /** "Hearth-Kontrollzentrum verwenden": off = no strip, no replacing, One UI's own panel. */
+    @Volatile private var ccEnabled = true
+
+    /** Hearth's lock screen notifications are on (worth watching the lock screen). */
+    @Volatile private var lockOn = false
+
+    /** Replacing the system shade needs both switches. */
+    private val replacing: Boolean get() = interceptShade && ccEnabled
+
     /**
      * Hearth itself opened the system shade (notifications, system switches): leave it open
      * until it was closed again. [allowShadeUntil] is the fallback if its closing isn't seen.
@@ -115,7 +124,19 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
                 if (trigger != null) addTrigger()
             }
             in SettingsRepository.GLIMMER_KEYS -> restartGlimmer()
-            SettingsRepository.KEY_LOCK_LAYOUT, SettingsRepository.KEY_LOCK_CONTENT -> lockNotes?.update()
+            SettingsRepository.KEY_LOCK_LAYOUT, SettingsRepository.KEY_LOCK_CONTENT -> {
+                lockOn = readLockOn(prefs)
+                lockNotes?.update()
+            }
+            SettingsRepository.KEY_CC_ENABLED -> {
+                ccEnabled = prefs.getBoolean(key, true)
+                if (ccEnabled) {
+                    ensureTrigger()
+                } else {
+                    hidePanel(immediately = true)
+                    removeTrigger()
+                }
+            }
         }
     }
 
@@ -161,6 +182,8 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         val prefs = getSharedPreferences(SettingsRepository.PREFS_NAME, MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
         interceptShade = prefs.getBoolean(SettingsRepository.KEY_INTERCEPT, false)
+        ccEnabled = prefs.getBoolean(SettingsRepository.KEY_CC_ENABLED, true)
+        lockOn = readLockOn(prefs)
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
@@ -187,14 +210,14 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         // Any sign of life from the status bar: make sure the strip is there.
         if (trigger == null) ensureTrigger()
         // The lock screen changed (camera opened over it, unlocked): look again, in batches.
-        if (lockNotes != null && !lockCheckPending && trigger == null) {
+        if (lockNotes != null && lockOn && !lockCheckPending && (trigger == null || !ccEnabled)) {
             lockCheckPending = true
             handler.postDelayed({
                 lockCheckPending = false
                 lockNotes?.update()
             }, 400)
         }
-        if (!interceptShade) return
+        if (!replacing) return
         if (event.packageName?.toString() != SYSTEM_UI) return
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
@@ -221,7 +244,7 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
     }
 
     private fun checkSystemShade() {
-        if (!interceptShade && !allowShade) return
+        if (!replacing && !allowShade) return
         val open = isSystemShadeOpen()
         if (allowShade) {
             if (open) {
@@ -233,7 +256,7 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
             }
             return
         }
-        if (open && interceptShade && !isLocked()) takeOverShade()
+        if (open && replacing && !isLocked()) takeOverShade()
     }
 
     private fun shadeAllowed(): Boolean {
@@ -376,7 +399,11 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         return height.coerceAtLeast(dp(24))
     }
 
+    private fun readLockOn(prefs: SharedPreferences): Boolean =
+        prefs.getString(SettingsRepository.KEY_LOCK_LAYOUT, null).let { it != null && it != "Off" }
+
     private fun ensureTrigger() {
+        if (!ccEnabled) return
         if (trigger != null || windowManager == null) return
         if (isLocked()) return
         if (getSystemService(PowerManager::class.java)?.isInteractive == false) return

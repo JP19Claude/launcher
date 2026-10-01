@@ -477,6 +477,15 @@ fun SettingsScreen(
                         update { it.copy(swipeOpensSearch = v) }
                     }
                     RowDivider()
+                    SwitchRow(
+                        label = "Hearth-Kontrollzentrum verwenden",
+                        description = if (s.ccEnabled) {
+                            "An: Hearths Glas-Kontrollzentrum, in Hearth und (mit dem Dienst) über anderen Apps"
+                        } else {
+                            "Aus: überall das normale Kontrollzentrum von One UI; Glimmer läuft weiter"
+                        },
+                        checked = s.ccEnabled,
+                    ) { v -> update { it.copy(ccEnabled = v) } }
                     ActionRow(
                         label = "Hearth-Kontrollzentrum in allen Apps",
                         description = if (serviceOn) {
