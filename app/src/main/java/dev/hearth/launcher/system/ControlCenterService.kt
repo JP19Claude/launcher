@@ -598,7 +598,9 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         val params = panelParams ?: return
         val steps = 5
         val step = (fraction.coerceIn(0f, 1f) * steps).roundToInt()
-        val radius = dp(BLUR_DP) * step / steps
+        // Strength from "Hintergrund weichzeichnen" in the settings.
+        val maxRadius = dp((BLUR_MIN_DP + BLUR_RANGE_DP * panelSettings.ccBlur.coerceIn(0f, 1f)).roundToInt())
+        val radius = maxRadius * step / steps
         if (radius == blurRadius) return
         blurRadius = radius
         params.blurBehindRadius = radius
@@ -626,7 +628,8 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         private const val SYSTEM_UI_ID = "com.android.systemui:id/"
         private const val SYSTEM_SHADE_GRACE_MS = 20_000L
         private const val PULL_DISTANCE_DP = 260
-        private const val BLUR_DP = 36
+        private const val BLUR_MIN_DP = 6
+        private const val BLUR_RANGE_DP = 74
         private const val MAX_NODES = 220
 
         /** How the system names its shade (Android, One UI, ColorOS; German and English). */

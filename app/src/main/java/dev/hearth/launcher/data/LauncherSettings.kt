@@ -113,6 +113,15 @@ enum class CcColorMode(val label: String) {
     White("Weiß"),
 }
 
+/** What the control center's glass panels are tinted with. */
+enum class CcGlassTint(val label: String) {
+    Clear("Klar"),
+    Frosted("Milchig"),
+    Dark("Dunkel"),
+    Accent("Akzentfarbe"),
+    Launcher("Wie der Launcher"),
+}
+
 /** Shape of the round switches in the control center. */
 enum class CcToggleShape(val label: String) {
     Circle("Rund"),
@@ -187,8 +196,22 @@ data class LauncherSettings(
     val ccShowShortcuts: Boolean = true,
     /** How much the control center darkens what's behind it (0..1). */
     val ccDim: Float = 0.5f,
-    /** Swipe left in the control center for Hearth's own notification list. */
+    /** Swipe right in the control center for Hearth's own notification list. */
     val ccNotifications: Boolean = true,
+    // Control center glass
+    val ccGlassTint: CcGlassTint = CcGlassTint.Clear,
+    /** How milky the panels are (0 = clear, 1 = nearly solid). */
+    val ccGlassOpacity: Float = 0.35f,
+    /** Light-catching rim and sheen. */
+    val ccSpecular: Float = 1.35f,
+    /** Lens bending at the edges (with the wallpaper behind). */
+    val ccRefraction: Float = 1.4f,
+    /** How blurred the app behind is (0..1). */
+    val ccBlur: Float = 0.6f,
+    /** Corner radius of the panels, in dp. */
+    val ccCorner: Int = 30,
+    /** Size of the round switches, in dp. */
+    val ccToggleSize: Int = 56,
     // Glimmer: live activities around the front camera, in every app
     val glimmerEnabled: Boolean = true,
     val glimmerStyle: GlimmerStyle = GlimmerStyle.Black,
@@ -225,10 +248,7 @@ data class LauncherSettings(
             showGreeting = true,
             showClaudeCard = true,
             swipeDownAction = SwipeDownAction.Split,
-            ccStyle = CcStyle.ColorOS,
-            ccColors = CcColorMode.Accent,
-            ccGlow = true,
-        )
+        ).withCcStyle(CcStyle.ColorOS)
         DesignPreset.IOSGlass -> copy(
             iconStyle = IconStyle.Glass,
             iconShape = IconShape.Squircle,
@@ -243,10 +263,7 @@ data class LauncherSettings(
             clockStyle = ClockStyle.Glass,
             showClaudeCard = false,
             swipeDownAction = SwipeDownAction.ControlCenter,
-            ccStyle = CcStyle.IOS,
-            ccColors = CcColorMode.IOS,
-            ccGlow = false,
-        )
+        ).withCcStyle(CcStyle.IOS)
         DesignPreset.Hearth -> copy(
             iconStyle = IconStyle.Original,
             iconShape = IconShape.Squircle,
@@ -259,11 +276,35 @@ data class LauncherSettings(
         )
     }
 
+    /** Switches the control center's look, with the colors and details that belong to it. */
+    fun withCcStyle(style: CcStyle): LauncherSettings = when (style) {
+        CcStyle.IOS -> copy(
+            ccStyle = style,
+            ccColors = CcColorMode.IOS,
+            ccGlow = false,
+            ccLabels = false,
+            ccShowClock = false,
+            ccShape = CcToggleShape.Circle,
+            ccGlassTint = CcGlassTint.Clear,
+            ccCorner = 30,
+            ccToggleSize = 56,
+        )
+        CcStyle.ColorOS -> copy(
+            ccStyle = style,
+            ccColors = CcColorMode.Accent,
+            ccGlow = true,
+            ccLabels = true,
+            ccShowClock = true,
+            ccCorner = 26,
+            ccToggleSize = 52,
+        )
+    }
+
     companion object {
         const val MAX_DOCK = 6
 
         /** Current default look; installs with a lower [designVersion] get it once. */
-        const val DESIGN_VERSION = 3
+        const val DESIGN_VERSION = 4
     }
 }
 
@@ -331,6 +372,13 @@ class SettingsRepository(context: Context) {
             ccShowShortcuts = prefs.getBoolean("ccShowShortcuts", d.ccShowShortcuts),
             ccDim = prefs.getFloat("ccDim", d.ccDim),
             ccNotifications = prefs.getBoolean("ccNotifications", d.ccNotifications),
+            ccGlassTint = enumOf("ccGlassTint", d.ccGlassTint),
+            ccGlassOpacity = prefs.getFloat("ccGlassOpacity", d.ccGlassOpacity),
+            ccSpecular = prefs.getFloat("ccSpecular", d.ccSpecular),
+            ccRefraction = prefs.getFloat("ccRefraction", d.ccRefraction),
+            ccBlur = prefs.getFloat("ccBlur", d.ccBlur),
+            ccCorner = prefs.getInt("ccCorner", d.ccCorner),
+            ccToggleSize = prefs.getInt("ccToggleSize", d.ccToggleSize),
             glimmerEnabled = prefs.getBoolean(KEY_GLIMMER, d.glimmerEnabled),
             glimmerStyle = enumOf("glimmerStyle", d.glimmerStyle),
             glimmerIdlePill = prefs.getBoolean("glimmerIdlePill", d.glimmerIdlePill),
@@ -398,6 +446,13 @@ class SettingsRepository(context: Context) {
             .putBoolean("ccShowShortcuts", s.ccShowShortcuts)
             .putFloat("ccDim", s.ccDim)
             .putBoolean("ccNotifications", s.ccNotifications)
+            .putString("ccGlassTint", s.ccGlassTint.name)
+            .putFloat("ccGlassOpacity", s.ccGlassOpacity)
+            .putFloat("ccSpecular", s.ccSpecular)
+            .putFloat("ccRefraction", s.ccRefraction)
+            .putFloat("ccBlur", s.ccBlur)
+            .putInt("ccCorner", s.ccCorner)
+            .putInt("ccToggleSize", s.ccToggleSize)
             .putBoolean(KEY_GLIMMER, s.glimmerEnabled)
             .putString("glimmerStyle", s.glimmerStyle.name)
             .putBoolean("glimmerIdlePill", s.glimmerIdlePill)

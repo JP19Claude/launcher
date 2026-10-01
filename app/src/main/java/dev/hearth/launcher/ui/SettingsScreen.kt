@@ -60,6 +60,7 @@ import dev.hearth.launcher.LauncherViewModel
 import dev.hearth.launcher.data.AccentColor
 import dev.hearth.launcher.data.BadgeStyle
 import dev.hearth.launcher.data.CcColorMode
+import dev.hearth.launcher.data.CcGlassTint
 import dev.hearth.launcher.data.CcSliderStyle
 import dev.hearth.launcher.data.CcStyle
 import dev.hearth.launcher.data.CcToggleShape
@@ -494,15 +495,8 @@ fun SettingsScreen(
                         options = CcStyle.entries,
                         selected = s.ccStyle,
                         optionLabel = { it.label },
-                        onSelect = { style ->
-                            update {
-                                // The matching colors and glow come along; both can be changed below.
-                                when (style) {
-                                    CcStyle.IOS -> it.copy(ccStyle = style, ccColors = CcColorMode.IOS, ccGlow = false)
-                                    CcStyle.ColorOS -> it.copy(ccStyle = style, ccColors = CcColorMode.Accent, ccGlow = true)
-                                }
-                            }
-                        },
+                        // The matching colors and details come along; all can be changed below.
+                        onSelect = { style -> update { it.withCcStyle(style) } },
                     )
                     Note("iOS 27: klares Glas, iOS-Farben, Verbindungen neben der Medien-Karte, Mitteilungen gestapelt wie auf dem iPhone. ColorOS 17: große Kacheln, leuchtende Schalter.")
                     RowDivider()
@@ -552,10 +546,36 @@ fun SettingsScreen(
                     SwitchRow(label = "Schnellstart (Kamera, Wecker, Rechner, Claude)", checked = s.ccShowShortcuts) { v ->
                         update { it.copy(ccShowShortcuts = v) }
                     }
+                    IntSlider("Größe der Schalter", s.ccToggleSize.coerceIn(44, 66), 44..66, " dp") { v ->
+                        update { it.copy(ccToggleSize = v) }
+                    }
+                    IntSlider("Rundung der Flächen", s.ccCorner.coerceIn(12, 44), 12..44, " dp") { v ->
+                        update { it.copy(ccCorner = v) }
+                    }
+                    RowDivider()
+                    ChoiceRow(
+                        label = "Glas der Flächen",
+                        options = CcGlassTint.entries,
+                        selected = s.ccGlassTint,
+                        optionLabel = { it.label },
+                        onSelect = { tint -> update { it.copy(ccGlassTint = tint) } },
+                    )
+                    PercentSlider("Deckkraft des Glases", s.ccGlassOpacity, 0f..1f) { v ->
+                        update { it.copy(ccGlassOpacity = v) }
+                    }
+                    PercentSlider("Glanz an den Kanten", s.ccSpecular / 2f, 0f..1f) { v ->
+                        update { it.copy(ccSpecular = v * 2f) }
+                    }
+                    PercentSlider("Lichtbrechung", s.ccRefraction / 2.5f, 0f..1f) { v ->
+                        update { it.copy(ccRefraction = v * 2.5f) }
+                    }
+                    PercentSlider("Hintergrund weichzeichnen", s.ccBlur, 0f..1f) { v ->
+                        update { it.copy(ccBlur = v) }
+                    }
                     PercentSlider("Hintergrund abdunkeln", s.ccDim, 0f..1f) { v ->
                         update { it.copy(ccDim = v) }
                     }
-                    Note("Änderungen gelten beim nächsten Öffnen des Kontrollzentrums, in Hearth und über anderen Apps.")
+                    Note("Änderungen gelten beim nächsten Öffnen des Kontrollzentrums, in Hearth und über anderen Apps. Das Weichzeichnen über anderen Apps braucht Android 12+ und ein Handy, das es unterstützt; sonst dunkelt Hearth stärker ab.")
                 }
             }
 

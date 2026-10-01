@@ -14,7 +14,6 @@ import dev.hearth.launcher.data.AppUsage
 import dev.hearth.launcher.data.CellPos
 import dev.hearth.launcher.data.HomeFolderData
 import dev.hearth.launcher.data.HomeLayoutRepository
-import dev.hearth.launcher.data.CcColorMode
 import dev.hearth.launcher.data.CcStyle
 import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.IconConfig
@@ -170,12 +169,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     init {
         // New default looks, each applied once to existing installs:
-        // 2 = ColorOS × Claude, 3 = control center and notifications in iOS 27 glass.
+        // 2 = ColorOS × Claude.
         if (settingsRepo.settings.value.designVersion < LauncherSettings.DESIGN_VERSION) {
             settingsRepo.update {
                 var s = it
                 if (s.designVersion < 2) s = s.withPreset(DesignPreset.ColorOSClaude)
-                if (s.designVersion < 3) s = s.copy(ccStyle = CcStyle.IOS, ccColors = CcColorMode.IOS, ccGlow = false)
+                // 3 and 4: control center and notifications as on iOS 27.
+                if (s.designVersion < 4) s = s.withCcStyle(CcStyle.IOS)
                 s.copy(designVersion = LauncherSettings.DESIGN_VERSION)
             }
         }

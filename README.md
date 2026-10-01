@@ -41,8 +41,14 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   „Alle löschen“. Mit „System-Kontrollzentrum ersetzen“ öffnet die linke Hälfte der
   Statusleiste direkt die Mitteilungen, die rechte die Schalter
 - Stil von Kontrollzentrum und Mitteilungen: iOS 27 (Standard: klares Glas, iOS-Farben –
-  blau für WLAN/Bluetooth, grün für Mobilfunk, orange für Flugmodus –, Verbindungen neben
-  der Medien-Karte, lose Glas-Knöpfe) oder ColorOS 17
+  blau für WLAN/Bluetooth, grün für Mobilfunk, orange für Flugmodus –, Verbindungs-Block
+  neben der Medien-Karte, „Nicht stören“ und „Smart View“ als breite Knöpfe neben den
+  hohen Reglern, darunter runde Glas-Knöpfe ohne Beschriftung) oder ColorOS 17
+- Glas und Design des Kontrollzentrums einstellbar: Glas (klar, milchig, dunkel,
+  Akzentfarbe, wie der Launcher), Deckkraft, Glanz an den Kanten, Lichtbrechung,
+  Weichzeichnen und Abdunkeln des Hintergrunds, Größe der Schalter, Rundung der Flächen.
+  In Hearth liegt das weichgezeichnete Hintergrundbild unter dem Kontrollzentrum, über
+  anderen Apps die Unschärfe des Systems (ohne sie dunkelt Hearth stärker ab)
 - Kontrollzentrum anpassen (Einstellungen → „Kontrollzentrum: Aussehen“): Farbe der
   Schalter (iOS, Akzent, bunt wie ColorOS 16, weiß), Form (rund/abgerundet), hohe oder
   breite Regler, leuchtende Kontur, Beschriftungen, große Kacheln, Medien-Karte, Uhr,
