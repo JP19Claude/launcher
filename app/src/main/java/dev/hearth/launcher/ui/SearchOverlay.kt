@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -59,6 +60,7 @@ fun SearchOverlay(
     onLaunch: (AppInfo) -> Unit,
     onWebSearch: (String) -> Unit,
     onOpenSettings: () -> Unit,
+    onAskClaude: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -155,6 +157,9 @@ fun SearchOverlay(
             }
             if (trimmed.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
+                    ClaudeRow(query = trimmed, onClick = { onAskClaude(trimmed) })
+                }
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     WebSearchRow(query = trimmed, onClick = { onWebSearch(trimmed) })
                 }
             }
@@ -236,5 +241,37 @@ private fun WebSearchRow(query: String, onClick: () -> Unit) {
             overflow = TextOverflow.Ellipsis,
         )
     }
+    }
+}
+
+/** Hand the question over to Claude (app, or claude.ai if the app isn't installed). */
+@Composable
+private fun ClaudeRow(query: String, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    LiquidGlass(
+        cornerRadius = 20.dp,
+        interactive = true,
+        tint = Color(0xFFD97757).copy(alpha = 0.22f),
+        modifier = Modifier
+            .padding(start = 12.dp, end = 12.dp, top = 12.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick),
+    ) {
+        Row(
+            Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ClaudeSpark(Color(0xFFD97757), Modifier.size(24.dp))
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = "Claude fragen: „$query“",
+                color = colors.onSurface,
+                fontFamily = FontFamily.Serif,
+                fontSize = 16.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }

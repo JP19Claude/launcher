@@ -28,26 +28,41 @@ object HearthColors {
     val GlassEdge = Color.White.copy(alpha = 0.22f)
 }
 
+/** Claude's palette: ivory paper, slate ink and the warm terracotta accent. */
+object ClaudeColors {
+    val Terracotta = Color(0xFFD97757)
+    val TerracottaDeep = Color(0xFFC6613F)
+    val Ivory = Color(0xFFFAF9F5)
+    val Paper = Color(0xFFF0EEE6)
+    val Oat = Color(0xFFE8E6DC)
+    val Slate = Color(0xFF141413)
+    val SlateMuted = Color(0xFF73726C)
+    val Night = Color(0xFF1F1E1D)
+    val NightRaised = Color(0xFF262624)
+    val NightSunken = Color(0xFF30302E)
+    val Cloud = Color(0xFFA6A39A)
+}
+
 private val LightScheme = lightColorScheme(
-    primary = HearthColors.Ochre,
-    onPrimary = HearthColors.Walnut,
-    background = HearthColors.Limestone,
-    onBackground = HearthColors.Walnut,
-    surface = HearthColors.LimestoneRaised,
-    onSurface = HearthColors.Walnut,
-    surfaceVariant = HearthColors.LimestoneSunken,
-    onSurfaceVariant = HearthColors.Stone,
+    primary = ClaudeColors.TerracottaDeep,
+    onPrimary = Color.White,
+    background = ClaudeColors.Ivory,
+    onBackground = ClaudeColors.Slate,
+    surface = ClaudeColors.Paper,
+    onSurface = ClaudeColors.Slate,
+    surfaceVariant = ClaudeColors.Oat,
+    onSurfaceVariant = ClaudeColors.SlateMuted,
 )
 
 private val DarkScheme = darkColorScheme(
-    primary = HearthColors.OchreLight,
-    onPrimary = HearthColors.Charcoal,
-    background = HearthColors.Charcoal,
-    onBackground = HearthColors.Bone,
-    surface = HearthColors.CharcoalRaised,
-    onSurface = HearthColors.Bone,
-    surfaceVariant = HearthColors.CharcoalSunken,
-    onSurfaceVariant = HearthColors.Ash,
+    primary = ClaudeColors.Terracotta,
+    onPrimary = Color.White,
+    background = ClaudeColors.Night,
+    onBackground = ClaudeColors.Ivory,
+    surface = ClaudeColors.NightRaised,
+    onSurface = ClaudeColors.Ivory,
+    surfaceVariant = ClaudeColors.NightSunken,
+    onSurfaceVariant = ClaudeColors.Cloud,
 )
 
 @Composable

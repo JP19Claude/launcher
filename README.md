@@ -4,6 +4,17 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
 
 ## Funktionen
 
+- Look „ColorOS × Claude“ (Standard): ColorOS-Uhr, abgerundete Icons, Claude-Farben
+  (Terrakotta, Elfenbein, Schiefer), Serifen-Akzente, animierter Funke und
+  eine „Frag Claude“-Glaskarte; weitere Vorlagen: iOS Liquid Glass, Hearth Klassik
+- Eigenes Kontrollzentrum aus Liquid Glass (nach unten wischen; links: Mitteilungen):
+  - Helligkeit und Lautstärke als große Glas-Regler
+  - Taschenlampe, Nicht stören, Vibration, Drehen, Auto-Helligkeit, Standort
+  - WLAN, Mobile Daten, Bluetooth, Flugmodus (öffnen die System-Panels)
+  - Medien-Tasten, Kamera, Wecker, Rechner, Claude
+  - Helligkeit/Drehung brauchen „Systemeinstellungen ändern“, Nicht stören den
+    Zugriff auf „Bitte nicht stören“; das System-Kontrollzentrum bleibt unverändert
+- Suche: „Claude fragen“ übergibt die Frage an die Claude-App oder claude.ai
 - Liquid Glass im Stil von Apple, fast überall: Icons, Dock, Uhr, Seitenpunkte,
   Such-Pille, Suche, Kontextmenüs und Einstellungen
   - Linsenwölbung am Rand, leichte Vergrößerung in der Mitte, Farbsäume (Android 13+)

@@ -51,11 +51,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hearth.launcher.LauncherViewModel
 import dev.hearth.launcher.data.AccentColor
 import dev.hearth.launcher.data.ClockStyle
+import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.GlassTint
 import dev.hearth.launcher.data.IconShape
 import dev.hearth.launcher.data.IconStyle
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.SearchEngine
+import dev.hearth.launcher.data.SwipeDownAction
 import dev.hearth.launcher.data.ThemeMode
 import kotlin.math.roundToInt
 
@@ -140,6 +142,19 @@ fun SettingsScreen(
                             modifier = Modifier.align(Alignment.Center),
                         )
                     }
+                }
+            }
+
+            item {
+                Section("Design-Vorlage") {
+                    ChoiceRow(
+                        label = "Look",
+                        options = DesignPreset.entries,
+                        selected = null,
+                        optionLabel = { it.label },
+                        onSelect = { preset -> vm.applyPreset(preset) },
+                    )
+                    Note("Setzt Icons, Uhr, Farben und Glas auf einmal. Danach kannst du alles einzeln anpassen.")
                 }
             }
 
@@ -281,11 +296,41 @@ fun SettingsScreen(
                     SwitchRow(label = "Such-Pille anzeigen", checked = s.showSearchPill) { v ->
                         update { it.copy(showSearchPill = v) }
                     }
-                    SwitchRow(label = "Nach oben/unten wischen öffnet die Suche", checked = s.swipeOpensSearch) { v ->
-                        update { it.copy(swipeOpensSearch = v) }
+                    SwitchRow(label = "Claude-Karte anzeigen", checked = s.showClaudeCard) { v ->
+                        update { it.copy(showClaudeCard = v) }
                     }
                     RowDivider()
                     ActionRow(label = "Hintergrundbild ändern", onClick = vm::openWallpaperPicker)
+                }
+            }
+
+            item {
+                Section("Gesten & Kontrollzentrum") {
+                    ChoiceRow(
+                        label = "Nach unten wischen",
+                        options = SwipeDownAction.entries,
+                        selected = s.swipeDownAction,
+                        optionLabel = { it.label },
+                        onSelect = { action -> update { it.copy(swipeDownAction = action) } },
+                    )
+                    SwitchRow(label = "Nach oben wischen öffnet die Suche", checked = s.swipeOpensSearch) { v ->
+                        update { it.copy(swipeOpensSearch = v) }
+                    }
+                    RowDivider()
+                    ActionRow(
+                        label = "Helligkeit & Drehung erlauben",
+                        description = "„Systemeinstellungen ändern“ für das Kontrollzentrum",
+                        onClick = vm.controls::requestWriteSettings,
+                    )
+                    ActionRow(
+                        label = "„Nicht stören“ erlauben",
+                        description = "Zugriff auf „Bitte nicht stören“",
+                    ) {
+                        val intent = Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        runCatching { context.startActivity(intent) }
+                    }
+                    Note("Das echte Kontrollzentrum von Android lässt sich von einer App nicht ersetzen. Hearth hat ein eigenes, das du auf dem Homescreen per Wischen nach unten öffnest.")
                 }
             }
 
@@ -351,16 +396,23 @@ fun SettingsScreen(
             }
 
             item {
-                Text(
-                    text = "Hearth",
-                    color = TextSecondary,
-                    fontFamily = FontFamily.Serif,
-                    fontSize = 14.sp,
-                    modifier = Modifier
+                Row(
+                    Modifier
                         .fillMaxWidth()
                         .padding(vertical = 24.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                )
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ClaudeSpark(s.accent.color, Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Hearth · gebaut mit Claude",
+                        color = TextSecondary,
+                        fontFamily = FontFamily.Serif,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                        fontSize = 14.sp,
+                    )
+                }
             }
         }
     }

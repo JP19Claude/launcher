@@ -14,6 +14,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -66,6 +67,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -99,11 +101,11 @@ import dev.hearth.launcher.LauncherViewModel
 import dev.hearth.launcher.data.AppInfo
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.data.SwipeDownAction
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.math.abs
 
 @Composable
 fun LauncherScreen(vm: LauncherViewModel) {
@@ -114,6 +116,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
+    var controlOpen by rememberSaveable { mutableStateOf(false) }
     var menu by remember { mutableStateOf<GlassMenuRequest?>(null) }
 
     val context = LocalContext.current
@@ -137,10 +140,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
 
     val columns = settings.columns.coerceIn(3, 6)
     val rows = settings.rows.coerceIn(3, 9)
-    val firstPageRows = when (settings.clockStyle) {
-        ClockStyle.Hidden -> rows
-        ClockStyle.Glass, ClockStyle.Large -> (rows - 2).coerceAtLeast(1)
-    }
+    val clockRows = if (settings.clockStyle == ClockStyle.Hidden) 0 else 2
+    val claudeRows = if (settings.showClaudeCard) 1 else 0
+    val firstPageRows = (rows - clockRows - claudeRows).coerceAtLeast(1)
     val homeApps = remember(apps, dock) {
         val dockKeys = dock.map { it.key }.toSet()
         apps.filterNot { it.key in dockKeys }
@@ -162,6 +164,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
             title = "Hearth",
             items = listOf(
                 GlassMenuItem("Launcher-Einstellungen", Icons.Rounded.Settings) { settingsOpen = true },
+                GlassMenuItem("Kontrollzentrum", Icons.Rounded.Home) { controlOpen = true },
                 GlassMenuItem("Hintergrundbild ändern", Icons.Rounded.Edit) { vm.openWallpaperPicker() },
                 GlassMenuItem("Suche öffnen", Icons.Rounded.Search) { searchOpen = true },
             ),
@@ -174,6 +177,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
             menu = null
             searchOpen = false
             settingsOpen = false
+            controlOpen = false
             pagerState.animateScrollToPage(0)
         }
     }
@@ -182,6 +186,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     BackHandler {
         when {
             menu != null -> menu = null
+            controlOpen -> controlOpen = false
             settingsOpen -> settingsOpen = false
             else -> searchOpen = false
         }
@@ -189,7 +194,25 @@ fun LauncherScreen(vm: LauncherViewModel) {
 
     val light = rememberGlassLight(settings.glassMotion)
     val glassStyle = remember(settings) { GlassStyle.from(settings) }
-    val menuBlur by animateDpAsState(if (menu != null) 16.dp else 0.dp, tween(220), label = "menuBlur")
+    val menuBlur by animateDpAsState(
+        targetValue = when {
+            controlOpen -> 24.dp
+            menu != null -> 16.dp
+            else -> 0.dp
+        },
+        animationSpec = tween(260),
+        label = "menuBlur",
+    )
+    val onSwipeDown: (Boolean) -> Unit = { leftHalf ->
+        when (settings.swipeDownAction) {
+            SwipeDownAction.ControlCenter -> controlOpen = true
+            SwipeDownAction.Search -> searchOpen = true
+            SwipeDownAction.Notifications -> if (!vm.controls.expandNotifications()) controlOpen = true
+            SwipeDownAction.Split ->
+                if (!(leftHalf && vm.controls.expandNotifications())) controlOpen = true
+        }
+        Unit
+    }
 
     CompositionLocalProvider(
         LocalBackdrop provides backdrop,
@@ -223,9 +246,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                 1f to Color.Black.copy(alpha = 0.18f),
                             ),
                         )
-                        .then(
-                            if (settings.swipeOpensSearch) Modifier.openSearchOnVerticalSwipe { searchOpen = true }
-                            else Modifier,
+                        .homeSwipes(
+                            onSwipeUp = { if (settings.swipeOpensSearch) searchOpen = true },
+                            onSwipeDown = onSwipeDown,
                         ),
                 ) {
                     Column(Modifier.fillMaxSize().systemBarsPadding()) {
@@ -239,6 +262,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                 Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
                                     if (page == 0) {
                                         HomeHeader(settings, Modifier.padding(start = 4.dp, end = 4.dp, top = 20.dp, bottom = 12.dp))
+                                        if (settings.showClaudeCard) {
+                                            ClaudeCard(
+                                                onClick = { vm.askClaude() },
+                                                modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp),
+                                            )
+                                        }
                                         if (needsWallpaperAccess) {
                                             WallpaperAccessHint(
                                                 onClick = requestWallpaperAccess,
@@ -303,6 +332,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             searchOpen = false
                             settingsOpen = true
                         },
+                        onAskClaude = {
+                            vm.askClaude(it)
+                            searchOpen = false
+                        },
                         onDismiss = { searchOpen = false },
                     )
                 }
@@ -319,6 +352,21 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         onClose = { settingsOpen = false },
                     )
                 }
+            }
+
+            AnimatedVisibility(
+                visible = controlOpen,
+                enter = fadeIn(tween(200)) + slideInVertically(tween(320)) { -it / 6 },
+                exit = fadeOut(tween(180)) + slideOutVertically(tween(220)) { -it / 6 },
+            ) {
+                ControlCenter(
+                    controls = vm.controls,
+                    onClose = { controlOpen = false },
+                    onOpenLauncherSettings = {
+                        controlOpen = false
+                        settingsOpen = true
+                    },
+                )
             }
 
             GlassMenuOverlay(request = menu, onDismiss = { menu = null })
@@ -352,17 +400,33 @@ private fun paginate(apps: List<AppInfo>, columns: Int, rows: Int, firstPageRows
     return listOf(apps.take(firstPageSize)) + rest
 }
 
-/** Swipe up or down anywhere on the home screen opens search. */
-private fun Modifier.openSearchOnVerticalSwipe(onOpen: () -> Unit): Modifier =
-    pointerInput(Unit) {
+/**
+ * Vertical swipes on the home screen: up opens search, down opens the control center
+ * or notifications (ColorOS-style split: left half notifications, right half controls).
+ */
+@Composable
+private fun Modifier.homeSwipes(onSwipeUp: () -> Unit, onSwipeDown: (leftHalf: Boolean) -> Unit): Modifier {
+    val up by rememberUpdatedState(onSwipeUp)
+    val down by rememberUpdatedState(onSwipeDown)
+    return pointerInput(Unit) {
         val threshold = 64.dp.toPx()
         var total = 0f
+        var startX = 0f
         detectVerticalDragGestures(
-            onDragStart = { total = 0f },
-            onDragEnd = { if (abs(total) > threshold) onOpen() },
+            onDragStart = { start ->
+                total = 0f
+                startX = start.x
+            },
+            onDragEnd = {
+                when {
+                    total < -threshold -> up()
+                    total > threshold -> down(startX < size.width / 2f)
+                }
+            },
             onVerticalDrag = { _, dragAmount -> total += dragAmount },
         )
     }
+}
 
 /** Empty space behind the icons: a long press opens the home screen menu. */
 @Composable
@@ -436,6 +500,7 @@ private fun greetingFor(hour: Int) = when (hour) {
 private fun HomeHeader(settings: LauncherSettings, modifier: Modifier = Modifier) {
     when (settings.clockStyle) {
         ClockStyle.Hidden -> Spacer(modifier)
+        ClockStyle.ColorOS -> ColorOSClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Large -> LargeClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Glass -> GlassClockCard(settings, modifier)
     }
@@ -477,6 +542,115 @@ private fun LargeClock(settings: LauncherSettings, modifier: Modifier = Modifier
             fontSize = 16.sp,
             style = OnWallpaperText,
         )
+    }
+}
+
+/** ColorOS-style home clock: big light digits, date with battery, and a Claude-flavored greeting. */
+@Composable
+private fun ColorOSClock(settings: LauncherSettings, modifier: Modifier = Modifier) {
+    val now by rememberNow()
+    val battery by rememberBattery()
+    val locale = Locale.getDefault()
+    val time = remember(now) { now.format(DateTimeFormatter.ofPattern("HH:mm", locale)) }
+    val date = remember(now) {
+        now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale))
+            .replaceFirstChar { it.titlecase(locale) }
+    }
+    val accent = settings.accent.color
+
+    Column(modifier) {
+        Text(
+            text = time,
+            color = Color.White,
+            fontWeight = FontWeight.Light,
+            fontSize = 84.sp,
+            lineHeight = 86.sp,
+            letterSpacing = (-2).sp,
+            style = OnWallpaperText,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text = date, color = Color.White.copy(alpha = 0.9f), fontSize = 16.sp, style = OnWallpaperText)
+            val level = battery
+            if (settings.showBattery && level != null) {
+                Text(
+                    text = "  ·  " + (if (level.charging) "⚡" else "") + "${level.percent} %",
+                    color = Color.White.copy(alpha = 0.75f),
+                    fontSize = 16.sp,
+                    style = OnWallpaperText,
+                )
+            }
+        }
+        if (settings.showGreeting) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                ClaudeSpark(accent, Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = greetingFor(now.hour),
+                    color = accent,
+                    fontFamily = FontFamily.Serif,
+                    fontStyle = FontStyle.Italic,
+                    fontSize = 18.sp,
+                    style = OnWallpaperText,
+                )
+            }
+        }
+    }
+}
+
+/** Whimsical "thinking" words, in the spirit of Claude Code's spinner. */
+private val ClaudeMoods = listOf(
+    "Grübelt …", "Sinniert …", "Tüftelt …", "Clauding …", "Brütet Ideen aus …",
+    "Philosophiert …", "Kombiniert …", "Denkt mit …", "Schmiedet Pläne …", "Ist neugierig …",
+)
+
+/** Glass card in Claude's terracotta: tap to open Claude. */
+@Composable
+private fun ClaudeCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val accent = LocalSettings.current.accent.color
+    var mood by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(3200)
+            mood = (mood + 1) % ClaudeMoods.size
+        }
+    }
+    LiquidGlass(
+        cornerRadius = 26.dp,
+        refraction = 20.dp,
+        interactive = true,
+        tint = Color(0xFFD97757).copy(alpha = 0.20f),
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(26.dp))
+            .clickable(onClick = onClick),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ClaudeSpark(accent, Modifier.size(30.dp))
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "Frag Claude",
+                    color = Color.White,
+                    fontFamily = FontFamily.Serif,
+                    fontSize = 19.sp,
+                    style = OnWallpaperText,
+                )
+                Crossfade(targetState = ClaudeMoods[mood], animationSpec = tween(500), label = "claudeMood") { text ->
+                    Text(
+                        text = text,
+                        color = Color.White.copy(alpha = 0.75f),
+                        fontFamily = FontFamily.Serif,
+                        fontStyle = FontStyle.Italic,
+                        fontSize = 14.sp,
+                        style = OnWallpaperText,
+                    )
+                }
+            }
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = Color.White.copy(alpha = 0.8f))
+        }
     }
 }
 

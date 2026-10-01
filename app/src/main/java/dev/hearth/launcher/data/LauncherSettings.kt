@@ -22,6 +22,7 @@ enum class IconShape(val label: String) {
 }
 
 enum class ClockStyle(val label: String) {
+    ColorOS("ColorOS"),
     Glass("Glas-Karte"),
     Large("Groß"),
     Hidden("Aus"),
@@ -29,6 +30,7 @@ enum class ClockStyle(val label: String) {
 
 /** Base color the glass is tinted with. */
 enum class GlassTint(val label: String, val color: Color) {
+    Claude("Claude", Color(0xFFD97757).copy(alpha = 0.14f)),
     Clear("Klar", Color.White.copy(alpha = 0.04f)),
     Light("Hell", Color.White.copy(alpha = 0.20f)),
     Dark("Dunkel", Color.Black.copy(alpha = 0.26f)),
@@ -38,6 +40,7 @@ enum class GlassTint(val label: String, val color: Color) {
 
 /** Color for tinted icons and highlights. */
 enum class AccentColor(val label: String, val color: Color) {
+    Claude("Claude", Color(0xFFD97757)),
     White("Weiß", Color(0xFFF5F5F5)),
     Ochre("Ocker", Color(0xFFE0B158)),
     Blue("Blau", Color(0xFF8DB8FF)),
@@ -53,6 +56,21 @@ enum class SearchEngine(val label: String, val url: String?) {
     Ecosia("Ecosia", "https://www.ecosia.org/search?q="),
     Bing("Bing", "https://www.bing.com/search?q="),
     Startpage("Startpage", "https://www.startpage.com/do/search?q="),
+}
+
+/** What swiping down on the home screen does. */
+enum class SwipeDownAction(val label: String) {
+    Split("Links Mitteilungen, rechts Kontrollzentrum"),
+    ControlCenter("Kontrollzentrum"),
+    Notifications("Mitteilungen"),
+    Search("Suche"),
+}
+
+/** Ready-made looks that set many options at once. */
+enum class DesignPreset(val label: String) {
+    ColorOSClaude("ColorOS × Claude"),
+    IOSGlass("iOS Liquid Glass"),
+    Hearth("Hearth Klassik"),
 }
 
 enum class ThemeMode(val label: String) {
@@ -89,6 +107,8 @@ data class LauncherSettings(
     val dimWallpaper: Float = 0.2f,
     val showSearchPill: Boolean = true,
     val swipeOpensSearch: Boolean = true,
+    val swipeDownAction: SwipeDownAction = SwipeDownAction.Split,
+    val showClaudeCard: Boolean = true,
     // Dock
     val dockSize: Int = 4,
     val dockCustomized: Boolean = false,
@@ -98,9 +118,58 @@ data class LauncherSettings(
     val theme: ThemeMode = ThemeMode.System,
     val haptics: Boolean = true,
     val hiddenApps: Set<String> = emptySet(),
+    /** Bumped when a new default look should be applied once to existing installs. */
+    val designVersion: Int = 0,
 ) {
+    fun withPreset(preset: DesignPreset): LauncherSettings = when (preset) {
+        DesignPreset.ColorOSClaude -> copy(
+            iconStyle = IconStyle.Original,
+            iconShape = IconShape.Rounded,
+            iconSize = 56,
+            accent = AccentColor.Claude,
+            glassTint = GlassTint.Claude,
+            glassTintStrength = 0.9f,
+            glassRefraction = 1.3f,
+            glassBlur = 1f,
+            glassDispersion = 0.6f,
+            glassSpecular = 1f,
+            clockStyle = ClockStyle.ColorOS,
+            showGreeting = true,
+            showClaudeCard = true,
+            swipeDownAction = SwipeDownAction.Split,
+        )
+        DesignPreset.IOSGlass -> copy(
+            iconStyle = IconStyle.Glass,
+            iconShape = IconShape.Squircle,
+            iconSize = 58,
+            accent = AccentColor.White,
+            glassTint = GlassTint.Clear,
+            glassTintStrength = 1f,
+            glassRefraction = 1.4f,
+            glassBlur = 1f,
+            glassDispersion = 0.8f,
+            glassSpecular = 1.1f,
+            clockStyle = ClockStyle.Glass,
+            showClaudeCard = false,
+            swipeDownAction = SwipeDownAction.ControlCenter,
+        )
+        DesignPreset.Hearth -> copy(
+            iconStyle = IconStyle.Original,
+            iconShape = IconShape.Squircle,
+            iconSize = 58,
+            accent = AccentColor.Ochre,
+            glassTint = GlassTint.Warm,
+            glassTintStrength = 1f,
+            clockStyle = ClockStyle.Large,
+            showClaudeCard = false,
+        )
+    }
+
     companion object {
         const val MAX_DOCK = 6
+
+        /** Current default look; installs with a lower [designVersion] get it once. */
+        const val DESIGN_VERSION = 2
     }
 }
 
@@ -146,6 +215,8 @@ class SettingsRepository(context: Context) {
             dimWallpaper = prefs.getFloat("dimWallpaper", d.dimWallpaper),
             showSearchPill = prefs.getBoolean("showSearchPill", d.showSearchPill),
             swipeOpensSearch = prefs.getBoolean("swipeOpensSearch", d.swipeOpensSearch),
+            swipeDownAction = enumOf("swipeDownAction", d.swipeDownAction),
+            showClaudeCard = prefs.getBoolean("showClaudeCard", d.showClaudeCard),
             dockSize = prefs.getInt("dockSize", d.dockSize),
             dockCustomized = prefs.getBoolean("dockCustomized", d.dockCustomized),
             dockApps = prefs.getString("dockApps", null)
@@ -156,6 +227,7 @@ class SettingsRepository(context: Context) {
             theme = enumOf("theme", d.theme),
             haptics = prefs.getBoolean("haptics", d.haptics),
             hiddenApps = prefs.getStringSet("hiddenApps", null)?.toSet() ?: d.hiddenApps,
+            designVersion = prefs.getInt("designVersion", d.designVersion),
         )
     }
 
@@ -184,6 +256,8 @@ class SettingsRepository(context: Context) {
             .putFloat("dimWallpaper", s.dimWallpaper)
             .putBoolean("showSearchPill", s.showSearchPill)
             .putBoolean("swipeOpensSearch", s.swipeOpensSearch)
+            .putString("swipeDownAction", s.swipeDownAction.name)
+            .putBoolean("showClaudeCard", s.showClaudeCard)
             .putInt("dockSize", s.dockSize)
             .putBoolean("dockCustomized", s.dockCustomized)
             .putString("dockApps", s.dockApps.joinToString("\n"))
@@ -191,6 +265,7 @@ class SettingsRepository(context: Context) {
             .putString("theme", s.theme.name)
             .putBoolean("haptics", s.haptics)
             .putStringSet("hiddenApps", s.hiddenApps)
+            .putInt("designVersion", s.designVersion)
             .apply()
     }
 }

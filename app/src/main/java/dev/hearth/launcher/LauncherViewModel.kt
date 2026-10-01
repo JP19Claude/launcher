@@ -7,12 +7,14 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.hearth.launcher.data.AppInfo
 import dev.hearth.launcher.data.AppRepository
+import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.IconConfig
 import dev.hearth.launcher.data.IconPackInfo
 import dev.hearth.launcher.data.IconPackRepository
 import dev.hearth.launcher.data.IconStyle
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.SettingsRepository
+import dev.hearth.launcher.data.SystemControls
 import dev.hearth.launcher.data.WallpaperBackdrop
 import dev.hearth.launcher.data.WallpaperRepository
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +38,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val iconPackRepo = IconPackRepository(application)
     private val repo = AppRepository(application, iconPackRepo)
     private val wallpaper = WallpaperRepository(application)
+
+    /** Brightness, volume, flashlight & co. for the launcher's control center. */
+    val controls = SystemControls(application)
 
     val settings: StateFlow<LauncherSettings> = settingsRepo.settings
 
@@ -69,6 +74,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val homeEvents: SharedFlow<Unit> = _homeEvents.asSharedFlow()
 
     init {
+        // New default look (ColorOS × Claude), applied once to existing installs.
+        if (settingsRepo.settings.value.designVersion < LauncherSettings.DESIGN_VERSION) {
+            settingsRepo.update {
+                it.withPreset(DesignPreset.ColorOSClaude).copy(designVersion = LauncherSettings.DESIGN_VERSION)
+            }
+        }
+
         // Re-render icons whenever the icon pack or icon style changes.
         viewModelScope.launch {
             settings
@@ -178,6 +190,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun openAppInfo(app: AppInfo) = repo.openAppInfo(app)
     fun uninstall(app: AppInfo) = repo.uninstall(app)
     fun webSearch(query: String) = repo.webSearch(query, settings.value.searchEngine)
+    fun askClaude(question: String? = null) = controls.openClaude(question)
+
+    fun applyPreset(preset: DesignPreset) = settingsRepo.update { it.withPreset(preset) }
 
     fun openWallpaperPicker() {
         val pick = Intent(Intent.ACTION_SET_WALLPAPER)
@@ -193,5 +208,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     override fun onCleared() {
         repo.close()
         wallpaper.close()
+        controls.close()
     }
 }
