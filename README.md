@@ -36,9 +36,9 @@ Effekt je nach Android-Version:
 ### Variante A: GitHub Actions (ohne Android Studio)
 
 1. Neues GitHub-Repository anlegen und den Projektordner hochladen
-2. GitHub baut die APK automatisch (Tab "Actions")
-3. Im fertigen Lauf unter "Artifacts" `hearth-debug-apk` herunterladen
-4. ZIP entpacken und `app-debug.apk` auf dem Handy installieren
+2. GitHub baut die APK bei jedem Push automatisch (Tab "Actions")
+3. Jeder erfolgreiche Build erscheint als Release (`build-<Nummer>`) mit `Hearth.apk`
+4. Neueste APK direkt laden: `https://github.com/<Besitzer>/<Repo>/releases/latest/download/Hearth.apk`
 
 ### Variante B: Android Studio
 
