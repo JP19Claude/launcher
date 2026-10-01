@@ -852,6 +852,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
             flyApp?.let { app ->
                 GlimmerFlyIn(
                     app = app,
+                    island = remember(app) { ControlCenterService.instance?.glimmerIslandSize() },
                     onPulse = { ControlCenterService.instance?.pulseGlimmer() },
                     onDone = { flyApp = null },
                 )

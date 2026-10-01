@@ -352,6 +352,9 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         glimmer?.pulse()
     }
 
+    /** Size of Glimmer's island right now, or null without Glimmer. */
+    fun glimmerIslandSize(): androidx.compose.ui.unit.DpSize? = glimmer?.islandSize
+
     /** Pulls down the normal notification shade. */
     fun showNotifications(): Boolean {
         allowSystemShade()

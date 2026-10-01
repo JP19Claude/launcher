@@ -419,7 +419,12 @@ class GlimmerController(private val service: ControlCenterService) {
      * Keeps the window just as big as the island: growing happens at once (so the animation
      * isn't cut off), shrinking after the animation, so touches around it reach the app below.
      */
+    /** The island's current size (zero while hidden), for the app fly-in to aim at. */
+    var islandSize: DpSize = DpSize.Zero
+        private set
+
     private fun resizeTo(size: DpSize) {
+        islandSize = size
         val p = params ?: return
         val view = root ?: return
         val topInset = topInsetPx()

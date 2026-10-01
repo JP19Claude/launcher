@@ -84,8 +84,10 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   - Kopfhörer verbunden/getrennt mit Gerätename, „Nicht stören“ an/aus, Akku voll
   - Musik: Fortschrittsbalken zum Spulen (ziehen oder tippen); pausierte Musik bleibt
     10 Minuten in Glimmer (mit Play-Zeichen), damit sie sich dort wieder starten lässt
-  - Schließt du eine App, schrumpft sie zu einer Karte und fliegt in Glimmer, das kurz
-    aufhüpft (für Apps, die über Hearth geöffnet wurden; abschaltbar)
+  - Schließt du eine App, fließt sie wie bei HarmonyOS in Glimmer: sie schrumpft zu einer
+    Karte in ihren Farben, steigt zur Kamera, wird dabei flach wie eine Kapsel und dunkel,
+    verschmilzt über eine flüssige Brücke mit der Insel (Android 12+), die sich kurz breit
+    drückt und zurückfedert (für Apps, die über Hearth geöffnet wurden; abschaltbar)
 - Foto-Widget: eigene Bilder als Diashow mit langsamem Zoom auf Glas, für Homescreen
   und Widget-Seite
 - Apps frei anordnen: Icon lange drücken und ziehen (Menü verschwindet beim Ziehen),

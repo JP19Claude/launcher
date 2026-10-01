@@ -206,15 +206,26 @@ fun GlimmerIsland(
     // Something new arrives: a little hop and a shimmer in its color, like a drop landing.
     val animations = LocalSettings.current.animations
     val hop = remember { Animatable(1f) }
+    // An app flowing in: wider and flatter for a moment, then wobbling back like a drop.
+    val squash = remember { Animatable(0f) }
     val shimmer = remember { Animatable(0f) }
     val key = islandKey(content)
+    val lastPulse = remember { intArrayOf(pulse) }
     LaunchedEffect(key, pulse) {
         if (!animations || content is IslandContent.Hidden) return@LaunchedEffect
-        if (content is IslandContent.Idle && pulse == 0) return@LaunchedEffect
+        val pulsed = pulse != lastPulse[0]
+        lastPulse[0] = pulse
+        if (content is IslandContent.Idle && !pulsed) return@LaunchedEffect
         launch {
-            hop.snapTo(1f)
-            hop.animateTo(1.07f, tween(120))
-            hop.animateTo(1f, spring(dampingRatio = 0.38f, stiffness = 420f))
+            if (pulsed) {
+                squash.snapTo(0f)
+                squash.animateTo(1f, tween(110))
+                squash.animateTo(0f, spring(dampingRatio = 0.3f, stiffness = 380f))
+            } else {
+                hop.snapTo(1f)
+                hop.animateTo(1.07f, tween(120))
+                hop.animateTo(1f, spring(dampingRatio = 0.38f, stiffness = 420f))
+            }
         }
         if (glow) {
             shimmer.snapTo(0f)
@@ -243,8 +254,9 @@ fun GlimmerIsland(
                 .padding(top = topInset)
                 .graphicsLayer {
                     val s = if (expanded) 1f else hop.value
-                    scaleX = s
-                    scaleY = s
+                    val q = if (expanded) 0f else squash.value
+                    scaleX = s * (1f + 0.14f * q)
+                    scaleY = s * (1f - 0.12f * q)
                     transformOrigin = TransformOrigin(0.5f, 0f)
                 },
             verticalAlignment = Alignment.Top,
