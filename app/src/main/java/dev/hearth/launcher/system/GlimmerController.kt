@@ -71,6 +71,19 @@ class GlimmerController(private val service: ControlCenterService) {
     private val message = MutableStateFlow<LiveNotice?>(null)
     private val landscape = MutableStateFlow(false)
 
+    /**
+     * Paused music stays in Glimmer for a while (like on the iPhone), so it can be resumed
+     * from there; it used to vanish the moment it was paused.
+     */
+    private val keepMedia = MutableStateFlow(false)
+    private val dropMedia = Runnable { keepMedia.value = false }
+
+    /** A short hop and shimmer, e.g. when an app just flew in. */
+    private val pulse = MutableStateFlow(0)
+    fun pulse() {
+        pulse.value = pulse.value + 1
+    }
+
     /** The activity brought to the front by a swipe or a tap on the small bubble. */
     private val focusKey = MutableStateFlow<String?>(null)
     private var lastOrder: List<String> = emptyList()
@@ -200,6 +213,17 @@ class GlimmerController(private val service: ControlCenterService) {
             s.launch {
                 NotificationHub.incoming.collect { if (settings.glimmerMessages) flashMessage(it) }
             }
+            s.launch {
+                media.nowPlaying.collect { now ->
+                    handler.removeCallbacks(dropMedia)
+                    when {
+                        now == null -> keepMedia.value = false
+                        now.playing -> keepMedia.value = true
+                        keepMedia.value -> handler.postDelayed(dropMedia, KEEP_PAUSED_MS)
+                        else -> Unit
+                    }
+                }
+            }
         }
         addWindow()
     }
@@ -300,6 +324,8 @@ class GlimmerController(private val service: ControlCenterService) {
                 val currentMessage by message.collectAsStateWithLifecycle()
                 val isExpanded by expanded.collectAsStateWithLifecycle()
                 val focus by focusKey.collectAsStateWithLifecycle()
+                val keepPaused by keepMedia.collectAsStateWithLifecycle()
+                val pulseCount by pulse.collectAsStateWithLifecycle()
                 val sideways by landscape.collectAsStateWithLifecycle()
                 val onLockScreen by locked.collectAsStateWithLifecycle()
 
@@ -310,6 +336,8 @@ class GlimmerController(private val service: ControlCenterService) {
                     ongoing.firstOrNull { it.kind == NoticeKind.Call }?.let { add(IslandContent.Live(it)) }
                     playing?.takeIf { it.playing }?.let { add(IslandContent.Media(it)) }
                     ongoing.filter { it.kind != NoticeKind.Call }.forEach { add(IslandContent.Live(it)) }
+                    // Paused, but still there to resume.
+                    playing?.takeIf { !it.playing && keepPaused }?.let { add(IslandContent.Media(it)) }
                 }
                 // What was brought to the front stays there (alerts and messages still come first).
                 val focused = ordered.firstOrNull { islandKey(it) == focus }
@@ -338,6 +366,7 @@ class GlimmerController(private val service: ControlCenterService) {
                             topInset = (topInset / density).dp,
                             media = media,
                             tapOpens = settings.glimmerTapOpens,
+                            pulse = pulseCount,
                             glow = settings.glimmerGlow,
                             onToggle = { expanded.value = !expanded.value },
                             onExpand = { expanded.value = true },
@@ -464,6 +493,7 @@ class GlimmerController(private val service: ControlCenterService) {
         val ORANGE = Color(0xFFFF9F0A)
         val RED = Color(0xFFFF453A)
         val PURPLE = Color(0xFF8E7CFF)
+        const val KEEP_PAUSED_MS = 10 * 60 * 1000L
         val HeadphoneTypes = buildSet {
             add(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)
             add(AudioDeviceInfo.TYPE_WIRED_HEADSET)

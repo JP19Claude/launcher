@@ -162,6 +162,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     var controlOpen by rememberSaveable { mutableStateOf(false) }
     var controlPage by remember { mutableIntStateOf(0) }
+    // The app that was just closed, flying into Glimmer.
+    var flyApp by remember { mutableStateOf<AppInfo?>(null) }
     var menu by remember { mutableStateOf<GlassMenuRequest?>(null) }
     var widgetPickerOpen by remember { mutableStateOf(false) }
     var selecting by remember { mutableStateOf(false) }
@@ -380,6 +382,14 @@ fun LauncherScreen(vm: LauncherViewModel) {
             widgetPickerOpen = false
             endSelection()
             if (alreadyInFront && pagerState.currentPage != widgetPages) pagerState.animateScrollToPage(widgetPages)
+        }
+    }
+
+    val currentSettings by rememberUpdatedState(settings)
+    LaunchedEffect(Unit) {
+        vm.flyIns.collect { app ->
+            val s = currentSettings
+            if (s.glimmerFlyIn && s.glimmerEnabled && s.animations && ControlCenterService.isEnabled) flyApp = app
         }
     }
 
@@ -836,6 +846,14 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         }
                         open
                     },
+                )
+            }
+
+            flyApp?.let { app ->
+                GlimmerFlyIn(
+                    app = app,
+                    onPulse = { ControlCenterService.instance?.pulseGlimmer() },
+                    onDone = { flyApp = null },
                 )
             }
 

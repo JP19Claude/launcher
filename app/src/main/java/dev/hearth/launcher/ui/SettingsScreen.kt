@@ -434,6 +434,11 @@ fun SettingsScreen(
                     SwitchRow(label = "Leuchten bei Neuem", description = "Glimmer schimmert kurz in der Farbe der Aktivität", checked = s.glimmerGlow) { v ->
                         update { it.copy(glimmerGlow = v) }
                     }
+                    SwitchRow(
+                        label = "Apps fliegen in Glimmer",
+                        description = "Schließt du eine App, schrumpft sie und fliegt in die Insel, wie beim iPhone (für Apps, die du über Hearth öffnest)",
+                        checked = s.glimmerFlyIn,
+                    ) { v -> update { it.copy(glimmerFlyIn = v) } }
                     RowDivider()
                     ActionRow(
                         label = "Bedienungshilfe einschalten",

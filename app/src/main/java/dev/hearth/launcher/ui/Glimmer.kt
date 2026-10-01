@@ -173,6 +173,8 @@ fun GlimmerIsland(
     media: MediaRepository,
     /** Tap opens the app (iPhone), holding unfolds; otherwise the other way round. */
     tapOpens: Boolean = false,
+    /** Counts up for a hop and shimmer from outside (an app flying in). */
+    pulse: Int = 0,
     /** Shimmer in the activity's color when something new shows up. */
     glow: Boolean = true,
     onToggle: () -> Unit,
@@ -206,8 +208,9 @@ fun GlimmerIsland(
     val hop = remember { Animatable(1f) }
     val shimmer = remember { Animatable(0f) }
     val key = islandKey(content)
-    LaunchedEffect(key) {
-        if (!animations || content is IslandContent.Idle || content is IslandContent.Hidden) return@LaunchedEffect
+    LaunchedEffect(key, pulse) {
+        if (!animations || content is IslandContent.Hidden) return@LaunchedEffect
+        if (content is IslandContent.Idle && pulse == 0) return@LaunchedEffect
         launch {
             hop.snapTo(1f)
             hop.animateTo(1.07f, tween(120))
@@ -449,7 +452,12 @@ private fun CompactContent(content: IslandContent) {
         Spacer(Modifier.weight(1f))
         when (content) {
             is IslandContent.Media ->
-                Equalizer(content.playing.artColor ?: Color.White, content.playing.playing, Modifier.size(20.dp, 14.dp))
+                if (content.playing.playing) {
+                    Equalizer(content.playing.artColor ?: Color.White, true, Modifier.size(20.dp, 14.dp))
+                } else {
+                    // Paused: a play sign, the island waits to be tapped.
+                    GlyphIcon(Glyph.Play, Color.White.copy(alpha = 0.85f), Modifier.size(16.dp))
+                }
             is IslandContent.Live -> {
                 val notice = content.notice
                 when (notice.kind) {

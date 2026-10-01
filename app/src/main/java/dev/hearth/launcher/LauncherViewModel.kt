@@ -347,6 +347,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _homeEvents.tryEmit(alreadyInFront)
     }
 
+    /** The app opened last from Hearth; it flies into Glimmer when we're back home. */
+    private var pendingFlyIn: AppInfo? = null
+    private val _flyIns = MutableSharedFlow<AppInfo>(extraBufferCapacity = 1)
+    val flyIns: SharedFlow<AppInfo> = _flyIns.asSharedFlow()
+
+    /** Back on the home screen after the launcher was in the background. */
+    fun onReturnedHome() {
+        val app = pendingFlyIn ?: return
+        pendingFlyIn = null
+        _flyIns.tryEmit(app)
+    }
+
     private fun buildLibrary(all: List<AppInfo>, used: Map<String, AppUsage>): AppLibraryData {
         val now = System.currentTimeMillis()
         val suggestions = all
@@ -373,6 +385,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun launch(app: AppInfo, sourceBounds: Rect? = null, options: Bundle? = null) {
         usage.recordLaunch(app.key)
+        pendingFlyIn = app
         repo.launch(app, sourceBounds, options)
     }
     fun openAppInfo(app: AppInfo) = repo.openAppInfo(app)

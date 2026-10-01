@@ -9,6 +9,7 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import android.view.KeyEvent
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -193,10 +194,32 @@ class MediaRepository(private val context: Context) {
         scaled.asImageBitmap() to Color(pixel)
     }.getOrNull()
 
+    /**
+     * Pauses or resumes. Some players only take the media buttons (no "play" action), or drop
+     * the session's controls while paused; then the play/pause key is sent to the session.
+     */
     fun playPause() {
-        val c = controller ?: return
-        if (c.playbackState?.state == PlaybackState.STATE_PLAYING) c.transportControls.pause()
-        else c.transportControls.play()
+        val c = controller ?: run {
+            refreshSessions()
+            controller
+        } ?: return
+        val state = c.playbackState
+        val playing = state?.state == PlaybackState.STATE_PLAYING || state?.state == PlaybackState.STATE_BUFFERING
+        val actions = state?.actions ?: 0L
+        val canPlay = actions and (PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PLAY_PAUSE) != 0L
+        val canPause = actions and (PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_PLAY_PAUSE) != 0L
+        when {
+            playing && canPause -> c.transportControls.pause()
+            !playing && canPlay -> c.transportControls.play()
+            else -> mediaButton(c, if (playing) KeyEvent.KEYCODE_MEDIA_PAUSE else KeyEvent.KEYCODE_MEDIA_PLAY)
+        }
+    }
+
+    private fun mediaButton(c: MediaController, keyCode: Int) {
+        runCatching {
+            c.dispatchMediaButtonEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+            c.dispatchMediaButtonEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
+        }
     }
 
     fun next() {

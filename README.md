@@ -82,7 +82,10 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
     Antippen die App wie beim iPhone
   - Neues hüpft kurz auf und schimmert in seiner Farbe (Cover-Farbe, Grün für Anrufe…)
   - Kopfhörer verbunden/getrennt mit Gerätename, „Nicht stören“ an/aus, Akku voll
-  - Musik: Fortschrittsbalken zum Spulen (ziehen oder tippen)
+  - Musik: Fortschrittsbalken zum Spulen (ziehen oder tippen); pausierte Musik bleibt
+    10 Minuten in Glimmer (mit Play-Zeichen), damit sie sich dort wieder starten lässt
+  - Schließt du eine App, schrumpft sie zu einer Karte und fliegt in Glimmer, das kurz
+    aufhüpft (für Apps, die über Hearth geöffnet wurden; abschaltbar)
 - Foto-Widget: eigene Bilder als Diashow mit langsamem Zoom auf Glas, für Homescreen
   und Widget-Seite
 - Apps frei anordnen: Icon lange drücken und ziehen (Menü verschwindet beim Ziehen),
@@ -108,7 +111,9 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   - Echte Linse (Android 13+): der Rand zieht sichtbar herein, was hinter der Kante liegt,
     die Mitte vergrößert leicht, Farbsäume, Fresnel-Glanz, dünne Lichtkante zum Licht hin,
     weichere auf der Gegenseite, leichter Schatten in der Wölbung
-  - „Glas-Qualität“: Flüssig (auch Knöpfe, Schalter, Icons) oder Ausgewogen
+  - „Glas-Qualität“: Flüssig (auch Knöpfe und Schalter) oder Ausgewogen
+  - Während Glas sich bewegt (Blättern, Animationen), pausiert die Linse und kommt im
+    Stillstand zurück: kein Ruckeln beim Wischen
   - Ohne Hintergrundbild (über anderen Apps, Sperrbildschirm, Glimmer): gezeichnete dicke
     Kante mit Glanzpunkt und Schatten
   - Glanzlichter auf der Kante, die beim Kippen des Handys mitwandern

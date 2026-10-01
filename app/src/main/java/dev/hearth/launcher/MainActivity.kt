@@ -66,6 +66,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (wasInBackground) viewModel.onReturnedHome()
         wasInBackground = false
         viewModel.onResume()
     }

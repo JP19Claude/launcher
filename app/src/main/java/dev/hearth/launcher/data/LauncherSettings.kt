@@ -40,8 +40,8 @@ enum class GlassTint(val label: String, val color: Color) {
 
 /** Which glass gets the real lens (bending, color split); smaller glass gets the drawn edge. */
 enum class GlassQuality(val label: String, val lensMinDp: Float) {
-    High("Flüssig (alles)", 40f),
-    Balanced("Ausgewogen (große Flächen)", 90f),
+    High("Flüssig (auch Knöpfe)", 52f),
+    Balanced("Ausgewogen (große Flächen)", 96f),
 }
 
 /** Color for tinted icons and highlights. */
@@ -242,6 +242,8 @@ data class LauncherSettings(
     val glimmerAlerts: Boolean = true,
     /** A soft glow in the activity's color when something new appears. */
     val glimmerGlow: Boolean = true,
+    /** Closing an app: it shrinks and flies into Glimmer, like on the iPhone. */
+    val glimmerFlyIn: Boolean = true,
     val badgeStyle: BadgeStyle = BadgeStyle.Number,
     /** Double tap on empty home screen space locks the phone (needs the accessibility service). */
     val doubleTapLock: Boolean = true,
@@ -414,6 +416,7 @@ class SettingsRepository(context: Context) {
             glimmerTapOpens = prefs.getBoolean("glimmerTapOpens", d.glimmerTapOpens),
             glimmerAlerts = prefs.getBoolean("glimmerAlerts", d.glimmerAlerts),
             glimmerGlow = prefs.getBoolean("glimmerGlow", d.glimmerGlow),
+            glimmerFlyIn = prefs.getBoolean("glimmerFlyIn", d.glimmerFlyIn),
             badgeStyle = enumOf("badgeStyle", d.badgeStyle),
             doubleTapLock = prefs.getBoolean("doubleTapLock", d.doubleTapLock),
             dockSize = prefs.getInt("dockSize", d.dockSize),
@@ -494,6 +497,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("glimmerTapOpens", s.glimmerTapOpens)
             .putBoolean("glimmerAlerts", s.glimmerAlerts)
             .putBoolean("glimmerGlow", s.glimmerGlow)
+            .putBoolean("glimmerFlyIn", s.glimmerFlyIn)
             .putString("badgeStyle", s.badgeStyle.name)
             .putBoolean("doubleTapLock", s.doubleTapLock)
             .putInt("dockSize", s.dockSize)

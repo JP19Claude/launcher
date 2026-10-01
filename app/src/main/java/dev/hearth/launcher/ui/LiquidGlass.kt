@@ -72,6 +72,15 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 
 /** The wallpaper copy that glass surfaces look through. Null = frosted fallback. */
 val LocalBackdrop = compositionLocalOf<WallpaperBackdrop?> { null }
@@ -145,7 +154,7 @@ fun rememberGlassLight(enabled: Boolean): State<Offset> {
                 y += (ty - y) * 0.2f
                 val old = light.value
                 // Only redraw for a visible change, not for sensor jitter.
-                if (abs(old.x - x) + abs(old.y - y) > 0.04f) light.value = Offset(x, y)
+                if (abs(old.x - x) + abs(old.y - y) > 0.07f) light.value = Offset(x, y)
             }
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
@@ -305,6 +314,14 @@ private val SharedGlassEffect: GlassEffect? by lazy {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) runCatching { GlassEffect() }.getOrNull() else null
 }
 
+/** A rounded rectangle [inset] in from every side (the lens canvas is bigger than the glass). */
+private class InsetRoundedShape(private val inset: Float, private val radius: Float) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline =
+        Outline.Rounded(
+            RoundRect(inset, inset, size.width - inset, size.height - inset, CornerRadius(radius)),
+        )
+}
+
 /** Which pre-blurred copy of the wallpaper glass looks through. */
 private enum class Frost { None, Soft, Strong }
 
@@ -385,6 +402,17 @@ fun LiquidGlass(
     // One compiled shader for every glass surface, and none at all without the wallpaper.
     val glassEffect = if (backdrop != null) SharedGlassEffect else null
     var origin by remember { mutableStateOf(Offset.Zero) }
+    // While the glass moves (paging, scrolling, opening animations) the lens pauses and the
+    // glass is drawn the cheap way; it comes back a moment after everything stands still.
+    // Running the lens on every moving frame of every surface was what made swiping stutter.
+    var moving by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { origin }.collectLatest {
+            moving = true
+            delay(170)
+            moving = false
+        }
+    }
 
     val isInteractive = interactive && style.interactive
     var pressed by remember { mutableStateOf(false) }
@@ -470,7 +498,7 @@ fun LiquidGlass(
                     .graphicsLayer {
                         val padded = lensPad * 2f
                         val lens = lensAvailable && min(size.width - padded, size.height - padded) >= shaderMinPx
-                        if (lens && glassEffect != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        if (lens && !moving && glassEffect != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             val innerMin = min(size.width, size.height) - padded
                             // The shader cuts the shape out itself, with soft edges.
                             clip = false
@@ -487,6 +515,12 @@ fun LiquidGlass(
                                 touch = touch + Offset(lensPad.toFloat(), lensPad.toFloat()),
                                 glow = glow,
                             )?.asComposeRenderEffect()
+                        } else if (lens) {
+                            // Bigger canvas than the glass: cut out just the glass.
+                            val innerMin = min(size.width, size.height) - padded
+                            clip = true
+                            shape = InsetRoundedShape(lensPad.toFloat(), min(radiusPx, innerMin / 2f))
+                            renderEffect = null
                         } else {
                             clip = true
                             shape = glassShape

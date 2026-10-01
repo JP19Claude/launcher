@@ -347,6 +347,11 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         allowShadeUntil = SystemClock.elapsedRealtime() + SYSTEM_SHADE_GRACE_MS
     }
 
+    /** Glimmer hops and shimmers (an app just flew into it). */
+    fun pulseGlimmer() {
+        glimmer?.pulse()
+    }
+
     /** Pulls down the normal notification shade. */
     fun showNotifications(): Boolean {
         allowSystemShade()
