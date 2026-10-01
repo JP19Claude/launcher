@@ -1,6 +1,7 @@
 package dev.hearth.launcher.system
 
 import android.annotation.SuppressLint
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -37,6 +38,7 @@ import dev.hearth.launcher.data.NotificationHub
 import dev.hearth.launcher.ui.GlassStyle
 import dev.hearth.launcher.ui.GlimmerIsland
 import dev.hearth.launcher.ui.Glyph
+import dev.hearth.launcher.ui.ISLAND_HEIGHT_DP
 import dev.hearth.launcher.ui.IslandContent
 import dev.hearth.launcher.ui.LocalGlassStyle
 import dev.hearth.launcher.ui.LocalSettings
@@ -65,6 +67,13 @@ class GlimmerController(private val service: ControlCenterService) {
     private val message = MutableStateFlow<LiveNotice?>(null)
     private val landscape = MutableStateFlow(false)
 
+    /** On the lock screen the phone shows its own media player and hints; Glimmer steps aside. */
+    private val locked = MutableStateFlow(false)
+    private fun updateLocked() {
+        locked.value = service.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
+        if (locked.value) expanded.value = false
+    }
+
     private var root: View? = null
     private var params: WindowManager.LayoutParams? = null
     private var scope: CoroutineScope? = null
@@ -77,6 +86,11 @@ class GlimmerController(private val service: ControlCenterService) {
     private val systemReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
+                Intent.ACTION_SCREEN_OFF, Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> {
+                    updateLocked()
+                    // Unlocking with the fingerprint can come a moment after the screen turns on.
+                    handler.postDelayed({ updateLocked() }, 600)
+                }
                 Intent.ACTION_POWER_CONNECTED -> {
                     val level = batteryLevel()
                     flash(IslandContent.Alert(Glyph.Spark, "Lädt", "$level %", GREEN, level / 100f))
@@ -128,7 +142,11 @@ class GlimmerController(private val service: ControlCenterService) {
             addAction(Intent.ACTION_POWER_CONNECTED)
             addAction(Intent.ACTION_BATTERY_LOW)
             addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_PRESENT)
         }
+        updateLocked()
         ContextCompat.registerReceiver(service, systemReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         receiverRegistered = true
         scope = MainScope().also { s ->
@@ -205,6 +223,7 @@ class GlimmerController(private val service: ControlCenterService) {
                 val currentMessage by message.collectAsStateWithLifecycle()
                 val isExpanded by expanded.collectAsStateWithLifecycle()
                 val sideways by landscape.collectAsStateWithLifecycle()
+                val onLockScreen by locked.collectAsStateWithLifecycle()
 
                 val ongoing = live.sortedBy { priority(it.kind) }
                 val activities = buildList<IslandContent> {
@@ -214,9 +233,12 @@ class GlimmerController(private val service: ControlCenterService) {
                     playing?.takeIf { it.playing }?.let { add(IslandContent.Media(it)) }
                     ongoing.filter { it.kind != NoticeKind.Call }.forEach { add(IslandContent.Live(it)) }
                 }
-                val main = activities.firstOrNull()
-                    ?: if (settings.glimmerIdlePill && !sideways) IslandContent.Idle else IslandContent.Hidden
-                val second = activities.drop(1).firstOrNull()
+                val main = when {
+                    onLockScreen -> IslandContent.Hidden
+                    else -> activities.firstOrNull()
+                        ?: if (settings.glimmerIdlePill && !sideways) IslandContent.Idle else IslandContent.Hidden
+                }
+                val second = if (onLockScreen) null else activities.drop(1).firstOrNull()
 
                 HearthTheme(dark = true) {
                     CompositionLocalProvider(
@@ -338,7 +360,7 @@ class GlimmerController(private val service: ControlCenterService) {
 
     private companion object {
         const val IDLE_WIDTH = 108f
-        const val IDLE_HEIGHT = 32f
+        const val IDLE_HEIGHT = ISLAND_HEIGHT_DP
         const val PAD = 8f
         val GREEN = Color(0xFF34C759)
         val ORANGE = Color(0xFFFF9F0A)

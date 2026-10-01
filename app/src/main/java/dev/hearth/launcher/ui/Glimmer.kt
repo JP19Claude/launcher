@@ -50,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -103,20 +104,24 @@ sealed interface IslandContent {
 private val Green = Color(0xFF34C759)
 private val Orange = Color(0xFFFF9F0A)
 
-/** Size of the pill for a content and state; the window around it follows this. */
+/** Height of the pill when not expanded: as tall as the status bar row, like the camera ring. */
+const val ISLAND_HEIGHT_DP = 30f
+
+/** Size of the secondary bubble next to the pill, plus the gap. */
+private val SecondaryExtra = 36.dp
+
+/**
+ * Size of the pill for a content and state; the window around it follows this.
+ * Compact stays narrow (about 45 % of the screen), so it fits between the clock and
+ * notification icons on the left and the status icons on the right.
+ */
 fun islandSize(content: IslandContent, expanded: Boolean, screenWidthDp: Float, hasSecondary: Boolean): DpSize {
     val full = min(screenWidthDp - 16f, 420f).dp
+    val compact = (screenWidthDp * 0.44f).coerceIn(150f, 190f).dp
     return when {
         content is IslandContent.Hidden -> DpSize(0.dp, 0.dp)
-        content is IslandContent.Idle -> DpSize(108.dp, 32.dp)
-        !expanded -> DpSize(
-            when (content) {
-                is IslandContent.Alert -> 250.dp
-                is IslandContent.Message -> 290.dp
-                else -> 232.dp
-            },
-            36.dp,
-        )
+        content is IslandContent.Idle -> DpSize((screenWidthDp * 0.27f).coerceIn(86f, 110f).dp, ISLAND_HEIGHT_DP.dp)
+        !expanded -> DpSize(compact, ISLAND_HEIGHT_DP.dp)
         else -> DpSize(
             full,
             when (content) {
@@ -126,7 +131,7 @@ fun islandSize(content: IslandContent, expanded: Boolean, screenWidthDp: Float, 
                 else -> 96.dp
             },
         )
-    }.let { if (hasSecondary && !expanded && content !is IslandContent.Idle) DpSize(it.width + 46.dp, it.height) else it }
+    }.let { if (hasSecondary && !expanded && content !is IslandContent.Idle) DpSize(it.width + SecondaryExtra, it.height) else it }
 }
 
 /** Sends a notification's intent; Android 14+ wants the sender to vouch for opening a screen. */
@@ -174,7 +179,7 @@ fun GlimmerIsland(
     }
 
     val morph = spring<Dp>(dampingRatio = 0.66f, stiffness = 380f)
-    val mainWidth = if (hasSecondary) target.width - 46.dp else target.width
+    val mainWidth = if (hasSecondary) target.width - SecondaryExtra else target.width
     val width by animateDpAsState(mainWidth, morph, label = "islandWidth")
     val height by animateDpAsState(target.height, morph, label = "islandHeight")
     val corner = if (expanded) 38.dp else height / 2
@@ -219,15 +224,15 @@ fun GlimmerIsland(
                 }
             }
             if (hasSecondary && secondary != null) {
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(6.dp))
                 IslandShape(
                     style = style,
-                    corner = 18.dp,
+                    corner = 15.dp,
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(ISLAND_HEIGHT_DP.dp)
                         .pointerInput(secondary) { detectTapGestures(onTap = { onOpen(secondary) }) },
                 ) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LeadingBadge(secondary, 22.dp) }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LeadingBadge(secondary, 18.dp) }
                 }
             }
         }
@@ -320,70 +325,70 @@ private fun AppBadge(notice: LiveNotice, size: Dp) {
     }
 }
 
+/**
+ * Compact, like on the iPhone: something small on the left, the camera in the middle,
+ * something small on the right. No text that would crowd the status bar.
+ */
 @Composable
 private fun CompactContent(content: IslandContent) {
     if (content is IslandContent.Idle || content is IslandContent.Hidden) return
     Row(
         Modifier
             .fillMaxSize()
-            .padding(horizontal = 9.dp),
+            .padding(horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LeadingBadge(content, 22.dp)
-        Spacer(Modifier.width(8.dp))
+        LeadingBadge(content, 20.dp)
+        Spacer(Modifier.weight(1f))
         when (content) {
-            is IslandContent.Media -> {
-                Text(
-                    content.playing.title,
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                Equalizer(content.playing.artColor ?: Color.White, content.playing.playing, Modifier.size(22.dp, 16.dp))
-            }
+            is IslandContent.Media ->
+                Equalizer(content.playing.artColor ?: Color.White, content.playing.playing, Modifier.size(20.dp, 14.dp))
             is IslandContent.Live -> {
-                val now = rememberNowMillis()
                 val notice = content.notice
-                Text(
-                    notice.title.ifBlank { notice.appLabel },
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
                 when (notice.kind) {
-                    NoticeKind.Call, NoticeKind.Timer -> Text(
-                        formatDuration(if (notice.countDown) notice.chronometerBase - now else now - notice.chronometerBase),
-                        color = noticeColor(notice.kind),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    NoticeKind.Progress -> ProgressRing(notice, Modifier.size(20.dp))
-                    else -> Unit
+                    NoticeKind.Call, NoticeKind.Timer -> {
+                        val now = rememberNowMillis()
+                        Text(
+                            formatDuration(if (notice.countDown) notice.chronometerBase - now else now - notice.chronometerBase),
+                            color = noticeColor(notice.kind),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                        )
+                    }
+                    NoticeKind.Progress -> ProgressRing(notice, Modifier.size(18.dp))
+                    else -> PulseDot(Color.White)
                 }
             }
-            is IslandContent.Message -> Text(
-                listOf(content.notice.title, content.notice.text).filter { it.isNotBlank() }.joinToString(": "),
-                color = Color.White,
-                fontSize = 13.sp,
+            is IslandContent.Message -> PulseDot(LocalSettings.current.accent.color)
+            is IslandContent.Alert -> Text(
+                content.value,
+                color = content.color,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
             )
-            is IslandContent.Alert -> {
-                Text(content.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                Text(content.value, color = content.color, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                content.level?.let { level ->
-                    Spacer(Modifier.width(6.dp))
-                    LevelBar(level, content.color, Modifier.size(24.dp, 11.dp))
-                }
-            }
             else -> Unit
         }
+        Spacer(Modifier.width(2.dp))
     }
+}
+
+/** A small dot that breathes: something new is waiting. */
+@Composable
+private fun PulseDot(color: Color) {
+    val transition = rememberInfiniteTransition(label = "pulseDot")
+    val scale by transition.animateFloat(0.6f, 1f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "dotScale")
+    Box(
+        Modifier
+            .size(10.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(CircleShape)
+            .background(color),
+    )
 }
 
 @Composable
