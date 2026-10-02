@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -104,14 +105,21 @@ fun CelebrationOverlay() {
                 .padding(top = 64.dp, start = 24.dp, end = 24.dp)
                 .clip(RoundedCornerShape(24.dp)),
         ) {
-            Text(
-                "🥚  $text",
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
-            )
+            androidx.compose.foundation.layout.Row(
+                Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Clawd dances along.
+                Clawd(Modifier.size(40.dp), mood = dev.hearth.launcher.data.ClawdMood.Dance, animate = true)
+                androidx.compose.foundation.layout.Spacer(Modifier.size(10.dp))
+                Text(
+                    text,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Start,
+                )
+            }
         }
     }
 }

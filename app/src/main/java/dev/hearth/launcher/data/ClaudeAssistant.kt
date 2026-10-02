@@ -154,6 +154,29 @@ object ClaudeAssistant {
     private val _items = MutableStateFlow<List<ChatItem>>(emptyList())
     val items: StateFlow<List<ChatItem>> = _items.asStateFlow()
 
+    private val _mood = MutableStateFlow(ClawdMood.Idle)
+
+    /** Clawd's mood for a moment (dancing, flipping, in love); back to idle by itself. */
+    val clawdMood: StateFlow<ClawdMood> = _mood.asStateFlow()
+    private var moodJob: Job? = null
+
+    fun react(mood: ClawdMood, millis: Long = 3500) {
+        _mood.value = mood
+        moodJob?.cancel()
+        moodJob = scope.launch {
+            delay(millis)
+            _mood.value = ClawdMood.Idle
+        }
+    }
+
+    /** Easter egg: Clawd tapped five times in the chat's header. */
+    fun tickled() {
+        if (!::app.isInitialized) return
+        add(ChatItem.Reply(id(), "Hihi! Das kitzelt! 🤸"))
+        react(ClawdMood.Flip, 2400)
+        EasterEggs.find(app, "tickle")
+    }
+
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
 
@@ -241,12 +264,14 @@ object ClaudeAssistant {
                 val key = settings.value.hasKey
                 // Without a key or in saving mode, everything Hearth understands itself is free.
                 val quick = LocalCommands.parse(q, tools, onlySafe = key && !settings.value.saver, canAskClaude = key)
-                // Easter egg: the meaning of life.
-                val meaning = ClaudeTools.fold(q).contains("sinn des lebens")
+                // Clawd's own small talk (and some easter eggs): answered here, free.
+                val talk = ClawdTalk.reply(q)
                 when {
-                    meaning -> {
-                        add(ChatItem.Reply(id(), "42. Die Frage dazu sucht Deep Thought noch."))
-                        EasterEggs.find(app, "42")
+                    talk != null -> {
+                        add(ChatItem.Reply(id(), talk.text))
+                        talk.mood?.let { react(it) }
+                        talk.egg?.let { EasterEggs.find(app, it) }
+                        if (spoken) speak(talk.text)
                     }
                     quick != null -> runLocal(quick, spoken)
                     key -> runClaude(q, spoken)
@@ -739,6 +764,7 @@ object ClaudeAssistant {
             - Wenn du eine App oder einen Bildschirm öffnest, mach das als letzten Schritt.
             - Für Fragen zum Handy (Akku, Uhrzeit, Wecker, was läuft) nutze device_status.
             - Wissensfragen beantwortest du direkt aus deinem Wissen, kurz und hilfreich.
+            - In Hearth erscheinst du als Clawd, ein kleines, freundliches Pixel-Wesen in Terrakotta. Sei warm und ein bisschen verspielt, aber bleib kurz und hilfreich.
 
             Jede Frage beginnt mit der aktuellen Zeit in eckigen Klammern; nutze sie für Wecker, Timer und Termine. Gerät: ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE}.
         """.trimIndent()

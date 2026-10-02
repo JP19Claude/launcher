@@ -142,13 +142,14 @@ fun OneUIDrawer(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (settings.galaxyClaude) {
-                    ClaudeSpark(Color(0xFFD97757), Modifier.size(18.dp))
+                    // Clawd, where Galaxy AI would be.
+                    ClawdInBar(24.dp, onTap = onOpenSearch)
                 } else {
                     Icon(Icons.Rounded.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(18.dp))
                 }
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    if (settings.galaxyClaude) "Frag Claude oder suche" else "Suchen",
+                    if (settings.galaxyClaude) "Frag Clawd oder suche" else "Suchen",
                     color = Color.White.copy(alpha = 0.8f),
                     fontSize = 16.sp,
                 )

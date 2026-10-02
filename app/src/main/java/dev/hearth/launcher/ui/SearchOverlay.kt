@@ -79,6 +79,11 @@ fun SearchOverlay(
         if (trimmed.equals("regenbogen", ignoreCase = true) || trimmed.equals("rainbow", ignoreCase = true)) {
             dev.hearth.launcher.data.EasterEggs.find(eggContext, "rainbow")
         }
+        // Looking for Clawd himself.
+        if (trimmed.equals("clawd", ignoreCase = true)) {
+            dev.hearth.launcher.data.ClaudeAssistant.react(dev.hearth.launcher.data.ClawdMood.Dance)
+            dev.hearth.launcher.data.EasterEggs.find(eggContext, "walk")
+        }
     }
     val results = remember(trimmed, apps) {
         if (trimmed.isEmpty()) {
@@ -117,7 +122,12 @@ fun SearchOverlay(
             SearchField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = if (claudeFirst) "Frag Claude oder suche Apps" else "Apps und Web durchsuchen",
+                placeholder = if (claudeFirst) "Frag Clawd oder suche Apps" else "Apps und Web durchsuchen",
+                trailing = if (claudeFirst) {
+                    { ClawdInBar(26.dp) { onAskClaude(trimmed) } }
+                } else {
+                    null
+                },
                 onSubmit = {
                     val first = results.firstOrNull()
                     when {
@@ -207,7 +217,7 @@ fun SearchOverlay(
                                         .padding(horizontal = 12.dp, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    ClaudeSpark(Color(0xFFD97757), Modifier.size(14.dp))
+                                    Clawd(Modifier.size(16.dp), animate = false)
                                     Spacer(Modifier.width(6.dp))
                                     Text(label, color = colors.onSurface, fontSize = 14.sp)
                                 }
@@ -280,6 +290,8 @@ private fun SearchField(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
     placeholder: String = "Apps und Web durchsuchen",
+    /** Clawd at the bar's end (Galaxy × Claude), where Galaxy AI would be. */
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     val colors = MaterialTheme.colorScheme
     BasicTextField(
@@ -313,6 +325,10 @@ private fun SearchField(
                         Text(placeholder, color = colors.onSurfaceVariant, fontSize = 17.sp)
                     }
                     innerTextField()
+                }
+                if (trailing != null) {
+                    Spacer(Modifier.width(8.dp))
+                    trailing()
                 }
             }
             }
@@ -368,10 +384,10 @@ private fun ClaudeRow(query: String, onClick: () -> Unit) {
             Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ClaudeSpark(Color(0xFFD97757), Modifier.size(24.dp))
+            Clawd(Modifier.size(30.dp))
             Spacer(Modifier.width(12.dp))
             Text(
-                text = "Claude fragen: „$query“",
+                text = "Clawd fragen: „$query“",
                 color = colors.onSurface,
                 fontFamily = FontFamily.Serif,
                 fontSize = 16.sp,

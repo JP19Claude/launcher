@@ -235,7 +235,7 @@ fun SettingsScreen(
 
             // One UI's start page: search, the Hearth card, and the categories on glass.
             if (oneUi && page == null) {
-                item { OneUISearchField(query) { query = it } }
+                item { OneUISearchField(query, onClawd = { vm.askClaude() }) { query = it } }
                 if (query.isBlank()) item { HearthCard(s) }
                 val found = SettingsCategories.filter { it.matches(query) }
                 if (found.isEmpty()) {
@@ -1437,7 +1437,7 @@ private val SettingsGroups: List<List<SettingsCategory>> = listOf(
 
 /** One UI's settings search, as a glass capsule. */
 @Composable
-private fun OneUISearchField(query: String, onChange: (String) -> Unit) {
+private fun OneUISearchField(query: String, onClawd: () -> Unit, onChange: (String) -> Unit) {
     LiquidGlass(
         cornerRadius = 26.dp,
         refraction = 14.dp,
@@ -1460,6 +1460,9 @@ private fun OneUISearchField(query: String, onChange: (String) -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+            // Clawd, as Galaxy AI sits in Samsung's settings search.
+            Spacer(Modifier.width(8.dp))
+            ClawdInBar(24.dp, onTap = onClawd)
         }
     }
 }

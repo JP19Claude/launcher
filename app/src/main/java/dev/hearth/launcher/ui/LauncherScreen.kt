@@ -1478,7 +1478,7 @@ private fun NowBriefCard(onAsk: (String?) -> Unit, modifier: Modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onAsk(null) },
             ) {
-                ClaudeSpark(ClaudeTerracotta, Modifier.size(22.dp))
+                Clawd(Modifier.size(28.dp))
                 Spacer(Modifier.width(9.dp))
                 Text("Now Brief", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, style = OnWallpaperText)
                 Text("  ·  Claude", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp, style = OnWallpaperText)
@@ -1554,11 +1554,11 @@ private fun ClaudeCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
             Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ClaudeSpark(accent, Modifier.size(30.dp))
+            Clawd(Modifier.size(36.dp))
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = "Frag Claude",
+                    text = "Frag Clawd",
                     color = Color.White,
                     fontFamily = FontFamily.Serif,
                     fontSize = 19.sp,
@@ -1741,7 +1741,7 @@ private fun SearchPill(onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (galaxy) {
-                ClaudeSpark(ClaudeTerracotta, Modifier.size(16.dp))
+                ClawdInBar(22.dp, onTap = onClick)
             } else {
                 Icon(
                     imageVector = Icons.Rounded.Search,
@@ -1751,7 +1751,7 @@ private fun SearchPill(onClick: () -> Unit) {
                 )
             }
             Spacer(Modifier.width(6.dp))
-            Text(if (galaxy) "Frag Claude oder suche" else "Suchen", color = Color.White, fontSize = 14.sp, style = OnWallpaperText)
+            Text(if (galaxy) "Frag Clawd oder suche" else "Suchen", color = Color.White, fontSize = 14.sp, style = OnWallpaperText)
         }
     }
 }

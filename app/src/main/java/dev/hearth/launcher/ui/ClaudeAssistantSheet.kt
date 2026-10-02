@@ -90,6 +90,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hearth.launcher.data.ChatItem
+import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.ClaudeSettings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -242,8 +243,10 @@ fun ClaudeAssistantSheet(
                         .fillMaxWidth()
                         .background(Brush.verticalGradient(listOf(Terracotta.copy(alpha = 0.20f), Color.Transparent))),
                 ) {
+                    val mood by ClaudeAssistant.clawdMood.collectAsStateWithLifecycle()
                     Header(
-                        title = if (settings.isClaude || !settings.hasKey) "Claude" else "Assistent",
+                        title = "Clawd",
+                        mood = if (busy) ClawdMood.Thinking else mood,
                         subtitle = if (settings.hasKey) settings.modelLabel else "Offline-Befehle",
                         canClear = items.isNotEmpty(),
                         onClear = ClaudeAssistant::clear,
@@ -309,6 +312,7 @@ fun ClaudeAssistantSheet(
 @Composable
 private fun Header(
     title: String,
+    mood: ClawdMood,
     subtitle: String,
     canClear: Boolean,
     onClear: () -> Unit,
@@ -321,8 +325,23 @@ private fun Header(
             .padding(start = 18.dp, end = 8.dp, top = 14.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ClaudeSpark(Terracotta, Modifier.size(26.dp))
-        Spacer(Modifier.width(10.dp))
+        // Clawd himself: tap him five times and he flips (easter egg).
+        val taps = remember { longArrayOf(0L, 0L) }
+        Clawd(
+            Modifier
+                .size(40.dp)
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                    val now = System.currentTimeMillis()
+                    taps[0] = if (now - taps[1] < 700) taps[0] + 1 else 1
+                    taps[1] = now
+                    if (taps[0] >= 5) {
+                        taps[0] = 0
+                        ClaudeAssistant.tickled()
+                    }
+                },
+            mood = mood,
+        )
+        Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
             Text(subtitle, color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -351,7 +370,7 @@ private fun HeaderButton(icon: ImageVector, description: String, onClick: () -> 
 private fun Welcome(suggestions: List<String>, offline: Boolean, onPick: (String) -> Unit, onAddKey: () -> Unit) {
     Column(Modifier.padding(top = 4.dp, bottom = 8.dp)) {
         Text(
-            "Was soll ich für dich erledigen?",
+            "Hey, ich bin Clawd! Was soll ich für dich erledigen?",
             color = Color.White,
             fontSize = 22.sp,
             fontWeight = FontWeight.Medium,
@@ -382,7 +401,7 @@ private fun Welcome(suggestions: List<String>, offline: Boolean, onPick: (String
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    ClaudeSpark(Terracotta, Modifier.size(13.dp))
+                    Clawd(Modifier.size(16.dp), animate = false)
                     Spacer(Modifier.width(6.dp))
                     Text(s, color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp)
                 }
@@ -424,7 +443,7 @@ private fun UserLine(text: String) {
 @Composable
 private fun ReplyLine(text: String) {
     Row(Modifier.fillMaxWidth().padding(end = 24.dp), verticalAlignment = Alignment.Top) {
-        ClaudeSpark(Terracotta, Modifier.padding(top = 3.dp).size(16.dp))
+        Clawd(Modifier.padding(top = 2.dp).size(20.dp), animate = false)
         Spacer(Modifier.width(9.dp))
         Text(text, color = Color.White.copy(alpha = 0.95f), fontSize = 15.sp, lineHeight = 21.sp)
     }
@@ -508,7 +527,7 @@ private fun Thinking(onStop: () -> Unit) {
     val t = rememberInfiniteTransition(label = "thinking")
     val phase by t.animateFloat(0f, 3f, infiniteRepeatable(tween(1100), RepeatMode.Restart), label = "dots")
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        ClaudeSpark(Terracotta, Modifier.size(16.dp))
+        Clawd(Modifier.size(22.dp), mood = ClawdMood.Thinking)
         Spacer(Modifier.width(9.dp))
         Canvas(Modifier.size(width = 34.dp, height = 10.dp)) {
             for (i in 0 until 3) {
@@ -521,7 +540,7 @@ private fun Thinking(onStop: () -> Unit) {
             }
         }
         Spacer(Modifier.width(6.dp))
-        Text("Claude erledigt das …", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text("Clawd erledigt das …", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp, modifier = Modifier.weight(1f))
         Text(
             "Stopp",
             color = Color.White.copy(alpha = 0.8f),
@@ -561,7 +580,7 @@ private fun InputRow(value: String, onValueChange: (String) -> Unit, onSend: () 
                         .padding(horizontal = 16.dp, vertical = 13.dp),
                 ) {
                     if (value.isEmpty()) {
-                        Text("Sag Claude, was es tun soll …", color = Color.White.copy(alpha = 0.45f), fontSize = 16.sp)
+                        Text("Sag Clawd, was er tun soll …", color = Color.White.copy(alpha = 0.45f), fontSize = 16.sp)
                     }
                     inner()
                 }

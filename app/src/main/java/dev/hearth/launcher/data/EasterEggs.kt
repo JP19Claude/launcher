@@ -9,18 +9,23 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Five easter eggs hidden in Hearth. Each one found is remembered; finding one throws a
- * little party (confetti and a glass message) on the home screen.
+ * Ten easter eggs hidden in Hearth, all with Clawd. Each one found is remembered; finding
+ * one throws a little party (confetti, Clawd dancing, a glass message).
  *
  *  1. Settings: tap "Hearth · gebaut mit Claude" at the bottom seven times
  *  2. Home: tap the clock five times quickly
- *  3. Claude: ask for the meaning of life
+ *  3. Clawd: ask for the meaning of life
  *  4. Search: look for "Regenbogen"
  *  5. Glass clock widget: tap it three times
+ *  6. Clawd: tap him in the chat's header five times (he flips)
+ *  7. Clawd: tell him you love him
+ *  8. Clawd: ask him to dance
+ *  9. Search: look for "Clawd"
+ * 10. Hold Clawd in a search bar (home or app drawer)
  */
 object EasterEggs {
 
-    const val TOTAL = 5
+    const val TOTAL = 10
 
     private const val PREFS = "hearth_eggs"
     private const val KEY = "found"

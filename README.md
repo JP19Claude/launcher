@@ -4,9 +4,20 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
 plus **Glimmer**, die Insel um die Frontkamera, und dem **Kontrollzentrum** als eigene Apps.
 
 
+## Clawd
+
+Clawd, Claudes kleines Pixel-Wesen in Terrakotta, wohnt in Hearth – überall dort, wo bei
+Samsung Galaxy AI sitzt: in der Such-Pille, der Suchleiste der App-Übersicht, am Ende der
+Suche und der Einstellungs-Suche, im Now Brief und als Gesicht des Assistenten. Er blinzelt,
+wippt, trippelt beim Nachdenken, tanzt, schlägt Salto und schickt Herzen.
+
+- Mit ihm sprechen: antippen öffnet den Chat; Begrüßung, „Wer bist du?“, „Wie geht's?“,
+  Witze, „Danke“ beantwortet er selbst (kostenlos, offline), alles andere die KI.
+- Er hat 10 Easter Eggs, verteilt in Hearth.
+
 ## Easter Eggs
 
-In Hearth sind 5 Easter Eggs versteckt. Jeder Fund feiert mit Konfetti und zählt mit; der
+In Hearth sind 10 Easter Eggs versteckt, alle mit Clawd. Jeder Fund feiert mit Konfetti und zählt mit; der
 Stand steht ganz unten in den Einstellungen. Wo sie sind? Selbst suchen. 🥚
 
 ## App-Sperre
