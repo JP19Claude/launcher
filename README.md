@@ -57,7 +57,8 @@ mit Liquid Glass, und Claude dort, wo bei Samsung Galaxy AI sitzt.
   „Übersetzen“ …), die Claude direkt damit öffnen
 - Such-Pille „Frag Claude oder suche“: in der Suche steht Claude ganz oben, „Los“ ohne passende
   App fragt Claude, vor dem Tippen gibt es Claude-Vorschläge
-- „Claude fragen“ im Menü jeder App (lange drücken): Tipps und versteckte Funktionen der App
+- „Claude fragen“ im Menü jeder App (lange drücken): öffnet die Claude-App mit der Frage nach
+  Tipps und versteckten Funktionen der App
 - One-UI-App-Übersicht statt der App-Mediathek: auf dem Startbildschirm nach oben wischen, alle
   Apps A–Z in Seiten mit Punkten über dem verschwommenen Hintergrund, oben die Suche (mit
   Claude), nach unten wischen schließt

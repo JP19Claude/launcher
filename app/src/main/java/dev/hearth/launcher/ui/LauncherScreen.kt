@@ -1082,10 +1082,11 @@ private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Un
     vm.shortcuts(app).forEach { shortcut ->
         add(GlassMenuItem(shortcut.label, Icons.Rounded.Star, image = shortcut.icon) { vm.startShortcut(shortcut) })
     }
-    // Galaxy × Claude: Claude knows every app, right from its menu.
+    // Galaxy × Claude: Claude knows every app, right from its menu. Opens the Claude app itself
+    // (or claude.ai), with the question already in it.
     if (vm.settings.value.galaxyClaude) {
         add(GlassMenuItem("Claude fragen", Icons.Rounded.Face) {
-            vm.askClaude("Wie nutze ich die App „${app.label}“ am besten? Gib mir ein paar Tipps und versteckte Funktionen.")
+            vm.controls.openClaudeApp("Wie nutze ich die App „${app.label}“ am besten? Gib mir ein paar Tipps und versteckte Funktionen.")
         })
     }
     add(GlassMenuItem("App-Info", Icons.Rounded.Info) { vm.openAppInfo(app) })
