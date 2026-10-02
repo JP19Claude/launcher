@@ -114,6 +114,10 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
@@ -411,6 +415,18 @@ fun GlimmerIsland(
     } else {
         null
     }
+    // Plugging in: a streak of green light runs once around the island, like current flowing in.
+    val chargeSweep = remember { Animatable(0f) }
+    val chargeKey = (content as? IslandContent.Alert)?.takeIf { isChargingAlert(it) }?.let { islandKey(it) }
+    LaunchedEffect(chargeKey) {
+        if (chargeKey == null || !animations || dimmed) {
+            chargeSweep.snapTo(0f)
+            return@LaunchedEffect
+        }
+        chargeSweep.snapTo(0.001f)
+        chargeSweep.animateTo(1f, tween(1200, easing = FastOutSlowInEasing))
+        chargeSweep.snapTo(0f)
+    }
     // Swiping over music: the content leans the way the track goes.
     val nudge = remember { Animatable(0f) }
     val nudgeScope = rememberCoroutineScope()
@@ -546,6 +562,31 @@ fun GlimmerIsland(
                             )
                         },
                     )
+                    .drawWithContent {
+                        drawContent()
+                        val p = chargeSweep.value
+                        if (p > 0f) {
+                            val cx = size.width / 2f
+                            val cy = size.height / 2f
+                            val turn = p * 360f - 90f
+                            val streak = object : ShaderBrush() {
+                                override fun createShader(size: Size) = android.graphics.SweepGradient(
+                                    cx,
+                                    cy,
+                                    intArrayOf(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT, Green.toArgb(), android.graphics.Color.WHITE),
+                                    floatArrayOf(0f, 0.72f, 0.95f, 1f),
+                                ).apply { setLocalMatrix(android.graphics.Matrix().apply { setRotate(turn, cx, cy) }) }
+                            }
+                            // Fades in at the start and out at the end of its round.
+                            val fade = (minOf(p, 1f - p) * 6f).coerceIn(0f, 1f)
+                            drawRoundRect(
+                                brush = streak,
+                                cornerRadius = CornerRadius(corner.toPx()),
+                                style = Stroke(2.dp.toPx()),
+                                alpha = fade,
+                            )
+                        }
+                    }
                     .pointerInput(content, expanded, tapOpens, onDoubleTap) {
                         detectTapGestures(
                             onPress = {
@@ -909,29 +950,9 @@ private fun LeadingBadgeIcon(content: IslandContent, size: Dp) {
             else -> AppBadge(content.notice, size)
         }
         is IslandContent.Message -> AppBadge(content.notice, size)
-        is IslandContent.Alert -> {
-            // Silent and vibrate: the bell wobbles, like the iPhone's ring switch.
-            val shake = remember(content) { Animatable(0f) }
-            LaunchedEffect(content) {
-                if (content.glyph == Glyph.Bell || content.glyph == Glyph.Vibrate) {
-                    shake.animateTo(
-                        0f,
-                        keyframes {
-                            durationMillis = 720
-                            18f at 70
-                            -16f at 170
-                            13f at 270
-                            -10f at 370
-                            6f at 470
-                            -3f at 570
-                        },
-                    )
-                }
-            }
-            GlyphIcon(content.glyph, content.color, Modifier.size(size).graphicsLayer { rotationZ = shake.value })
-        }
-        IslandContent.Torch -> GlyphIcon(Glyph.Torch, Yellow, Modifier.size(size))
-        is IslandContent.Charging -> GlyphIcon(Glyph.Spark, Green, Modifier.size(size))
+        is IslandContent.Alert -> AlertGlyph(content, size)
+        IslandContent.Torch -> TorchGlyph(size)
+        is IslandContent.Charging -> BoltGlyph(Green, size, charging = true)
         is IslandContent.Code -> GlyphIcon(Glyph.Lock, Green, Modifier.size(size))
         is IslandContent.Screenshot -> {
             val thumb = content.thumb
@@ -1093,7 +1114,11 @@ private fun CompactContent(content: IslandContent) {
             }
             is IslandContent.Message -> PulseDot(LocalSettings.current.accent.color)
             IslandContent.Torch -> Text("An", color = Yellow, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            is IslandContent.Charging -> RollingText("${content.level} %", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            is IslandContent.Charging -> Row(verticalAlignment = Alignment.CenterVertically) {
+                RollingText("${content.level} %", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(5.dp))
+                LevelBar(content.level / 100f, Green, Modifier.size(24.dp, 12.dp), charging = true)
+            }
             // The code itself; after the tap a green "Kopiert".
             is IslandContent.Code -> if (content.copied) {
                 Text("Kopiert", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
@@ -1116,7 +1141,7 @@ private fun CompactContent(content: IslandContent) {
                 // Charging and battery: a small battery filling up, like on the iPhone.
                 content.level?.let { level ->
                     Spacer(Modifier.width(5.dp))
-                    LevelBar(level, content.color, Modifier.size(24.dp, 12.dp))
+                    LevelBar(level, content.color, Modifier.size(24.dp, 12.dp), charging = isChargingAlert(content))
                 }
             }
             else -> Unit
@@ -1256,7 +1281,7 @@ private fun ExpandedContent(
                     Text(content.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     Text(content.value, color = content.color, fontSize = 15.sp)
                 }
-                content.level?.let { LevelBar(it, content.color, Modifier.size(52.dp, 24.dp)) }
+                content.level?.let { LevelBar(it, content.color, Modifier.size(52.dp, 24.dp), charging = isChargingAlert(content)) }
             }
             is IslandContent.Code -> Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 GlyphIcon(Glyph.Lock, Green, Modifier.size(36.dp))
@@ -1313,7 +1338,7 @@ private fun ExpandedContent(
                     Text("Lädt", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     RollingText("${content.level} %", color = Green, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 }
-                LevelBar(content.level / 100f, Green, Modifier.size(52.dp, 24.dp))
+                LevelBar(content.level / 100f, Green, Modifier.size(52.dp, 24.dp), charging = true)
             }
             IslandContent.Torch -> Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 GlyphIcon(Glyph.Torch, Yellow, Modifier.size(40.dp))
@@ -1870,6 +1895,166 @@ private fun FluidCloudCompact(p: NowPlaying) {
     }
 }
 
+/** Plugging in: the charging alert in green (not "battery low", which uses the same bolt). */
+private fun isChargingAlert(content: IslandContent.Alert): Boolean =
+    content.glyph == Glyph.Spark && content.color == Green
+
+/**
+ * Each little system moment gets its own motion: the bolt zaps in, the moon rises, the plane
+ * flies through, headphones pop with a ring, the bell rings, a full battery sparkles.
+ */
+@Composable
+private fun AlertGlyph(content: IslandContent.Alert, size: Dp) {
+    val still = LocalGlimmerStill.current || !LocalSettings.current.animations
+    if (content.glyph == Glyph.Spark) {
+        BoltGlyph(content.color, size, charging = isChargingAlert(content))
+        return
+    }
+    val rotate = remember(content) { Animatable(0f) }
+    val shiftX = remember(content) { Animatable(0f) }
+    val shiftY = remember(content) { Animatable(0f) }
+    val grow = remember(content) { Animatable(if (still) 1f else 0.6f) }
+    val ring = remember(content) { Animatable(0f) }
+    LaunchedEffect(content, still) {
+        if (still) {
+            grow.snapTo(1f)
+            return@LaunchedEffect
+        }
+        when (content.glyph) {
+            // Silent and vibrate: the bell wobbles, like the iPhone's ring switch.
+            Glyph.Bell, Glyph.Vibrate -> {
+                grow.snapTo(1f)
+                rotate.animateTo(0f, keyframes {
+                    durationMillis = 720
+                    18f at 70
+                    -16f at 170
+                    13f at 270
+                    -10f at 370
+                    6f at 470
+                    -3f at 570
+                })
+            }
+            // Do not disturb: the moon rises and settles with a little turn.
+            Glyph.Moon -> {
+                grow.snapTo(1f)
+                shiftY.snapTo(1f)
+                rotate.snapTo(-50f)
+                launch { shiftY.animateTo(0f, spring(dampingRatio = 0.55f, stiffness = 220f)) }
+                rotate.animateTo(0f, spring(dampingRatio = 0.5f, stiffness = 180f))
+            }
+            // Airplane mode: the plane flies in from the left and lands in place.
+            Glyph.Airplane -> {
+                grow.snapTo(1f)
+                shiftX.snapTo(-1.6f)
+                rotate.snapTo(-20f)
+                launch { shiftX.animateTo(0f, spring(dampingRatio = 0.65f, stiffness = 160f)) }
+                rotate.animateTo(0f, spring(dampingRatio = 0.45f, stiffness = 200f))
+            }
+            // Headphones: a pop, and a ring spreading out like they just found the phone.
+            Glyph.Headphones -> {
+                launch { grow.animateTo(1f, spring(dampingRatio = 0.4f, stiffness = 380f)) }
+                ring.snapTo(0f)
+                ring.animateTo(1f, tween(900, easing = FastOutSlowInEasing))
+            }
+            // Fully charged: a double sparkle.
+            Glyph.Battery -> {
+                grow.animateTo(1.18f, tween(140))
+                grow.animateTo(0.95f, tween(120))
+                grow.animateTo(1.12f, tween(120))
+                grow.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 300f))
+            }
+            else -> grow.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = 380f))
+        }
+    }
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        if (ring.value in 0.01f..0.99f) {
+            Canvas(Modifier.size(size)) {
+                val rr = this.size.minDimension / 2f * (0.7f + ring.value * 0.9f)
+                drawCircle(content.color.copy(alpha = (1f - ring.value) * 0.6f), rr, style = Stroke(1.5.dp.toPx()))
+            }
+        }
+        GlyphIcon(
+            content.glyph,
+            content.color,
+            Modifier
+                .size(size)
+                .graphicsLayer {
+                    rotationZ = rotate.value
+                    translationX = shiftX.value * size.toPx()
+                    translationY = shiftY.value * size.toPx()
+                    scaleX = grow.value
+                    scaleY = grow.value
+                    alpha = (1f - kotlin.math.abs(shiftX.value) / 1.6f).coerceIn(0.2f, 1f)
+                },
+        )
+    }
+}
+
+/** The charging bolt: zaps in big with a flash, then pulses softly while it charges. */
+@Composable
+private fun BoltGlyph(color: Color, size: Dp, charging: Boolean) {
+    val still = LocalGlimmerStill.current || !LocalSettings.current.animations
+    val zap = remember { Animatable(if (still) 1f else 0f) }
+    val flash = remember { Animatable(0f) }
+    LaunchedEffect(still) {
+        if (still) return@LaunchedEffect
+        launch {
+            flash.snapTo(1f)
+            flash.animateTo(0f, tween(600))
+        }
+        zap.animateTo(1.35f, tween(150))
+        zap.animateTo(1f, spring(dampingRatio = 0.35f, stiffness = 420f))
+    }
+    val pulse = if (charging && !still) {
+        rememberInfiniteTransition(label = "bolt").animateFloat(
+            0.75f, 1f, infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "boltPulse",
+        )
+    } else {
+        null
+    }
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(size)) {
+            // A flash of light behind the bolt as the power comes in.
+            val f = flash.value
+            if (f > 0.01f) drawCircle(color.copy(alpha = f * 0.45f), this.size.minDimension * (0.35f + 0.4f * (1f - f)))
+        }
+        GlyphIcon(
+            Glyph.Spark,
+            color,
+            Modifier
+                .size(size)
+                .graphicsLayer {
+                    scaleX = zap.value
+                    scaleY = zap.value
+                    alpha = pulse?.value ?: 1f
+                },
+        )
+    }
+}
+
+/** The flashlight: a soft beam of light breathing in front of it. */
+@Composable
+private fun TorchGlyph(size: Dp) {
+    val still = LocalGlimmerStill.current || !LocalSettings.current.animations
+    val beam = if (!still) {
+        rememberInfiniteTransition(label = "torch").animateFloat(
+            0.35f, 0.8f, infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "beam",
+        )
+    } else {
+        null
+    }
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(size)) {
+            val b = beam?.value ?: 0.5f
+            drawCircle(
+                Brush.radialGradient(listOf(Yellow.copy(alpha = b * 0.55f), Color.Transparent), center = center, radius = this.size.minDimension * 0.75f),
+                radius = this.size.minDimension * 0.75f,
+            )
+        }
+        GlyphIcon(Glyph.Torch, Yellow, Modifier.size(size))
+    }
+}
+
 /** Bars standing still at gentle heights (always-on display). */
 @Composable
 private fun StillBars(colors: List<Color>, count: Int, modifier: Modifier) {
@@ -1944,16 +2129,89 @@ private fun ProgressRing(notice: LiveNotice, modifier: Modifier) {
 }
 
 @Composable
-private fun LevelBar(level: Float, color: Color, modifier: Modifier) {
+private fun LevelBar(level: Float, color: Color, modifier: Modifier, charging: Boolean = false) {
+    val still = LocalGlimmerStill.current || !LocalSettings.current.animations
+    val target = level.coerceIn(0f, 1f)
+    // Fills up from empty when it appears, like the iPhone's battery when you plug in.
+    val fill = remember { Animatable(if (still) target else 0f) }
+    LaunchedEffect(target, still) {
+        if (still) fill.snapTo(target) else fill.animateTo(target, spring(dampingRatio = 0.75f, stiffness = 90f))
+    }
+    val low = !charging && target <= 0.2f
+    val moving = !still && (charging || low)
+    val transition = if (moving) rememberInfiniteTransition(label = "battery") else null
+    // The liquid's edge rocks, a gleam runs through it, and a low battery blinks.
+    val wave = transition?.animateFloat(0f, 1f, infiniteRepeatable(tween(1100, easing = LinearEasing)), label = "wave")
+    val gleam = transition?.animateFloat(-0.4f, 1.4f, infiniteRepeatable(tween(1700, easing = FastOutSlowInEasing)), label = "gleam")
+    val blink = transition?.animateFloat(0.45f, 1f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "blink")
     Canvas(modifier) {
-        val r = androidx.compose.ui.geometry.CornerRadius(size.height * 0.3f)
-        drawRoundRect(Color.White.copy(alpha = 0.35f), size = size, cornerRadius = r, style = Stroke(size.height * 0.1f))
-        val pad = size.height * 0.18f
+        val nub = size.width * 0.08f
+        val body = Size(size.width - nub, size.height)
+        val r = CornerRadius(size.height * 0.3f)
+        drawRoundRect(Color.White.copy(alpha = 0.35f), size = body, cornerRadius = r, style = Stroke(size.height * 0.1f))
+        // The little cap on the right.
         drawRoundRect(
-            color,
-            topLeft = Offset(pad, pad),
-            size = Size((size.width - 2 * pad) * level.coerceIn(0f, 1f), size.height - 2 * pad),
-            cornerRadius = r,
+            Color.White.copy(alpha = 0.35f),
+            topLeft = Offset(body.width + nub * 0.25f, size.height * 0.32f),
+            size = Size(nub * 0.75f, size.height * 0.36f),
+            cornerRadius = CornerRadius(nub),
         )
+        val pad = size.height * 0.18f
+        val inner = Size(body.width - 2 * pad, size.height - 2 * pad)
+        val w = inner.width * fill.value.coerceIn(0f, 1f)
+        if (w > 0.5f) {
+            val fillColor = if (low) color.copy(alpha = blink?.value ?: 1f) else color
+            val path = Path().apply {
+                val top = pad
+                val bottom = pad + inner.height
+                val left = pad
+                // The right edge is a gentle wave while charging.
+                val amp = if (wave != null && charging) inner.height * 0.12f else 0f
+                val phase = (wave?.value ?: 0f) * 2f * Math.PI.toFloat()
+                moveTo(left, top)
+                val steps = 8
+                for (i in 0..steps) {
+                    val y = top + (bottom - top) * i / steps
+                    val x = left + w + amp * sin(phase + i * 0.9f)
+                    lineTo(x.coerceAtLeast(left), y)
+                }
+                lineTo(left, bottom)
+                close()
+            }
+            clipPath(Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(pad, pad, pad + inner.width, pad + inner.height, r)) }) {
+                drawPath(path, fillColor)
+                // A soft gleam running through the charge.
+                val g = gleam?.value
+                if (g != null && charging) {
+                    val gx = pad + inner.width * g
+                    drawRect(
+                        Brush.horizontalGradient(
+                            listOf(Color.Transparent, Color.White.copy(alpha = 0.55f), Color.Transparent),
+                            startX = gx - inner.width * 0.25f,
+                            endX = gx + inner.width * 0.25f,
+                        ),
+                        topLeft = Offset(pad, pad),
+                        size = Size(w, inner.height),
+                    )
+                }
+            }
+        }
+        // A bolt over the battery while charging.
+        if (charging) {
+            val cx = body.width / 2f
+            val cy = size.height / 2f
+            val h = size.height * 0.62f
+            val bolt = Path().apply {
+                moveTo(cx + h * 0.12f, cy - h / 2f)
+                lineTo(cx - h * 0.22f, cy + h * 0.06f)
+                lineTo(cx + h * 0.02f, cy + h * 0.06f)
+                lineTo(cx - h * 0.12f, cy + h / 2f)
+                lineTo(cx + h * 0.22f, cy - h * 0.06f)
+                lineTo(cx - h * 0.02f, cy - h * 0.06f)
+                close()
+            }
+            drawPath(bolt, Color.Black.copy(alpha = 0.55f), style = Stroke(size.height * 0.08f, join = StrokeJoin.Round))
+            drawPath(bolt, Color.White)
+        }
     }
 }

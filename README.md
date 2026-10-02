@@ -158,7 +158,12 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     Abschnitten (Gestaltung, Größe & Position, Bedienung, Was Glimmer zeigt, Sperrbildschirm & AOD)
   - Im Vollbild (Videos, Spiele ohne Statusleiste) tritt Glimmer zurück, nur Anruf, Wecker und
     Entsperren kommen durch (als Test, standardmäßig aus, da nicht jedes Handy das zuverlässig meldet)
-  - Laden zeigt eine kleine Batterie, die sich füllt
+  - Laden: beim Einstecken springt der Blitz mit einem Lichtblitz herein und ein grüner Streifen
+    läuft einmal um die Insel; die Batterie füllt sich von leer bis zum Akkustand, ihre Kante wogt
+    wie Flüssigkeit, ein Glanz läuft hindurch, der Blitz darüber pulsiert; schwacher Akku blinkt rot
+  - Eigene Bewegung für jeden Hinweis: der Mond geht auf (Nicht stören), das Flugzeug fliegt ein
+    (Flugmodus), Kopfhörer springen mit einem Ring auf, voller Akku funkelt, die Glocke schwingt,
+    die Taschenlampe leuchtet atmend
   - Stoppuhr und Timer laufen in Glimmer weiter, auch bei der Samsung-Uhr und anderen Uhr-Apps
     (Zeit aus Chronometer oder Text, Stoppuhr mit Zehnteln, angehalten bleibt sie stehen)
   - Bildschirm- und Sprachaufnahmen mit rotem Punkt und laufender Zeit
