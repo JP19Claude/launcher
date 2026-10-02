@@ -46,6 +46,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -192,6 +195,35 @@ private val RainbowColors = listOf(
 /** Height of the pill when not expanded: as tall as the status bar row, like the camera ring. */
 const val ISLAND_HEIGHT_DP = 30f
 
+/**
+ * The front camera, seen from the island: its center sideways from the island's middle, its
+ * center down from the island's top, and its radius. Nothing Glimmer shows (numbers, symbols,
+ * text) is laid over it. The default is a typical punch hole in the middle of the pill.
+ */
+@Immutable
+data class CameraHole(
+    val x: Dp = 0.dp,
+    val y: Dp = (ISLAND_HEIGHT_DP / 2).dp,
+    /** Half its width (for what sits left and right of it). */
+    val radius: Dp = 7.dp,
+    /** Half its height (a wide double camera is flatter than it is wide). */
+    val halfHeight: Dp = radius,
+) {
+    val bottom: Dp get() = y + halfHeight
+}
+
+private val LocalCameraHole = compositionLocalOf { CameraHole() }
+
+/** Room kept free around the camera, so nothing even touches its edge. */
+private val CameraMargin = 5.dp
+
+/** Top padding of unfolded content when there's no camera to keep clear of. */
+private val ExpandedTop = 14.dp
+
+/** How much lower unfolded content starts, so it begins below the camera. */
+private fun cameraClearance(camera: CameraHole): Dp =
+    (camera.bottom + CameraMargin + 2.dp - ExpandedTop).coerceAtLeast(0.dp)
+
 private const val UNLOCK_SIZE_DP = 92f
 
 /** True on the always-on display: everything holds still (no frames while the phone dozes). */
@@ -216,8 +248,8 @@ fun islandSize(
     widthScale: Float = 1f,
     /** The iPhone's proportions: its pill is 3.4 times, a compact activity about 6.2 times as wide as tall. */
     dynamicIsland: Boolean = false,
-    /** Unfolded content starts below the camera, so the card grows a little taller for it. */
-    clearCamera: Boolean = false,
+    /** Unfolded content starts below the camera, so the card grows this much taller for it. */
+    cameraClearance: Dp = 0.dp,
 ): DpSize {
     val full = if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, 420f).dp
     val compact = if (dynamicIsland) {
@@ -236,7 +268,7 @@ fun islandSize(
         !expanded -> DpSize(compact, ISLAND_HEIGHT_DP.dp)
         else -> DpSize(
             full,
-            (if (clearCamera) 16.dp else 0.dp) + when (content) {
+            cameraClearance + when (content) {
                 is IslandContent.Media -> 178.dp
                 is IslandContent.Live -> if (content.notice.actions.isNotEmpty()) 158.dp else 116.dp
                 is IslandContent.Message -> if (content.notice.actions.isNotEmpty()) 160.dp else 124.dp
@@ -298,6 +330,8 @@ fun GlimmerIsland(
     dimmed: Boolean = false,
     /** Double tap, if something is set for it (otherwise taps aren't held back to wait for one). */
     onDoubleTap: (() -> Unit)? = null,
+    /** Where the front camera is, so content stays out of it. */
+    camera: CameraHole = CameraHole(),
 ) {
     val context = LocalContext.current
     val settings = LocalSettings.current
@@ -318,7 +352,7 @@ fun GlimmerIsland(
         hasSecondary,
         settings.glimmerWidth,
         settings.glimmerIsDynamicIsland,
-        clearCamera = settings.glimmerSmall,
+        cameraClearance = cameraClearance(camera),
     )
     LaunchedEffect(target) { onTargetSize(target) }
     val collapseAfter = settings.glimmerAutoCollapse
@@ -509,7 +543,9 @@ fun GlimmerIsland(
         }
     }
 
-    CompositionLocalProvider(LocalGlimmerStill provides dimmed) {
+    // With a second bubble beside it, the pill sits left of the middle: the camera is further right in it.
+    val cameraInPill = if (hasSecondary) camera.copy(x = camera.x + SecondaryExtra / 2) else camera
+    CompositionLocalProvider(LocalGlimmerStill provides dimmed, LocalCameraHole provides cameraInPill) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         // Gone once it has shrunk away (it shrinks into the camera instead of vanishing).
         if (drawn is IslandContent.Hidden || (hidden && width < 1.dp)) return@Box
@@ -713,7 +749,7 @@ fun GlimmerIsland(
                                 onOpen = { onOpen(c) },
                                 onAction = { sendIntent(context, it); onCollapse() },
                                 onShare = { onShare(c) },
-                                clearCamera = settings.glimmerSmall,
+                                topPadding = ExpandedTop + cameraClearance(camera),
                             )
                             // Several things running: little dots like Samsung's Now Bar; swipe for the next.
                             if (activityCount > 1) {
@@ -1033,8 +1069,15 @@ private fun CompactContent(content: IslandContent) {
         return
     }
     if (content is IslandContent.Unlock) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            UnlockGlyph(content, Modifier.size(50.dp))
+        // Face ID's square: the symbol sits below the camera, not on it.
+        val hole = LocalCameraHole.current
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(top = (hole.bottom + 2.dp).coerceIn(0.dp, 40.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            UnlockGlyph(content, Modifier.size(46.dp))
         }
         return
     }
@@ -1050,28 +1093,22 @@ private fun CompactContent(content: IslandContent) {
     // green wave on the right.
     if (content is IslandContent.Live && content.notice.kind == NoticeKind.Call && content.notice.hasTime) {
         val now = rememberLiveNow(content.notice)
-        Row(
-            Modifier
-                .fillMaxSize()
-                .padding(horizontal = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Rounded.Call, null, tint = Green, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(5.dp))
-            RollingText(liveTimeText(content.notice, now) ?: "", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.weight(1f))
-            HyperWave(listOf(Green, Color(0xFF7CF29A)), playing = true, modifier = Modifier.size(26.dp, 14.dp))
-        }
+        AroundCamera(
+            edge = 10.dp,
+            left = {
+                Icon(Icons.Rounded.Call, null, tint = Green, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(5.dp))
+                RollingText(liveTimeText(content.notice, now) ?: "", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            },
+            right = {
+                HyperWave(listOf(Green, Color(0xFF7CF29A)), playing = true, modifier = Modifier.size(26.dp, 14.dp))
+            },
+        )
         return
     }
-    Row(
-        Modifier
-            .fillMaxSize()
-            .padding(horizontal = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    AroundCamera(
+        left = { LeadingBadge(content, 20.dp) },
     ) {
-        LeadingBadge(content, 20.dp)
-        Spacer(Modifier.weight(1f))
         when (content) {
             is IslandContent.Media ->
                 if (content.playing.playing) {
@@ -1146,19 +1183,28 @@ private fun CompactContent(content: IslandContent) {
             IslandContent.Torch -> Text("An", color = Yellow, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             is IslandContent.Charging -> Row(verticalAlignment = Alignment.CenterVertically) {
                 RollingText("${content.level} %", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.width(5.dp))
-                LevelBar(content.level / 100f, Green, Modifier.size(24.dp, 12.dp), charging = true)
+                Spacer(Modifier.width(4.dp))
+                LevelBar(content.level / 100f, Green, Modifier.size(20.dp, 11.dp), charging = true)
             }
-            // The code itself; after the tap a green "Kopiert".
+            // The code itself (smaller when long, so it fits beside the camera); after the tap a green "Kopiert".
             is IslandContent.Code -> if (content.copied) {
                 Text("Kopiert", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             } else {
-                Text(content.code, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, style = TimeStyle, letterSpacing = 1.sp)
+                Text(
+                    content.code,
+                    color = Color.White,
+                    fontSize = if (content.code.length > 6) 11.sp else 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    style = TimeStyle,
+                    letterSpacing = if (content.code.length > 6) 0.sp else 1.sp,
+                    maxLines = 1,
+                )
             }
             is IslandContent.Screenshot -> GlyphIcon(Glyph.Screenshot, Color.White.copy(alpha = 0.85f), Modifier.size(16.dp))
             // Just landed: a soft light in the app's color.
             is IslandContent.Arrival -> PulseDot(content.color)
             is IslandContent.Alert -> Row(verticalAlignment = Alignment.CenterVertically) {
+                // The battery keeps its place; the text gives way (ellipsis) if room is short.
                 Text(
                     content.value,
                     color = content.color,
@@ -1166,17 +1212,60 @@ private fun CompactContent(content: IslandContent) {
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 96.dp),
+                    modifier = Modifier.weight(1f, fill = false).widthIn(max = 96.dp),
                 )
                 // Charging and battery: a small battery filling up, like on the iPhone.
                 content.level?.let { level ->
-                    Spacer(Modifier.width(5.dp))
-                    LevelBar(level, content.color, Modifier.size(24.dp, 12.dp), charging = isChargingAlert(content))
+                    Spacer(Modifier.width(4.dp))
+                    LevelBar(level, content.color, Modifier.size(20.dp, 11.dp), charging = isChargingAlert(content))
                 }
             }
             else -> Unit
         }
         Spacer(Modifier.width(2.dp))
+    }
+}
+
+/**
+ * Compact content split around the camera, like the iPhone's leading and trailing sides:
+ * the left part ends before the camera hole, the right part starts after it, and whatever
+ * doesn't fit is cut at the hole's edge instead of running under it.
+ */
+@Composable
+private fun AroundCamera(
+    edge: Dp = 6.dp,
+    left: @Composable RowScope.() -> Unit,
+    right: @Composable RowScope.() -> Unit,
+) {
+    val hole = LocalCameraHole.current
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val w = maxWidth
+        // Only where the camera actually reaches into the pill; else split in the middle.
+        val inside = hole.y - hole.halfHeight < maxHeight && hole.y + hole.halfHeight > 0.dp
+        val half = if (inside) hole.radius + CameraMargin else 0.dp
+        val holeStart = (w / 2 + hole.x - half).coerceIn(0.dp, w)
+        val holeEnd = (w / 2 + hole.x + half).coerceIn(holeStart, w)
+        Row(
+            Modifier
+                .align(Alignment.CenterStart)
+                .width(holeStart)
+                .fillMaxHeight()
+                .clipToBounds()
+                .padding(start = edge.coerceAtMost(holeStart)),
+            verticalAlignment = Alignment.CenterVertically,
+            content = left,
+        )
+        Row(
+            Modifier
+                .align(Alignment.CenterEnd)
+                .width(w - holeEnd)
+                .fillMaxHeight()
+                .clipToBounds()
+                .padding(end = edge.coerceAtMost(w - holeEnd)),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+            content = right,
+        )
     }
 }
 
@@ -1208,13 +1297,13 @@ private fun ExpandedContent(
     onOpen: () -> Unit,
     onAction: (PendingIntent) -> Unit,
     onShare: () -> Unit = {},
-    /** Start below the camera, so nothing sits behind it. */
-    clearCamera: Boolean = false,
+    /** Starts below the camera, so nothing sits behind it. */
+    topPadding: Dp = ExpandedTop,
 ) {
     Column(
         Modifier
             .fillMaxSize()
-            .padding(start = 18.dp, end = 18.dp, top = if (clearCamera) 30.dp else 14.dp, bottom = 14.dp),
+            .padding(start = 18.dp, end = 18.dp, top = topPadding, bottom = 14.dp),
     ) {
         when (content) {
             is IslandContent.Media -> if (LocalSettings.current.glimmerMusicStyle == GlimmerMusicStyle.Hyper) {
@@ -1469,30 +1558,29 @@ private fun HyperCompact(p: NowPlaying) {
                 )
             },
     ) {
-        Row(
-            Modifier
-                .fillMaxSize()
-                .padding(start = 5.dp, end = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val art = p.art
-            if (art != null) {
-                Image(art, null, contentScale = ContentScale.Crop, modifier = Modifier.size(21.dp).clip(RoundedCornerShape(7.dp)))
-            } else {
-                Box(
-                    Modifier
-                        .size(21.dp)
-                        .clip(RoundedCornerShape(7.dp))
-                        .background(Brush.linearGradient(colors)),
-                )
-            }
-            Spacer(Modifier.weight(1f))
-            if (p.playing) {
-                HyperWave(colors, playing = true, modifier = Modifier.size(30.dp, 15.dp))
-            } else {
-                GlyphIcon(Glyph.Play, colors.first(), Modifier.size(15.dp))
-            }
-        }
+        AroundCamera(
+            left = {
+                val art = p.art
+                if (art != null) {
+                    Image(art, null, contentScale = ContentScale.Crop, modifier = Modifier.size(21.dp).clip(RoundedCornerShape(7.dp)))
+                } else {
+                    Box(
+                        Modifier
+                            .size(21.dp)
+                            .clip(RoundedCornerShape(7.dp))
+                            .background(Brush.linearGradient(colors)),
+                    )
+                }
+            },
+            right = {
+                if (p.playing) {
+                    HyperWave(colors, playing = true, modifier = Modifier.size(30.dp, 15.dp))
+                } else {
+                    GlyphIcon(Glyph.Play, colors.first(), Modifier.size(15.dp))
+                }
+                Spacer(Modifier.width(4.dp))
+            },
+        )
     }
 }
 
@@ -1889,12 +1977,9 @@ private fun FluidCloudCompact(p: NowPlaying) {
             }
         }
     }
-    Row(
-        Modifier
-            .fillMaxSize()
-            .padding(horizontal = 5.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    AroundCamera(
+        edge = 5.dp,
+        left = {
         Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
                 val stroke = 2.dp.toPx()
@@ -1912,7 +1997,8 @@ private fun FluidCloudCompact(p: NowPlaying) {
                 if (art != null) Image(art, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             }
         }
-        Spacer(Modifier.weight(1f))
+        },
+        right = {
         if (p.durationMs > 0) {
             RollingText(
                 "-" + formatDuration(p.durationMs - position),
@@ -1924,7 +2010,8 @@ private fun FluidCloudCompact(p: NowPlaying) {
         } else {
             Equalizer(ringColor, p.playing, Modifier.size(20.dp, 14.dp))
         }
-    }
+        },
+    )
 }
 
 /** Plugging in: the charging alert in green (not "battery low", which uses the same bolt). */

@@ -53,6 +53,7 @@ import dev.hearth.launcher.data.MediaRepository
 import dev.hearth.launcher.data.NoticeKind
 import dev.hearth.launcher.data.NotificationHub
 import dev.hearth.launcher.ui.GlassStyle
+import dev.hearth.launcher.ui.CameraHole
 import dev.hearth.launcher.ui.GlimmerIsland
 import dev.hearth.launcher.ui.Glyph
 import dev.hearth.launcher.ui.ISLAND_HEIGHT_DP
@@ -86,6 +87,9 @@ class GlimmerController(private val service: GlimmerService) {
     private val landscape = MutableStateFlow(false)
     /** Where the camera sits and how wide the screen is; read again after rotating or waking. */
     private val insetTop = MutableStateFlow(0)
+
+    /** The camera hole in px: center from the window's middle and the screen's top, half width and half height (0: unknown). */
+    private val cameraHolePx = MutableStateFlow(listOf(0, 0, 0, 0))
     private val screenWidth = MutableStateFlow(360f)
 
     /**
@@ -654,6 +658,7 @@ class GlimmerController(private val service: GlimmerService) {
         val view = root ?: return
         val x = windowX()
         insetTop.value = topInsetPx()
+        cameraHolePx.value = cameraHole()
         p.x = x
         runCatching { windowManager.updateViewLayout(view, p) }
         resizeTo(lastTarget)
@@ -672,7 +677,7 @@ class GlimmerController(private val service: GlimmerService) {
             if (service.getSystemService(PowerManager::class.java)?.isInteractive == false) return
             val x = windowX()
             val top = topInsetPx()
-            if (params?.x != x || insetTop.value != top) placeWindow()
+            if (params?.x != x || insetTop.value != top || cameraHolePx.value != cameraHole()) placeWindow()
             return
         }
         if (view != null) {
@@ -701,6 +706,27 @@ class GlimmerController(private val service: GlimmerService) {
         return 0 to statusBar / 2
     }
 
+    /**
+     * Where the camera hole is, seen from the window: its center sideways from the window's
+     * middle (the island may be nudged off it in the settings), its center from the top of the
+     * screen, and its radius. Glimmer keeps every number and symbol out of it.
+     */
+    private fun cameraHole(): List<Int> {
+        val (cx, cy) = cameraCenter()
+        var halfWidth = 0
+        var halfHeight = 0
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            runCatching {
+                val cutout = windowManager.currentWindowMetrics.windowInsets.displayCutout?.boundingRectTop
+                if (cutout != null && !cutout.isEmpty) {
+                    halfWidth = cutout.width() / 2
+                    halfHeight = cutout.height() / 2
+                }
+            }
+        }
+        return listOf(cx - windowX(), cy, halfWidth, halfHeight)
+    }
+
     private fun topInsetPx(): Int =
         ((cameraCenter().second - dp(IDLE_HEIGHT) / 2).coerceAtLeast(dp(4f)) + dp(settings.glimmerOffsetY.toFloat())).coerceAtLeast(0)
 
@@ -712,6 +738,7 @@ class GlimmerController(private val service: GlimmerService) {
         val cameraX = windowX()
         val topInset = topInsetPx()
         insetTop.value = topInset
+        cameraHolePx.value = cameraHole()
         screenWidth.value = service.resources.configuration.screenWidthDp.toFloat()
         val frame = object : FrameLayout(service) {
             override fun dispatchTouchEvent(event: MotionEvent): Boolean {
@@ -765,6 +792,7 @@ class GlimmerController(private val service: GlimmerService) {
                 val settings by settingsState.collectAsStateWithLifecycle()
                 val torch by torchOn.collectAsStateWithLifecycle()
                 val top by insetTop.collectAsStateWithLifecycle()
+                val holePx by cameraHolePx.collectAsStateWithLifecycle()
                 val widthDp by screenWidth.collectAsStateWithLifecycle()
                 val onAod = aod && settings.glimmerAod
 
@@ -848,6 +876,18 @@ class GlimmerController(private val service: GlimmerService) {
                             style = settings.glimmerStyle,
                             screenWidthDp = widthDp,
                             topInset = (top / (density * settings.glimmerScale)).dp,
+                            camera = run {
+                                // In the island's own units (smaller in the 85 % mode).
+                                val unit = density * settings.glimmerScale
+                                val (hx, hy, hw, hh) = holePx
+                                val known = hw > 0 && hh > 0
+                                CameraHole(
+                                    x = (hx / unit).dp,
+                                    y = ((hy - top) / unit).dp,
+                                    radius = if (known) (hw / unit).coerceIn(4f, 40f).dp else CameraHole().radius,
+                                    halfHeight = if (known) (hh / unit).coerceIn(4f, 20f).dp else CameraHole().halfHeight,
+                                )
+                            },
                             media = media,
                             // Locked, apps can't come up anyway: a tap unfolds instead.
                             tapOpens = settings.glimmerTapOpens && !onLockScreen,
