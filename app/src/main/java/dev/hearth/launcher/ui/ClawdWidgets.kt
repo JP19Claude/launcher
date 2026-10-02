@@ -293,6 +293,8 @@ internal fun ClawdClockWidget(modifier: Modifier) {
     val accent = LocalSettings.current.accent.color
     BoxWithConstraints(modifier.tap { player.play(ClawdMood.Wave) }) {
         val narrow = maxWidth < 220.dp
+        val boxW = maxWidth
+        val boxH = maxHeight
         val mood = player.mood ?: if (asleep) ClawdMood.Sleep else ClawdMood.Idle
         val time = now.format(DateTimeFormatter.ofPattern("HH:mm", locale))
         val date = now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale))
@@ -302,13 +304,13 @@ internal fun ClawdClockWidget(modifier: Modifier) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Clawd(Modifier.fillMaxWidth(0.55f).height(maxHeight * 0.38f), mood = mood)
+                Clawd(Modifier.fillMaxWidth(0.55f).height(boxH * 0.38f), mood = mood)
                 Text(time, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Light)
                 Text(greeting(now.hour), color = accent, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         } else {
             Row(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Clawd(Modifier.fillMaxHeight(0.75f).width(maxWidth * 0.36f), mood = mood)
+                Clawd(Modifier.fillMaxHeight(0.75f).width(boxW * 0.36f), mood = mood)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(greeting(now.hour), color = accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
@@ -361,7 +363,7 @@ internal fun ClawdAskWidget(modifier: Modifier) {
 /** Clawd dances while charging, is tired when the battery is low, a pixel bar shows the level. */
 @Composable
 internal fun ClawdBatteryWidget(modifier: Modifier) {
-    val (level, charging) = rememberBattery()
+    val (level, charging) = rememberBatteryLevel()
     val player = rememberMoodPlayer()
     val low = level in 0..15
     val mood = player.mood ?: when {
@@ -375,12 +377,13 @@ internal fun ClawdBatteryWidget(modifier: Modifier) {
         else -> Color.White
     }
     BoxWithConstraints(modifier.tap { player.play(ClawdMood.Love) }) {
+        val boxH = maxHeight
         Column(
             Modifier.fillMaxSize().padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Clawd(Modifier.fillMaxWidth(0.62f).height(maxHeight * 0.4f), mood = mood)
+            Clawd(Modifier.fillMaxWidth(0.62f).height(boxH * 0.4f), mood = mood)
             Spacer(Modifier.height(6.dp))
             // Ten pixel cells, filled up to the level.
             Canvas(Modifier.fillMaxWidth(0.7f).height(12.dp)) {

@@ -163,7 +163,7 @@ private fun GlassAnalogClock(modifier: Modifier) {
 
 /** Battery level, and whether it's charging, kept up to date while the widget is shown. */
 @Composable
-internal fun rememberBattery(): Pair<Int, Boolean> {
+internal fun rememberBatteryLevel(): Pair<Int, Boolean> {
     val context = LocalContext.current
     var state by remember { mutableStateOf(readBattery(context, null)) }
     DisposableEffect(context) {
@@ -191,7 +191,7 @@ private fun readBattery(context: Context, intent: Intent?): Pair<Int, Boolean> =
 /** The battery as a ring: green while charging, red when low, the percent in the middle. */
 @Composable
 private fun BatteryWidget(modifier: Modifier) {
-    val (level, charging) = rememberBattery()
+    val (level, charging) = rememberBatteryLevel()
     val color = when {
         charging -> Color(0xFF34C759)
         level in 0..20 -> Color(0xFFFF453A)
