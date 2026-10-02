@@ -54,6 +54,11 @@ mit Liquid Glass, und Claude dort, wo bei Samsung Galaxy AI sitzt.
   Player), das App-Popup wie auf dem Galaxy (Shortcuts als Liste, Aktionen als Reihe runder
   Symbole mit Namen), Einstellungen mit One-UI-Titel und blauen Abschnittsnamen, runde
   Seitenpunkte
+- Hearth-Widgets aus Liquid Glass (Widget hinzufügen): analoge Glas-Uhr mit Sekundenzeiger,
+  Akku-Ring (grün beim Laden, rot wenn leer), Datum mit Wochentag und nächstem Wecker – auf dem
+  Startbildschirm und auf der Widget-Seite
+- Dock-Aussehen: Glasleiste, schwebende Glas-Kapsel oder ohne Hintergrund
+- Suchleiste der App-Übersicht und Knöpfe des Bearbeitungsmodus aus Liquid Glass
 - App-Übersicht: „Vorgeschlagene Apps“ oben, ⋮-Menü mit Sortieren (A–Z, Neueste zuerst,
   Meistgenutzt), Vorschläge an/aus und Einstellungen
 - One UI: Squircle-Icons, die große, fette One-UI-Uhr mit Datum und Akku, Galaxy-Blau,

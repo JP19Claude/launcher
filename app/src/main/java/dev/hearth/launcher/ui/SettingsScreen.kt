@@ -79,6 +79,7 @@ import dev.hearth.launcher.data.GlimmerGlowColor
 import dev.hearth.launcher.data.GlimmerOutline
 import dev.hearth.launcher.data.GlimmerMotion
 import dev.hearth.launcher.data.GlimmerDoubleTap
+import dev.hearth.launcher.data.DockStyle
 import dev.hearth.launcher.data.FlyInStyle
 import dev.hearth.launcher.data.GlassQuality
 import dev.hearth.launcher.data.GlassTint
@@ -473,6 +474,14 @@ fun SettingsScreen(
 
             item {
                 Section("Dock") {
+                    ChoiceRow(
+                        label = "Aussehen",
+                        options = DockStyle.entries,
+                        selected = s.dockStyle,
+                        optionLabel = { it.label },
+                        onSelect = { v -> update { it.copy(dockStyle = v) } },
+                    )
+                    RowDivider()
                     IntSlider("Anzahl Apps", s.dockSize.coerceIn(1, LauncherSettings.MAX_DOCK), 1..LauncherSettings.MAX_DOCK) { v ->
                         vm.setDockSize(v)
                     }

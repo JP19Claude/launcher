@@ -211,6 +211,13 @@ enum class DesignPreset(val label: String) {
     Hearth("Hearth Klassik"),
 }
 
+/** How the dock looks. */
+enum class DockStyle(val label: String) {
+    Glass("Glasleiste"),
+    Floating("Schwebende Glas-Kapsel"),
+    Clear("Ohne Hintergrund"),
+}
+
 /** Order of the apps in One UI's app drawer. */
 enum class DrawerSort(val label: String) {
     Alphabet("A–Z"),
@@ -263,6 +270,7 @@ data class LauncherSettings(
     /** One UI app drawer: order of the apps, and the suggested apps on top. */
     val drawerSort: DrawerSort = DrawerSort.Alphabet,
     val drawerSuggestions: Boolean = true,
+    val dockStyle: DockStyle = DockStyle.Glass,
     val showAppLibrary: Boolean = true,
     val showWidgetPage: Boolean = true,
     val triggerZone: TriggerZone = TriggerZone.RightHalf,
@@ -608,6 +616,7 @@ class SettingsRepository(context: Context) {
             galaxyClaude = prefs.getBoolean("galaxyClaude", d.galaxyClaude),
             drawerSort = enumOf("drawerSort", d.drawerSort),
             drawerSuggestions = prefs.getBoolean("drawerSuggestions", d.drawerSuggestions),
+            dockStyle = enumOf("dockStyle", d.dockStyle),
             showAppLibrary = prefs.getBoolean("showAppLibrary", d.showAppLibrary),
             showWidgetPage = prefs.getBoolean("showWidgetPage", d.showWidgetPage),
             triggerZone = enumOf("triggerZone", d.triggerZone),
@@ -712,6 +721,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("galaxyClaude", s.galaxyClaude)
             .putString("drawerSort", s.drawerSort.name)
             .putBoolean("drawerSuggestions", s.drawerSuggestions)
+            .putString("dockStyle", s.dockStyle.name)
             .putBoolean("showAppLibrary", s.showAppLibrary)
             .putBoolean("showWidgetPage", s.showWidgetPage)
             .putString("triggerZone", s.triggerZone.name)

@@ -127,13 +127,18 @@ fun OneUIDrawer(
                 Modifier.padding(start = 20.dp, end = 8.dp, top = 14.dp, bottom = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-            Row(
-                Modifier
+            // The search bar as a liquid glass capsule.
+            LiquidGlass(
+                cornerRadius = 24.dp,
+                refraction = 14.dp,
+                interactive = true,
+                modifier = Modifier
                     .weight(1f)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.16f))
-                    .clickable(onClick = onOpenSearch)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .clickable(onClick = onOpenSearch),
+            ) {
+            Row(
+                Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (settings.galaxyClaude) {
@@ -147,6 +152,7 @@ fun OneUIDrawer(
                     color = Color.White.copy(alpha = 0.8f),
                     fontSize = 16.sp,
                 )
+            }
             }
             Box(
                 Modifier
@@ -363,14 +369,16 @@ private fun EditAction(icon: ImageVector, label: String, onClick: () -> Unit) {
             .padding(horizontal = 6.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            Modifier
+        // Round liquid glass buttons, as everywhere in Hearth.
+        LiquidGlass(
+            cornerRadius = 27.dp,
+            refraction = 12.dp,
+            interactive = true,
+            modifier = Modifier
                 .size(54.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.18f)),
-            contentAlignment = Alignment.Center,
+                .clip(CircleShape),
         ) {
-            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp).align(Alignment.Center))
         }
         Spacer(Modifier.size(6.dp))
         Text(

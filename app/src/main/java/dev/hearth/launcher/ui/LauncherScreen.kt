@@ -147,6 +147,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import dev.hearth.launcher.LauncherViewModel
 import dev.hearth.launcher.data.AppInfo
+import dev.hearth.launcher.data.HearthWidget
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.SwipeDownAction
@@ -294,6 +295,14 @@ fun LauncherScreen(vm: LauncherViewModel) {
             findFreeSlot(homeWidgets, pages.size, targetPage, 2, 2, columns, rows, firstPageRows)
         }
         requestPhotos(vm.widgets.addPhotoWidget(slot))
+    }
+    val addHearthWidget: (HearthWidget) -> Unit = { kind ->
+        widgetPickerOpen = false
+        val slot = widgetTarget?.let { targetPage ->
+            findFreeSlot(homeWidgets, pages.size, targetPage, kind.spanX, kind.spanY, columns, rows, firstPageRows)
+        }
+        vm.widgets.addHearthWidget(kind, slot)
+        toast = GlassToast("${kind.label} hinzugefügt")
     }
     val addWidget: (AppWidgetProviderInfo) -> Unit = { info ->
         widgetPickerOpen = false
@@ -788,7 +797,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                                     vm.widgets.removeHome(widget.id)
                                                     toast = GlassToast("Widget entfernt")
                                                 },
-                                                onPickPhotos = if (vm.widgets.isInternal(widget.id)) {
+                                                onPickPhotos = if (vm.widgets.isInternal(widget.id) && vm.widgets.kindOf(widget.id) == HearthWidget.Photos) {
                                                     { requestPhotos(widget.id) }
                                                 } else {
                                                     null
@@ -985,6 +994,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     repo = vm.widgets,
                     onPick = addWidget,
                     onPickPhotos = addPhotoWidget,
+                    onPickHearth = addHearthWidget,
                     onDismiss = { widgetPickerOpen = false },
                 )
             }

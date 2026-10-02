@@ -38,6 +38,14 @@ data class HomeWidget(
             row < other.row + other.spanY && other.row < row + spanY
 }
 
+/** Hearth's own widgets, all on liquid glass; their size on the home screen and the widget page. */
+enum class HearthWidget(val label: String, val description: String, val spanX: Int, val spanY: Int, val pageHeight: Int) {
+    Photos("Fotos", "Deine Bilder als Diashow auf Glas", 2, 2, 220),
+    Clock("Glas-Uhr", "Analoge Uhr mit Sekundenzeiger, wie aus Glas", 2, 2, 200),
+    Battery("Akku", "Akkustand als Ring, grün beim Laden", 2, 2, 170),
+    Date("Datum", "Wochentag, Tag und nächster Wecker, groß wie bei One UI", 2, 2, 170),
+}
+
 /** An installable widget, for the picker. */
 @Immutable
 class WidgetChoice(
@@ -95,16 +103,23 @@ class WidgetRepository(private val context: Context) {
      * Adds a photo widget, on the home screen at [homeSlot] or on the widget page.
      * Returns its id; the caller then lets the user pick the photos.
      */
-    fun addPhotoWidget(homeSlot: HomeWidget?): Int {
+    fun addPhotoWidget(homeSlot: HomeWidget?): Int = addHearthWidget(HearthWidget.Photos, homeSlot)
+
+    /** Adds one of Hearth's own widgets (clock, battery, date, photos); returns its id. */
+    fun addHearthWidget(kind: HearthWidget, homeSlot: HomeWidget?): Int {
         val id = prefs.getInt(KEY_NEXT_INTERNAL, -1)
-        prefs.edit().putInt(KEY_NEXT_INTERNAL, id - 1).apply()
+        prefs.edit().putInt(KEY_NEXT_INTERNAL, id - 1).putString("kind_$id", kind.name).apply()
         if (homeSlot != null) {
             updateHome(_homeWidgets.value + homeSlot.copy(id = id))
         } else {
-            update(_widgets.value + PlacedWidget(id, 220))
+            update(_widgets.value + PlacedWidget(id, kind.pageHeight))
         }
         return id
     }
+
+    /** Which of Hearth's widgets an id is (older ones are all photo widgets). */
+    fun kindOf(id: Int): HearthWidget =
+        prefs.getString("kind_$id", null)?.let { n -> HearthWidget.entries.firstOrNull { it.name == n } } ?: HearthWidget.Photos
 
     fun info(id: Int): AppWidgetProviderInfo? = runCatching { manager.getAppWidgetInfo(id) }.getOrNull()
 

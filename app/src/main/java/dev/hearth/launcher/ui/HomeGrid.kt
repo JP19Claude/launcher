@@ -362,7 +362,7 @@ private fun HomeWidgetView(
                 .clip(RoundedCornerShape(24.dp)),
         ) {
             if (repo.isInternal(widget.id)) {
-                PhotoWidget(repo, widget.id, Modifier.fillMaxSize().padding(4.dp))
+                InternalWidget(repo, widget.id, Modifier.fillMaxSize().padding(4.dp))
             } else if (info == null) {
                 Text(
                     "Widget nicht verfügbar",

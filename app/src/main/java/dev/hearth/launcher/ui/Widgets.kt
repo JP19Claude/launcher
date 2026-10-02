@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.hearth.launcher.data.HearthWidget
 import dev.hearth.launcher.data.PlacedWidget
 import dev.hearth.launcher.data.WidgetChoice
 import dev.hearth.launcher.data.WidgetRepository
@@ -181,7 +182,7 @@ private fun WidgetCard(
                 .clip(RoundedCornerShape(28.dp)),
         ) {
             if (repo.isInternal(widget.id)) {
-                PhotoWidget(repo, widget.id, Modifier.fillMaxSize().padding(6.dp))
+                InternalWidget(repo, widget.id, Modifier.fillMaxSize().padding(6.dp))
             } else if (info == null) {
                 Text(
                     "Widget nicht mehr verfügbar",
@@ -213,7 +214,7 @@ private fun WidgetCard(
                 EditButton(Icons.Rounded.KeyboardArrowDown, "Nach unten", enabled = canMoveDown) { repo.move(widget.id, 1) }
                 EditButton(null, "Kleiner", label = "−") { repo.resize(widget.id, -40) }
                 EditButton(Icons.Rounded.Add, "Größer") { repo.resize(widget.id, 40) }
-                if (repo.isInternal(widget.id)) {
+                if (repo.isInternal(widget.id) && repo.kindOf(widget.id) == HearthWidget.Photos) {
                     val pick = LocalPhotoPicker.current
                     EditButton(Icons.Rounded.Edit, "Fotos auswählen") { pick(widget.id) }
                 }
@@ -299,6 +300,8 @@ fun WidgetPicker(
     onPick: (AppWidgetProviderInfo) -> Unit,
     onPickPhotos: () -> Unit,
     onDismiss: () -> Unit,
+    /** Hearth's own glass widgets (clock, battery, date). */
+    onPickHearth: (HearthWidget) -> Unit = {},
 ) {
     var choices by remember { mutableStateOf<List<WidgetChoice>?>(null) }
     LaunchedEffect(Unit) {
@@ -364,6 +367,21 @@ fun WidgetPicker(
                             subtitle = "Hearth-Widget: deine Bilder als Diashow auf Glas",
                             onClick = onPickPhotos,
                         )
+                    }
+                    // Hearth's own liquid glass widgets.
+                    HearthWidget.entries.filter { it != HearthWidget.Photos }.forEach { kind ->
+                        item(key = "hearth-${kind.name}") {
+                            HearthWidgetRow(
+                                title = kind.label,
+                                subtitle = "Hearth-Widget: ${kind.description}",
+                                glyph = when (kind) {
+                                    HearthWidget.Battery -> Glyph.Battery
+                                    HearthWidget.Clock -> Glyph.Alarm
+                                    else -> Glyph.Tiles
+                                },
+                                onClick = { onPickHearth(kind) },
+                            )
+                        }
                     }
                     items(list, key = { it.info.provider.flattenToString() + it.info.profile.hashCode() }) { choice ->
                         WidgetChoiceRow(choice) { onPick(choice.info) }
@@ -512,7 +530,7 @@ fun PhotoWidget(repo: WidgetRepository, id: Int, modifier: Modifier = Modifier) 
 }
 
 @Composable
-private fun HearthWidgetRow(title: String, subtitle: String, onClick: () -> Unit) {
+private fun HearthWidgetRow(title: String, subtitle: String, glyph: Glyph = Glyph.Camera, onClick: () -> Unit) {
     LiquidGlass(
         cornerRadius = 24.dp,
         refraction = 16.dp,
@@ -531,7 +549,7 @@ private fun HearthWidgetRow(title: String, subtitle: String, onClick: () -> Unit
                     .background(Color.White.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center,
             ) {
-                GlyphIcon(Glyph.Camera, Color.White, Modifier.size(28.dp))
+                GlyphIcon(glyph, Color.White, Modifier.size(28.dp))
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
