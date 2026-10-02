@@ -303,7 +303,9 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
  * nudge), going through a few things it shows; tap it to unfold, like the real one.
  */
 @Composable
-private fun GlimmerPreview(s: LauncherSettings, media: MediaRepository) {
+private fun GlimmerPreview(chosen: LauncherSettings, media: MediaRepository) {
+    // As it really runs: in the Dynamic Island mode with the iPhone's look.
+    val s = chosen.forGlimmer()
     val demos = remember {
         listOf<IslandContent>(
             IslandContent.Idle,
@@ -324,7 +326,7 @@ private fun GlimmerPreview(s: LauncherSettings, media: MediaRepository) {
             }
         }
     }
-    val content = demos[index]
+    val content = demos[index].let { if (s.glimmerIsDynamicIsland && it is IslandContent.Lock) IslandContent.Idle else it }
     val unfoldable = content !is IslandContent.Idle && content !is IslandContent.Lock
     val screenWidth = LocalConfiguration.current.screenWidthDp.toFloat()
     Column(Modifier.padding(vertical = 8.dp)) {
@@ -340,20 +342,22 @@ private fun GlimmerPreview(s: LauncherSettings, media: MediaRepository) {
                     .fillMaxSize()
                     .offset(x = s.glimmerOffsetX.dp, y = s.glimmerOffsetY.dp),
             ) {
-                GlimmerIsland(
-                    content = if (s.glimmerEnabled) content else IslandContent.Hidden,
-                    secondary = null,
-                    expanded = expanded && unfoldable,
-                    style = s.glimmerStyle,
-                    screenWidthDp = screenWidth,
-                    topInset = 14.dp,
-                    media = media,
-                    glow = s.glimmerGlow,
-                    onToggle = { expanded = !expanded },
-                    onCollapse = { expanded = false },
-                    onOpen = { expanded = false },
-                    onTargetSize = {},
-                )
+                CompositionLocalProvider(LocalSettings provides s) {
+                    GlimmerIsland(
+                        content = if (s.glimmerEnabled) content else IslandContent.Hidden,
+                        secondary = null,
+                        expanded = expanded && unfoldable,
+                        style = s.glimmerStyle,
+                        screenWidthDp = screenWidth,
+                        topInset = 14.dp,
+                        media = media,
+                        glow = s.glimmerGlow,
+                        onToggle = { expanded = !expanded },
+                        onCollapse = { expanded = false },
+                        onOpen = { expanded = false },
+                        onTargetSize = {},
+                    )
+                }
             }
         }
         Text(

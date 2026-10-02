@@ -330,9 +330,10 @@ class GlimmerController(private val service: GlimmerService) {
 
     /** Settings that apply while running (see [SettingsRepository.GLIMMER_LIVE_KEYS]). */
     fun update(newSettings: LauncherSettings) {
-        val moved = newSettings.glimmerOffsetX != settings.glimmerOffsetX || newSettings.glimmerOffsetY != settings.glimmerOffsetY
-        settings = newSettings
-        settingsState.value = newSettings
+        val effective = newSettings.forGlimmer()
+        val moved = effective.glimmerOffsetX != settings.glimmerOffsetX || effective.glimmerOffsetY != settings.glimmerOffsetY
+        settings = effective
+        settingsState.value = effective
         refreshCharging()
         if (moved) placeWindow()
     }
@@ -499,8 +500,8 @@ class GlimmerController(private val service: GlimmerService) {
     }
 
     fun start(newSettings: LauncherSettings) {
-        settings = newSettings
-        settingsState.value = newSettings
+        settings = newSettings.forGlimmer()
+        settingsState.value = settings
         if (root != null) return
         landscape.value = service.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         media.start()
@@ -785,6 +786,8 @@ class GlimmerController(private val service: GlimmerService) {
                     ?: visible.firstOrNull()
                     ?: when {
                         !settings.glimmerIdlePill || sideways || aod || stepBack -> IslandContent.Hidden
+                        // The iPhone's island is just there on the lock screen, no padlock in it.
+                        settings.glimmerIsDynamicIsland -> IslandContent.Idle
                         padlockOpen -> IslandContent.Lock(open = true)
                         onLockScreen -> IslandContent.Lock(open = false)
                         else -> IslandContent.Idle

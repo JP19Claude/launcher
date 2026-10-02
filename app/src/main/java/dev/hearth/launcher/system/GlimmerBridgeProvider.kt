@@ -53,7 +53,7 @@ class GlimmerBridgeProvider : ContentProvider() {
             // Glimmer's service in the Glimmer app, the control center's in its app.
             val service = GlimmerService.instance
             val controlCenter = ControlCenterService.instance
-            val settings = SettingsRepository(context).settings.value
+            val settings = SettingsRepository(context).settings.value.forGlimmer()
             fun status(into: Bundle) = into.apply {
                 putBoolean("running", if (context.packageName == ControlsLink.packageName) controlCenter != null else service != null)
                 putBoolean("glimmer", settings.glimmerEnabled)
@@ -68,6 +68,7 @@ class GlimmerBridgeProvider : ContentProvider() {
                     screenWidthDp = context.resources.configuration.screenWidthDp.toFloat(),
                     hasSecondary = false,
                     widthScale = settings.glimmerWidth,
+                    dynamicIsland = settings.glimmerIsDynamicIsland,
                 )
                 putFloat("lw", landing.width.value)
                 putInt("ox", settings.glimmerOffsetX)

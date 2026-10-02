@@ -201,10 +201,16 @@ fun islandSize(
     screenWidthDp: Float,
     hasSecondary: Boolean,
     widthScale: Float = 1f,
+    /** The iPhone's proportions: its pill is 3.4 times, a compact activity about 6.2 times as wide as tall. */
+    dynamicIsland: Boolean = false,
 ): DpSize {
-    val full = min(screenWidthDp - 16f, 420f).dp
-    val compact = ((screenWidthDp * 0.44f).coerceIn(150f, 190f) * widthScale).coerceAtMost(screenWidthDp - 60f).dp
-    val idle = (screenWidthDp * 0.27f).coerceIn(86f, 110f) * widthScale
+    val full = if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, 420f).dp
+    val compact = if (dynamicIsland) {
+        (ISLAND_HEIGHT_DP * 6.2f).coerceAtMost(screenWidthDp - 60f).dp
+    } else {
+        ((screenWidthDp * 0.44f).coerceIn(150f, 190f) * widthScale).coerceAtMost(screenWidthDp - 60f).dp
+    }
+    val idle = if (dynamicIsland) ISLAND_HEIGHT_DP * 3.375f else (screenWidthDp * 0.27f).coerceIn(86f, 110f) * widthScale
     return when {
         content is IslandContent.Hidden -> DpSize(0.dp, 0.dp)
         content is IslandContent.Idle -> DpSize(idle.dp, ISLAND_HEIGHT_DP.dp)
@@ -283,7 +289,7 @@ fun GlimmerIsland(
         }
     }
     val hasSecondary = secondary != null && !expanded
-    val target = islandSize(content, expanded, screenWidthDp, hasSecondary, settings.glimmerWidth)
+    val target = islandSize(content, expanded, screenWidthDp, hasSecondary, settings.glimmerWidth, settings.glimmerIsDynamicIsland)
     LaunchedEffect(target) { onTargetSize(target) }
     val collapseAfter = settings.glimmerAutoCollapse
     LaunchedEffect(expanded, content, collapseAfter) {
@@ -320,7 +326,7 @@ fun GlimmerIsland(
     // round as the iPhone's unfolded island (44) or the Face ID square (30).
     val cornerCap by animateDpAsState(
         when {
-            expanded -> 44.dp
+            expanded -> if (settings.glimmerIsDynamicIsland) 42.dp else 44.dp
             content is IslandContent.Unlock -> 30.dp
             else -> 60.dp
         },
@@ -791,8 +797,10 @@ private fun LeadingBadgeIcon(content: IslandContent, size: Dp) {
     when (content) {
         is IslandContent.Media -> {
             val art = content.playing.art
+            // The iPhone shows the cover as a small rounded square, Glimmer as a circle.
+            val artShape = if (LocalSettings.current.glimmerIsDynamicIsland) RoundedCornerShape(size * 0.24f) else CircleShape
             if (art != null) {
-                Image(art, null, contentScale = ContentScale.Crop, modifier = Modifier.size(size).clip(CircleShape))
+                Image(art, null, contentScale = ContentScale.Crop, modifier = Modifier.size(size).clip(artShape))
             } else {
                 GlyphIcon(Glyph.Speaker, Color.White, Modifier.size(size))
             }

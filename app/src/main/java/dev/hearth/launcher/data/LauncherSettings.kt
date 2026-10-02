@@ -101,6 +101,12 @@ enum class GlimmerUnlock(val label: String) {
     Off("Aus"),
 }
 
+/** Glimmer with its own extras, or as close to the iPhone's Dynamic Island as it gets. */
+enum class GlimmerMode(val label: String) {
+    Glimmer("Glimmer"),
+    DynamicIsland("Dynamic Island 1:1"),
+}
+
 /** The color Glimmer shimmers in when something new arrives. */
 enum class GlimmerGlowColor(val label: String) {
     Activity("Farbe der Aktivität"),
@@ -273,6 +279,7 @@ data class LauncherSettings(
     val ccToggleSize: Int = 56,
     // Glimmer: live activities around the front camera, in every app
     val glimmerEnabled: Boolean = true,
+    val glimmerMode: GlimmerMode = GlimmerMode.Glimmer,
     val glimmerStyle: GlimmerStyle = GlimmerStyle.Black,
     val glimmerIdlePill: Boolean = true,
     val glimmerMessages: Boolean = true,
@@ -334,10 +341,34 @@ data class LauncherSettings(
             glimmerWidth == d.glimmerWidth && glimmerOffsetX == d.glimmerOffsetX && glimmerOffsetY == d.glimmerOffsetY
         }
 
+    /** True when Glimmer copies the iPhone's Dynamic Island. */
+    val glimmerIsDynamicIsland: Boolean get() = glimmerMode == GlimmerMode.DynamicIsland
+
+    /**
+     * The settings Glimmer actually runs with: as chosen, or in the Dynamic Island mode the
+     * iPhone's way (black, its proportions, tap opens and holding unfolds, none of Glimmer's
+     * extras). The own choices stay saved and come back when switching back.
+     */
+    fun forGlimmer(): LauncherSettings = if (!glimmerIsDynamicIsland) this else copy(
+        glimmerStyle = GlimmerStyle.Black,
+        glimmerMusicStyle = GlimmerMusicStyle.Classic,
+        glimmerIdlePill = true,
+        glimmerGlow = false,
+        glimmerOutline = GlimmerOutline.Off,
+        glimmerWidth = 1f,
+        glimmerMotion = GlimmerMotion.Normal,
+        glimmerTapOpens = true,
+        glimmerDoubleTap = GlimmerDoubleTap.Off,
+        glimmerSwipeTracks = false,
+        glimmerMessages = false,
+        glimmerCharging = false,
+    )
+
     /** Every Glimmer setting as it comes (it stays switched on). */
     fun withGlimmerDefaults(): LauncherSettings {
         val d = LauncherSettings()
         return copy(
+            glimmerMode = d.glimmerMode,
             glimmerStyle = d.glimmerStyle,
             glimmerIdlePill = d.glimmerIdlePill,
             glimmerMessages = d.glimmerMessages,
@@ -512,6 +543,7 @@ class SettingsRepository(context: Context) {
             ccCorner = prefs.getInt("ccCorner", d.ccCorner),
             ccToggleSize = prefs.getInt("ccToggleSize", d.ccToggleSize),
             glimmerEnabled = prefs.getBoolean(KEY_GLIMMER, d.glimmerEnabled),
+            glimmerMode = enumOf("glimmerMode", d.glimmerMode),
             glimmerStyle = enumOf("glimmerStyle", d.glimmerStyle),
             glimmerIdlePill = prefs.getBoolean("glimmerIdlePill", d.glimmerIdlePill),
             glimmerMessages = prefs.getBoolean("glimmerMessages", d.glimmerMessages),
@@ -608,6 +640,7 @@ class SettingsRepository(context: Context) {
             .putInt("ccCorner", s.ccCorner)
             .putInt("ccToggleSize", s.ccToggleSize)
             .putBoolean(KEY_GLIMMER, s.glimmerEnabled)
+            .putString("glimmerMode", s.glimmerMode.name)
             .putString("glimmerStyle", s.glimmerStyle.name)
             .putBoolean("glimmerIdlePill", s.glimmerIdlePill)
             .putBoolean("glimmerMessages", s.glimmerMessages)
@@ -685,7 +718,7 @@ class SettingsRepository(context: Context) {
         val GLIMMER_KEYS = setOf(
             KEY_GLIMMER, "glimmerStyle", "glimmerIdlePill", "glimmerMessages",
             "glimmerTapOpens", "glimmerAlerts", "glimmerGlow", "glimmerMusicStyle",
-            "glimmerUnlock", "glimmerAod",
+            "glimmerUnlock", "glimmerAod", "glimmerMode",
         )
 
         /**

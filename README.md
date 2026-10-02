@@ -143,6 +143,11 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     zurücksetzen“ (mit Bestätigung) bringen alles wieder auf Standard
   - Funktionen: Doppeltippen (Musik, Taschenlampe, Bildschirmfoto), Zuklappen nach 5–30 s oder
     nie, Wischen über Musik wechselt den Titel, Akku beim Laden dauerhaft zeigen, Vibration
+  - Modus „Dynamic Island 1:1“: Glimmer wird zur Kopie der iPhone-Insel – reines Schwarz, ihre
+    Proportionen (Pille 3,4 : 1, kompakte Aktivitäten 6,2 : 1, aufgeklappt fast bildschirmbreit
+    mit 42er-Ecken), Cover als abgerundetes Quadrat, auf dem Sperrbildschirm nur die Pille,
+    Antippen öffnet die App, gedrückt halten klappt auf, ohne Glimmers Extras; die eigenen
+    Einstellungen bleiben gespeichert
   - Live-Vorschau oben in der Glimmer-App: zeigt Aussehen, Breite, Rand, Leuchten, Bewegung und
     Position sofort, wechselt durch ein paar Inhalte, antippen klappt auf; Einstellungen in
     Abschnitten (Gestaltung, Größe & Position, Bedienung, Was Glimmer zeigt, Sperrbildschirm & AOD)

@@ -74,6 +74,7 @@ import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.GlimmerMusicStyle
 import dev.hearth.launcher.data.GlimmerStyle
 import dev.hearth.launcher.data.GlimmerUnlock
+import dev.hearth.launcher.data.GlimmerMode
 import dev.hearth.launcher.data.GlimmerGlowColor
 import dev.hearth.launcher.data.GlimmerOutline
 import dev.hearth.launcher.data.GlimmerMotion
@@ -567,32 +568,44 @@ fun SettingsScreen(
 /** All of Glimmer's options, grouped into sections (shown in the Glimmer app). */
 @Composable
 internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
+    // In the Dynamic Island mode the iPhone decides the look and handling; those rows step aside.
+    val di = s.glimmerIsDynamicIsland
     Column {
     Section("Glimmer") {
         Note("Die Insel um die Frontkamera, in jeder App: Musik, Anrufe, Timer, Stoppuhr, Navigation, Downloads, Nachrichten, Laden und mehr. Nach unten ziehen klappt sie auf, nach oben schließt sie, zur Seite wechselt zwischen zwei Aktivitäten.")
         SwitchRow(label = "Glimmer anzeigen", checked = s.glimmerEnabled) { v -> update { it.copy(glimmerEnabled = v) } }
         ChoiceRow(
+            label = "Modus",
+            options = GlimmerMode.entries,
+            selected = s.glimmerMode,
+            optionLabel = { it.label },
+            onSelect = { m -> update { it.copy(glimmerMode = m) } },
+        )
+        if (di) Note(
+            "Dynamic Island 1:1: Glimmer verhält sich wie die Insel des iPhones – reines Schwarz, ihre Proportionen (Pille, kompakte Aktivitäten, aufgeklappt fast bildschirmbreit), Cover als abgerundetes Quadrat, auf dem Sperrbildschirm nur die Pille. Antippen öffnet die App, gedrückt halten klappt auf. Glimmers Extras (Leuchten, Rand, Nachrichten, Doppeltippen, Titel wischen, Akku beim Laden) sind aus. Deine eigenen Einstellungen bleiben gespeichert und kommen zurück, wenn du wieder „Glimmer“ wählst.",
+        )
+        if (!di) ChoiceRow(
             label = "Aussehen",
             options = GlimmerStyle.entries,
             selected = s.glimmerStyle,
             optionLabel = { it.label },
             onSelect = { style -> update { it.copy(glimmerStyle = style) } },
         )
-        ChoiceRow(
+        if (!di) ChoiceRow(
             label = "Musik",
             options = GlimmerMusicStyle.entries,
             selected = s.glimmerMusicStyle,
             optionLabel = { it.label },
             onSelect = { style -> update { it.copy(glimmerMusicStyle = style) } },
         )
-        SwitchRow(
+        if (!di) SwitchRow(
             label = "Kleine Pille, wenn nichts läuft",
             description = "Wie beim iPhone; im Querformat ausgeblendet",
             checked = s.glimmerIdlePill,
         ) { v -> update { it.copy(glimmerIdlePill = v) } }
     }
 
-    Section("Gestaltung") {
+    if (!di) Section("Gestaltung") {
         SwitchRow(label = "Leuchten bei Neuem", description = "Glimmer schimmert kurz, wenn etwas Neues kommt", checked = s.glimmerGlow) { v ->
             update { it.copy(glimmerGlow = v) }
         }
@@ -619,8 +632,8 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
         )
     }
 
-    Section("Größe & Position") {
-        SliderRow(
+    Section(if (di) "Position" else "Größe & Position") {
+        if (!di) SliderRow(
             label = "Breite",
             value = s.glimmerWidth,
             range = 0.8f..1.3f,
@@ -640,12 +653,12 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
     }
 
     Section("Bedienung") {
-        SwitchRow(
+        if (!di) SwitchRow(
             label = "Antippen öffnet die App",
             description = if (s.glimmerTapOpens) "Wie beim iPhone; gedrückt halten klappt auf" else "Aus: Antippen klappt auf, gedrückt halten öffnet die App",
             checked = s.glimmerTapOpens,
         ) { v -> update { it.copy(glimmerTapOpens = v) } }
-        ChoiceRow(
+        if (!di) ChoiceRow(
             label = "Doppeltippen",
             options = GlimmerDoubleTap.entries,
             selected = s.glimmerDoubleTap,
@@ -659,7 +672,7 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             optionLabel = { if (it == 0) "Nie" else "nach $it s" },
             onSelect = { secs -> update { it.copy(glimmerAutoCollapse = secs) } },
         )
-        SwitchRow(
+        if (!di) SwitchRow(
             label = "Zur Seite wischen wechselt den Titel",
             description = "Läuft nur Musik: über Glimmer nach links für den nächsten, nach rechts für den vorherigen Titel",
             checked = s.glimmerSwipeTracks,
@@ -670,7 +683,7 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
     }
 
     Section("Was Glimmer zeigt") {
-        SwitchRow(label = "Neue Nachrichten kurz zeigen", checked = s.glimmerMessages) { v ->
+        if (!di) SwitchRow(label = "Neue Nachrichten kurz zeigen", checked = s.glimmerMessages) { v ->
             update { it.copy(glimmerMessages = v) }
         }
         SwitchRow(
@@ -678,7 +691,7 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             description = "Kurz anzeigen, wenn Kopfhörer sich verbinden, „Nicht stören“ umschaltet oder der Akku voll ist",
             checked = s.glimmerAlerts,
         ) { v -> update { it.copy(glimmerAlerts = v) } }
-        SwitchRow(
+        if (!di) SwitchRow(
             label = "Akku beim Laden zeigen",
             description = "Solange das Handy lädt, bleibt der Akkustand mit rollenden Zahlen in Glimmer",
             checked = s.glimmerCharging,
