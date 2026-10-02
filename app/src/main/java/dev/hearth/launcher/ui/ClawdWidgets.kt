@@ -25,6 +25,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -54,6 +57,11 @@ import dev.hearth.launcher.data.ChatItem
 import dev.hearth.launcher.data.ClaudeAssistant
 import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.ClawdTalk
+import dev.hearth.launcher.data.ClawdFocus
+import dev.hearth.launcher.data.ClawdOracle
+import dev.hearth.launcher.data.ClawdPet
+import dev.hearth.launcher.data.clawdAsleep
+import dev.hearth.launcher.data.clawdGreeting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -129,7 +137,7 @@ internal fun ClawdPictureWidget(id: Int, modifier: Modifier) {
         ClawdScene.Accent -> Brush.verticalGradient(listOf(accent.copy(alpha = 0.95f), accent.copy(alpha = 0.55f)))
         ClawdScene.Glass -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
     }
-    val clawd = if (scene == ClawdScene.Terracotta || scene == ClawdScene.Accent) Ivory else ClawdColor
+    val clawd: Color? = if (scene == ClawdScene.Terracotta || scene == ClawdScene.Accent) Ivory else null
     val dark = scene == ClawdScene.Light
     Box(
         modifier
@@ -275,21 +283,13 @@ internal fun ClawdWorldWidget(modifier: Modifier) {
 
 // Clawd-Uhr: the time, with Clawd greeting you
 
-private fun greeting(hour: Int): String = when (hour) {
-    in 5..10 -> "Guten Morgen!"
-    in 11..13 -> "Mahlzeit!"
-    in 14..17 -> "Schönen Nachmittag!"
-    in 18..21 -> "Guten Abend!"
-    else -> "Gute Nacht … zzz"
-}
-
 /** The time big, a greeting, and Clawd beside it (asleep at night). */
 @Composable
 internal fun ClawdClockWidget(modifier: Modifier) {
     val now = rememberTime(everySecond = false)
     val locale = Locale.getDefault()
     val player = rememberMoodPlayer()
-    val asleep = now.hour >= 23 || now.hour < 6
+    val asleep = clawdAsleep(now.hour)
     val accent = LocalSettings.current.accent.color
     BoxWithConstraints(modifier.tap { player.play(ClawdMood.Wave) }) {
         val narrow = maxWidth < 220.dp
@@ -306,14 +306,14 @@ internal fun ClawdClockWidget(modifier: Modifier) {
             ) {
                 Clawd(Modifier.fillMaxWidth(0.55f).height(boxH * 0.38f), mood = mood)
                 Text(time, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Light)
-                Text(greeting(now.hour), color = accent, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(clawdGreeting(now.hour), color = accent, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         } else {
             Row(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Clawd(Modifier.fillMaxHeight(0.75f).width(boxW * 0.36f), mood = mood)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(greeting(now.hour), color = accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    Text(clawdGreeting(now.hour), color = accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     Text(time, color = Color.White, fontSize = 52.sp, fontWeight = FontWeight.Light, lineHeight = 56.sp)
                     Text(date, color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
@@ -475,5 +475,312 @@ internal fun ClawdStickerWidget(modifier: Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Clawd(Modifier.fillMaxSize(0.8f), mood = mood)
+    }
+}
+
+// Clawd-Tamagotchi: feed him, play with him
+
+/** Clawd as a pet: he gets hungry and bored; feeding, playing and petting make him happy. */
+@Composable
+internal fun ClawdPetWidget(modifier: Modifier) {
+    val context = LocalContext.current
+    val minute = rememberTime(everySecond = false)
+    var state by remember { mutableStateOf(ClawdPet.state(context)) }
+    // Hunger grows by itself: read again every minute.
+    androidx.compose.runtime.LaunchedEffect(minute.minute) { state = ClawdPet.state(context) }
+    val player = rememberMoodPlayer()
+    val accent = LocalSettings.current.accent.color
+    Row(modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Clawd(
+            Modifier
+                .fillMaxHeight(0.8f)
+                .width(86.dp)
+                .tap {
+                    state = ClawdPet.pet(context)
+                    player.play(ClawdMood.Love)
+                },
+            mood = player.mood ?: state.mood,
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(state.status, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            PetBar("Satt", state.food, Color(0xFFFFB04A))
+            PetBar("Laune", state.joy, Color(0xFFFF6FA8))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PetButton("🍕 Füttern", accent, Modifier.weight(1f)) {
+                    state = ClawdPet.feed(context)
+                    player.play(ClawdMood.Dance)
+                }
+                PetButton("⚽ Spielen", accent, Modifier.weight(1f)) {
+                    state = ClawdPet.play(context)
+                    player.play(ClawdMood.Flip)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PetBar(label: String, value: Int, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp, modifier = Modifier.width(42.dp))
+        Box(
+            Modifier
+                .weight(1f)
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color.White.copy(alpha = 0.14f)),
+        ) {
+            Box(
+                Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(value.coerceIn(0, 100) / 100f)
+                    .background(color),
+            )
+        }
+    }
+}
+
+@Composable
+private fun PetButton(label: String, accent: Color, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(accent.copy(alpha = 0.28f))
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, color = Color.White, fontSize = 12.sp, maxLines = 1)
+    }
+}
+
+// Clawd-Orakel: ask a yes/no question, tap him
+
+/** Clawd as a magic 8-ball: think of a question, tap, he ponders and answers. */
+@Composable
+internal fun ClawdOracleWidget(modifier: Modifier) {
+    var answer by remember { mutableStateOf<String?>(null) }
+    var thinking by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    BoxWithConstraints(
+        modifier.tap {
+            if (thinking) return@tap
+            thinking = true
+            scope.launch {
+                delay(1300)
+                answer = ClawdOracle.ask()
+                thinking = false
+            }
+        },
+    ) {
+        val boxH = maxHeight
+        Column(
+            Modifier.fillMaxSize().padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Clawd(
+                Modifier.fillMaxWidth(0.6f).height(boxH * 0.42f),
+                mood = when {
+                    thinking -> ClawdMood.Thinking
+                    answer != null -> ClawdMood.Wave
+                    else -> ClawdMood.Idle
+                },
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                when {
+                    thinking -> "Hmm …"
+                    answer != null -> answer!!
+                    else -> "Denk an eine Ja/Nein-Frage und tipp mich an"
+                },
+                color = Color.White,
+                fontSize = if (answer != null && !thinking) 14.sp else 12.sp,
+                fontWeight = if (answer != null && !thinking) FontWeight.SemiBold else FontWeight.Normal,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+// Clawd-Fokus: 25 minutes of work, Clawd works along
+
+/** A focus timer: tap to start 25 minutes, Clawd works along and dances when it's done. */
+@Composable
+internal fun ClawdFocusWidget(modifier: Modifier) {
+    val context = LocalContext.current
+    var end by remember { mutableStateOf(ClawdFocus.endsAt(context)) }
+    var celebrate by remember { mutableStateOf(false) }
+    val running = end > 0L
+    // Ticks every second while it runs, so the minutes count down.
+    rememberTime(everySecond = running)
+    val left = if (running) (end - System.currentTimeMillis()).coerceAtLeast(0L) else 0L
+    // Time's up: count it and let Clawd dance.
+    androidx.compose.runtime.LaunchedEffect(running, left == 0L) {
+        if (running && left == 0L) {
+            ClawdFocus.finished(context)
+            end = 0L
+            celebrate = true
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(celebrate) {
+        if (celebrate) {
+            delay(6000)
+            celebrate = false
+        }
+    }
+    val accent = LocalSettings.current.accent.color
+    BoxWithConstraints(
+        modifier.tap {
+            celebrate = false
+            if (running) ClawdFocus.stop(context) else ClawdFocus.start(context)
+            end = ClawdFocus.endsAt(context)
+        },
+    ) {
+        val boxH = maxHeight
+        Column(
+            Modifier.fillMaxSize().padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Clawd(
+                Modifier.fillMaxWidth(0.55f).height(boxH * 0.36f),
+                mood = when {
+                    celebrate -> ClawdMood.Dance
+                    running -> ClawdMood.Thinking
+                    else -> ClawdMood.Idle
+                },
+            )
+            val minutes = left / 60_000
+            val seconds = (left / 1000) % 60
+            Text(
+                when {
+                    celebrate -> "Geschafft! 🎉"
+                    running -> "%d:%02d".format(minutes, seconds)
+                    else -> "${ClawdFocus.MINUTES}:00"
+                },
+                color = Color.White,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Light,
+            )
+            Text(
+                when {
+                    celebrate -> "Pause verdient"
+                    running -> "Wir arbeiten · tippen stoppt"
+                    else -> "Fokus · tippen startet" + (ClawdFocus.done(context).takeIf { it > 0 }?.let { " · $it ✓" } ?: "")
+                },
+                color = accent.copy(alpha = 0.85f),
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+// Clawd-Begleiter: Clawd walking around on the home screen
+
+/**
+ * Clawd living on the home screen, just above the dock: he strolls back and forth, sleeps at
+ * night and when the battery is nearly empty, dances when the charger goes in. Tap him and he
+ * says something (greetings, tips, jokes), double tap and he does a flip, hold him to talk.
+ */
+@Composable
+fun ClawdCompanion(onTalk: () -> Unit, modifier: Modifier = Modifier) {
+    val settings = LocalSettings.current
+    val globalMood by ClaudeAssistant.clawdMood.collectAsStateWithLifecycle()
+    val (battery, charging) = rememberBatteryLevel()
+    val hour = rememberTime(everySecond = false).hour
+    var bubble by remember { mutableStateOf<String?>(null) }
+    val player = rememberMoodPlayer()
+    var taps by remember { mutableIntStateOf(0) }
+
+    // The charger goes in: a little dance.
+    var wasCharging by remember { mutableStateOf(charging) }
+    androidx.compose.runtime.LaunchedEffect(charging) {
+        if (charging && !wasCharging) {
+            player.play(ClawdMood.Dance, 4000)
+            bubble = "Strom! Ich tanke mit. ⚡"
+        }
+        wasCharging = charging
+    }
+    androidx.compose.runtime.LaunchedEffect(bubble) {
+        if (bubble != null) {
+            delay(5000)
+            bubble = null
+        }
+    }
+
+    val asleep = clawdAsleep(hour) || (battery in 0..10 && !charging)
+    val busy = player.mood != null || globalMood != ClawdMood.Idle
+    val walking = settings.animations && !asleep && !busy
+    val pos = remember { androidx.compose.animation.core.Animatable(0.5f) }
+    var facingRight by remember { mutableStateOf(true) }
+    androidx.compose.runtime.LaunchedEffect(walking) {
+        if (!walking) return@LaunchedEffect
+        while (true) {
+            delay(kotlin.random.Random.nextLong(2500, 7000))
+            val target = kotlin.random.Random.nextFloat()
+            facingRight = target > pos.value
+            val distance = abs(target - pos.value)
+            pos.animateTo(target, tween((distance * 9000).toInt().coerceAtLeast(500), easing = LinearEasing))
+        }
+    }
+    val mood = player.mood ?: when {
+        globalMood != ClawdMood.Idle -> globalMood
+        asleep -> ClawdMood.Sleep
+        pos.isRunning -> ClawdMood.Thinking
+        else -> ClawdMood.Idle
+    }
+
+    BoxWithConstraints(modifier.fillMaxWidth().height(40.dp).padding(horizontal = 22.dp)) {
+        val h = 34.dp
+        val w = h * (14f / 11f)
+        val x = (maxWidth - w) * pos.value
+        Clawd(
+            Modifier
+                .align(Alignment.BottomStart)
+                .offset(x = x)
+                .size(width = w, height = h)
+                .graphicsLayer { scaleX = if (facingRight) 1f else -1f }
+                .pointerInput(hour, battery, charging) {
+                    detectTapGestures(
+                        onTap = {
+                            taps++
+                            player.play(TapMoods[taps % TapMoods.size].takeIf { it != ClawdMood.Flip } ?: ClawdMood.Wave)
+                            bubble = dev.hearth.launcher.data.ClawdLines.next(hour, battery, charging)
+                        },
+                        onDoubleTap = {
+                            player.play(ClawdMood.Flip, 1600)
+                            bubble = "Hui! 🤸"
+                        },
+                        onLongPress = { onTalk() },
+                    )
+                },
+            mood = mood,
+        )
+        val text = bubble
+        if (text != null) {
+            val bubbleW = 230.dp
+            Text(
+                text,
+                color = Color.White,
+                fontSize = 12.sp,
+                lineHeight = 15.sp,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .offset(x = (x - 20.dp).coerceIn(0.dp, (maxWidth - bubbleW).coerceAtLeast(0.dp)), y = -(h + 6.dp))
+                    .widthIn(max = bubbleW)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .tap { bubble = null }
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
+            )
+        }
     }
 }

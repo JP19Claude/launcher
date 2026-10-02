@@ -110,6 +110,10 @@ class GlimmerBridgeProvider : ContentProvider() {
                 }
                 GlimmerLink.SYNC_SETTINGS -> {
                     if (extras != null) SettingsRepository.writeRaw(context, extras)
+                    // The Clawd app: his widgets take the new look right away.
+                    if (context.packageName == ClawdLink.packageName) {
+                        context.sendBroadcast(android.content.Intent(ClawdLink.ACTION_REFRESH).setPackage(context.packageName))
+                    }
                     null
                 }
                 GlimmerLink.APP_UNLOCKED -> {

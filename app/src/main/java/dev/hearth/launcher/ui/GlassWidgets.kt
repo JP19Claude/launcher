@@ -76,6 +76,9 @@ fun InternalWidget(repo: WidgetRepository, id: Int, modifier: Modifier = Modifie
         HearthWidget.ClawdBattery -> ClawdBatteryWidget(modifier)
         HearthWidget.ClawdJoke -> ClawdJokeWidget(id, modifier)
         HearthWidget.ClawdSticker -> ClawdStickerWidget(modifier)
+        HearthWidget.ClawdPet -> ClawdPetWidget(modifier)
+        HearthWidget.ClawdOracle -> ClawdOracleWidget(modifier)
+        HearthWidget.ClawdFocus -> ClawdFocusWidget(modifier)
     }
 }
 

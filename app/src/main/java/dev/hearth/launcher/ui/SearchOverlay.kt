@@ -269,6 +269,25 @@ fun SearchOverlay(
                     AppIcon(app, actions, onWallpaper = false, fillCell = true, onLaunch = onLaunch)
                 }
             }
+            // Nothing found: Clawd scratches his head and offers to help.
+            if (trimmed.isNotEmpty() && results.isEmpty() && calculate(trimmed) == null) {
+                item(span = { GridItemSpan(maxLineSpan) }, key = "clawd-empty") {
+                    androidx.compose.foundation.layout.Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onAskClaude(trimmed) }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Clawd(Modifier.size(width = 56.dp, height = 46.dp), mood = dev.hearth.launcher.data.ClawdMood.Thinking)
+                        androidx.compose.foundation.layout.Spacer(Modifier.size(12.dp))
+                        Column {
+                            Text("Hier ist keine App mit dem Namen.", color = colors.onBackground, fontSize = 15.sp)
+                            Text("Tipp mich an, dann kümmere ich mich drum.", color = colors.onSurfaceVariant, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
             if (trimmed.isNotEmpty()) {
                 if (!claudeFirst) item(span = { GridItemSpan(maxLineSpan) }) {
                     ClaudeRow(query = trimmed, onClick = { onAskClaude(trimmed) })

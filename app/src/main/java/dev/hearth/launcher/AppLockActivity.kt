@@ -87,10 +87,13 @@ class AppLockActivity : ComponentActivity() {
             finish()
             return
         }
+        val look = dev.hearth.launcher.data.SettingsRepository(this).settings.value
         setContent {
-            HearthTheme(dark = true) {
-                BackHandler { leave() }
-                LockScreen()
+            androidx.compose.runtime.CompositionLocalProvider(dev.hearth.launcher.ui.LocalSettings provides look) {
+                HearthTheme(dark = true) {
+                    BackHandler { leave() }
+                    LockScreen()
+                }
             }
         }
         // Asked once the screen is in front: some phones (Samsung among them) silently drop a
@@ -310,19 +313,32 @@ class AppLockActivity : ComponentActivity() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Box(
-                    Modifier
-                        .size(84.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    GlyphIcon(Glyph.Lock, Color.White, Modifier.size(40.dp))
+                // Clawd guards the app, with a little lock at his side.
+                Box(Modifier.size(104.dp)) {
+                    Box(
+                        Modifier
+                            .size(96.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        dev.hearth.launcher.ui.Clawd(Modifier.size(width = 66.dp, height = 58.dp))
+                    }
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF2C2C30)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        GlyphIcon(Glyph.Lock, Color.White, Modifier.size(18.dp))
+                    }
                 }
                 Spacer(Modifier.size(20.dp))
                 Text(label, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                 Spacer(Modifier.size(6.dp))
-                Text(if (removing) "App-Sperre aufheben?" else "ist gesperrt", color = Color.White.copy(alpha = 0.65f), fontSize = 15.sp)
+                Text(if (removing) "App-Sperre aufheben?" else "ist gesperrt – Clawd passt auf", color = Color.White.copy(alpha = 0.65f), fontSize = 15.sp)
                 message?.let {
                     Spacer(Modifier.size(16.dp))
                     Text(it, color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp, textAlign = TextAlign.Center)

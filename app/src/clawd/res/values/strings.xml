@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Clawd</string>
+    <string name="listener_label">Clawd: Mitteilungen &amp; Medien</string>
+    <string name="clawd_w_picture">Clawd-Bild</string>
+    <string name="clawd_w_picture_d">Clawd als Bild mit sechs Hintergründen; antippen und er bewegt sich</string>
+    <string name="clawd_w_clock">Clawd-Uhr</string>
+    <string name="clawd_w_clock_d">Uhrzeit und Datum mit Clawd und einem Gruß, nachts schläft er</string>
+    <string name="clawd_w_joke">Clawd-Witz</string>
+    <string name="clawd_w_joke_d">Jeden Tag ein Witz von Clawd, antippen für den nächsten</string>
+    <string name="clawd_w_ask">Frag Clawd</string>
+    <string name="clawd_w_ask_d">Ein Tipp und du sprichst mit Clawd</string>
+    <string name="clawd_w_battery">Clawd-Akku</string>
+    <string name="clawd_w_battery_d">Clawd tanzt beim Laden und wird müde, wenn der Akku leer wird</string>
+    <string name="clawd_w_sticker">Clawd-Sticker</string>
+    <string name="clawd_w_sticker_d">Nur Clawd, klein: antippen für die nächste Pose</string>
+    <string name="clawd_w_pet">Clawd-Tamagotchi</string>
+    <string name="clawd_w_pet_d">Füttern und spielen: Clawd wird hungrig und will beschäftigt werden</string>
+    <string name="clawd_w_oracle">Clawd-Orakel</string>
+    <string name="clawd_w_oracle_d">Denk an eine Ja/Nein-Frage, tipp ihn an – Clawd antwortet</string>
+</resources>

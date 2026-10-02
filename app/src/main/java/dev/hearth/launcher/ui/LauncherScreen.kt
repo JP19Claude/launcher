@@ -837,6 +837,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             Modifier.fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
+                            // Clawd lives here, on the home pages: he walks, talks and plays.
+                            if (settings.clawdCompanion && !onLibraryPage && pagerState.currentPage >= widgetPages) {
+                                ClawdCompanion(onTalk = { vm.askClaude() })
+                            }
                             if (widgetPages + pages.size + libraryPages > 1) {
                                 PageDots(
                                     count = widgetPages + pages.size + libraryPages,

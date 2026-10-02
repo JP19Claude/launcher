@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Face
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Notifications
@@ -273,6 +274,8 @@ fun SettingsScreen(
             }
 
             if (shows("claude")) item { ClaudeAssistantSettings() }
+
+            if (shows("clawd")) item { ClawdSettings(s, update) }
 
             if (shows("design")) item {
                 Section("Liquid Glass") {
@@ -1420,6 +1423,8 @@ internal val SettingsCategories = listOf(
         "home raster spalten reihen uhr widgets dock wischen gesten doppeltippen sperren seiten"),
     SettingsCategory("claude", "Claude & KI", "Assistent, Anbieter, Schlüssel, Sparmodus", Icons.Rounded.Face, Color(0xFFD97757),
         "claude ki assistent api schlüssel nvidia groq gemini modell sprache vorlesen sparmodus"),
+    SettingsCategory("clawd", "Clawd", "Farbe, Hüte, Begleiter, Widgets, Clawd-App", Icons.Rounded.Favorite, Color(0xFFE5845F),
+        "clawd maskottchen pixel hut krone farbe begleiter widget tamagotchi orakel fokus app"),
     SettingsCategory("glimmer", "Glimmer & Kontrollzentrum", "Insel um die Kamera, Kontrollzentrum über Apps", Icons.Rounded.Notifications, Color(0xFFFF9F0A),
         "glimmer insel dynamic island kontrollzentrum quick panel schalter regler"),
     SettingsCategory("privacy", "Datenschutz & Sicherheit", "App-Sperre, ausgeblendete Apps", Icons.Rounded.Lock, Color(0xFF34C759),
@@ -1431,7 +1436,7 @@ internal val SettingsCategories = listOf(
 /** The start page's cards, grouped like Samsung's. */
 private val SettingsGroups: List<List<SettingsCategory>> = listOf(
     SettingsCategories.filter { it.id == "design" || it.id == "home" },
-    SettingsCategories.filter { it.id == "claude" || it.id == "glimmer" },
+    SettingsCategories.filter { it.id == "claude" || it.id == "clawd" || it.id == "glimmer" },
     SettingsCategories.filter { it.id == "privacy" || it.id == "general" },
 )
 

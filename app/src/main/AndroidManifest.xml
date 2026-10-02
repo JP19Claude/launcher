@@ -40,6 +40,7 @@
         <package android:name="dev.hearth.launcher" />
         <package android:name="dev.hearth.glimmer" />
         <package android:name="dev.hearth.controls" />
+        <package android:name="dev.hearth.clawd" />
         <!-- Claude app, for "Frag Claude" -->
         <package android:name="com.anthropic.claude" />
         <!-- Earbud companion apps, opened for noise cancelling -->

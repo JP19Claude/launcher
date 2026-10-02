@@ -23,13 +23,14 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build debug APKs (Hearth, Glimmer, control center)
+      - name: Build debug APKs (Hearth, Glimmer, control center, Clawd)
         run: |
           chmod +x gradlew
-          ./gradlew assembleHearthDebug assembleGlimmerDebug assembleControlsDebug
+          ./gradlew assembleHearthDebug assembleGlimmerDebug assembleControlsDebug assembleClawdDebug
           cp app/build/outputs/apk/hearth/debug/app-hearth-debug.apk Hearth.apk
           cp app/build/outputs/apk/glimmer/debug/app-glimmer-debug.apk Glimmer.apk
           cp app/build/outputs/apk/controls/debug/app-controls-debug.apk Kontrollzentrum.apk
+          cp app/build/outputs/apk/clawd/debug/app-clawd-debug.apk Clawd.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -38,6 +39,7 @@ jobs:
             Hearth.apk
             Glimmer.apk
             Kontrollzentrum.apk
+            Clawd.apk
 
       # Once: every earlier version of every app as its own release (oldest first, so they
       # line up in order). A marker tag remembers it's done.
@@ -90,7 +92,8 @@ jobs:
           v=$(grep -o 'versionName = "[^"]*"' app/build.gradle.kts | cut -d'"' -f2)
           for entry in "Hearth.apk|hearth|Hearth|der Launcher" \
                        "Glimmer.apk|glimmer|Glimmer|die Insel um die Kamera" \
-                       "Kontrollzentrum.apk|kontrollzentrum|Kontrollzentrum|das Glas-Kontrollzentrum über allen Apps"; do
+                       "Kontrollzentrum.apk|kontrollzentrum|Kontrollzentrum|das Glas-Kontrollzentrum über allen Apps" \
+                       "Clawd.apk|clawd|Clawd|Clawds Widgets für jeden Launcher, sein Tamagotchi und Chat"; do
             IFS='|' read -r file slug name what <<< "$entry"
             tag="$slug-v$v"
             cp "$file" "$name-$v.apk"
@@ -113,8 +116,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "build-${{ github.run_number }}" Hearth.apk Glimmer.apk Kontrollzentrum.apk \
+          gh release create "build-${{ github.run_number }}" Hearth.apk Glimmer.apk Kontrollzentrum.apk Clawd.apk \
             --target "${{ github.sha }}" \
             --title "Hearth Build ${{ github.run_number }}" \
-            --notes "Hearth.apk (Launcher), Glimmer.apk (Insel) und Kontrollzentrum.apk (Glas-Kontrollzentrum über Apps). Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
+            --notes "Hearth.apk (Launcher), Glimmer.apk (Insel), Kontrollzentrum.apk (Glas-Kontrollzentrum über Apps) und Clawd.apk (Clawds Widgets für jeden Launcher). Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
             --latest

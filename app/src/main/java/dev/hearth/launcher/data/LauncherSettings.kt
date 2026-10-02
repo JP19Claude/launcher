@@ -246,6 +246,35 @@ enum class DockStyle(val label: String) {
     Clear("Ohne Hintergrund"),
 }
 
+/** Clawd's color; the rainbow one changes color as he moves. */
+enum class ClawdSkin(val label: String, val color: Color) {
+    Terracotta("Terrakotta", Color(0xFFD97757)),
+    Ocean("Ozean", Color(0xFF5B8DEF)),
+    Mint("Minze", Color(0xFF4CB782)),
+    Lavender("Lavendel", Color(0xFF9B7BE0)),
+    Gold("Gold", Color(0xFFE5B53A)),
+    Rose("Rosa", Color(0xFFF07AA8)),
+    Snow("Schnee", Color(0xFFF2F0EA)),
+    Midnight("Mitternacht", Color(0xFF5A6A8C)),
+    Rainbow("Regenbogen", Color(0xFFD97757)),
+}
+
+/** What Clawd wears on his head (or his eyes). */
+enum class ClawdHat(val label: String) {
+    None("Nichts"),
+    Party("Partyhut"),
+    Crown("Krone"),
+    Beanie("Mütze"),
+    Cap("Cap"),
+    Bow("Schleife"),
+    Headphones("Kopfhörer"),
+    Sunglasses("Sonnenbrille"),
+    ;
+
+    /** Sits above his head, so he needs a little more room up there. */
+    val tall: Boolean get() = this != None && this != Sunglasses
+}
+
 /** Order of the apps in One UI's app drawer. */
 enum class DrawerSort(val label: String) {
     Alphabet("A–Z"),
@@ -300,6 +329,10 @@ data class LauncherSettings(
     val drawerSuggestions: Boolean = true,
     val dockStyle: DockStyle = DockStyle.Glass,
     val doubleTapAction: HomeGesture = HomeGesture.Lock,
+    /** Clawd: his color, what he wears, and whether he walks around on the home screen. */
+    val clawdSkin: ClawdSkin = ClawdSkin.Terracotta,
+    val clawdHat: ClawdHat = ClawdHat.None,
+    val clawdCompanion: Boolean = true,
     val clockFont: ClockFont = ClockFont.Default,
     val labelSize: LabelSize = LabelSize.Normal,
     val showAppLibrary: Boolean = true,
@@ -693,6 +726,9 @@ class SettingsRepository(context: Context) {
             drawerSort = enumOf("drawerSort", d.drawerSort),
             drawerSuggestions = prefs.getBoolean("drawerSuggestions", d.drawerSuggestions),
             dockStyle = enumOf("dockStyle", d.dockStyle),
+            clawdSkin = enumOf("clawdSkin", d.clawdSkin),
+            clawdHat = enumOf("clawdHat", d.clawdHat),
+            clawdCompanion = prefs.getBoolean("clawdCompanion", d.clawdCompanion),
             // Older installs had only "double tap locks" on or off.
             doubleTapAction = enumOf(
                 "doubleTapAction",
@@ -808,6 +844,9 @@ class SettingsRepository(context: Context) {
             .putString("drawerSort", s.drawerSort.name)
             .putBoolean("drawerSuggestions", s.drawerSuggestions)
             .putString("dockStyle", s.dockStyle.name)
+            .putString("clawdSkin", s.clawdSkin.name)
+            .putString("clawdHat", s.clawdHat.name)
+            .putBoolean("clawdCompanion", s.clawdCompanion)
             .putString("doubleTapAction", s.doubleTapAction.name)
             .putString("clockFont", s.clockFont.name)
             .putString("labelSize", s.labelSize.name)
@@ -887,7 +926,7 @@ class SettingsRepository(context: Context) {
         const val PREFS_NAME = "hearth_settings"
 
         /** Settings Hearth hands to Glimmer: the control center's look and the accent color. */
-        fun isShared(key: String) = key.startsWith("cc") || key == "accent" || key == AppLock.KEY
+        fun isShared(key: String) = key.startsWith("cc") || key.startsWith("clawd") || key == "accent" || key == AppLock.KEY
 
         /** The shared settings as they are stored, for [writeRaw] in the other app. */
         fun readShared(context: Context): Bundle = Bundle().apply {

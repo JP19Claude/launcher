@@ -1,7 +1,7 @@
 # Hearth Launcher
 
 Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und Liquid Glass –
-plus **Glimmer**, die Insel um die Frontkamera, und dem **Kontrollzentrum** als eigene Apps.
+plus **Glimmer**, die Insel um die Frontkamera, dem **Kontrollzentrum** und **Clawd** als eigene Apps.
 
 
 ## Clawd
@@ -19,7 +19,24 @@ wippt, trippelt beim Nachdenken, tanzt, schlägt Salto und schickt Herzen.
   (er spaziert durch eine Pixel-Landschaft mit Tag, Abend und Nacht), **Clawd-Uhr** (Uhrzeit
   mit Gruß, nachts schläft er), **Frag Clawd** (ein Tipp öffnet den Chat), **Clawd-Akku**
   (tanzt beim Laden, müde bei leerem Akku), **Clawd-Witz** (jeden Tag ein Witz) und
-  **Clawd-Sticker** (1×1, nur er).
+  **Clawd-Sticker** (1×1, nur er), dazu **Clawd-Tamagotchi** (füttern, spielen, streicheln –
+  er wird hungrig), **Clawd-Orakel** (Ja/Nein-Fragen) und **Clawd-Fokus** (25-Minuten-Timer).
+- Clawd-Begleiter: Er spaziert auf dem Startbildschirm über dem Dock, schläft nachts und bei
+  leerem Akku, tanzt, wenn das Ladekabel reinkommt. Antippen: er sagt etwas (Gruß, Tipp,
+  Witz) · zweimal: Salto · gedrückt halten: mit ihm reden.
+- Aussehen (Einstellungen → Clawd): neun Farben (auch Regenbogen) und Hüte – Partyhut,
+  Krone, Mütze, Cap, Schleife, Kopfhörer, Sonnenbrille. Gilt überall.
+- Außerdem: leere Suche („Tipp mich an, dann kümmere ich mich drum“), App-Sperre (Clawd
+  passt auf), Assistent über anderen Apps.
+
+### Clawd-App
+
+`Clawd.apk` (dev.hearth.clawd) bringt Clawds Widgets auf jeden Startbildschirm, auch auf den von
+Samsung: Clawd-Bild, Clawd-Uhr, Frag Clawd, Clawd-Tamagotchi, Clawd-Witz, Clawd-Akku,
+Clawd-Orakel und Clawd-Sticker – mit „Hinzufügen“ direkt aus der App. Dazu ein Chat mit ihm
+(Fragen über Smalltalk hinaus gehen an Claude in Hearth oder an die Claude-App), sein
+Tamagotchi und sein Aussehen. Mit Hearth übernimmt die App Clawds Farbe und Hut automatisch.
+In Hearth bleiben alle Clawd-Widgets eingebaut.
 
 ## Easter Eggs
 

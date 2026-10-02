@@ -58,6 +58,14 @@ object ControlsLink : HearthApp("dev.hearth.controls", "dev.hearth.controls.brid
     const val DOWNLOAD_URL = "https://github.com/Vinted7777/launcher/releases/latest/download/Kontrollzentrum.apk"
 }
 
+/** Clawd: his own app with his widgets for any launcher (Samsung's too); takes Hearth's look of him. */
+object ClawdLink : HearthApp("dev.hearth.clawd", "dev.hearth.clawd.bridge") {
+    const val DOWNLOAD_URL = "https://github.com/Vinted7777/launcher/releases/latest/download/Clawd.apk"
+
+    /** Sent inside the Clawd app when his look changed: the widgets draw him again. */
+    const val ACTION_REFRESH = "dev.hearth.clawd.REFRESH"
+}
+
 /** Glimmer: the island; also takes the app picture for Hearth's fly-in. */
 object GlimmerLink : HearthApp("dev.hearth.glimmer", "dev.hearth.glimmer.bridge") {
 

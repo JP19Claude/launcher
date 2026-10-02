@@ -1,0 +1,9 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="66dp"
+    android:viewportWidth="16"
+    android:viewportHeight="11">
+    <!-- Clawd, for the widget previews -->
+    <path android:fillColor="#D97757" android:pathData="M3,1h10v7h-10zM1,4h2v2h-2zM13,4h2v2h-2zM4,8h1v2h-1zM6,8h1v2h-1zM9,8h1v2h-1zM11,8h1v2h-1z" />
+    <path android:fillColor="#1B1A1F" android:pathData="M4,2h1v2h-1zM11,2h1v2h-1z" />
+</vector>

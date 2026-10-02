@@ -1,6 +1,7 @@
 package dev.hearth.launcher
 
 import androidx.compose.ui.unit.DpSize
+import dev.hearth.launcher.system.ClawdLink
 import dev.hearth.launcher.system.ControlsLink
 import dev.hearth.launcher.system.GlimmerLink
 import android.os.SystemClock
@@ -238,6 +239,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 .collect { (_, shared) ->
                     ControlsLink.syncSettings(getApplication<Application>(), shared)
                     GlimmerLink.syncSettings(getApplication<Application>(), shared)
+                    ClawdLink.syncSettings(getApplication<Application>(), shared)
                 }
         }
 

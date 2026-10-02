@@ -10,6 +10,10 @@ import androidx.activity.enableEdgeToEdge
 import dev.hearth.launcher.data.ClaudeAssistant
 import dev.hearth.launcher.data.SystemControls
 import dev.hearth.launcher.ui.ClaudeAssistantSheet
+import dev.hearth.launcher.ui.LocalSettings
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hearth.launcher.ui.theme.HearthTheme
 
 /**
@@ -38,7 +42,11 @@ class ClaudeAssistActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         if (savedInstanceState == null) question(intent)?.let { ClaudeAssistant.ask(it) }
+        val settings = dev.hearth.launcher.data.SettingsRepository(this).settings
         setContent {
+            // Clawd in his colors and hat here too.
+            val look by settings.collectAsStateWithLifecycle()
+            CompositionLocalProvider(LocalSettings provides look) {
             HearthTheme(dark = true) {
                 ClaudeAssistantSheet(
                     onDismiss = { finish() },
@@ -52,6 +60,7 @@ class ClaudeAssistActivity : ComponentActivity() {
                         }
                     },
                 )
+            }
             }
         }
     }
