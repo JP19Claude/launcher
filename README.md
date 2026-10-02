@@ -118,7 +118,9 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
   - Entsperren wie Face ID: wacht das Handy gesperrt auf, wird Glimmer zum abgerundeten
     Quadrat mit Face-ID-Symbol (oder Fingerabdruck), das atmet und sich umsieht; sobald das
     Handy dich erkennt (auch wenn es auf dem Sperrbildschirm bleibt), wird daraus ein grüner
-    Haken; erkennt es dich nicht, färbt sich der Rahmen rot und schüttelt sich
+    Haken; schlägt Fingerabdruck oder Face ID fehl (der Sperrbildschirm meldet „nicht
+    erkannt“, „erneut versuchen“, falsche PIN …), wird das ganze Symbol rot und die Insel
+    schüttelt sich wie beim iPhone, bei jedem Versuch neu
   - Always-On-Display: Musik und Aktivitäten bleiben sichtbar, gedimmt und ohne Bewegung
     (sofern das Handy Einblendungen im AOD zulässt)
   - Laden zeigt eine kleine Batterie, die sich füllt

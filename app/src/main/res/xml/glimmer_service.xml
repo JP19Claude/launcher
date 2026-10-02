@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Glimmer's accessibility service: draws the island over every app and the lock screen.
-     It only hears about the system UI (to notice the lock screen changing), only looks at the
-     system UI's windows, and while an app opened from Hearth is in front keeps its last
+     It only hears about the system UI (to notice the lock screen saying a face or finger wasn't
+     recognized), only looks at the system UI's windows, and while an app opened from Hearth is in front keeps its last
      picture in memory (never saved) so the app can fly into the island when it's closed. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeAnnouncement"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows"
     android:packageNames="com.android.systemui"
     android:canRetrieveWindowContent="true"
     android:canTakeScreenshot="true"
     android:description="@string/glimmer_service_description"
-    android:notificationTimeout="200"
+    android:notificationTimeout="100"
     android:summary="@string/glimmer_service_summary" />

@@ -122,9 +122,14 @@ sealed interface IslandContent {
 
     /**
      * Face ID moment: scanning while the phone checks, a green tick once it's unlocked,
-     * a shake when it didn't recognize you.
+     * red and a shake when it didn't recognize you ([attempt] counts tries, so each one shakes).
      */
-    data class Unlock(val success: Boolean, val face: Boolean, val failed: Boolean = false) : IslandContent
+    data class Unlock(
+        val success: Boolean,
+        val face: Boolean,
+        val failed: Boolean = false,
+        val attempt: Int = 0,
+    ) : IslandContent
 
     /** Short system moments: charging, silent mode, low battery. */
     data class Alert(
@@ -279,6 +284,24 @@ fun GlimmerIsland(
         }
     }
     val glowColor = glowColorOf(content, LocalSettings.current.accent.color)
+    // Face or finger not recognized: the whole island shakes its head, like the iPhone's.
+    val denied = remember { Animatable(0f) }
+    val deniedKey = (content as? IslandContent.Unlock)?.takeIf { it.failed }?.attempt
+    LaunchedEffect(deniedKey) {
+        if (deniedKey == null || dimmed) {
+            denied.snapTo(0f)
+            return@LaunchedEffect
+        }
+        denied.animateTo(0f, keyframes {
+            durationMillis = 560
+            -1f at 55
+            1f at 140
+            -0.85f at 225
+            0.6f at 310
+            -0.35f at 395
+            0.15f at 475
+        })
+    }
     // How sharp the content is: from a blur to clear whenever it changes or unfolds.
     val clarity = remember { Animatable(1f) }
     LaunchedEffect(key, expanded) {
@@ -330,6 +353,7 @@ fun GlimmerIsland(
                     val q = if (expanded) 0f else squash.value
                     scaleX = s * (1f + 0.14f * q)
                     scaleY = s * (1f - 0.12f * q)
+                    translationX = denied.value * 7.dp.toPx()
                     transformOrigin = TransformOrigin(0.5f, 0f)
                 },
             verticalAlignment = Alignment.Top,
@@ -1179,7 +1203,7 @@ private fun IslandButton(glyph: Glyph, big: Boolean = false, onClick: () -> Unit
 /**
  * Face ID (or the fingerprint) like on the iPhone: the frame and face breathe and look around
  * while the phone checks, then everything folds into a tick once it's unlocked. If it
- * didn't recognize you, the frame flushes red and shakes its head, like the iPhone.
+ * didn't recognize you, the whole symbol turns red while the island shakes, like the iPhone.
  */
 @Composable
 private fun UnlockGlyph(content: IslandContent.Unlock, modifier: Modifier) {
@@ -1188,30 +1212,15 @@ private fun UnlockGlyph(content: IslandContent.Unlock, modifier: Modifier) {
         if (content.success) done.animateTo(1f, tween(460, easing = FastOutSlowInEasing)) else done.snapTo(0f)
     }
     val still = LocalGlimmerStill.current
-    val shake = remember { Animatable(0f) }
-    val miss = remember { Animatable(0f) }
-    LaunchedEffect(content.failed) {
-        if (!content.failed) {
-            miss.snapTo(0f)
-            return@LaunchedEffect
-        }
-        launch { miss.animateTo(1f, tween(160)) }
-        if (!still) {
-            shake.animateTo(0f, keyframes {
-                durationMillis = 520
-                -1f at 60
-                1f at 140
-                -0.8f at 220
-                0.6f at 300
-                -0.35f at 380
-                0.15f at 450
-            })
-        }
+    // Red at once, the moment the try fails, fading back only if the island stays.
+    val miss = remember { Animatable(if (content.failed) 1f else 0f) }
+    LaunchedEffect(content.failed, content.attempt) {
+        if (content.failed) miss.animateTo(1f, tween(120)) else miss.animateTo(0f, tween(240))
     }
     val transition = rememberInfiniteTransition(label = "unlockScan")
     val breath by transition.animateFloat(0.93f, 1.03f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "breath")
     val scan by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1300, easing = LinearEasing)), label = "scan")
-    Canvas(modifier.graphicsLayer { translationX = shake.value * size.width * 0.16f }) {
+    Canvas(modifier) {
         val d = done.value
         val m = miss.value
         val w = size.minDimension
@@ -1245,7 +1254,7 @@ private fun UnlockGlyph(content: IslandContent.Unlock, modifier: Modifier) {
             val look = if (still || m > 0f) 0f else sin(scan * 2f * Math.PI.toFloat()) * w * 0.035f
             if (content.face) {
                 translate(left = look) {
-                    val c = Color.White.copy(alpha = features)
+                    val c = androidx.compose.ui.graphics.lerp(Color.White, Red, m).copy(alpha = features)
                     // Eyes, nose, smile.
                     drawLine(c, Offset(w * 0.36f, w * 0.37f), Offset(w * 0.36f, w * 0.46f), stroke, StrokeCap.Round)
                     drawLine(c, Offset(w * 0.64f, w * 0.37f), Offset(w * 0.64f, w * 0.46f), stroke, StrokeCap.Round)
@@ -1272,7 +1281,8 @@ private fun UnlockGlyph(content: IslandContent.Unlock, modifier: Modifier) {
                     val radius = w * (0.1f + i * 0.075f)
                     val lit = if (still) 1f else ((scan * 4f - i).coerceIn(0f, 1f))
                     drawArc(
-                        Color.White.copy(alpha = features * (0.35f + 0.65f * lit)),
+                        androidx.compose.ui.graphics.lerp(Color.White, Red, m)
+                            .copy(alpha = features * (0.35f + 0.65f * (if (m > 0f) 1f else lit))),
                         startAngle = 200f - i * 6f,
                         sweepAngle = 220f + i * 12f,
                         useCenter = false,

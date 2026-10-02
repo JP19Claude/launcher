@@ -110,31 +110,104 @@ class GlimmerController(private val service: GlimmerService) {
 
     /**
      * Face ID-style moment while unlocking: scanning when the screen wakes locked, a green tick
-     * the moment the phone knows you (even if it stays on the lock screen), a shake if it gives up.
+     * the moment the phone knows you (even if it stays on the lock screen), the symbol turning
+     * red and the island shaking when the face or finger isn't recognized.
      */
     private val unlock = MutableStateFlow<IslandContent.Unlock?>(null)
     private var unlockToken = 0
     /** The tick was shown for this wake-up; unlocking afterwards doesn't show it again. */
     private var unlockTicked = false
+    /** Counts failed tries, so every one shakes again. */
+    private var unlockAttempt = 0
+    private var lastFailAt = 0L
+    /** The scan symbol is up and waiting for the face (not a tick, not a shake). */
+    private var scanStartedAt = 0L
+    private var watchUntil = 0L
+    private var watching = false
     private fun keyguard() = service.getSystemService(KeyguardManager::class.java)
     private fun showUnlock(success: Boolean, hideAfter: Long, failed: Boolean = false) {
         val symbol = settings.glimmerUnlock
         if (symbol == GlimmerUnlock.Off) return
         if (success) unlockTicked = true
-        unlock.value = IslandContent.Unlock(success = success, face = symbol == GlimmerUnlock.FaceId, failed = failed)
+        scanStartedAt = 0L
+        unlock.value = IslandContent.Unlock(
+            success = success,
+            face = symbol == GlimmerUnlock.FaceId,
+            failed = failed,
+            attempt = unlockAttempt,
+        )
         val token = ++unlockToken
         handler.postDelayed({ if (token == unlockToken) unlock.value = null }, hideAfter)
     }
     private fun hideUnlock() {
         unlockToken++
+        scanStartedAt = 0L
         unlock.value = null
     }
 
     /**
-     * Woken up locked: scan while the phone checks the face (or finger). Android doesn't tell apps
-     * about biometrics, but the device stops being "locked" the moment it recognizes you, even
-     * while the lock screen is still up, so that's what is watched here.
+     * Android doesn't tell apps about biometrics, but the device stops being "locked" the moment
+     * it recognizes you, even while the lock screen is still up, so that's what is watched here.
      */
+    private val unlockWatch = object : Runnable {
+        override fun run() {
+            watching = false
+            if (unlockTicked) return
+            val k = keyguard() ?: return
+            if (!k.isDeviceLocked) {
+                showUnlock(success = true, hideAfter = UNLOCK_DONE_MS)
+                return
+            }
+            val now = SystemClock.uptimeMillis()
+            // The scan ran out without the lock screen saying anything.
+            if (scanStartedAt != 0L && now - scanStartedAt > UNLOCK_SCAN_MS) {
+                // Face ID looks on its own, so finding no one counts as a miss; the finger may
+                // simply not have been put on yet, so its symbol just goes quietly.
+                if (settings.glimmerUnlock == GlimmerUnlock.FaceId) failUnlock() else hideUnlock()
+            }
+            if (now < watchUntil) {
+                watching = true
+                handler.postDelayed(this, UNLOCK_POLL_MS)
+            }
+        }
+    }
+    private fun watchUnlock() {
+        watchUntil = SystemClock.uptimeMillis() + UNLOCK_WATCH_MS
+        if (!watching) {
+            watching = true
+            handler.postDelayed(unlockWatch, UNLOCK_POLL_MS)
+        }
+    }
+    private fun stopUnlockWatch() {
+        handler.removeCallbacks(unlockWatch)
+        watching = false
+    }
+
+    /** Whether lock screen texts are worth reading right now (cheap: called for system UI events). */
+    fun wantsUnlockTexts(): Boolean =
+        settings.glimmerUnlock != GlimmerUnlock.Off && locked.value && !unlockTicked
+
+    /** The lock screen said something; a "not recognized" or "try again" is a failed try. */
+    fun onLockScreenText(text: CharSequence) {
+        if (!wantsUnlockTexts()) return
+        val t = text.toString().lowercase()
+        if (UnlockFailureWords.any { it in t }) failUnlock()
+    }
+
+    private fun failUnlock() {
+        val k = keyguard() ?: return
+        if (settings.glimmerUnlock == GlimmerUnlock.Off || unlockTicked || !k.isDeviceSecure || !k.isKeyguardLocked) return
+        val now = SystemClock.uptimeMillis()
+        // One try often comes as several events.
+        if (now - lastFailAt < 700) return
+        lastFailAt = now
+        unlockAttempt++
+        showUnlock(success = false, hideAfter = UNLOCK_FAIL_MS, failed = true)
+        // Another try may follow: keep watching for the tick.
+        watchUnlock()
+    }
+
+    /** Woken up locked: scan while the phone checks the face (or finger). */
     private fun startUnlockScan() {
         val kg = keyguard() ?: return
         if (settings.glimmerUnlock == GlimmerUnlock.Off || !kg.isDeviceSecure || !kg.isKeyguardLocked) return
@@ -145,22 +218,8 @@ class GlimmerController(private val service: GlimmerService) {
             return
         }
         showUnlock(success = false, hideAfter = UNLOCK_SCAN_MS + 1000)
-        val token = unlockToken
-        val started = SystemClock.uptimeMillis()
-        val poll = object : Runnable {
-            override fun run() {
-                if (token != unlockToken) return
-                val k = keyguard()
-                when {
-                    k == null || !k.isDeviceLocked -> showUnlock(success = true, hideAfter = UNLOCK_DONE_MS)
-                    // Not recognized: a shake, like the iPhone, then the island goes back.
-                    SystemClock.uptimeMillis() - started > UNLOCK_SCAN_MS ->
-                        showUnlock(success = false, hideAfter = UNLOCK_FAIL_MS, failed = true)
-                    else -> handler.postDelayed(this, UNLOCK_POLL_MS)
-                }
-            }
-        }
-        handler.postDelayed(poll, UNLOCK_POLL_MS)
+        scanStartedAt = SystemClock.uptimeMillis()
+        watchUnlock()
     }
 
     /**
@@ -266,6 +325,7 @@ class GlimmerController(private val service: GlimmerService) {
                         }
                         else -> {
                             unlockTicked = false
+                            stopUnlockWatch()
                             hideUnlock()
                         }
                     }
@@ -428,6 +488,7 @@ class GlimmerController(private val service: GlimmerService) {
         batteryReceiverRegistered = false
         torchOn.value = false
         unlock.value = null
+        watching = false
         audioCallback?.let { cb ->
             runCatching { service.getSystemService(AudioManager::class.java)?.unregisterAudioDeviceCallback(cb) }
         }
@@ -708,7 +769,18 @@ class GlimmerController(private val service: GlimmerService) {
         /** How long the face is looked for before the shake (Samsung gives up after about as long). */
         const val UNLOCK_SCAN_MS = 4000L
         const val UNLOCK_DONE_MS = 1300L
-        const val UNLOCK_FAIL_MS = 900L
+        const val UNLOCK_FAIL_MS = 1100L
+        /** How long after waking further tries are watched for (a second finger, a PIN). */
+        const val UNLOCK_WATCH_MS = 30_000L
+        /** What lock screens say when a face, finger, PIN or pattern didn't match. */
+        val UnlockFailureWords = listOf(
+            "nicht erkannt", "nicht erkennen", "kein treffer", "keine übereinstimmung",
+            "stimmt nicht überein", "erneut versuchen", "es erneut", "noch einmal versuchen",
+            "nochmal versuchen", "zu viele versuche", "falsche pin", "falsches muster", "falsches passwort",
+            "not recognized", "not recognised", "no match", "doesn't match", "does not match",
+            "didn't match", "couldn't recognize", "can't recognize", "try again", "too many attempts",
+            "wrong pin", "wrong pattern", "wrong password",
+        )
         val HeadphoneTypes = buildSet {
             add(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)
             add(AudioDeviceInfo.TYPE_WIRED_HEADSET)

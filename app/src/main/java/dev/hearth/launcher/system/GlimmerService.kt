@@ -86,7 +86,23 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         restartGlimmer()
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
+    /**
+     * Only the system UI's events arrive. While the lock screen is up, its messages are read
+     * for one thing: a face or finger that wasn't recognized, so Glimmer's symbol can shake.
+     */
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        val g = glimmer ?: return
+        if (event == null || !g.wantsUnlockTexts()) return
+        when (event.eventType) {
+            AccessibilityEvent.TYPE_ANNOUNCEMENT -> event.text?.forEach { g.onLockScreenText(it) }
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
+                if (event.contentChangeTypes and AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT == 0) return
+                val node = runCatching { event.source }.getOrNull() ?: return
+                node.text?.let { g.onLockScreenText(it) }
+                node.contentDescription?.let { g.onLockScreenText(it) }
+            }
+        }
+    }
 
     private fun isLocked(): Boolean = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
 
