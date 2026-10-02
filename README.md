@@ -49,11 +49,13 @@ Claude ist in Hearth eingebaut und erledigt Dinge direkt auf dem Handy, statt nu
 Design-Vorlage „Galaxy × Claude“ (Einstellungen → Design-Vorlage): der Launcher im Stil von One UI
 mit Liquid Glass, und Claude dort, wo bei Samsung Galaxy AI sitzt.
 
-- One UI 8 in Liquid Glass: Samsungs Quick Panel als Kontrollzentrum (WLAN und Bluetooth als
+- One UI 9 in Liquid Glass: Samsungs Quick Panel als Kontrollzentrum (WLAN und Bluetooth als
   große Knöpfe, runde Schalter mit Namen, breite Regler, Smart View und Medienausgabe,
   Player), das App-Popup wie auf dem Galaxy (Shortcuts als Liste, Aktionen als Reihe runder
   Symbole mit Namen), Einstellungen mit One-UI-Titel und blauen Abschnittsnamen, runde
   Seitenpunkte
+- App-Übersicht: „Vorgeschlagene Apps“ oben, ⋮-Menü mit Sortieren (A–Z, Neueste zuerst,
+  Meistgenutzt), Vorschläge an/aus und Einstellungen
 - One UI: Squircle-Icons, die große, fette One-UI-Uhr mit Datum und Akku, Galaxy-Blau,
   kühl getöntes Glas, einfaches Wischen zwischen den Seiten, links Mitteilungen und rechts
   Schnelleinstellungen; im Kontrollzentrum runde Schalter und breite Regler wie bei One UI
@@ -224,6 +226,8 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     aufgeklappt mit Punkten (Samsungs Now Bar); Aussehen „Farbig getönt“ in der Farbe der Aktivität
   - Gesperrt zeigt Glimmer keine Codes und Nachrichten (ein frischer Code erscheint nach dem
     Entsperren); Antippen und Wischen reagieren auch, während Timer oder Musik laufen
+  - Neue Meldungen: Ladekabel getrennt (mit Akkustand), neuer Wecker gestellt (Tag und
+    Uhrzeit, der Wecker klingelt kurz)
   - „Kleiner (85 %)“: Glimmer in jedem Zustand 15 % schmaler; Höhe, Inhalt und Schrift bleiben
   - Nichts liegt unter der Frontkamera: Glimmer kennt Lage und Größe des Kameralochs, kompakt
     stehen Inhalte links und rechts davon, aufgeklappt beginnt der Inhalt darunter

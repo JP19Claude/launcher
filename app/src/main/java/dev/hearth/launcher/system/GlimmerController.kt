@@ -15,6 +15,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.Configuration
 import android.graphics.PixelFormat
+import android.app.AlarmManager
 import android.app.NotificationManager
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
@@ -406,6 +407,9 @@ class GlimmerController(private val service: GlimmerService) {
     }
     private var receiverRegistered = false
 
+    /** The next alarm as last seen, so only a newly set one flashes. */
+    private var lastAlarm: Long? = null
+
     private val density get() = service.resources.displayMetrics.density
     private fun dp(value: Float) = (value * density).roundToInt()
 
@@ -441,6 +445,20 @@ class GlimmerController(private val service: GlimmerService) {
                 Intent.ACTION_POWER_CONNECTED -> {
                     val level = batteryLevel()
                     flash(IslandContent.Alert(Glyph.Spark, "Lädt", "$level %", GREEN, level / 100f))
+                }
+                // Unplugged: how full it got, briefly, like One UI's charging toast.
+                Intent.ACTION_POWER_DISCONNECTED -> if (settings.glimmerAlerts) {
+                    val level = batteryLevel()
+                    flash(IslandContent.Alert(Glyph.Battery, "Ladekabel getrennt", "$level %", Color.White, level / 100f))
+                }
+                // A new alarm was set: when it rings, so you know it took.
+                AlarmManager.ACTION_NEXT_ALARM_CLOCK_CHANGED -> if (settings.glimmerAlerts) {
+                    val next = runCatching { service.getSystemService(AlarmManager::class.java)?.nextAlarmClock?.triggerTime }.getOrNull()
+                    if (next != null && next != lastAlarm && next > System.currentTimeMillis()) {
+                        val text = java.text.SimpleDateFormat("EEE HH:mm", java.util.Locale.GERMAN).format(java.util.Date(next))
+                        flash(IslandContent.Alert(Glyph.Alarm, "Wecker", text, ORANGE))
+                    }
+                    lastAlarm = next
                 }
                 Intent.ACTION_BATTERY_CHANGED -> {
                     val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
@@ -532,6 +550,8 @@ class GlimmerController(private val service: GlimmerService) {
         media.start()
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_POWER_CONNECTED)
+            addAction(Intent.ACTION_POWER_DISCONNECTED)
+            addAction(AlarmManager.ACTION_NEXT_ALARM_CLOCK_CHANGED)
             addAction(Intent.ACTION_BATTERY_LOW)
             addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
             addAction(Intent.ACTION_SCREEN_OFF)
@@ -548,6 +568,7 @@ class GlimmerController(private val service: GlimmerService) {
             f != NotificationManager.INTERRUPTION_FILTER_ALL && f != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
         }
         batteryFull = true
+        lastAlarm = runCatching { service.getSystemService(AlarmManager::class.java)?.nextAlarmClock?.triggerTime }.getOrNull()
         refreshCharging()
         startHeadphoneWatch()
         runCatching { service.getSystemService(DisplayManager::class.java)?.registerDisplayListener(displayListener, handler) }

@@ -167,6 +167,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val library by vm.library.collectAsStateWithLifecycle()
     val assistantOpen by vm.assistantOpen.collectAsStateWithLifecycle()
+    val appUsage by vm.appUsage.collectAsStateWithLifecycle()
     var openFolder by remember { mutableStateOf<LibraryFolderContent?>(null) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     // Galaxy × Claude: One UI's app drawer (swipe up) instead of the App Library page.
@@ -857,6 +858,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             drawerOpen = false
                             settingsOpen = true
                         },
+                        usage = appUsage,
+                        suggestions = library.suggestions,
+                        onSettingsChange = vm::updateSettings,
                     )
                 }
 

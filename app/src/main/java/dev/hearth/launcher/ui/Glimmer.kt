@@ -2044,7 +2044,8 @@ private fun AlertGlyph(content: IslandContent.Alert, size: Dp) {
         }
         when (content.glyph) {
             // Silent and vibrate: the bell wobbles, like the iPhone's ring switch.
-            Glyph.Bell, Glyph.Vibrate -> {
+            // The alarm clock rings like the bell.
+            Glyph.Bell, Glyph.Vibrate, Glyph.Alarm -> {
                 grow.snapTo(1f)
                 rotate.animateTo(0f, keyframes {
                     durationMillis = 720

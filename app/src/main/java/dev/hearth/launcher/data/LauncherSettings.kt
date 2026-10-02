@@ -170,7 +170,7 @@ enum class GlimmerStyle(val label: String) {
 enum class CcStyle(val label: String) {
     IOS("iOS 27"),
     ColorOS("ColorOS 17"),
-    OneUI("One UI 8"),
+    OneUI("One UI 9"),
 }
 
 /** Brightness and volume sliders in the control center. */
@@ -209,6 +209,13 @@ enum class DesignPreset(val label: String) {
     ColorOSClaude("ColorOS × Claude"),
     IOSGlass("iOS Liquid Glass"),
     Hearth("Hearth Klassik"),
+}
+
+/** Order of the apps in One UI's app drawer. */
+enum class DrawerSort(val label: String) {
+    Alphabet("A–Z"),
+    Newest("Neueste zuerst"),
+    MostUsed("Meistgenutzt"),
 }
 
 enum class ThemeMode(val label: String) {
@@ -253,6 +260,9 @@ data class LauncherSettings(
      * card on the home screen, Claude first in the search, "Ask Claude" in every app's menu.
      */
     val galaxyClaude: Boolean = false,
+    /** One UI app drawer: order of the apps, and the suggested apps on top. */
+    val drawerSort: DrawerSort = DrawerSort.Alphabet,
+    val drawerSuggestions: Boolean = true,
     val showAppLibrary: Boolean = true,
     val showWidgetPage: Boolean = true,
     val triggerZone: TriggerZone = TriggerZone.RightHalf,
@@ -596,6 +606,8 @@ class SettingsRepository(context: Context) {
             swipeDownAction = enumOf("swipeDownAction", d.swipeDownAction),
             showClaudeCard = prefs.getBoolean("showClaudeCard", d.showClaudeCard),
             galaxyClaude = prefs.getBoolean("galaxyClaude", d.galaxyClaude),
+            drawerSort = enumOf("drawerSort", d.drawerSort),
+            drawerSuggestions = prefs.getBoolean("drawerSuggestions", d.drawerSuggestions),
             showAppLibrary = prefs.getBoolean("showAppLibrary", d.showAppLibrary),
             showWidgetPage = prefs.getBoolean("showWidgetPage", d.showWidgetPage),
             triggerZone = enumOf("triggerZone", d.triggerZone),
@@ -698,6 +710,8 @@ class SettingsRepository(context: Context) {
             .putString("swipeDownAction", s.swipeDownAction.name)
             .putBoolean("showClaudeCard", s.showClaudeCard)
             .putBoolean("galaxyClaude", s.galaxyClaude)
+            .putString("drawerSort", s.drawerSort.name)
+            .putBoolean("drawerSuggestions", s.drawerSuggestions)
             .putBoolean("showAppLibrary", s.showAppLibrary)
             .putBoolean("showWidgetPage", s.showWidgetPage)
             .putString("triggerZone", s.triggerZone.name)

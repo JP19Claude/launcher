@@ -568,7 +568,7 @@ fun ControlCenter(
                     // Loose round glass buttons, four to a row.
                     ToggleCard(roundButtons, columns = 4, modifier = Modifier.unfold(3, reveal).fillMaxWidth(), card = false)
                 } else if (oneUi) {
-                    // One UI 8's Quick Panel in liquid glass: Wi-Fi and Bluetooth as big buttons,
+                    // One UI 9's Quick Panel in liquid glass: Wi-Fi and Bluetooth as big buttons,
                     // the round switches with their names, wide sliders, Smart View and media
                     // output side by side, and the player below.
                     Row(Modifier.unfold(1, reveal).fillMaxWidth().height(70.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

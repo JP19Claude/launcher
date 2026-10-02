@@ -151,6 +151,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    /** How often and when each app was opened (drawer sorting). */
+    val appUsage: StateFlow<Map<String, AppUsage>> = usage.usage
+
     /** Apps sorted into folders, like the App Library on iOS. */
     val library: StateFlow<AppLibraryData> = combine(apps, usage.usage) { all, used -> buildLibrary(all, used) }
         .flowOn(Dispatchers.Default)

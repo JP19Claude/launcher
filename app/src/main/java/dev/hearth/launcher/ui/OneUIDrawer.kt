@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -43,6 +44,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.AppInfo
+import dev.hearth.launcher.data.AppUsage
+import dev.hearth.launcher.data.DrawerSort
+import dev.hearth.launcher.data.LauncherSettings
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.runtime.mutableStateOf
 
 /**
  * Galaxy × Claude: One UI's app drawer in place of the App Library. Swipe up on the home
@@ -56,11 +62,27 @@ fun OneUIDrawer(
     onLaunch: (AppInfo, Rect?) -> Unit,
     onOpenSearch: () -> Unit,
     onDismiss: () -> Unit,
-    /** The drawer's ⋮ button: the launcher's settings, as on One UI. */
+    /** The drawer's ⋮ menu: the launcher's settings, as on One UI. */
     onOpenSettings: () -> Unit = {},
+    /** How often each app was opened, for "Meistgenutzt". */
+    usage: Map<String, AppUsage> = emptyMap(),
+    /** The apps you'll likely open next, shown on top. */
+    suggestions: List<AppInfo> = emptyList(),
+    /** Changes the drawer's own settings (order, suggestions) from its ⋮ menu. */
+    onSettingsChange: ((LauncherSettings) -> LauncherSettings) -> Unit = {},
 ) {
     val settings = LocalSettings.current
-    val sorted = remember(apps) { apps.sortedBy { it.label.lowercase() } }
+    val sorted = remember(apps, settings.drawerSort, usage) {
+        when (settings.drawerSort) {
+            DrawerSort.Alphabet -> apps.sortedBy { it.label.lowercase() }
+            DrawerSort.Newest -> apps.sortedWith(compareByDescending<AppInfo> { it.installTime }.thenBy { it.label.lowercase() })
+            DrawerSort.MostUsed -> apps.sortedWith(
+                compareByDescending<AppInfo> { usage[it.key]?.count ?: 0 }.thenBy { it.label.lowercase() },
+            )
+        }
+    }
+    var menuOpen by remember { mutableStateOf(false) }
+    val shownSuggestions = if (settings.drawerSuggestions) suggestions.take(settings.columns.coerceIn(4, 5)) else emptyList()
     // One UI's drawer: 5 across (4 with big icons), 6 rows a page.
     val columns = settings.columns.coerceIn(4, 5)
     val rows = 6
@@ -130,11 +152,40 @@ fun OneUIDrawer(
                 Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .clickable(onClick = onOpenSettings),
+                    .clickable { menuOpen = true },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Rounded.MoreVert, contentDescription = "Einstellungen", tint = Color.White.copy(alpha = 0.85f))
+                Icon(Icons.Rounded.MoreVert, contentDescription = "Mehr", tint = Color.White.copy(alpha = 0.85f))
             }
+            }
+            // One UI: the apps you'll likely want next, above all the others.
+            if (shownSuggestions.isNotEmpty()) {
+                Text(
+                    "Vorgeschlagene Apps",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(start = 22.dp, bottom = 2.dp),
+                )
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                ) {
+                    for (c in 0 until columns) {
+                        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            shownSuggestions.getOrNull(c)?.let { app ->
+                                AppIcon(app, actions, onWallpaper = true, fillCell = true, onLaunch = onLaunch)
+                            }
+                        }
+                    }
+                }
+                Box(
+                    Modifier
+                        .padding(horizontal = 22.dp, vertical = 8.dp)
+                        .fillMaxWidth()
+                        .height(0.6.dp)
+                        .background(Color.White.copy(alpha = 0.18f)),
+                )
             }
             HorizontalPager(
                 state = pagerState,
@@ -187,6 +238,85 @@ fun OneUIDrawer(
                 Spacer(Modifier.size(18.dp))
             }
         }
+        if (menuOpen) {
+            DrawerMenu(
+                sort = settings.drawerSort,
+                suggestions = settings.drawerSuggestions,
+                onSort = { sort -> onSettingsChange { it.copy(drawerSort = sort) } },
+                onSuggestions = { v -> onSettingsChange { it.copy(drawerSuggestions = v) } },
+                onSettings = {
+                    menuOpen = false
+                    onOpenSettings()
+                },
+                onDismiss = { menuOpen = false },
+            )
+        }
+    }
+}
+
+/** The drawer's ⋮ menu, as on One UI: sort the apps, suggested apps, settings – on glass. */
+@Composable
+private fun DrawerMenu(
+    sort: DrawerSort,
+    suggestions: Boolean,
+    onSort: (DrawerSort) -> Unit,
+    onSuggestions: (Boolean) -> Unit,
+    onSettings: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
+    ) {
+        LiquidGlass(
+            cornerRadius = 24.dp,
+            refraction = 16.dp,
+            tint = Color.Black.copy(alpha = 0.32f),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .systemBarsPadding()
+                .padding(top = 64.dp, end = 12.dp)
+                .width(240.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp))
+                // Taps on the menu stay on the menu.
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+        ) {
+            Column(Modifier.padding(vertical = 8.dp)) {
+                Text(
+                    "Sortieren",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp),
+                )
+                DrawerSort.entries.forEach { option ->
+                    MenuOption(option.label, checked = option == sort) { onSort(option) }
+                }
+                Box(
+                    Modifier
+                        .padding(horizontal = 14.dp, vertical = 4.dp)
+                        .fillMaxWidth()
+                        .height(0.6.dp)
+                        .background(Color.White.copy(alpha = 0.18f)),
+                )
+                MenuOption("Vorgeschlagene Apps", checked = suggestions) { onSuggestions(!suggestions) }
+                MenuOption("Einstellungen", checked = false, onClick = onSettings)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MenuOption(label: String, checked: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        if (checked) Icon(Icons.Rounded.Check, contentDescription = null, tint = LocalSettings.current.accent.color, modifier = Modifier.size(18.dp))
     }
 }
 
