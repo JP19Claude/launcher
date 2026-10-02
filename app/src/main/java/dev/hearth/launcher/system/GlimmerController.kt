@@ -80,6 +80,9 @@ class GlimmerController(private val service: GlimmerService) {
     private val alert = MutableStateFlow<IslandContent.Alert?>(null)
     private val message = MutableStateFlow<LiveNotice?>(null)
     private val landscape = MutableStateFlow(false)
+    /** Where the camera sits and how wide the screen is; read again after rotating or waking. */
+    private val insetTop = MutableStateFlow(0)
+    private val screenWidth = MutableStateFlow(360f)
 
     /**
      * Paused music stays in Glimmer for a while (like on the iPhone), so it can be resumed
@@ -281,14 +284,32 @@ class GlimmerController(private val service: GlimmerService) {
         }
     }
     private fun updateDozing() {
+        // A screen that's on for the user is never the AOD, whatever the display reports in
+        // between (some phones keep saying "doze" for a moment after waking up).
+        val interactive = service.getSystemService(PowerManager::class.java)?.isInteractive != false
         val state = service.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)?.state
-        dozing.value = state == Display.STATE_DOZE || state == Display.STATE_DOZE_SUSPEND
+        dozing.value = !interactive && (state == Display.STATE_DOZE || state == Display.STATE_DOZE_SUSPEND)
     }
 
     /** On the lock screen Glimmer shows live activities, but no empty idle pill. */
     private val locked = MutableStateFlow(false)
     private fun updateLocked() {
         locked.value = service.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
+    }
+
+    /**
+     * After the screen goes off or on, look again a few times: the lock screen, the AOD and the
+     * window settle at different moments, and a state caught halfway must not hide the island.
+     */
+    private val refreshState = Runnable {
+        updateLocked()
+        updateDozing()
+        ensureWindow()
+    }
+    private fun refreshSoon() {
+        handler.removeCallbacks(refreshState)
+        refreshState.run()
+        for (delay in longArrayOf(350, 1000, 2500)) handler.postDelayed(refreshState, delay)
     }
 
     private var root: View? = null
@@ -304,13 +325,9 @@ class GlimmerController(private val service: GlimmerService) {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 Intent.ACTION_SCREEN_OFF, Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> {
-                    updateLocked()
-                    updateDozing()
-                    // Unlocking with the fingerprint can come a moment after the screen turns on.
-                    handler.postDelayed({
-                        updateLocked()
-                        updateDozing()
-                    }, 600)
+                    refreshSoon()
+                    // Standby folds the island up, like the iPhone's.
+                    if (intent.action == Intent.ACTION_SCREEN_OFF) expanded.value = false
                     when (intent.action) {
                         // Woken up while locked: the face (or finger) is being checked.
                         Intent.ACTION_SCREEN_ON -> startUnlockScan()
@@ -489,6 +506,9 @@ class GlimmerController(private val service: GlimmerService) {
         torchOn.value = false
         unlock.value = null
         watching = false
+        // Their timers are cancelled below, so they would otherwise stay forever.
+        alert.value = null
+        message.value = null
         audioCallback?.let { cb ->
             runCatching { service.getSystemService(AudioManager::class.java)?.unregisterAudioDeviceCallback(cb) }
         }
@@ -508,13 +528,49 @@ class GlimmerController(private val service: GlimmerService) {
 
     fun onConfigurationChanged(config: Configuration) {
         landscape.value = config.orientation == Configuration.ORIENTATION_LANDSCAPE
-        // The camera moves with rotation; place the window again.
-        params?.let { p ->
-            val (x, _) = cameraCenter()
-            p.x = x
-            root?.let { runCatching { windowManager.updateViewLayout(it, p) } }
-        }
+        screenWidth.value = config.screenWidthDp.toFloat()
+        // The camera moves with rotation (or folding); place the window again.
+        placeWindow()
+        ensureWindow()
     }
+
+    /** Puts the window over the camera again and re-applies the island's size. */
+    private fun placeWindow() {
+        val p = params ?: return
+        val view = root ?: return
+        val (x, _) = cameraCenter()
+        insetTop.value = topInsetPx()
+        p.x = x
+        runCatching { windowManager.updateViewLayout(view, p) }
+        resizeTo(islandSize)
+    }
+
+    /**
+     * The window can be lost while the phone sleeps (the system dropped it, or it couldn't be
+     * added while the screen was off). Then it's simply added again, so Glimmer never stays gone.
+     */
+    private fun ensureWindow() {
+        if (scope == null || !settings.glimmerEnabled) return
+        val view = root
+        if (view != null && view.isAttachedToWindow) {
+            // Still there: make sure it sits over the camera (measured only while the screen is
+            // on; the AOD may report the screen without its cutout).
+            if (service.getSystemService(PowerManager::class.java)?.isInteractive == false) return
+            val (x, _) = cameraCenter()
+            val top = topInsetPx()
+            if (params?.x != x || insetTop.value != top) placeWindow()
+            return
+        }
+        if (view != null) {
+            // Not attached yet right after adding is normal; only replace a window that was lost.
+            if (SystemClock.uptimeMillis() - windowAddedAt < 1500) return
+            runCatching { windowManager.removeViewImmediate(view) }
+            root = null
+            params = null
+        }
+        addWindow()
+    }
+    private var windowAddedAt = 0L
 
     /** Camera position: horizontal offset from the screen's middle, and its vertical center (px). */
     @SuppressLint("DiscouragedApi", "InternalInsetResource")
@@ -537,6 +593,8 @@ class GlimmerController(private val service: GlimmerService) {
     private fun addWindow() {
         val (cameraX, _) = cameraCenter()
         val topInset = topInsetPx()
+        insetTop.value = topInset
+        screenWidth.value = service.resources.configuration.screenWidthDp.toFloat()
         val frame = object : FrameLayout(service) {
             override fun dispatchTouchEvent(event: MotionEvent): Boolean {
                 // A touch anywhere else on the screen folds the island back up.
@@ -566,6 +624,8 @@ class GlimmerController(private val service: GlimmerService) {
                 val unlocking by unlock.collectAsStateWithLifecycle()
                 val aod by dozing.collectAsStateWithLifecycle()
                 val torch by torchOn.collectAsStateWithLifecycle()
+                val top by insetTop.collectAsStateWithLifecycle()
+                val widthDp by screenWidth.collectAsStateWithLifecycle()
                 val onAod = aod && settings.glimmerAod
 
                 val ongoing = live.sortedBy { priority(it.kind) }
@@ -620,8 +680,8 @@ class GlimmerController(private val service: GlimmerService) {
                                 main !is IslandContent.Unlock,
                             dimmed = onAod,
                             style = settings.glimmerStyle,
-                            screenWidthDp = service.resources.configuration.screenWidthDp.toFloat(),
-                            topInset = (topInset / density).dp,
+                            screenWidthDp = widthDp,
+                            topInset = (top / density).dp,
                             media = media,
                             tapOpens = settings.glimmerTapOpens,
                             pulse = pulseCount,
@@ -668,6 +728,10 @@ class GlimmerController(private val service: GlimmerService) {
         if (runCatching { windowManager.addView(frame, p) }.isSuccess) {
             root = frame
             params = p
+            windowAddedAt = SystemClock.uptimeMillis()
+        } else {
+            // Couldn't be added right now (screen off, system busy): try again shortly.
+            handler.postDelayed({ if (root == null) ensureWindow() }, 2000)
         }
     }
 
@@ -685,7 +749,7 @@ class GlimmerController(private val service: GlimmerService) {
         islandSize = size
         val p = params ?: return
         val view = root ?: return
-        val topInset = topInsetPx()
+        val topInset = insetTop.value
         val hidden = size.width.value <= 0f
         val w = if (hidden) 1 else dp(size.width.value + 2 * PAD)
         val h = if (hidden) 1 else topInset + dp(size.height.value + PAD)

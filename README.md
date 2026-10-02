@@ -123,6 +123,12 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     schüttelt sich wie beim iPhone, bei jedem Versuch neu
   - Always-On-Display: Musik und Aktivitäten bleiben sichtbar, gedimmt und ohne Bewegung
     (sofern das Handy Einblendungen im AOD zulässt)
+  - Bewegung wie die Dynamic Island: beim Aufklappen erst in die Breite, dann mit leichtem
+    Federn nach unten, beim Zuklappen schneller und ruhiger; Inhalte wachsen von oben heraus
+    bzw. sinken in die Kamera zurück; unter dem Finger schwillt die Insel leicht an; wenn nichts
+    mehr läuft, zieht sie sich in die Kamera zurück statt einfach zu verschwinden
+  - Bleibt nach dem Standby da: Sperrbildschirm, AOD und Fenster werden nach dem Ein- und
+    Ausschalten mehrmals neu geprüft, ein verlorenes Fenster wird neu angelegt
   - Laden zeigt eine kleine Batterie, die sich füllt
   - Stoppuhr und Timer laufen in Glimmer weiter, auch bei der Samsung-Uhr und anderen Uhr-Apps
     (Zeit aus Chronometer oder Text, Stoppuhr mit Zehnteln, angehalten bleibt sie stehen)
@@ -220,7 +226,8 @@ Effekt je nach Android-Version:
 
 Danach Home-Taste drücken und "Hearth" als Standard-Launcher wählen,
 oder: Einstellungen > Apps > Standard-Apps > Startbildschirm-App.
-Glimmer und Kontrollzentrum öffnen und dort jeweils die Bedienungshilfe und den Benachrichtigungszugriff einschalten.
+Glimmer und Kontrollzentrum öffnen und dort jeweils die Bedienungshilfe und den Benachrichtigungszugriff einschalten,
+und „Akku: Nicht eingeschränkt“ erlauben, damit One UI sie im Standby nicht schlafen legt.
 
 ## Struktur
 

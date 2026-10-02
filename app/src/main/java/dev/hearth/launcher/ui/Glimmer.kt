@@ -15,6 +15,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.Canvas
@@ -241,16 +243,41 @@ fun GlimmerIsland(
         }
     }
 
-    val morph = spring<Dp>(dampingRatio = 0.66f, stiffness = 380f)
-    val mainWidth = if (hasSecondary) target.width - SecondaryExtra else target.width
-    val width by animateDpAsState(mainWidth, morph, label = "islandWidth")
-    val height by animateDpAsState(target.height, morph, label = "islandHeight")
-    val corner = when {
-        // As round as the iPhone's unfolded island.
-        expanded -> 44.dp
-        content is IslandContent.Unlock -> 30.dp
-        else -> height / 2
+    // Like the Dynamic Island: unfolding stretches out sideways first and then drops down with
+    // a little bounce; folding pulls up first and is quicker; going away has no bounce at all.
+    val hidden = content is IslandContent.Hidden
+    val widthSpec = when {
+        hidden -> spring<Dp>(dampingRatio = 1f, stiffness = 520f)
+        expanded -> spring(dampingRatio = 0.68f, stiffness = 330f)
+        else -> spring(dampingRatio = 0.78f, stiffness = 380f)
     }
+    val heightSpec = when {
+        hidden -> spring<Dp>(dampingRatio = 1f, stiffness = 520f)
+        expanded -> spring(dampingRatio = 0.72f, stiffness = 240f)
+        else -> spring(dampingRatio = 0.86f, stiffness = 520f)
+    }
+    val mainWidth = if (hasSecondary) target.width - SecondaryExtra else target.width
+    val width = animateDpAsState(mainWidth, widthSpec, label = "islandWidth").value.coerceAtLeast(0.dp)
+    val height = animateDpAsState(target.height, heightSpec, label = "islandHeight").value.coerceAtLeast(0.dp)
+    // The corners follow the shape without jumping: never rounder than a pill, at most as
+    // round as the iPhone's unfolded island (44) or the Face ID square (30).
+    val cornerCap by animateDpAsState(
+        when {
+            expanded -> 44.dp
+            content is IslandContent.Unlock -> 30.dp
+            else -> 60.dp
+        },
+        tween(320, easing = FastOutSlowInEasing),
+        label = "islandCorner",
+    )
+    val corner = minOf(height / 2, cornerCap)
+    // What is drawn while the island shrinks away: the last thing it showed.
+    val lastShown = remember { arrayOf<IslandContent>(IslandContent.Hidden) }
+    if (!hidden) lastShown[0] = content
+    val drawn = if (hidden) lastShown[0] else content
+    // Pressing it: it swells a little under the finger, like the iPhone's.
+    val press = remember { Animatable(1f) }
+    val pressScope = rememberCoroutineScope()
 
     // Something new arrives: a little hop and a shimmer in its color, like a drop landing.
     val animations = LocalSettings.current.animations
@@ -313,13 +340,13 @@ fun GlimmerIsland(
         clarity.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
     }
     val tap: () -> Unit = {
-        if (content !is IslandContent.Idle && content !is IslandContent.Unlock) {
+        if (content !is IslandContent.Idle && content !is IslandContent.Unlock && content !is IslandContent.Hidden) {
             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             if (tapOpens && !expanded) onOpen(content) else onToggle()
         }
     }
     val hold: () -> Unit = {
-        if (content !is IslandContent.Idle && content !is IslandContent.Unlock) {
+        if (content !is IslandContent.Idle && content !is IslandContent.Unlock && content !is IslandContent.Hidden) {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             if (tapOpens && !expanded) onExpand() else onOpen(content)
         }
@@ -342,14 +369,16 @@ fun GlimmerIsland(
 
     CompositionLocalProvider(LocalGlimmerStill provides dimmed) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-        if (content is IslandContent.Hidden) return@Box
+        // Gone once it has shrunk away (it shrinks into the camera instead of vanishing).
+        if (drawn is IslandContent.Hidden || (hidden && width < 1.dp)) return@Box
         Row(
             Modifier
                 .padding(top = topInset)
                 .graphicsLayer {
                     // Always-on display: softer, so it doesn't glare or burn in.
-                    alpha = if (dimmed) 0.62f else 1f
-                    val s = if (expanded) 1f else hop.value
+                    val fade = if (hidden) (width.value / 40f).coerceIn(0f, 1f) else 1f
+                    alpha = (if (dimmed) 0.62f else 1f) * fade
+                    val s = (if (expanded) 1f else hop.value) * press.value
                     val q = if (expanded) 0f else squash.value
                     scaleX = s * (1f + 0.14f * q)
                     scaleY = s * (1f - 0.12f * q)
@@ -379,7 +408,19 @@ fun GlimmerIsland(
                     }
                     .size(width, height)
                     .pointerInput(content, expanded, tapOpens) {
-                        detectTapGestures(onTap = { tap() }, onLongPress = { hold() })
+                        detectTapGestures(
+                            onPress = {
+                                val pressable = !dimmed && content !is IslandContent.Idle &&
+                                    content !is IslandContent.Hidden && content !is IslandContent.Unlock
+                                if (pressable && animations) {
+                                    pressScope.launch { press.animateTo(if (expanded) 1.015f else 1.06f, spring(dampingRatio = 0.7f, stiffness = 700f)) }
+                                    tryAwaitRelease()
+                                    pressScope.launch { press.animateTo(1f, spring(dampingRatio = 0.42f, stiffness = 520f)) }
+                                }
+                            },
+                            onTap = { tap() },
+                            onLongPress = { hold() },
+                        )
                     }
                     // Pull down to unfold, push up to fold, sideways to switch activities.
                     .pointerInput(content, expanded) {
@@ -418,10 +459,25 @@ fun GlimmerIsland(
                             null
                         }
                     },
-                    targetState = content to expanded,
+                    targetState = drawn to expanded,
                     transitionSpec = {
-                        (fadeIn(tween(220, delayMillis = 90)) + scaleIn(tween(260, delayMillis = 60), initialScale = 0.92f))
-                            .togetherWith(fadeOut(tween(90)))
+                        val top = TransformOrigin(0.5f, 0f)
+                        when {
+                            // Unfolding: the small content melts away, the big one grows in from
+                            // the top while the shape is still stretching.
+                            targetState.second && !initialState.second ->
+                                (fadeIn(tween(240, delayMillis = 110)) +
+                                    scaleIn(spring(dampingRatio = 0.78f, stiffness = 300f), initialScale = 0.82f, transformOrigin = top))
+                                    .togetherWith(fadeOut(tween(90)) + scaleOut(tween(140), targetScale = 1.12f))
+                            // Folding: the big content sinks back into the camera, quickly.
+                            !targetState.second && initialState.second ->
+                                (fadeIn(tween(200, delayMillis = 150)) + scaleIn(tween(240, delayMillis = 120), initialScale = 0.9f))
+                                    .togetherWith(fadeOut(tween(120)) + scaleOut(tween(200), targetScale = 0.8f, transformOrigin = top))
+                            // Something else takes over the pill: a quick cross-fade with a little rise.
+                            else ->
+                                (fadeIn(tween(220, delayMillis = 90)) + scaleIn(tween(260, delayMillis = 60), initialScale = 0.9f))
+                                    .togetherWith(fadeOut(tween(110)) + scaleOut(tween(140), targetScale = 0.94f))
+                        }
                     },
                     contentKey = { (c, e) -> islandKey(c) to e },
                     label = "islandContent",

@@ -6,6 +6,9 @@
     <!-- Earbuds' battery level in the island (Android 12+ asks the user once). -->
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
+    <!-- Lets the app ask once not to be put to sleep, so its service survives standby. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <application>
         <activity
             android:name=".GlimmerActivity"

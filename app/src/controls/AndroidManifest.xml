@@ -3,6 +3,9 @@
      Works with any launcher; Hearth hands it the look of its own control center. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Lets the app ask once not to be put to sleep, so its service survives standby. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <application>
         <activity
             android:name=".ControlsActivity"

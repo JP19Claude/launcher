@@ -4,6 +4,7 @@ import androidx.core.content.ContextCompat
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import android.os.Build
+import android.os.PowerManager
 import android.content.pm.PackageManager
 import android.Manifest
 import android.content.Intent
@@ -75,9 +76,14 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
     var notificationAccess by remember { mutableStateOf(media.hasAccess()) }
     var canWrite by remember { mutableStateOf(Settings.System.canWrite(context)) }
     var hearthInstalled by remember { mutableStateOf(false) }
+    val batteryFree = {
+        context.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(context.packageName) == true
+    }
+    var unrestricted by remember { mutableStateOf(batteryFree()) }
     LaunchedEffect(Unit) {
         while (true) {
             serviceOn = serviceEnabled()
+            unrestricted = batteryFree()
             notificationAccess = media.hasAccess()
             canWrite = Settings.System.canWrite(context)
             hearthInstalled = runCatching {
@@ -186,6 +192,22 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
                                 else -> "Aus: für die Medien-Karte und die Mitteilungen im Kontrollzentrum"
                             },
                         ) { media.requestAccess() }
+                        // One UI puts rarely opened apps to sleep, and with them their service:
+                        // then the island (or control center) is gone after standby.
+                        ActionRow(
+                            label = "Akku: Nicht eingeschränkt",
+                            description = if (unrestricted) {
+                                "Erlaubt. Falls es trotzdem verschwindet: in den App-Infos unter „Akku“ auf „Nicht eingeschränkt“ stellen"
+                            } else {
+                                "Aus: Damit das Handy ${if (app == FamilyApp.Glimmer) "Glimmer" else "das Kontrollzentrum"} im Standby nicht schlafen legt"
+                            },
+                        ) {
+                            if (unrestricted) {
+                                open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+                            } else {
+                                open(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}")))
+                            }
+                        }
                         if (app == FamilyApp.Glimmer && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) ActionRow(
                             label = "Kopfhörer-Akku anzeigen",
                             description = if (bluetoothAllowed) "Erlaubt" else "Erlauben, damit Glimmer Name und Akku deiner Kopfhörer zeigt",
