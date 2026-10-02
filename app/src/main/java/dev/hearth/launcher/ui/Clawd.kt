@@ -82,7 +82,8 @@ fun Clawd(
     animate: Boolean = LocalSettings.current.animations,
 ) {
     if (!animate) {
-        Canvas(modifier) { drawClawd(color, blink = false, bob = 0f, legPhase = 0f, armLift = 0f, spin = 0f, hearts = 0f) }
+        val asleep = mood == ClawdMood.Sleep
+        Canvas(modifier) { drawClawd(color, blink = asleep, bob = 0f, legPhase = 0f, armLift = 0f, spin = 0f, hearts = 0f, zzz = if (asleep) 0.5f else 0f) }
         return
     }
     val t = rememberInfiniteTransition(label = "clawd")
@@ -99,6 +100,7 @@ fun Clawd(
             ClawdMood.Flip -> drawClawd(color, blink = true, bob = -abs(sin(phase)) * 1.2f, legPhase = 0f, armLift = 1f, spin = clock * 360f, hearts = 0f)
             ClawdMood.Love -> drawClawd(color, blink = true, bob = sin(phase) * 0.3f, legPhase = 0f, armLift = 0.5f, spin = 0f, hearts = clock)
             ClawdMood.Wave -> drawClawd(color, blink, bob = 0f, legPhase = 0f, armLift = sin(phase * 4f), spin = 0f, hearts = 0f)
+            ClawdMood.Sleep -> drawClawd(color, blink = true, bob = sin(phase) * 0.15f, legPhase = 0f, armLift = -0.4f, spin = 0f, hearts = 0f, zzz = clock)
         }
     }
 }
@@ -116,6 +118,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawd(
     armLift: Float,
     spin: Float,
     hearts: Float,
+    zzz: Float = 0f,
 ) {
     // Room above for a jump or a heart, so he never leaves the canvas.
     val px = minOf(size.width / COLS, size.height / (ROWS + 2))
@@ -153,6 +156,18 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawd(
                 drawRect(eye, Offset(left + 10 * px, top + 1 * px), Size(px, px * 2))
             }
         }
+    }
+    // Little pixel z's drifting up while he sleeps.
+    if (zzz > 0f) {
+        val z = Color(0xFFB8C4D6).copy(alpha = (1f - zzz).coerceIn(0f, 1f) * 0.9f)
+        fun letter(x: Float, y: Float, s: Float) {
+            drawRect(z, Offset(x, y), Size(s * 3, s))
+            drawRect(z, Offset(x + s, y + s), Size(s, s))
+            drawRect(z, Offset(x, y + s * 2), Size(s * 3, s))
+        }
+        val s = px * 0.45f
+        letter(left + COLS * px * 0.78f, top - zzz * px * 2f, s)
+        letter(left + COLS * px * 0.9f, top - zzz * px * 2f - px * 1.6f, s * 0.75f)
     }
     // A heart floating up when loved.
     if (hearts > 0f) {

@@ -69,12 +69,19 @@ fun InternalWidget(repo: WidgetRepository, id: Int, modifier: Modifier = Modifie
         HearthWidget.Date -> DateWidget(modifier)
         HearthWidget.Toggles -> TogglesWidget(modifier)
         HearthWidget.Note -> NoteWidget(id, modifier)
+        HearthWidget.ClawdPicture -> ClawdPictureWidget(id, modifier)
+        HearthWidget.ClawdWorld -> ClawdWorldWidget(modifier)
+        HearthWidget.ClawdClock -> ClawdClockWidget(modifier)
+        HearthWidget.ClawdAsk -> ClawdAskWidget(modifier)
+        HearthWidget.ClawdBattery -> ClawdBatteryWidget(modifier)
+        HearthWidget.ClawdJoke -> ClawdJokeWidget(id, modifier)
+        HearthWidget.ClawdSticker -> ClawdStickerWidget(modifier)
     }
 }
 
 /** The time, ticking each second while the screen shows it (not at all with animations off). */
 @Composable
-private fun rememberTime(everySecond: Boolean): LocalDateTime {
+internal fun rememberTime(everySecond: Boolean): LocalDateTime {
     val time by produceState(LocalDateTime.now(), everySecond) {
         while (true) {
             value = LocalDateTime.now()
@@ -156,7 +163,7 @@ private fun GlassAnalogClock(modifier: Modifier) {
 
 /** Battery level, and whether it's charging, kept up to date while the widget is shown. */
 @Composable
-private fun rememberBattery(): Pair<Int, Boolean> {
+internal fun rememberBattery(): Pair<Int, Boolean> {
     val context = LocalContext.current
     var state by remember { mutableStateOf(readBattery(context, null)) }
     DisposableEffect(context) {

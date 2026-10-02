@@ -14,6 +14,12 @@ wippt, trippelt beim Nachdenken, tanzt, schlägt Salto und schickt Herzen.
 - Mit ihm sprechen: antippen öffnet den Chat; Begrüßung, „Wer bist du?“, „Wie geht's?“,
   Witze, „Danke“ beantwortet er selbst (kostenlos, offline), alles andere die KI.
 - Er hat 10 Easter Eggs, verteilt in Hearth.
+- Clawd-Widgets (Widget hinzufügen → Clawd): **Clawd-Bild** (sechs Hintergründe über den
+  ✦-Knopf, antippen und er winkt, tanzt, schickt Herzen, schlägt Salto), **Clawd-Welt**
+  (er spaziert durch eine Pixel-Landschaft mit Tag, Abend und Nacht), **Clawd-Uhr** (Uhrzeit
+  mit Gruß, nachts schläft er), **Frag Clawd** (ein Tipp öffnet den Chat), **Clawd-Akku**
+  (tanzt beim Laden, müde bei leerem Akku), **Clawd-Witz** (jeden Tag ein Witz) und
+  **Clawd-Sticker** (1×1, nur er).
 
 ## Easter Eggs
 

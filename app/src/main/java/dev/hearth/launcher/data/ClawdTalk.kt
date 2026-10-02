@@ -1,7 +1,7 @@
 package dev.hearth.launcher.data
 
 /** How Clawd, Claude's little pixel creature, is feeling right now (drives his animation). */
-enum class ClawdMood { Idle, Thinking, Dance, Flip, Love, Wave }
+enum class ClawdMood { Idle, Thinking, Dance, Flip, Love, Wave, Sleep }
 
 /**
  * Clawd's own small talk: greetings, who he is, jokes – and a few easter eggs. Answered
@@ -18,7 +18,17 @@ object ClawdTalk {
         "Warum war das Handy so müde? Es hatte zu viele Tabs offen.",
         "Was sagt der Akku zum Ladekabel? Ohne dich bin ich nur halb so voll.",
         "Warum ist Glimmer nie einsam? Er hat immer die Kamera in der Mitte.",
+        "Warum hat Clawd vier Beine? Damit er auch bei Updates auf dem Boden bleibt.",
+        "Was ist Clawds Lieblingsessen? Pixel-Pizza – in 8 Bit geschnitten.",
+        "Wie kommt Clawd auf den Startbildschirm? Ganz einfach: mit einem Widget-Sprung.",
+        "Warum zählt Clawd nie Schafe? Er zählt Pixel. Bei 104 schläft er ein.",
+        "Was sagt Clawd, wenn das WLAN weg ist? Kein Problem, ich bin offline auch lustig.",
     )
+
+    /** How many jokes Clawd knows; [joke] picks one (any number wraps around). */
+    val jokeCount: Int get() = Jokes.size
+
+    fun joke(n: Int): String = Jokes[Math.floorMod(n, Jokes.size)]
 
     private var joke = 0
 

@@ -368,8 +368,37 @@ fun WidgetPicker(
                             onClick = onPickPhotos,
                         )
                     }
+                    // Clawd's widgets first: pictures of him, his world, his clock …
+                    item(key = "clawd-header") {
+                        Text(
+                            "Clawd",
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(start = 6.dp, top = 6.dp),
+                        )
+                    }
+                    HearthWidget.entries.filter { it.clawd }.forEach { kind ->
+                        item(key = "hearth-${kind.name}") {
+                            HearthWidgetRow(
+                                title = kind.label,
+                                subtitle = kind.description,
+                                clawd = true,
+                                onClick = { onPickHearth(kind) },
+                            )
+                        }
+                    }
+                    item(key = "glass-header") {
+                        Text(
+                            "Hearth",
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(start = 6.dp, top = 6.dp),
+                        )
+                    }
                     // Hearth's own liquid glass widgets.
-                    HearthWidget.entries.filter { it != HearthWidget.Photos }.forEach { kind ->
+                    HearthWidget.entries.filter { it != HearthWidget.Photos && !it.clawd }.forEach { kind ->
                         item(key = "hearth-${kind.name}") {
                             HearthWidgetRow(
                                 title = kind.label,
@@ -531,7 +560,7 @@ fun PhotoWidget(repo: WidgetRepository, id: Int, modifier: Modifier = Modifier) 
 }
 
 @Composable
-private fun HearthWidgetRow(title: String, subtitle: String, glyph: Glyph = Glyph.Camera, onClick: () -> Unit) {
+private fun HearthWidgetRow(title: String, subtitle: String, glyph: Glyph = Glyph.Camera, clawd: Boolean = false, onClick: () -> Unit) {
     LiquidGlass(
         cornerRadius = 24.dp,
         refraction = 16.dp,
@@ -550,7 +579,7 @@ private fun HearthWidgetRow(title: String, subtitle: String, glyph: Glyph = Glyp
                     .background(Color.White.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center,
             ) {
-                GlyphIcon(glyph, Color.White, Modifier.size(28.dp))
+                if (clawd) Clawd(Modifier.size(40.dp)) else GlyphIcon(glyph, Color.White, Modifier.size(28.dp))
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {

@@ -46,6 +46,17 @@ enum class HearthWidget(val label: String, val description: String, val spanX: I
     Date("Datum", "Wochentag, Tag und nächster Wecker, groß wie bei One UI", 2, 2, 170),
     Toggles("Schnellschalter", "Taschenlampe, Nicht stören, Vibration und Drehen als Glasknöpfe", 4, 1, 110),
     Note("Notiz", "Ein Zettel aus Glas: antippen und schreiben, wird von selbst gespeichert", 2, 2, 180),
+    ClawdPicture("Clawd-Bild", "Clawd als Bild: hell, Terrakotta, Nacht, Abend, Akzent oder Glas – antippen und er bewegt sich", 2, 2, 210),
+    ClawdWorld("Clawd-Welt", "Clawd spaziert durch eine Pixel-Landschaft, die mit der Tageszeit wechselt", 4, 2, 200),
+    ClawdClock("Clawd-Uhr", "Die Uhrzeit mit Clawd und einem Gruß – nachts schläft er", 4, 2, 170),
+    ClawdAsk("Frag Clawd", "Ein Tipp und du sprichst mit Clawd, mit seiner letzten Antwort", 4, 1, 110),
+    ClawdBattery("Clawd-Akku", "Clawd tanzt beim Laden und wird müde, wenn der Akku leer wird", 2, 2, 190),
+    ClawdJoke("Clawd-Witz", "Jeden Tag ein Witz von Clawd, antippen für den nächsten", 4, 2, 160),
+    ClawdSticker("Clawd-Sticker", "Nur Clawd, klein und lebendig – passt in jede Lücke", 1, 1, 120),
+    ;
+
+    /** One of Clawd's widgets (shown with him in the picker). */
+    val clawd: Boolean get() = name.startsWith("Clawd")
 }
 
 /** An installable widget, for the picker. */
