@@ -153,6 +153,8 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     (vivos Origin Island); Musikstil „Fluid Cloud“ mit drehendem Cover, Fortschrittsring und
     rückwärts rollender Restzeit, atmendes Leuchten (OPPO/OnePlus); durch alle Aktivitäten wischen,
     aufgeklappt mit Punkten (Samsungs Now Bar); Aussehen „Farbig getönt“ in der Farbe der Aktivität
+  - Gesperrt zeigt Glimmer keine Codes und Nachrichten (ein frischer Code erscheint nach dem
+    Entsperren); Antippen und Wischen reagieren auch, während Timer oder Musik laufen
   - Live-Vorschau oben in der Glimmer-App: zeigt Aussehen, Breite, Rand, Leuchten, Bewegung und
     Position sofort, wechselt durch ein paar Inhalte, antippen klappt auf; Einstellungen in
     Abschnitten (Gestaltung, Größe & Position, Bedienung, Was Glimmer zeigt, Sperrbildschirm & AOD)

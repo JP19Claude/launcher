@@ -465,7 +465,7 @@ class GlimmerController(private val service: GlimmerService) {
                 }
                 Intent.ACTION_BATTERY_LOW -> {
                     val level = batteryLevel()
-                    flash(IslandContent.Alert(Glyph.Spark, "Akku schwach", "$level %", RED, level / 100f))
+                    flash(IslandContent.Alert(Glyph.Battery, "Akku schwach", "$level %", RED, level / 100f))
                 }
                 AudioManager.RINGER_MODE_CHANGED_ACTION -> {
                     when (intent.getIntExtra(AudioManager.EXTRA_RINGER_MODE, -1)) {
@@ -487,18 +487,31 @@ class GlimmerController(private val service: GlimmerService) {
         return if (level < 0 || scale <= 0) 0 else level * 100 / scale
     }
 
+    /**
+     * Lets something short-lived go after [delay], but not while the island is unfolded on it:
+     * then it waits until it's folded again (it used to stay forever if it ran out just then).
+     */
+    private fun dropLater(delay: Long, stillCurrent: () -> Boolean, drop: () -> Unit) {
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                if (!stillCurrent()) return
+                if (expanded.value) handler.postDelayed(this, 1500) else drop()
+            }
+        }, delay)
+    }
+
     private var alertToken = 0
     private fun flash(content: IslandContent.Alert) {
         alert.value = content
         val token = ++alertToken
-        handler.postDelayed({ if (token == alertToken && !expanded.value) alert.value = null }, 3500)
+        dropLater(3500, { token == alertToken }) { alert.value = null }
     }
 
     private var messageToken = 0
     private fun flashMessage(notice: LiveNotice) {
         message.value = notice
         val token = ++messageToken
-        handler.postDelayed({ if (token == messageToken && !expanded.value) message.value = null }, 4500)
+        dropLater(4500, { token == messageToken }) { message.value = null }
     }
 
     fun start(newSettings: LauncherSettings) {
@@ -750,9 +763,11 @@ class GlimmerController(private val service: GlimmerService) {
                 val ongoing = live.sortedBy { priority(it.kind) }
                 val ordered = buildList<IslandContent> {
                     currentAlert?.let { add(it) }
-                    currentCode?.let { add(it) }
+                    // Locked, codes and messages wait: whoever holds the phone shouldn't read them.
+                    // A code still fresh shows once it's unlocked.
+                    if (!onLockScreen) currentCode?.let { add(it) }
                     currentShot?.let { add(it) }
-                    currentMessage?.let { add(IslandContent.Message(it)) }
+                    if (!onLockScreen) currentMessage?.let { add(IslandContent.Message(it)) }
                     ongoing.filter { it.kind == NoticeKind.Call || it.kind == NoticeKind.Alarm }.forEach { add(IslandContent.Live(it)) }
                     if (torch) add(IslandContent.Torch)
                     chargeLevel?.let { add(IslandContent.Charging(it)) }
@@ -881,14 +896,14 @@ class GlimmerController(private val service: GlimmerService) {
 
     private var resizeToken = 0
 
-    /**
-     * Keeps the window just as big as the island: growing happens at once (so the animation
-     * isn't cut off), shrinking after the animation, so touches around it reach the app below.
-     */
     /** The island's current size (zero while hidden), for the app fly-in to aim at. */
     var islandSize: DpSize = DpSize.Zero
         private set
 
+    /**
+     * Keeps the window just as big as the island: growing happens at once (so the animation
+     * isn't cut off), shrinking after the animation, so touches around it reach the app below.
+     */
     private fun resizeTo(size: DpSize) {
         islandSize = size
         val p = params ?: return
@@ -916,7 +931,6 @@ class GlimmerController(private val service: GlimmerService) {
         }
     }
 
-    /** Sideways swipe: the second activity comes to the front. */
     /**
      * Sideways swipe: the next (or previous) activity comes to the front, going round through
      * all of them like Samsung's Now Bar.
@@ -935,7 +949,7 @@ class GlimmerController(private val service: GlimmerService) {
         code.value = IslandContent.Code(found.code, found.appLabel, found.icon)
         val token = ++codeToken
         // Codes go stale; the island lets it go after a while.
-        handler.postDelayed({ if (token == codeToken && !expanded.value) code.value = null }, 45_000)
+        dropLater(45_000, { token == codeToken }) { code.value = null }
     }
     private fun copyCode(c: IslandContent.Code) {
         val clipboard = service.getSystemService(android.content.ClipboardManager::class.java) ?: return
@@ -1009,7 +1023,7 @@ class GlimmerController(private val service: GlimmerService) {
         lastScreenshotId = found.first
         screenshot.value = IslandContent.Screenshot(found.second, found.third, found.first)
         val token = ++screenshotToken
-        handler.postDelayed({ if (token == screenshotToken && !expanded.value) screenshot.value = null }, 5000)
+        dropLater(5000, { token == screenshotToken }) { screenshot.value = null }
     }
 
     private fun shareScreenshot(shot: IslandContent.Screenshot) {
@@ -1029,16 +1043,10 @@ class GlimmerController(private val service: GlimmerService) {
         if (content is IslandContent.Screenshot) shareScreenshot(content)
     }
 
+    // Short-lived things that ran out while unfolded go once it's folded (see dropLater).
     private fun collapse() {
         if (!expanded.value) return
         expanded.value = false
-        // Short-lived things that were kept while open can go now.
-        handler.postDelayed({
-            if (!expanded.value) {
-                alert.value = null
-                message.value = null
-            }
-        }, 1200)
     }
 
     /** Long press (or tap on the expanded card): open what the island is about. */

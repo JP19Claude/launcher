@@ -32,6 +32,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.Canvas
@@ -311,7 +312,8 @@ fun GlimmerIsland(
     val target = islandSize(content, expanded, screenWidthDp, hasSecondary, settings.glimmerWidth, settings.glimmerIsDynamicIsland)
     LaunchedEffect(target) { onTargetSize(target) }
     val collapseAfter = settings.glimmerAutoCollapse
-    LaunchedEffect(expanded, content, collapseAfter) {
+    // Keyed on which activity it is, not on its every update (a timer changes each second).
+    LaunchedEffect(expanded, islandKey(content), collapseAfter) {
         if (expanded && collapseAfter > 0) {
             delay(collapseAfter * 1000L)
             onCollapse()
@@ -471,6 +473,16 @@ fun GlimmerIsland(
             if (tapOpens && !expanded) onExpand() else onOpen(content)
         }
     }
+    // Gestures read the latest state: restarting them whenever the content updates (a timer
+    // every second, music as it plays) would cut taps and swipes off halfway.
+    val tapNow by rememberUpdatedState(tap)
+    val holdNow by rememberUpdatedState(hold)
+    val contentNow by rememberUpdatedState(content)
+    val expandedNow by rememberUpdatedState(expanded)
+    val secondaryNow by rememberUpdatedState(secondary)
+    val doubleTapNow by rememberUpdatedState(onDoubleTap)
+    val swipeTracksNow by rememberUpdatedState(settings.glimmerSwipeTracks)
+    val pressableNow by rememberUpdatedState(!dimmed && !isPassive(content) && animations)
 
     // A second activity splits off like a drop, as on the iPhone: the little bubble slides out
     // from under the pill, joined to it by a liquid neck that thins and lets go.
@@ -587,34 +599,38 @@ fun GlimmerIsland(
                             )
                         }
                     }
-                    .pointerInput(content, expanded, tapOpens, onDoubleTap) {
+                    // Only whether a double tap is set restarts this (it changes how taps are told apart).
+                    .pointerInput(onDoubleTap != null) {
                         detectTapGestures(
                             onPress = {
-                                val pressable = !dimmed && !isPassive(content)
-                                if (pressable && animations) {
-                                    pressScope.launch { press.animateTo(if (expanded) 1.015f else 1.06f, spring(dampingRatio = 0.7f, stiffness = 700f)) }
+                                if (pressableNow) {
+                                    pressScope.launch { press.animateTo(if (expandedNow) 1.015f else 1.06f, spring(dampingRatio = 0.7f, stiffness = 700f)) }
                                     tryAwaitRelease()
                                     pressScope.launch { press.animateTo(1f, spring(dampingRatio = 0.42f, stiffness = 520f)) }
                                 }
                             },
-                            onTap = { tap() },
-                            onDoubleTap = onDoubleTap?.let { action ->
+                            onTap = { tapNow() },
+                            onDoubleTap = if (onDoubleTap != null) {
                                 { _: Offset ->
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    action()
+                                    doubleTapNow?.invoke()
                                 }
+                            } else {
+                                null
                             },
-                            onLongPress = { hold() },
+                            onLongPress = { holdNow() },
                         )
                     }
                     // Pull down to unfold, push up to fold, sideways to switch activities.
-                    .pointerInput(content, expanded) {
+                    .pointerInput(Unit) {
                         var total = Offset.Zero
                         detectDragGestures(
                             onDragStart = { total = Offset.Zero },
                             onDragEnd = {
                                 val threshold = 18.dp.toPx()
                                 val vertical = abs(total.y) > abs(total.x)
+                                val content = contentNow
+                                val expanded = expandedNow
                                 when {
                                     isPassive(content) -> Unit
                                     vertical && total.y > threshold && !expanded -> {
@@ -624,7 +640,7 @@ fun GlimmerIsland(
                                     vertical && total.y < -threshold && expanded -> onCollapse()
                                     // Music alone in the island: sideways skips the track.
                                     !vertical && abs(total.x) > threshold * 2 && !expanded &&
-                                        content is IslandContent.Media && secondary == null && settings.glimmerSwipeTracks -> {
+                                        content is IslandContent.Media && secondaryNow == null && swipeTracksNow -> {
                                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         val forward = total.x < 0
                                         if (forward) media.next() else media.previous()
@@ -717,6 +733,7 @@ fun GlimmerIsland(
                 IslandShape(
                     style = style,
                     corner = 15.dp,
+                    tint = if (style == GlimmerStyle.Tinted) glowColorOf(secondary, settings.accent.color) else Color.Black,
                     modifier = Modifier
                         .graphicsLayer {
                             val d = detach.value
@@ -743,13 +760,15 @@ fun GlimmerIsland(
                         }
                         .size(ISLAND_HEIGHT_DP.dp)
                         // Tap: bring it to the front and unfold it; hold: open its app.
-                        .pointerInput(secondary) {
+                        .pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = {
-                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    onFocus(secondary)
+                                    secondaryNow?.let { item ->
+                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onFocus(item)
+                                    }
                                 },
-                                onLongPress = { onOpen(secondary) },
+                                onLongPress = { secondaryNow?.let { onOpen(it) } },
                             )
                         },
                 ) {
@@ -1737,7 +1756,7 @@ private fun UnlockGlyph(content: IslandContent.Unlock, modifier: Modifier) {
 }
 
 /** Timers count down, everything else (calls, recordings, stopwatches) counts up. */
-private fun countsDown(notice: LiveNotice): Boolean = notice.kind == NoticeKind.Timer && !notice.stopwatch
+private fun countsDown(notice: LiveNotice): Boolean = notice.countDown || (notice.kind == NoticeKind.Timer && !notice.stopwatch)
 
 /**
  * Numbers that roll like the iPhone's: a digit that changes slides out and the new one slides
