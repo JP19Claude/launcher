@@ -73,6 +73,7 @@ import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.GlimmerMusicStyle
 import dev.hearth.launcher.data.GlimmerStyle
+import dev.hearth.launcher.data.GlimmerUnlock
 import dev.hearth.launcher.data.GlassQuality
 import dev.hearth.launcher.data.GlassTint
 import dev.hearth.launcher.data.IconShape
@@ -569,6 +570,18 @@ internal fun GlimmerOptionRows(s: LauncherSettings, update: ((LauncherSettings) 
             optionLabel = { it.label },
             onSelect = { style -> update { it.copy(glimmerStyle = style) } },
         )
+        ChoiceRow(
+            label = "Beim Entsperren",
+            options = GlimmerUnlock.entries,
+            selected = s.glimmerUnlock,
+            optionLabel = { it.label },
+            onSelect = { u -> update { it.copy(glimmerUnlock = u) } },
+        )
+        SwitchRow(
+            label = "Auf dem Always-On-Display",
+            description = "Musik und Aktivitäten bleiben im AOD sichtbar, gedimmt und ohne Bewegung (wenn das Handy fremde Einblendungen dort zulässt)",
+            checked = s.glimmerAod,
+        ) { v -> update { it.copy(glimmerAod = v) } }
         ChoiceRow(
             label = "Musik",
             options = GlimmerMusicStyle.entries,

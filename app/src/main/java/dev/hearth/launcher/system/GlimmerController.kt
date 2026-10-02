@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import dev.hearth.launcher.data.GlimmerStyle
+import dev.hearth.launcher.data.GlimmerUnlock
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.LiveNotice
 import dev.hearth.launcher.data.MediaRepository
@@ -105,6 +106,61 @@ class GlimmerController(private val service: GlimmerService) {
     private var audioCallbackPrimed = false
     private fun headphones(devices: Array<out AudioDeviceInfo>): List<AudioDeviceInfo> = devices.filter { d ->
         d.isSink && d.type in HeadphoneTypes
+    }
+
+    /**
+     * Face ID-style moment while unlocking: scanning when the screen wakes locked, a green tick
+     * the moment the phone knows you (even if it stays on the lock screen), a shake if it gives up.
+     */
+    private val unlock = MutableStateFlow<IslandContent.Unlock?>(null)
+    private var unlockToken = 0
+    /** The tick was shown for this wake-up; unlocking afterwards doesn't show it again. */
+    private var unlockTicked = false
+    private fun keyguard() = service.getSystemService(KeyguardManager::class.java)
+    private fun showUnlock(success: Boolean, hideAfter: Long, failed: Boolean = false) {
+        val symbol = settings.glimmerUnlock
+        if (symbol == GlimmerUnlock.Off) return
+        if (success) unlockTicked = true
+        unlock.value = IslandContent.Unlock(success = success, face = symbol == GlimmerUnlock.FaceId, failed = failed)
+        val token = ++unlockToken
+        handler.postDelayed({ if (token == unlockToken) unlock.value = null }, hideAfter)
+    }
+    private fun hideUnlock() {
+        unlockToken++
+        unlock.value = null
+    }
+
+    /**
+     * Woken up locked: scan while the phone checks the face (or finger). Android doesn't tell apps
+     * about biometrics, but the device stops being "locked" the moment it recognizes you, even
+     * while the lock screen is still up, so that's what is watched here.
+     */
+    private fun startUnlockScan() {
+        val kg = keyguard() ?: return
+        if (settings.glimmerUnlock == GlimmerUnlock.Off || !kg.isDeviceSecure || !kg.isKeyguardLocked) return
+        unlockTicked = false
+        // Recognized already (the fingerprint woke the phone): straight to the tick.
+        if (!kg.isDeviceLocked) {
+            showUnlock(success = true, hideAfter = UNLOCK_DONE_MS)
+            return
+        }
+        showUnlock(success = false, hideAfter = UNLOCK_SCAN_MS + 1000)
+        val token = unlockToken
+        val started = SystemClock.uptimeMillis()
+        val poll = object : Runnable {
+            override fun run() {
+                if (token != unlockToken) return
+                val k = keyguard()
+                when {
+                    k == null || !k.isDeviceLocked -> showUnlock(success = true, hideAfter = UNLOCK_DONE_MS)
+                    // Not recognized: a shake, like the iPhone, then the island goes back.
+                    SystemClock.uptimeMillis() - started > UNLOCK_SCAN_MS ->
+                        showUnlock(success = false, hideAfter = UNLOCK_FAIL_MS, failed = true)
+                    else -> handler.postDelayed(this, UNLOCK_POLL_MS)
+                }
+            }
+        }
+        handler.postDelayed(poll, UNLOCK_POLL_MS)
     }
 
     /**
@@ -196,6 +252,23 @@ class GlimmerController(private val service: GlimmerService) {
                         updateLocked()
                         updateDozing()
                     }, 600)
+                    when (intent.action) {
+                        // Woken up while locked: the face (or finger) is being checked.
+                        Intent.ACTION_SCREEN_ON -> startUnlockScan()
+                        // Unlocked (PIN, pattern, or a biometric that wasn't caught): the tick,
+                        // unless it was already shown for this wake-up.
+                        Intent.ACTION_USER_PRESENT -> {
+                            if (!unlockTicked && keyguard()?.isDeviceSecure == true) {
+                                showUnlock(success = true, hideAfter = UNLOCK_DONE_MS)
+                            } else if (unlock.value?.success != true) {
+                                hideUnlock()
+                            }
+                        }
+                        else -> {
+                            unlockTicked = false
+                            hideUnlock()
+                        }
+                    }
                 }
                 Intent.ACTION_POWER_CONNECTED -> {
                     val level = batteryLevel()
@@ -354,6 +427,7 @@ class GlimmerController(private val service: GlimmerService) {
         if (batteryReceiverRegistered) runCatching { service.unregisterReceiver(earbudsBattery) }
         batteryReceiverRegistered = false
         torchOn.value = false
+        unlock.value = null
         audioCallback?.let { cb ->
             runCatching { service.getSystemService(AudioManager::class.java)?.unregisterAudioDeviceCallback(cb) }
         }
@@ -428,8 +502,10 @@ class GlimmerController(private val service: GlimmerService) {
                 val pulseCount by pulse.collectAsStateWithLifecycle()
                 val sideways by landscape.collectAsStateWithLifecycle()
                 val onLockScreen by locked.collectAsStateWithLifecycle()
+                val unlocking by unlock.collectAsStateWithLifecycle()
                 val aod by dozing.collectAsStateWithLifecycle()
                 val torch by torchOn.collectAsStateWithLifecycle()
+                val onAod = aod && settings.glimmerAod
 
                 val ongoing = live.sortedBy { priority(it.kind) }
                 val ordered = buildList<IslandContent> {
@@ -453,17 +529,23 @@ class GlimmerController(private val service: GlimmerService) {
                 // A call coming in or an alarm ringing opens up right away, like on the iPhone.
                 val urgent = ongoing.firstOrNull { it.kind == NoticeKind.Alarm || (it.kind == NoticeKind.Call && !it.hasTime) }
                 LaunchedEffect(urgent?.key) {
-                    if (urgent != null && !dozing.value && !locked.value) {
+                    if (urgent != null && !dozing.value) {
                         focusKey.value = islandKey(IslandContent.Live(urgent))
                         expanded.value = true
                     }
                 }
-                // Nothing on the lock screen or the always-on display: Glimmer only shows once unlocked.
-                val offLockScreen = !onLockScreen && !aod
-                val shown = if (offLockScreen) activities else emptyList()
-                val main = shown.firstOrNull()
-                    ?: if (settings.glimmerIdlePill && !sideways && offLockScreen) IslandContent.Idle else IslandContent.Hidden
-                val second = shown.drop(1).firstOrNull()
+                // On the always-on display only music and live activities, still and dimmed.
+                val shown = when {
+                    aod && !settings.glimmerAod -> emptyList()
+                    onAod -> activities.filter { it is IslandContent.Media || it is IslandContent.Live }
+                    else -> activities
+                }
+                // On the lock screen too, but without the empty idle pill there.
+                // Unlocking (Face ID moment) goes before everything else.
+                val main = unlocking
+                    ?: shown.firstOrNull()
+                    ?: if (settings.glimmerIdlePill && !sideways && !onLockScreen && !aod) IslandContent.Idle else IslandContent.Hidden
+                val second = if (unlocking != null) null else shown.drop(1).firstOrNull()
 
                 HearthTheme(dark = true) {
                     CompositionLocalProvider(
@@ -473,7 +555,9 @@ class GlimmerController(private val service: GlimmerService) {
                         GlimmerIsland(
                             content = main,
                             secondary = second,
-                            expanded = isExpanded && offLockScreen && main !is IslandContent.Idle && main !is IslandContent.Hidden,
+                            expanded = isExpanded && !aod && main !is IslandContent.Idle && main !is IslandContent.Hidden &&
+                                main !is IslandContent.Unlock,
+                            dimmed = onAod,
                             style = settings.glimmerStyle,
                             screenWidthDp = service.resources.configuration.screenWidthDp.toFloat(),
                             topInset = (topInset / density).dp,
@@ -620,6 +704,11 @@ class GlimmerController(private val service: GlimmerService) {
         const val ACTION_BATTERY_LEVEL_CHANGED = "android.bluetooth.device.action.BATTERY_LEVEL_CHANGED"
         const val EXTRA_BATTERY_LEVEL = "android.bluetooth.device.extra.BATTERY_LEVEL"
         const val KEEP_PAUSED_MS = 10 * 60 * 1000L
+        const val UNLOCK_POLL_MS = 120L
+        /** How long the face is looked for before the shake (Samsung gives up after about as long). */
+        const val UNLOCK_SCAN_MS = 4000L
+        const val UNLOCK_DONE_MS = 1300L
+        const val UNLOCK_FAIL_MS = 900L
         val HeadphoneTypes = buildSet {
             add(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)
             add(AudioDeviceInfo.TYPE_WIRED_HEADSET)

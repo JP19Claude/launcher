@@ -120,6 +120,12 @@ sealed interface IslandContent {
     /** The flashlight is on; tap (or hold) turns it off. */
     data object Torch : IslandContent
 
+    /**
+     * Face ID moment: scanning while the phone checks, a green tick once it's unlocked,
+     * a shake when it didn't recognize you.
+     */
+    data class Unlock(val success: Boolean, val face: Boolean, val failed: Boolean = false) : IslandContent
+
     /** Short system moments: charging, silent mode, low battery. */
     data class Alert(
         val glyph: Glyph,
@@ -137,6 +143,8 @@ private val Yellow = Color(0xFFFFD60A)
 
 /** Height of the pill when not expanded: as tall as the status bar row, like the camera ring. */
 const val ISLAND_HEIGHT_DP = 30f
+
+private const val UNLOCK_SIZE_DP = 92f
 
 /** True on the always-on display: everything holds still (no frames while the phone dozes). */
 private val LocalGlimmerStill = compositionLocalOf { false }
@@ -158,6 +166,8 @@ fun islandSize(content: IslandContent, expanded: Boolean, screenWidthDp: Float, 
     return when {
         content is IslandContent.Hidden -> DpSize(0.dp, 0.dp)
         content is IslandContent.Idle -> DpSize((screenWidthDp * 0.27f).coerceIn(86f, 110f).dp, ISLAND_HEIGHT_DP.dp)
+        // Like Face ID on the iPhone: the island becomes a rounded square for the moment.
+        content is IslandContent.Unlock -> DpSize(UNLOCK_SIZE_DP.dp, UNLOCK_SIZE_DP.dp)
         !expanded -> DpSize(compact, ISLAND_HEIGHT_DP.dp)
         else -> DpSize(
             full,
@@ -233,6 +243,7 @@ fun GlimmerIsland(
     val corner = when {
         // As round as the iPhone's unfolded island.
         expanded -> 44.dp
+        content is IslandContent.Unlock -> 30.dp
         else -> height / 2
     }
 
@@ -245,7 +256,7 @@ fun GlimmerIsland(
     val key = islandKey(content)
     val lastPulse = remember { intArrayOf(pulse) }
     LaunchedEffect(key, pulse) {
-        if (!animations || dimmed || content is IslandContent.Hidden) return@LaunchedEffect
+        if (!animations || dimmed || content is IslandContent.Hidden || content is IslandContent.Unlock) return@LaunchedEffect
         val pulsed = pulse != lastPulse[0]
         lastPulse[0] = pulse
         if (content is IslandContent.Idle && !pulsed) return@LaunchedEffect
@@ -271,7 +282,7 @@ fun GlimmerIsland(
     // How sharp the content is: from a blur to clear whenever it changes or unfolds.
     val clarity = remember { Animatable(1f) }
     LaunchedEffect(key, expanded) {
-        if (!animations || dimmed || content is IslandContent.Hidden || content is IslandContent.Idle) {
+        if (!animations || dimmed || content is IslandContent.Hidden || content is IslandContent.Idle || content is IslandContent.Unlock) {
             clarity.snapTo(1f)
             return@LaunchedEffect
         }
@@ -279,13 +290,13 @@ fun GlimmerIsland(
         clarity.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
     }
     val tap: () -> Unit = {
-        if (content !is IslandContent.Idle) {
+        if (content !is IslandContent.Idle && content !is IslandContent.Unlock) {
             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             if (tapOpens && !expanded) onOpen(content) else onToggle()
         }
     }
     val hold: () -> Unit = {
-        if (content !is IslandContent.Idle) {
+        if (content !is IslandContent.Idle && content !is IslandContent.Unlock) {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             if (tapOpens && !expanded) onExpand() else onOpen(content)
         }
@@ -453,6 +464,7 @@ private fun glowColorOf(content: IslandContent, accent: Color): Color = when (co
     is IslandContent.Message -> accent
     is IslandContent.Media -> content.playing.artPalette.firstOrNull() ?: content.playing.artColor ?: Color.White
     is IslandContent.Live -> noticeColor(content.notice.kind)
+    is IslandContent.Unlock -> if (content.failed) Red else Color.White
     IslandContent.Torch -> Yellow
     else -> Color.White
 }
@@ -464,6 +476,8 @@ internal fun islandKey(content: IslandContent): String = when (content) {
     is IslandContent.Alert -> "alert-${content.title}"
     IslandContent.Idle -> "idle"
     IslandContent.Hidden -> "hidden"
+    // One key for scanning, done and failed, so the scan turns into the tick in place.
+    is IslandContent.Unlock -> "unlock"
     IslandContent.Torch -> "torch"
 }
 
@@ -625,6 +639,12 @@ private fun AppBadge(notice: LiveNotice, size: Dp) {
 @Composable
 private fun CompactContent(content: IslandContent) {
     if (content is IslandContent.Idle || content is IslandContent.Hidden) return
+    if (content is IslandContent.Unlock) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            UnlockGlyph(content, Modifier.size(50.dp))
+        }
+        return
+    }
     if (content is IslandContent.Media && LocalSettings.current.glimmerMusicStyle == GlimmerMusicStyle.Hyper) {
         HyperCompact(content.playing)
         return
@@ -1153,6 +1173,130 @@ private fun IslandButton(glyph: Glyph, big: Boolean = false, onClick: () -> Unit
         contentAlignment = Alignment.Center,
     ) {
         GlyphIcon(glyph, Color.White, Modifier.size(if (big) 26.dp else 22.dp))
+    }
+}
+
+/**
+ * Face ID (or the fingerprint) like on the iPhone: the frame and face breathe and look around
+ * while the phone checks, then everything folds into a tick once it's unlocked. If it
+ * didn't recognize you, the frame flushes red and shakes its head, like the iPhone.
+ */
+@Composable
+private fun UnlockGlyph(content: IslandContent.Unlock, modifier: Modifier) {
+    val done = remember { Animatable(if (content.success) 1f else 0f) }
+    LaunchedEffect(content.success) {
+        if (content.success) done.animateTo(1f, tween(460, easing = FastOutSlowInEasing)) else done.snapTo(0f)
+    }
+    val still = LocalGlimmerStill.current
+    val shake = remember { Animatable(0f) }
+    val miss = remember { Animatable(0f) }
+    LaunchedEffect(content.failed) {
+        if (!content.failed) {
+            miss.snapTo(0f)
+            return@LaunchedEffect
+        }
+        launch { miss.animateTo(1f, tween(160)) }
+        if (!still) {
+            shake.animateTo(0f, keyframes {
+                durationMillis = 520
+                -1f at 60
+                1f at 140
+                -0.8f at 220
+                0.6f at 300
+                -0.35f at 380
+                0.15f at 450
+            })
+        }
+    }
+    val transition = rememberInfiniteTransition(label = "unlockScan")
+    val breath by transition.animateFloat(0.93f, 1.03f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "breath")
+    val scan by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1300, easing = LinearEasing)), label = "scan")
+    Canvas(modifier.graphicsLayer { translationX = shake.value * size.width * 0.16f }) {
+        val d = done.value
+        val m = miss.value
+        val w = size.minDimension
+        val stroke = w * 0.07f
+        val lineStyle = Stroke(width = stroke, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val checking = if (still || m > 0f) 1f else breath
+        // The frame: four rounded corners, pulling in a little once done.
+        scale(checking * (1f - 0.14f * d), center) {
+            val inset = w * 0.06f
+            val len = w * 0.24f
+            val r = w * 0.12f
+            val corner = Path().apply {
+                moveTo(inset, inset + len)
+                lineTo(inset, inset + r)
+                quadraticBezierTo(inset, inset, inset + r, inset)
+                lineTo(inset + len, inset)
+            }
+            // Unlocked: the frame turns green with the tick.
+            // Not recognized: it flushes red while it shakes.
+            val frameColor = androidx.compose.ui.graphics.lerp(
+                androidx.compose.ui.graphics.lerp(Color.White, Red, m),
+                Green,
+                d,
+            ).copy(alpha = 1f - 0.35f * d)
+            for ((sx, sy) in listOf(1f to 1f, -1f to 1f, 1f to -1f, -1f to -1f)) {
+                scale(sx, sy, center) { drawPath(corner, frameColor, style = lineStyle) }
+            }
+        }
+        val features = 1f - ((d - 0f) / 0.45f).coerceIn(0f, 1f)
+        if (features > 0f) {
+            val look = if (still || m > 0f) 0f else sin(scan * 2f * Math.PI.toFloat()) * w * 0.035f
+            if (content.face) {
+                translate(left = look) {
+                    val c = Color.White.copy(alpha = features)
+                    // Eyes, nose, smile.
+                    drawLine(c, Offset(w * 0.36f, w * 0.37f), Offset(w * 0.36f, w * 0.46f), stroke, StrokeCap.Round)
+                    drawLine(c, Offset(w * 0.64f, w * 0.37f), Offset(w * 0.64f, w * 0.46f), stroke, StrokeCap.Round)
+                    val nose = Path().apply {
+                        moveTo(w * 0.52f, w * 0.37f)
+                        lineTo(w * 0.52f, w * 0.56f)
+                        lineTo(w * 0.46f, w * 0.56f)
+                    }
+                    drawPath(nose, c, style = lineStyle)
+                    drawArc(
+                        c,
+                        startAngle = 25f,
+                        sweepAngle = 130f,
+                        useCenter = false,
+                        topLeft = Offset(w * 0.33f, w * 0.44f),
+                        size = Size(w * 0.34f, w * 0.26f),
+                        style = lineStyle,
+                    )
+                }
+            } else {
+                // Fingerprint ridges, lit up one after another while checking.
+                val c = Offset(w * 0.5f, w * 0.56f)
+                for (i in 0 until 4) {
+                    val radius = w * (0.1f + i * 0.075f)
+                    val lit = if (still) 1f else ((scan * 4f - i).coerceIn(0f, 1f))
+                    drawArc(
+                        Color.White.copy(alpha = features * (0.35f + 0.65f * lit)),
+                        startAngle = 200f - i * 6f,
+                        sweepAngle = 220f + i * 12f,
+                        useCenter = false,
+                        topLeft = Offset(c.x - radius, c.y - radius),
+                        size = Size(radius * 2f, radius * 2f),
+                        style = lineStyle,
+                    )
+                }
+            }
+        }
+        // The tick, drawn on as the face fades.
+        val tickProgress = ((d - 0.3f) / 0.7f).coerceIn(0f, 1f)
+        if (tickProgress > 0f) {
+            val tick = Path().apply {
+                moveTo(w * 0.30f, w * 0.52f)
+                lineTo(w * 0.45f, w * 0.66f)
+                lineTo(w * 0.72f, w * 0.36f)
+            }
+            val measure = PathMeasure().apply { setPath(tick, false) }
+            val part = Path()
+            measure.getSegment(0f, measure.length * tickProgress, part, true)
+            // The green tick, like Face ID's.
+            drawPath(part, Green, style = Stroke(width = stroke * 1.25f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
     }
 }
 

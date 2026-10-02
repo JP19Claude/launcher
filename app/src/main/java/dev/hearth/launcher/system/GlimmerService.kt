@@ -27,10 +27,12 @@ import androidx.savedstate.SavedStateRegistryOwner
 import dev.hearth.launcher.data.SettingsRepository
 
 /**
- * The Glimmer app's accessibility service: the island around the camera in every app (not on
- * the lock screen), and the last picture of the app in front for Hearth's fly-in.
+ * The Glimmer app's accessibility service: the island around the camera in every app (with
+ * the Face ID moment, on the lock screen and the always-on display), and the last picture of
+ * the app in front for Hearth's fly-in.
  *
- * Accessibility, because only such services may draw over the status bar and take that picture. The control center over other apps is its own app now.
+ * Accessibility, because only such services may draw over the status bar and lock screen
+ * and take that picture. The control center over other apps is its own app now.
  */
 class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistryOwner {
 

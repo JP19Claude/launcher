@@ -8,8 +8,8 @@ plus **Glimmer**, die Insel um die Frontkamera, und dem **Kontrollzentrum** als 
 - **Hearth** (`Hearth.apk`, `dev.hearth.launcher`): der Launcher mit Homescreen, Dock,
   App-Mediathek, Suche, Widgets und seinem Kontrollzentrum auf dem Homescreen.
 - **Glimmer** (`Glimmer.apk`, `dev.hearth.glimmer`): die Insel (Dynamic Island) mit
-  Live-Aktivitäten, nach dem Entsperren in jeder App (der Sperrbildschirm bleibt beim
-  System). Braucht ihre Bedienungshilfe und den Benachrichtigungszugriff.
+  Live-Aktivitäten in jeder App, auf dem Sperrbildschirm, im Always-On-Display und mit
+  Face-ID-Moment. Braucht ihre Bedienungshilfe und den Benachrichtigungszugriff.
 - **Kontrollzentrum** (`Kontrollzentrum.apk`, `dev.hearth.controls`): das Glas-Kontrollzentrum
   über jeder App, auf Wunsch anstelle von One UIs. Braucht seine Bedienungshilfe.
 - Glimmer und Kontrollzentrum laufen mit jedem Launcher. Zusammen mit Hearth: geschlossene
@@ -113,8 +113,14 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     zur Kamera, wird flach wie eine Kapsel und dunkel; die Insel streckt sich ihr entgegen,
     beide verschmelzen über eine flüssige Brücke (Android 12+), dann drückt sich die Insel
     kurz breit und federt zurück (für Apps, die über Hearth geöffnet wurden; abschaltbar)
-  - Auf dem Sperrbildschirm und dem Always-On-Display bleibt alles beim System: Glimmer
-    zeigt sich erst nach dem Entsperren
+  - Auf dem Sperrbildschirm zeigt Glimmer Aktivitäten (ohne leere Pille); die Mitteilungen
+    dort bleiben beim System
+  - Entsperren wie Face ID: wacht das Handy gesperrt auf, wird Glimmer zum abgerundeten
+    Quadrat mit Face-ID-Symbol (oder Fingerabdruck), das atmet und sich umsieht; sobald das
+    Handy dich erkennt (auch wenn es auf dem Sperrbildschirm bleibt), wird daraus ein grüner
+    Haken; erkennt es dich nicht, färbt sich der Rahmen rot und schüttelt sich
+  - Always-On-Display: Musik und Aktivitäten bleiben sichtbar, gedimmt und ohne Bewegung
+    (sofern das Handy Einblendungen im AOD zulässt)
   - Laden zeigt eine kleine Batterie, die sich füllt
   - Stoppuhr und Timer laufen in Glimmer weiter, auch bei der Samsung-Uhr und anderen Uhr-Apps
     (Zeit aus Chronometer oder Text, Stoppuhr mit Zehnteln, angehalten bleibt sie stehen)

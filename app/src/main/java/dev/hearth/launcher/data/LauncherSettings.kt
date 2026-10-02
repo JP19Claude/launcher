@@ -94,6 +94,13 @@ enum class BadgeStyle(val label: String) {
     Off("Aus"),
 }
 
+/** What Glimmer shows while the phone unlocks. */
+enum class GlimmerUnlock(val label: String) {
+    FaceId("Face ID"),
+    Fingerprint("Fingerabdruck"),
+    Off("Aus"),
+}
+
 /** How Glimmer shows music. */
 enum class GlimmerMusicStyle(val label: String) {
     Hyper("Hyper Island (Xiaomi)"),
@@ -242,6 +249,9 @@ data class LauncherSettings(
     /** Closing an app: it shrinks and flies into Glimmer, like on the iPhone. */
     val glimmerFlyIn: Boolean = true,
     val glimmerMusicStyle: GlimmerMusicStyle = GlimmerMusicStyle.Hyper,
+    val glimmerUnlock: GlimmerUnlock = GlimmerUnlock.FaceId,
+    /** Keep showing music and live activities on the always-on display (dimmed, still). */
+    val glimmerAod: Boolean = true,
     val badgeStyle: BadgeStyle = BadgeStyle.Number,
     /** Double tap on empty home screen space locks the phone (needs the accessibility service). */
     val doubleTapLock: Boolean = true,
@@ -415,6 +425,8 @@ class SettingsRepository(context: Context) {
             glimmerGlow = prefs.getBoolean("glimmerGlow", d.glimmerGlow),
             glimmerFlyIn = prefs.getBoolean("glimmerFlyIn", d.glimmerFlyIn),
             glimmerMusicStyle = enumOf("glimmerMusicStyle", d.glimmerMusicStyle),
+            glimmerUnlock = enumOf("glimmerUnlock", d.glimmerUnlock),
+            glimmerAod = prefs.getBoolean("glimmerAod", d.glimmerAod),
             badgeStyle = enumOf("badgeStyle", d.badgeStyle),
             doubleTapLock = prefs.getBoolean("doubleTapLock", d.doubleTapLock),
             dockSize = prefs.getInt("dockSize", d.dockSize),
@@ -496,6 +508,8 @@ class SettingsRepository(context: Context) {
             .putBoolean("glimmerGlow", s.glimmerGlow)
             .putBoolean("glimmerFlyIn", s.glimmerFlyIn)
             .putString("glimmerMusicStyle", s.glimmerMusicStyle.name)
+            .putString("glimmerUnlock", s.glimmerUnlock.name)
+            .putBoolean("glimmerAod", s.glimmerAod)
             .putString("badgeStyle", s.badgeStyle.name)
             .putBoolean("doubleTapLock", s.doubleTapLock)
             .putInt("dockSize", s.dockSize)
@@ -550,6 +564,7 @@ class SettingsRepository(context: Context) {
         val GLIMMER_KEYS = setOf(
             KEY_GLIMMER, "glimmerStyle", "glimmerIdlePill", "glimmerMessages",
             "glimmerTapOpens", "glimmerAlerts", "glimmerGlow", "glimmerMusicStyle",
+            "glimmerUnlock", "glimmerAod",
         )
         const val KEY_CC_ENABLED = "ccEnabled"
     }
