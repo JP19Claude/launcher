@@ -139,7 +139,8 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
                 }
                 // Screen back on without the lock screen (it locks only after a while):
                 // there's no "user present" then, the strip used to stay missing.
-                Intent.ACTION_SCREEN_ON -> handler.postDelayed({ ensureTrigger() }, 300)
+                // Looked at a few times: the lock screen settles at its own pace after waking.
+                Intent.ACTION_SCREEN_ON -> for (delay in longArrayOf(300, 1000, 2500)) handler.postDelayed({ ensureTrigger() }, delay)
                 Intent.ACTION_USER_PRESENT -> ensureTrigger()
             }
         }
@@ -354,7 +355,13 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
 
     private fun ensureTrigger() {
         if (!ccEnabled) return
-        if (trigger != null || windowManager == null) return
+        // A strip the system dropped while the phone slept is put back (it used to stay gone).
+        trigger?.let { view ->
+            if (view.isAttachedToWindow || SystemClock.uptimeMillis() - triggerAddedAt < 1500) return
+            runCatching { windowManager?.removeViewImmediate(view) }
+            trigger = null
+        }
+        if (windowManager == null) return
         if (isLocked()) return
         if (getSystemService(PowerManager::class.java)?.isInteractive == false) return
         addTrigger()
@@ -432,8 +439,12 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             title = "Hearth control center trigger"
         }
-        if (runCatching { wm.addView(view, params) }.isSuccess) trigger = view
+        if (runCatching { wm.addView(view, params) }.isSuccess) {
+            trigger = view
+            triggerAddedAt = SystemClock.uptimeMillis()
+        }
     }
+    private var triggerAddedAt = 0L
 
     private fun removeTrigger() {
         val view = trigger ?: return
