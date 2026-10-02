@@ -198,6 +198,8 @@ fun SettingsScreen(
                 }
             }
 
+            item { ClaudeAssistantSettings() }
+
             item {
                 Section("Liquid Glass") {
                     ChoiceRow(
@@ -978,7 +980,7 @@ private fun HiddenAppsPicker(
 }
 
 private val SectionOrder = listOf(
-    "Design-Vorlage", "Liquid Glass", "Animationen", "Icons", "Icon-Pack", "Homescreen",
+    "Design-Vorlage", "Claude-Assistent", "Liquid Glass", "Animationen", "Icons", "Icon-Pack", "Homescreen",
     "Glimmer", "Gesten & Kontrollzentrum", "Dock", "Suche", "Allgemein", "Ausgeblendete Apps",
 )
 

@@ -20,6 +20,8 @@ import dev.hearth.launcher.data.CellPos
 import dev.hearth.launcher.data.HomeFolderData
 import dev.hearth.launcher.data.HomeLayoutRepository
 import dev.hearth.launcher.data.CcStyle
+import dev.hearth.launcher.data.AssistantHost
+import dev.hearth.launcher.data.ClaudeAssistant
 import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.IconConfig
 import dev.hearth.launcher.data.IconPackInfo
@@ -172,7 +174,26 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      */
     val homeEvents: SharedFlow<Boolean> = _homeEvents.asSharedFlow()
 
+    /** Claude's sheet over the home screen. */
+    private val _assistantOpen = MutableStateFlow(false)
+    val assistantOpen: StateFlow<Boolean> = _assistantOpen.asStateFlow()
+
+    fun closeAssistant() {
+        _assistantOpen.value = false
+    }
+
+    /** What the launcher lets Claude do while it runs. */
+    private val assistantHost = object : AssistantHost {
+        override fun applyPreset(preset: DesignPreset) = this@LauncherViewModel.applyPreset(preset)
+        override fun openLauncherSettings() = requestSettings()
+        override fun openWallpaperPicker() = this@LauncherViewModel.openWallpaperPicker()
+        override fun webSearch(query: String) = this@LauncherViewModel.webSearch(query)
+    }
+
     init {
+        ClaudeAssistant.init(application)
+        ClaudeAssistant.host = assistantHost
+
         // New default looks, each applied once to existing installs:
         // 2 = ColorOS × Claude.
         if (settingsRepo.settings.value.designVersion < LauncherSettings.DESIGN_VERSION) {
@@ -446,7 +467,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun startShortcut(shortcut: dev.hearth.launcher.data.AppShortcut) = repo.startShortcut(shortcut)
     fun uninstall(app: AppInfo) = repo.uninstall(app)
     fun webSearch(query: String) = repo.webSearch(query, settings.value.searchEngine)
-    fun askClaude(question: String? = null) = controls.openClaude(question)
+    /**
+     * "Frag Claude": Hearth's own assistant, which can act on the phone (or the Claude app,
+     * when it's switched off in the settings).
+     */
+    fun askClaude(question: String? = null) {
+        if (!ClaudeAssistant.settings.value.enabled) {
+            controls.openClaudeApp(question)
+            return
+        }
+        if (!question.isNullOrBlank()) ClaudeAssistant.ask(question)
+        _assistantOpen.value = true
+    }
 
     fun applyPreset(preset: DesignPreset) = settingsRepo.update { it.withPreset(preset) }
 
@@ -462,6 +494,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     override fun onCleared() {
+        if (ClaudeAssistant.host === assistantHost) ClaudeAssistant.host = null
         repo.close()
         wallpaper.close()
         controls.close()

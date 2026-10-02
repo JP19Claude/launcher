@@ -166,6 +166,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val needsWallpaperAccess by vm.needsWallpaperAccess.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val library by vm.library.collectAsStateWithLifecycle()
+    val assistantOpen by vm.assistantOpen.collectAsStateWithLifecycle()
     var openFolder by remember { mutableStateOf<LibraryFolderContent?>(null) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     // Galaxy × Claude: One UI's app drawer (swipe up) instead of the App Library page.
@@ -407,6 +408,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
             searchOpen = false
             drawerOpen = false
             editMode = false
+            vm.closeAssistant()
             settingsOpen = false
             controlOpen = false
             widgetPickerOpen = false
@@ -443,6 +445,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     // Always enabled: on the home screen, back does nothing (like every launcher).
     BackHandler {
         when {
+            assistantOpen -> vm.closeAssistant()
             editMode -> editMode = false
             menu != null -> menu = null
             renaming != null -> renaming = null
@@ -1037,6 +1040,18 @@ fun LauncherScreen(vm: LauncherViewModel) {
             GlassToastHost(toast = toast, onDismiss = { toast = null })
 
             GlassMenuOverlay(request = menu, onDismiss = { menu = null })
+
+            // Claude, over everything: it can act on the phone (alarms, lights, apps, messages …).
+            if (assistantOpen) {
+                ClaudeAssistantSheet(
+                    onDismiss = vm::closeAssistant,
+                    onOpenSettings = {
+                        searchOpen = false
+                        drawerOpen = false
+                        settingsOpen = true
+                    },
+                )
+            }
 
             drag?.let { d ->
                 DragOverlay(

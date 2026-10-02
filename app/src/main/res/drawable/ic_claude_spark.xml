@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Claude's spark, for the quick settings tile (single color, as the system wants it). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12.00,1.50 L12.99,9.60 L19.42,4.58 L14.40,11.01 L22.50,12.00 L14.40,12.99 L19.42,19.42 L12.99,14.40 L12.00,22.50 L11.01,14.40 L4.58,19.42 L9.60,12.99 L1.50,12.00 L9.60,11.01 L4.58,4.58 L11.01,9.60 Z" />
+</vector>

@@ -2,6 +2,51 @@
 <!-- Hearth: the launcher. Glimmer (island, control center over apps, lock screen) is its own app. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Claude in the system: talking to Claude, setting alarms and timers without a detour,
+         finding contacts by name (asked for only when Claude needs it) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <queries>
+        <!-- What Claude opens for you -->
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.tts.engine.CHECK_TTS_DATA" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SET_ALARM" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SET_TIMER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.INSERT" />
+            <data android:mimeType="vnd.android.cursor.dir/event" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="text/plain" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="google.navigation" />
+        </intent>
+    </queries>
+
     <application>
         <activity
             android:name=".MainActivity"
@@ -19,5 +64,41 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Claude over any app. ASSIST: Hearth can be the phone's digital assistant (long
+             press on home). Questions only come in through the alias below. -->
+        <activity
+            android:name=".ClaudeAssistActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="Claude"
+            android:launchMode="singleTask"
+            android:taskAffinity="dev.hearth.launcher.claude"
+            android:theme="@style/Theme.Hearth.Assist"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- The door for questions: only the family's apps (same signature) may use it. -->
+        <activity-alias
+            android:name=".ClaudeAskActivity"
+            android:exported="true"
+            android:permission="dev.hearth.permission.BRIDGE"
+            android:targetActivity=".ClaudeAssistActivity" />
+
+        <!-- "Claude" tile in the system's quick settings -->
+        <service
+            android:name=".system.ClaudeTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_claude_spark"
+            android:label="Claude"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

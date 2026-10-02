@@ -395,6 +395,11 @@ class GlimmerController(private val service: GlimmerService) {
                     runCatching { service.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT) }
                 }, 350)
             }
+            // Hearth's assistant, over whatever app is open.
+            GlimmerDoubleTap.Claude -> {
+                collapse()
+                dev.hearth.launcher.data.ClaudeAssistant.openAssistant(service)
+            }
         }
     }
     private var receiverRegistered = false

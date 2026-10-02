@@ -141,6 +141,7 @@ enum class GlimmerDoubleTap(val label: String) {
     PlayPause("Musik Play/Pause"),
     Torch("Taschenlampe"),
     Screenshot("Bildschirmfoto"),
+    Claude("Claude"),
 }
 
 /** How a closing app flies into Glimmer. */

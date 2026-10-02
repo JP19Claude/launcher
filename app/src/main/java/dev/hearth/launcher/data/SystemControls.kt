@@ -266,7 +266,10 @@ class SystemControls(private val context: Context) {
     }
 
     /** Waits a moment, so the control center itself is gone from the screenshot. */
-    fun takeScreenshot() = globalAction(AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT, 500)
+    fun takeScreenshot(delayMs: Long = 500) = globalAction(AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT, delayMs)
+
+    /** Back, home, recent apps, split screen: for Claude, through the same accessibility route. */
+    fun performGlobal(action: Int, delayMs: Long = 250) = globalAction(action, delayMs)
     fun lockScreen() = globalAction(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN, 250)
     fun powerMenu() = globalAction(AccessibilityService.GLOBAL_ACTION_POWER_DIALOG, 150)
 
@@ -400,6 +403,22 @@ class SystemControls(private val context: Context) {
         }
     }
 
+    /** Do not disturb on or off; false (and the access settings open) without access. */
+    fun setDoNotDisturb(on: Boolean): Boolean {
+        val nm = notifications ?: return false
+        if (!nm.isNotificationPolicyAccessGranted) {
+            start(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+            return false
+        }
+        return runCatching {
+            nm.setInterruptionFilter(
+                if (on) NotificationManager.INTERRUPTION_FILTER_PRIORITY else NotificationManager.INTERRUPTION_FILTER_ALL,
+            )
+        }.isSuccess
+    }
+
+    fun hasDoNotDisturbAccess(): Boolean = notifications?.isNotificationPolicyAccessGranted == true
+
     /** Sends a media button press to whatever played last (no permission needed). */
     fun mediaKey(keyCode: Int) {
         val a = audio ?: return
@@ -454,23 +473,21 @@ class SystemControls(private val context: Context) {
     fun openAlarms() = start(Intent(AlarmClock.ACTION_SHOW_ALARMS))
     fun openCalculator() = start(Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_CALCULATOR))
 
-    /** Opens the Claude app (with the question, if given), or claude.ai if the app isn't installed. */
+    /**
+     * Claude: Hearth's own assistant (it can act on the phone), from any app of the family.
+     * Without Hearth, the Claude app or claude.ai.
+     */
     fun openClaude(question: String? = null) {
-        val pm = context.packageManager
-        val installed = pm.getLaunchIntentForPackage(CLAUDE_PACKAGE)
-        if (installed != null) {
-            if (!question.isNullOrBlank()) {
-                val share = Intent(Intent.ACTION_SEND)
-                    .setType("text/plain")
-                    .putExtra(Intent.EXTRA_TEXT, question)
-                    .setPackage(CLAUDE_PACKAGE)
-                if (start(share)) return
-            }
-            start(installed)
+        if (ClaudeAssistant.openAssistant(context, question)) {
+            onOpenedScreen?.invoke()
             return
         }
-        val url = if (question.isNullOrBlank()) "https://claude.ai/new" else "https://claude.ai/new?q=" + Uri.encode(question)
-        start(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        openClaudeApp(question)
+    }
+
+    /** Opens the Claude app (with the question, if given), or claude.ai if the app isn't installed. */
+    fun openClaudeApp(question: String? = null) {
+        if (ClaudeAssistant.openClaudeApp(context, question)) onOpenedScreen?.invoke()
     }
 
     /** Starts the first intent that works. */

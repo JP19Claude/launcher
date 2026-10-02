@@ -4,6 +4,31 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
 plus **Glimmer**, die Insel um die Frontkamera, und dem **Kontrollzentrum** als eigene Apps.
 
 
+## Claude im System
+
+Claude ist in Hearth eingebaut und erledigt Dinge direkt auf dem Handy, statt nur zu antworten.
+Es nutzt dafür die Werkzeuge der Anthropic-API mit deinem eigenen API-Schlüssel. Ohne Schlüssel
+versteht Hearth einfache Befehle trotzdem, offline.
+
+- Was Claude kann:
+  - Taschenlampe, Helligkeit, Lautstärke, Ton, Vibration, lautlos, Nicht stören, Auto-Drehen
+  - Wecker und Timer, ohne Umweg über die Uhr-App
+  - Termine (fertig ausgefüllt), Kontakte suchen, Anrufe, SMS, WhatsApp und E-Mails vorbereiten
+  - Navigation, Karte, Websuche, Webseiten
+  - Apps und ihre Einstellungen öffnen, jede Systemeinstellung öffnen
+  - Musik steuern, Bildschirmfoto, Sperren, Zurück, Home, letzte Apps, geteilter Bildschirm
+  - Zwischenablage, Zustand des Handys (Akku, Wecker, WLAN …), das Design von Hearth
+  - mehrere Dinge in einem Satz
+- So erreichst du Claude:
+  - „Frag Claude“, die Suche, Now Brief und das Kontrollzentrum
+  - langes Drücken auf Home, mit Hearth als digitalem Assistenten
+  - die Kachel „Claude“ in den Schnelleinstellungen
+  - Doppeltippen auf Glimmer
+- Spracheingabe; Antworten werden vorgelesen, wenn du per Sprache fragst.
+- Anrufe, Nachrichten und Termine bestätigst du immer selbst.
+- Fragen nimmt Claude nur von den Hearth-Apps an (geschützt über die Signatur).
+- Einstellungen → Claude-Assistent: Schlüssel, Modell (Sonnet 5.5, Haiku 4.5, Opus 5.5), Vorlesen.
+
 ## Galaxy × Claude
 
 Design-Vorlage „Galaxy × Claude“ (Einstellungen → Design-Vorlage): der Launcher im Stil von One UI
@@ -65,7 +90,7 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
   echter Unschärfe dahinter). Links öffnet weiter die normale Mitteilungsleiste.
   Bereich einstellbar: rechte Hälfte, rechtes Drittel, ganze Breite. Ganz entfernen
   lässt sich das System-Kontrollzentrum nur mit Root.
-- Suche: „Claude fragen“ übergibt die Frage an die Claude-App oder claude.ai
+- Suche: „Claude fragen“ öffnet Hearths Claude-Assistenten (ausgeschaltet: Claude-App oder claude.ai)
 - App-Mediathek wie bei iOS (hinter der letzten Seite): Glas-Ordner nach Kategorie,
   „Vorschläge“ aus deinen meistgenutzten Apps, „Neu hinzugefügt“; die kleinen Icons
   in der Ecke öffnen den ganzen Ordner
