@@ -90,6 +90,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hearth.launcher.data.ChatItem
+import dev.hearth.launcher.data.ClaudeSettings
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import dev.hearth.launcher.data.AiProvider
 import dev.hearth.launcher.data.ClaudeAssistant
 import dev.hearth.launcher.data.ClaudeFix
@@ -682,6 +686,52 @@ internal fun ClaudeKeyField(modifier: Modifier = Modifier, onSaved: () -> Unit =
     }
 }
 
+/** "Verfügbare Modelle laden": the service's current chat models, best first, to tap. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ModelPicker(s: ClaudeSettings) {
+    val scope = rememberCoroutineScope()
+    var models by remember(s.provider, s.apiKey) { mutableStateOf<List<String>?>(null) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember(s.provider, s.apiKey) { mutableStateOf<String?>(null) }
+    if (s.apiKey.isBlank()) return
+    ActionRow(
+        label = if (loading) "Lade Modelle …" else "Verfügbare Modelle laden",
+        description = "Zeigt, welche Modelle ${s.provider.label} gerade anbietet (die besten für Hearth zuerst)",
+    ) {
+        if (loading) return@ActionRow
+        loading = true
+        error = null
+        scope.launch {
+            try {
+                models = ClaudeAssistant.availableModels(s)
+                if (models.isNullOrEmpty()) error = "Keine passenden Modelle gefunden."
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                error = e.message ?: "Die Liste ließ sich nicht laden."
+            } finally {
+                loading = false
+            }
+        }
+    }
+    error?.let { Note(it) }
+    val list = models
+    if (!list.isNullOrEmpty()) {
+        FlowRow(
+            Modifier.padding(horizontal = 18.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            list.take(40).forEach { id ->
+                Chip(text = id, selected = id == s.modelId, swatch = null) {
+                    ClaudeAssistant.updateSettings { it.copy(models = it.models + (it.provider to id)) }
+                }
+            }
+        }
+    }
+}
+
 /** A one-line text setting, saved when done (or when leaving the field). */
 @Composable
 private fun SettingsTextField(
@@ -784,12 +834,13 @@ internal fun ClaudeAssistantSettings() {
                     placeholder = s.provider.defaultModel.ifEmpty { "Modellname" },
                 ) { v -> ClaudeAssistant.updateSettings { it.copy(models = it.models + (it.provider to v.trim())) } }
                 Text(
-                    "Leer lassen für ${s.provider.defaultModel.ifEmpty { "–" }}",
+                    "Leer lassen für ${s.provider.defaultModel.ifEmpty { "automatische Wahl" }}. Gibt es ein Modell nicht mehr, nimmt Hearth von selbst das nächste passende.",
                     color = Color.White.copy(alpha = 0.55f),
                     fontSize = 12.sp,
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
+            ModelPicker(s)
         }
         SwitchRow(
             label = "Sparmodus",

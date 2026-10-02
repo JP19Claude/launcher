@@ -17,8 +17,10 @@ Claude ist in Hearth eingebaut und erledigt Dinge direkt auf dem Handy, statt nu
 - Andere KI-Anbieter, oft mit kostenlosem Kontingent: NVIDIA (build.nvidia.com), Groq,
   Google Gemini, OpenRouter (Gratis-Modelle mit „:free“), Mistral, Cerebras oder ein eigener
   OpenAI-kompatibler Dienst (https). Einstellungen → Claude-Assistent → KI-Anbieter, Schlüssel
-  eintragen, Modellname änderbar (es muss Werkzeuge/Function Calling können). Jeder Anbieter
-  behält seinen eigenen Schlüssel.
+  eintragen, Modellname änderbar (es muss Werkzeuge/Function Calling können) oder aus
+  „Verfügbare Modelle laden“ antippen. Bei NVIDIA wählt Hearth das Modell selbst; gibt es ein
+  Modell nicht mehr (z. B. Fehler 410 „end of life“), nimmt Hearth automatisch das nächste
+  passende aus der Liste des Anbieters. Jeder Anbieter behält seinen eigenen Schlüssel.
 - Mit eigenem API-Schlüssel (getrennt vom Claude-Abo abgerechnet) erledigt Claude auch
   Komplexes mit Werkzeugen. Sparmodus (Standard): was Hearth selbst versteht, kostet nichts;
   Standardmodell Haiku 4.5, wenig Denkaufwand.

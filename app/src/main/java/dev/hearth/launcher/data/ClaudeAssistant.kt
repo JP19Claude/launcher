@@ -55,7 +55,8 @@ enum class AiProvider(
     val keyHint: String,
 ) {
     Anthropic("Claude", "https://api.anthropic.com/v1", "", "https://console.anthropic.com/settings/keys", "sk-ant-…"),
-    Nvidia("NVIDIA", "https://integrate.api.nvidia.com/v1", "meta/llama-3.3-70b-instruct", "https://build.nvidia.com/settings/api-keys", "nvapi-…"),
+    // NVIDIA retires models often: Hearth picks a current one from its list by itself.
+    Nvidia("NVIDIA", "https://integrate.api.nvidia.com/v1", "", "https://build.nvidia.com/settings/api-keys", "nvapi-…"),
     Groq("Groq", "https://api.groq.com/openai/v1", "llama-3.3-70b-versatile", "https://console.groq.com/keys", "gsk_…"),
     Gemini("Google Gemini", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-2.5-flash", "https://aistudio.google.com/apikey", "AIza…"),
     OpenRouter("OpenRouter", "https://openrouter.ai/api/v1", "meta-llama/llama-3.3-70b-instruct:free", "https://openrouter.ai/keys", "sk-or-…"),
@@ -96,7 +97,7 @@ data class ClaudeSettings(
     val modelId: String get() = if (isClaude) model.id else models[provider]?.takeIf { it.isNotBlank() } ?: provider.defaultModel
 
     /** For the header: "Haiku 4.5" or "NVIDIA · meta/llama-3.3-70b-instruct". */
-    val modelLabel: String get() = if (isClaude) model.label else "${provider.label} · $modelId"
+    val modelLabel: String get() = if (isClaude) model.label else "${provider.label} · ${modelId.ifBlank { "automatisch" }}"
 
     /** Base address for the chosen service. */
     val baseUrl: String get() = (if (provider == AiProvider.Custom) customUrl.trim() else provider.baseUrl).trimEnd('/')
@@ -376,7 +377,7 @@ object ClaudeAssistant {
                 add(ChatItem.Reply(id(), "Das waren viele Schritte auf einmal – sag mir, wie es weitergehen soll."))
                 return
             }
-            val turn = if (s.isClaude) requestClaude(s) else requestOpenAi(s)
+            val turn = if (s.isClaude) requestClaude(s) else requestOpenAiHealing(s)
             val said = turn.text.trim()
             if (said.isNotEmpty()) add(ChatItem.Reply(id(), said))
 
@@ -459,6 +460,95 @@ object ClaudeAssistant {
         }
         return Turn(text.toString(), calls)
     }
+
+    /**
+     * Services retire models (NVIDIA often): when the model is gone, unknown or can't use
+     * tools, Hearth takes the next fitting one from the service's own list, remembers it and
+     * goes on. Without a model set, it picks one the same way.
+     */
+    private suspend fun requestOpenAiHealing(start: ClaudeSettings): Turn {
+        var s = start
+        val tried = mutableSetOf<String>()
+        if (s.modelId.isBlank()) {
+            s = switchModel(s, tried, auto = true)
+                ?: throw ClaudeApiException("${s.provider.label} hat gerade kein passendes Modell. Prüfe den Schlüssel oder wähl einen anderen Anbieter.", fix = ClaudeFix.ApiKey)
+        }
+        while (true) {
+            try {
+                return requestOpenAi(s)
+            } catch (e: ClaudeApiException) {
+                if (!e.modelProblem || tried.size >= 3) throw e
+                tried += s.modelId
+                s = switchModel(s, tried, auto = false) ?: throw e
+            }
+        }
+    }
+
+    /** Takes the best model from the service's list that wasn't tried yet, and keeps it. */
+    private suspend fun switchModel(s: ClaudeSettings, tried: MutableSet<String>, auto: Boolean): ClaudeSettings? {
+        val next = runCatching { availableModels(s) }.getOrDefault(emptyList())
+            .firstOrNull { it != s.modelId && it !in tried } ?: return null
+        val old = s.modelId
+        updateSettings { it.copy(models = it.models + (s.provider to next)) }
+        add(
+            ChatItem.Action(
+                id(),
+                if (auto || old.isBlank()) "Modell gewählt: $next" else "„$old“ geht nicht mehr – jetzt: $next",
+                true,
+            ),
+        )
+        return settings.value
+    }
+
+    /**
+     * The chat models a service offers right now (its /models list), the ones best for
+     * Hearth first: big instruction models known to use tools well; embeddings, safety,
+     * image, speech and similar models left out.
+     */
+    suspend fun availableModels(s: ClaudeSettings = settings.value): List<String> {
+        if (s.isClaude || s.apiKey.isBlank() || s.baseUrl.isBlank()) return emptyList()
+        val name = s.provider.label
+        val json = runInterruptible(Dispatchers.IO) {
+            post("${s.baseUrl}/models", null, name, s) { connection ->
+                connection.setRequestProperty("Authorization", "Bearer ${s.apiKey.trim()}")
+            }
+        }
+        val list = json.optJSONArray("data") ?: json.optJSONArray("models") ?: JSONArray()
+        val ids = (0 until list.length()).mapNotNull { i ->
+            (list.optJSONObject(i)?.optString("id") ?: list.optString(i)).takeIf { !it.isNullOrBlank() }
+        }.map { it.removePrefix("models/") }.distinct()
+        val ranked = rankModels(ids)
+        // OpenRouter lists hundreds of paid models: only the free ones, when there are any.
+        return if (s.provider == AiProvider.OpenRouter) ranked.filter { it.endsWith(":free") }.ifEmpty { ranked } else ranked
+    }
+
+    private val NotForChat = listOf(
+        "embed", "rerank", "guard", "safety", "clip", "parse", "reward", "retriever", "ocr", "speech", "asr",
+        "tts", "whisper", "detect", "translat", "pii", "image", "video", "diffusion", "flux", "sdxl", "cosmos",
+        "paligemma", "deplot", "kosmos", "vila", "neva", "fuyu", "audio", "moderation", "bge", "e5-", "nv-embed",
+        "riva", "fastpitch", "canary", "parakeet", "streampetr", "grounding", "nemotron-nano-vl", "-vl", "vision",
+        "base", "aqa", "tokenizer",
+    )
+
+    /** What tends to work best for a phone assistant with tools; earlier is better. */
+    private val PreferredModels = listOf(
+        "nemotron-3-super", "nemotron-super", "kimi-k2", "glm-5", "glm-4.7", "glm-4.6", "qwen3", "deepseek-v3",
+        "gpt-oss-120b", "llama-4-maverick", "mistral-large", "mistral-medium", "llama-3.3", "llama-3.1-405b",
+        "llama-3.1-70b", "gemini-2.5-flash", "gemini", "mixtral-8x22b", "qwen2.5-72b", "mistral-small",
+        "gpt-oss", "llama", "instruct", "chat",
+    )
+
+    private fun rankModels(ids: List<String>): List<String> = ids
+        .filter { id -> val l = id.lowercase(); NotForChat.none { l.contains(it) } }
+        .sortedWith(
+            compareBy<String> { id ->
+                val l = id.lowercase()
+                PreferredModels.indexOfFirst { l.contains(it) }.let { if (it < 0) PreferredModels.size else it }
+            }
+                // Free variants first on OpenRouter; newer (longer, dated) names before older.
+                .thenBy { if (it.endsWith(":free")) 0 else 1 }
+                .thenByDescending { it },
+        )
 
     /**
      * NVIDIA, Groq, Gemini, OpenRouter, Mistral, Cerebras or an own service: the OpenAI chat
@@ -545,7 +635,8 @@ object ClaudeAssistant {
 
     private fun post(
         url: String,
-        body: String,
+        /** Null: a GET (the model list). */
+        body: String?,
         name: String,
         s: ClaudeSettings,
         headers: (HttpURLConnection) -> Unit,
@@ -557,13 +648,13 @@ object ClaudeAssistant {
             throw ClaudeApiException("Die Adresse von $name stimmt nicht.")
         }
         try {
-            connection.requestMethod = "POST"
+            connection.requestMethod = if (body == null) "GET" else "POST"
             connection.connectTimeout = 15_000
-            connection.readTimeout = 90_000
-            connection.doOutput = true
+            connection.readTimeout = if (body == null) 20_000 else 90_000
+            connection.doOutput = body != null
             connection.setRequestProperty("content-type", "application/json")
             headers(connection)
-            connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+            if (body != null) connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
             val code = connection.responseCode
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
             val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
@@ -582,19 +673,26 @@ object ClaudeAssistant {
             throw when (code) {
                 401 -> ClaudeApiException("Der API-Schlüssel für $name stimmt nicht. Trag ihn bitte neu ein.", fix = ClaudeFix.ApiKey)
                 403 -> ClaudeApiException("Der Schlüssel für $name darf das nicht (${detail ?: "keine Berechtigung"}).", fix = ClaudeFix.ApiKey)
-                404 -> ClaudeApiException(
+                404, 410 -> ClaudeApiException(
                     if (s.isClaude) "Dieses Claude-Modell gibt es für deinen Schlüssel nicht. Wähl in den Einstellungen ein anderes."
-                    else "Das Modell „${s.modelId}“ oder die Adresse gibt es bei $name nicht. Ändere den Modellnamen in den Einstellungen.",
+                    else "Das Modell „${s.modelId}“ gibt es bei $name nicht (mehr). Wähl in den Einstellungen unter „Verfügbare Modelle laden“ ein anderes.",
+                    modelProblem = true,
                 )
                 429 -> ClaudeApiException("$name: gerade zu viele Anfragen oder das Gratis-Kontingent ist aufgebraucht. Warte kurz und versuch es noch einmal.")
-                400, 422 -> ClaudeApiException(
-                    when {
-                        detail?.contains("credit", ignoreCase = true) == true -> "Auf deinem $name-Konto ist kein Guthaben mehr."
-                        detail?.contains("tool", ignoreCase = true) == true || detail?.contains("function", ignoreCase = true) == true ->
-                            "Das Modell „${s.modelId}“ kann bei $name keine Werkzeuge benutzen. Wähl in den Einstellungen ein anderes Modell."
-                        else -> "$name konnte die Anfrage nicht lesen (${detail ?: "Fehler $code"}). Starte am besten einen neuen Chat."
-                    },
-                )
+                400, 422 -> {
+                    val noTools = detail?.contains("tool", ignoreCase = true) == true || detail?.contains("function", ignoreCase = true) == true
+                    val badModel = detail?.contains("model", ignoreCase = true) == true &&
+                        Regex("not (found|exist|available|supported)|unknown|invalid|end of life|deprecated", RegexOption.IGNORE_CASE).containsMatchIn(detail)
+                    ClaudeApiException(
+                        when {
+                            detail?.contains("credit", ignoreCase = true) == true -> "Auf deinem $name-Konto ist kein Guthaben mehr."
+                            noTools -> "Das Modell „${s.modelId}“ kann bei $name keine Werkzeuge benutzen. Wähl in den Einstellungen ein anderes Modell."
+                            badModel -> "Das Modell „${s.modelId}“ gibt es bei $name nicht. Wähl in den Einstellungen ein anderes."
+                            else -> "$name konnte die Anfrage nicht lesen (${detail ?: "Fehler $code"}). Starte am besten einen neuen Chat."
+                        },
+                        modelProblem = !s.isClaude && (noTools || badModel),
+                    )
+                }
                 in 500..599 -> ClaudeApiException("$name ist gerade überlastet. Versuch es gleich noch einmal.", retry = true)
                 else -> ClaudeApiException("$name hat mit Fehler $code geantwortet${detail?.let { " ($it)" } ?: ""}.")
             }
@@ -736,4 +834,6 @@ class ClaudeApiException(
     message: String,
     val retry: Boolean = false,
     val fix: ClaudeFix? = null,
+    /** The model is gone, unknown or can't use tools: another one may work. */
+    val modelProblem: Boolean = false,
 ) : Exception(message)
