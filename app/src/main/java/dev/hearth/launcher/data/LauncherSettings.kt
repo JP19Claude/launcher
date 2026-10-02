@@ -147,12 +147,16 @@ enum class FlyInStyle(val label: String) {
 enum class GlimmerMusicStyle(val label: String) {
     Hyper("Hyper Island (Xiaomi)"),
     Classic("Klassisch"),
+    /** OPPO's and OnePlus' Fluid Cloud: a spinning cover with a progress ring, time left. */
+    FluidCloud("Fluid Cloud (OPPO/OnePlus)"),
 }
 
 /** Look of Glimmer, the island around the front camera. */
 enum class GlimmerStyle(val label: String) {
     Black("Schwarz wie die Kamera"),
     Glass("Liquid Glass"),
+    /** Dark, tinted in the activity's color (like vivo's and OPPO's colored capsules). */
+    Tinted("Farbig getönt"),
 }
 
 /** Overall look of control center and notifications. */
@@ -314,6 +318,12 @@ data class LauncherSettings(
     val glimmerHaptics: Boolean = true,
     /** Videos and games without a status bar: only what matters stays (a call, an alarm). */
     val glimmerHideFullscreen: Boolean = false,
+    /** One-time codes from notifications sit in the island, a tap copies them (vivo, OPPO). */
+    val glimmerCodes: Boolean = true,
+    /** A screenshot shows as a little picture in the island (vivo's Origin Island). */
+    val glimmerScreenshots: Boolean = true,
+    /** A soft light breathes around the island while something runs (OPPO's Fluid Cloud). */
+    val glimmerBreathe: Boolean = false,
     val badgeStyle: BadgeStyle = BadgeStyle.Number,
     /** Double tap on empty home screen space locks the phone (needs the accessibility service). */
     val doubleTapLock: Boolean = true,
@@ -362,6 +372,9 @@ data class LauncherSettings(
         glimmerSwipeTracks = false,
         glimmerMessages = false,
         glimmerCharging = false,
+        glimmerCodes = false,
+        glimmerScreenshots = false,
+        glimmerBreathe = false,
     )
 
     /** Every Glimmer setting as it comes (it stays switched on). */
@@ -390,6 +403,9 @@ data class LauncherSettings(
             glimmerCharging = d.glimmerCharging,
             glimmerHaptics = d.glimmerHaptics,
             glimmerHideFullscreen = d.glimmerHideFullscreen,
+            glimmerCodes = d.glimmerCodes,
+            glimmerScreenshots = d.glimmerScreenshots,
+            glimmerBreathe = d.glimmerBreathe,
         )
     }
 
@@ -567,6 +583,9 @@ class SettingsRepository(context: Context) {
             glimmerCharging = prefs.getBoolean("glimmerCharging", d.glimmerCharging),
             glimmerHaptics = prefs.getBoolean("glimmerHaptics", d.glimmerHaptics),
             glimmerHideFullscreen = prefs.getBoolean("glimmerHideFullscreen", d.glimmerHideFullscreen),
+            glimmerCodes = prefs.getBoolean("glimmerCodes", d.glimmerCodes),
+            glimmerScreenshots = prefs.getBoolean("glimmerScreenshots", d.glimmerScreenshots),
+            glimmerBreathe = prefs.getBoolean("glimmerBreathe", d.glimmerBreathe),
             badgeStyle = enumOf("badgeStyle", d.badgeStyle),
             doubleTapLock = prefs.getBoolean("doubleTapLock", d.doubleTapLock),
             dockSize = prefs.getInt("dockSize", d.dockSize),
@@ -664,6 +683,9 @@ class SettingsRepository(context: Context) {
             .putBoolean("glimmerCharging", s.glimmerCharging)
             .putBoolean("glimmerHaptics", s.glimmerHaptics)
             .putBoolean("glimmerHideFullscreen", s.glimmerHideFullscreen)
+            .putBoolean("glimmerCodes", s.glimmerCodes)
+            .putBoolean("glimmerScreenshots", s.glimmerScreenshots)
+            .putBoolean("glimmerBreathe", s.glimmerBreathe)
             .putString("badgeStyle", s.badgeStyle.name)
             .putBoolean("doubleTapLock", s.doubleTapLock)
             .putInt("dockSize", s.dockSize)
@@ -729,7 +751,7 @@ class SettingsRepository(context: Context) {
             "glimmerIdlePill", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerAutoCollapse",
-            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "accent", "animations",
+            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "accent", "animations",
         )
         const val KEY_CC_ENABLED = "ccEnabled"
     }

@@ -148,6 +148,11 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     mit 42er-Ecken), Cover als abgerundetes Quadrat, auf dem Sperrbildschirm nur die Pille,
     Antippen öffnet die App, gedrückt halten klappt auf, ohne Glimmers Extras; die eigenen
     Einstellungen bleiben gespeichert
+  - Von anderen Inseln übernommen: Bestätigungscodes aus SMS und Apps sitzen in Glimmer, antippen
+    kopiert (vivo, OPPO); neue Bildschirmfotos erscheinen als kleines Bild zum Öffnen oder Teilen
+    (vivos Origin Island); Musikstil „Fluid Cloud“ mit drehendem Cover, Fortschrittsring und
+    rückwärts rollender Restzeit, atmendes Leuchten (OPPO/OnePlus); durch alle Aktivitäten wischen,
+    aufgeklappt mit Punkten (Samsungs Now Bar); Aussehen „Farbig getönt“ in der Farbe der Aktivität
   - Live-Vorschau oben in der Glimmer-App: zeigt Aussehen, Breite, Rand, Leuchten, Bewegung und
     Position sofort, wechselt durch ein paar Inhalte, antippen klappt auf; Einstellungen in
     Abschnitten (Gestaltung, Größe & Position, Bedienung, Was Glimmer zeigt, Sperrbildschirm & AOD)

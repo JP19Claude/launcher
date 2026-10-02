@@ -63,6 +63,9 @@ class LiveNotice(
     }
 }
 
+/** A one-time code found in a notification (SMS, bank, login), for Glimmer to copy. */
+class VerificationCode(val code: String, val appLabel: String, val icon: ImageBitmap?, val key: String)
+
 /** A notification as listed on the control center's notification page. */
 @Immutable
 class ShadeNotice(
@@ -98,6 +101,40 @@ object NotificationHub {
 
     /** New, important messages, to flash briefly. */
     val incoming: SharedFlow<LiveNotice> = _incoming.asSharedFlow()
+
+    private val _codes = MutableSharedFlow<VerificationCode>(extraBufferCapacity = 4)
+
+    /** One-time codes as they arrive (like vivo's and OPPO's islands offer to copy them). */
+    val codes: SharedFlow<VerificationCode> = _codes.asSharedFlow()
+
+    /** Words that say a number in a notification is a code to type in somewhere. */
+    private val codeWords = Regex(
+        "(code|otp|tan\\b|pin\\b|passcode|kennwort|bestätigung|verifizierung|verification|verify|sicherheits|einmal|anmelde|login|zugangs)",
+        RegexOption.IGNORE_CASE,
+    )
+    private val codeNumber = Regex("(?<![\\d.,:/+-])(\\d{3}[- ]\\d{3}|\\d{4,8})(?![\\d.,:/%€$])")
+
+    /** The code in a notification's text, if it is one (keywords plus a 4 to 8 digit number). */
+    fun findCode(text: String): String? {
+        if (!codeWords.containsMatchIn(text)) return null
+        return codeNumber.find(text)?.value?.filter { it.isDigit() }?.takeIf { it.length in 4..8 }
+    }
+
+    private fun lookForCode(service: NotificationListenerService, sbn: StatusBarNotification) {
+        if (sbn.isOngoing || sbn.packageName == service.packageName) return
+        val extras = sbn.notification.extras
+        val text = listOfNotNull(
+            extras.getCharSequence(Notification.EXTRA_TITLE),
+            extras.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: extras.getCharSequence(Notification.EXTRA_TEXT),
+        ).joinToString(" ")
+        val code = findCode(text) ?: return
+        val label = runCatching {
+            val pm = service.packageManager
+            pm.getApplicationLabel(pm.getApplicationInfo(sbn.packageName, 0)).toString()
+        }.getOrDefault(sbn.packageName)
+        val icon = runCatching { sbn.notification.smallIcon?.loadDrawable(service)?.toBitmap(64, 64)?.asImageBitmap() }.getOrNull()
+        _codes.tryEmit(VerificationCode(code, label, icon, sbn.key))
+    }
 
     private val _badges = MutableStateFlow<Map<String, Int>>(emptyMap())
 
@@ -151,6 +188,7 @@ object NotificationHub {
 
     fun onPosted(service: NotificationListenerService, sbn: StatusBarNotification) {
         refresh(service)
+        runCatching { lookForCode(service, sbn) }
         val notice = parse(service, sbn) ?: return
         if (notice.kind != NoticeKind.Message || sbn.isOngoing) return
         val ranking = NotificationListenerService.Ranking()

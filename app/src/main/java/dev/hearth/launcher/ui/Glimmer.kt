@@ -25,6 +25,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.SizeTransform
 import androidx.compose.runtime.key
+import androidx.compose.runtime.produceState
+import android.os.SystemClock
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -140,6 +142,12 @@ sealed interface IslandContent {
     /** The flashlight is on; tap (or hold) turns it off. */
     data object Torch : IslandContent
 
+    /** A one-time code from a notification; a tap copies it (like vivo's and OPPO's islands). */
+    data class Code(val code: String, val appLabel: String, val icon: ImageBitmap?, val copied: Boolean = false) : IslandContent
+
+    /** A screenshot just taken, as a little picture (like vivo's Origin Island). */
+    data class Screenshot(val uri: android.net.Uri, val thumb: ImageBitmap?, val id: Long) : IslandContent
+
     /** Charging, kept in the island while plugged in (if chosen). */
     data class Charging(val level: Int) : IslandContent
 
@@ -226,6 +234,8 @@ fun islandSize(
                 is IslandContent.Live -> if (content.notice.actions.isNotEmpty()) 158.dp else 116.dp
                 is IslandContent.Message -> if (content.notice.actions.isNotEmpty()) 160.dp else 124.dp
                 is IslandContent.Charging -> 96.dp
+                is IslandContent.Code -> 112.dp
+                is IslandContent.Screenshot -> 132.dp
                 else -> 96.dp
             },
         )
@@ -267,7 +277,12 @@ fun GlimmerIsland(
     glow: Boolean = true,
     onToggle: () -> Unit,
     onExpand: () -> Unit = onToggle,
-    onSwap: () -> Unit = {},
+    /** Sideways swipe: true for the next activity, false for the previous one. */
+    onSwap: (Boolean) -> Unit = {},
+    /** "Share" in the unfolded island (screenshots). */
+    onShare: (IslandContent) -> Unit = {},
+    /** How many activities there are, for the little page dots when unfolded (Now Bar). */
+    activityCount: Int = 1,
     onFocus: (IslandContent) -> Unit = {},
     onCollapse: () -> Unit,
     onOpen: (IslandContent) -> Unit,
@@ -379,6 +394,23 @@ fun GlimmerIsland(
         GlimmerGlowColor.White -> Color.White
     }
     val rainbow = settings.glimmerGlowColor == GlimmerGlowColor.Rainbow
+    // The tinted look follows the activity's color, softly.
+    val islandTint by androidx.compose.animation.animateColorAsState(
+        if (style == GlimmerStyle.Tinted) glowColorOf(drawn, settings.accent.color) else Color.Black,
+        tween(500),
+        label = "islandTint",
+    )
+    // Only animates when chosen and something is running, so it costs nothing otherwise.
+    val breath = if (settings.glimmerBreathe && animations && !dimmed && !isPassive(drawn) && !hidden) {
+        rememberInfiniteTransition(label = "breathe").animateFloat(
+            initialValue = 0.25f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(1600, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            label = "breath",
+        )
+    } else {
+        null
+    }
     // Swiping over music: the content leans the way the track goes.
     val nudge = remember { Animatable(0f) }
     val nudgeScope = rememberCoroutineScope()
@@ -413,7 +445,8 @@ fun GlimmerIsland(
     val tap: () -> Unit = {
         if (!isPassive(content)) {
             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            if (tapOpens && !expanded) onOpen(content) else onToggle()
+            // A code is copied with one tap, without unfolding first.
+            if ((tapOpens || content is IslandContent.Code) && !expanded) onOpen(content) else onToggle()
         }
     }
     val hold: () -> Unit = {
@@ -461,8 +494,22 @@ fun GlimmerIsland(
             IslandShape(
                 style = style,
                 corner = corner,
+                tint = islandTint,
                 modifier = Modifier
                     .drawBehind {
+                        // Breathing light around the island while something runs (Fluid Cloud).
+                        val b = breath?.value ?: 0f
+                        if (b > 0.01f && !expanded) {
+                            for (i in 1..3) {
+                                val spread = i * 2.2.dp.toPx() * (0.6f + 0.4f * b)
+                                drawRoundRect(
+                                    color = glowColor.copy(alpha = b * 0.22f / i),
+                                    topLeft = Offset(-spread, -spread),
+                                    size = Size(size.width + spread * 2, size.height + spread * 2),
+                                    cornerRadius = CornerRadius(size.height / 2 + spread),
+                                )
+                            }
+                        }
                         val a = shimmer.value
                         if (a > 0.01f && !expanded) {
                             // Soft rings growing outwards, fading: the "glimmer".
@@ -547,7 +594,7 @@ fun GlimmerIsland(
                                     }
                                     !vertical && abs(total.x) > threshold * 2 && !expanded -> {
                                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        onSwap()
+                                        onSwap(total.x < 0)
                                     }
                                 }
                             },
@@ -592,7 +639,33 @@ fun GlimmerIsland(
                     label = "islandContent",
                 ) { (c, e) ->
                     if (e) {
-                        ExpandedContent(c, media, onOpen = { onOpen(c) }, onAction = { sendIntent(context, it); onCollapse() })
+                        Box(Modifier.fillMaxSize()) {
+                            ExpandedContent(
+                                c,
+                                media,
+                                onOpen = { onOpen(c) },
+                                onAction = { sendIntent(context, it); onCollapse() },
+                                onShare = { onShare(c) },
+                            )
+                            // Several things running: little dots like Samsung's Now Bar; swipe for the next.
+                            if (activityCount > 1) {
+                                Row(
+                                    Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                ) {
+                                    repeat(activityCount.coerceAtMost(6)) { i ->
+                                        Box(
+                                            Modifier
+                                                .size(width = if (i == 0) 12.dp else 5.dp, height = 5.dp)
+                                                .clip(CircleShape)
+                                                .background(Color.White.copy(alpha = if (i == 0) 0.9f else 0.35f)),
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     } else {
                         CompactContent(c)
                     }
@@ -654,6 +727,8 @@ private fun glowColorOf(content: IslandContent, accent: Color): Color = when (co
     is IslandContent.Media -> content.playing.artPalette.firstOrNull() ?: content.playing.artColor ?: Color.White
     is IslandContent.Live -> noticeColor(content.notice.kind)
     is IslandContent.Charging -> Green
+    is IslandContent.Code -> Green
+    is IslandContent.Screenshot -> Color.White
     is IslandContent.Arrival -> content.color
     is IslandContent.Unlock -> if (content.failed) Red else Color.White
     IslandContent.Torch -> Yellow
@@ -674,6 +749,8 @@ internal fun islandKey(content: IslandContent): String = when (content) {
     // One key for closed and open, so the padlock opens in place.
     is IslandContent.Lock -> "lock"
     is IslandContent.Charging -> "charging"
+    is IslandContent.Code -> "code-${content.code}"
+    is IslandContent.Screenshot -> "screenshot-${content.id}"
     is IslandContent.Arrival -> "arrival-${content.id}"
     IslandContent.Hidden -> "hidden"
     // One key for scanning, done and failed, so the scan turns into the tick in place.
@@ -682,8 +759,27 @@ internal fun islandKey(content: IslandContent): String = when (content) {
 }
 
 @Composable
-private fun IslandShape(style: GlimmerStyle, corner: Dp, modifier: Modifier, content: @Composable () -> Unit) {
+private fun IslandShape(
+    style: GlimmerStyle,
+    corner: Dp,
+    modifier: Modifier,
+    tint: Color = Color.Black,
+    content: @Composable () -> Unit,
+) {
     when (style) {
+        // Dark, with the activity's color glowing through from the top (vivo, OPPO).
+        GlimmerStyle.Tinted -> Box(
+            modifier
+                .clip(RoundedCornerShape(corner))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            androidx.compose.ui.graphics.lerp(Color.Black, tint, 0.42f),
+                            androidx.compose.ui.graphics.lerp(Color.Black, tint, 0.16f),
+                        ),
+                    ),
+                ),
+        ) { content() }
         GlimmerStyle.Black -> Box(
             modifier
                 .clip(RoundedCornerShape(corner))
@@ -836,6 +932,15 @@ private fun LeadingBadgeIcon(content: IslandContent, size: Dp) {
         }
         IslandContent.Torch -> GlyphIcon(Glyph.Torch, Yellow, Modifier.size(size))
         is IslandContent.Charging -> GlyphIcon(Glyph.Spark, Green, Modifier.size(size))
+        is IslandContent.Code -> GlyphIcon(Glyph.Lock, Green, Modifier.size(size))
+        is IslandContent.Screenshot -> {
+            val thumb = content.thumb
+            if (thumb != null) {
+                Image(thumb, null, contentScale = ContentScale.Crop, modifier = Modifier.size(size).clip(RoundedCornerShape(size * 0.22f)))
+            } else {
+                GlyphIcon(Glyph.Screenshot, Color.White, Modifier.size(size))
+            }
+        }
         is IslandContent.Arrival -> {
             val icon = content.icon
             if (icon != null) {
@@ -884,6 +989,10 @@ private fun CompactContent(content: IslandContent) {
     }
     if (content is IslandContent.Media && LocalSettings.current.glimmerMusicStyle == GlimmerMusicStyle.Hyper) {
         HyperCompact(content.playing)
+        return
+    }
+    if (content is IslandContent.Media && LocalSettings.current.glimmerMusicStyle == GlimmerMusicStyle.FluidCloud) {
+        FluidCloudCompact(content.playing)
         return
     }
     // A call in progress, like on the iPhone: its time in green on the left, the voice as a
@@ -985,6 +1094,13 @@ private fun CompactContent(content: IslandContent) {
             is IslandContent.Message -> PulseDot(LocalSettings.current.accent.color)
             IslandContent.Torch -> Text("An", color = Yellow, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             is IslandContent.Charging -> RollingText("${content.level} %", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            // The code itself; after the tap a green "Kopiert".
+            is IslandContent.Code -> if (content.copied) {
+                Text("Kopiert", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            } else {
+                Text(content.code, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, style = TimeStyle, letterSpacing = 1.sp)
+            }
+            is IslandContent.Screenshot -> GlyphIcon(Glyph.Screenshot, Color.White.copy(alpha = 0.85f), Modifier.size(16.dp))
             // Just landed: a soft light in the app's color.
             is IslandContent.Arrival -> PulseDot(content.color)
             is IslandContent.Alert -> Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1036,6 +1152,7 @@ private fun ExpandedContent(
     media: MediaRepository,
     onOpen: () -> Unit,
     onAction: (PendingIntent) -> Unit,
+    onShare: () -> Unit = {},
 ) {
     Column(
         Modifier
@@ -1140,6 +1257,54 @@ private fun ExpandedContent(
                     Text(content.value, color = content.color, fontSize = 15.sp)
                 }
                 content.level?.let { LevelBar(it, content.color, Modifier.size(52.dp, 24.dp)) }
+            }
+            is IslandContent.Code -> Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                GlyphIcon(Glyph.Lock, Green, Modifier.size(36.dp))
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Code · ${content.appLabel}", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(content.code, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.SemiBold, style = TimeStyle, letterSpacing = 3.sp)
+                }
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(if (content.copied) Color.White.copy(alpha = 0.16f) else Green)
+                        .clickable(onClick = onOpen)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                ) {
+                    Text(if (content.copied) "Kopiert" else "Kopieren", color = if (content.copied) Green else Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            is IslandContent.Screenshot -> Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                val thumb = content.thumb
+                Box(
+                    Modifier
+                        .size(width = 62.dp, height = 96.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.1f))
+                        .clickable(onClick = onOpen),
+                ) {
+                    if (thumb != null) Image(thumb, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Bildschirmfoto", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Gespeichert", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Teilen" to onShare, "Ansehen" to onOpen).forEach { (label, action) ->
+                            Box(
+                                Modifier
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Color.White.copy(alpha = if (label == "Ansehen") 0.9f else 0.16f))
+                                    .clickable(onClick = action)
+                                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                            ) {
+                                Text(label, color = if (label == "Ansehen") Color.Black else Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
             }
             is IslandContent.Charging -> Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 GlyphIcon(Glyph.Spark, Green, Modifier.size(40.dp))
@@ -1637,6 +1802,70 @@ private fun PadlockGlyph(open: Boolean, modifier: Modifier) {
         }
         rotate(degrees = -14f * o.value, pivot = Offset(left, bodyTop)) {
             drawPath(shackle, Color.White, style = Stroke(width = stroke, cap = StrokeCap.Round))
+        }
+    }
+}
+
+/**
+ * Music like OPPO's and OnePlus' Fluid Cloud: the cover spins like a record while it plays,
+ * ringed by how far the song has got, and the time left counts down on the right.
+ */
+@Composable
+private fun FluidCloudCompact(p: NowPlaying) {
+    val still = LocalGlimmerStill.current
+    val now by produceState(SystemClock.elapsedRealtime(), p.playing, p.positionMs) {
+        while (p.playing && !still) {
+            value = SystemClock.elapsedRealtime()
+            delay(1000)
+        }
+        value = SystemClock.elapsedRealtime()
+    }
+    val position = p.currentPosition(now)
+    val fraction = if (p.durationMs > 0) (position.toFloat() / p.durationMs).coerceIn(0f, 1f) else 0f
+    val ringColor = p.artPalette.firstOrNull() ?: p.artColor ?: Color.White
+    // The record turns while playing and stays put when paused.
+    val spin = remember { Animatable(0f) }
+    LaunchedEffect(p.playing, still) {
+        if (p.playing && !still) {
+            while (true) {
+                spin.animateTo(spin.value + 360f, tween(8000, easing = LinearEasing))
+            }
+        }
+    }
+    Row(
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
+            Canvas(Modifier.fillMaxSize()) {
+                val stroke = 2.dp.toPx()
+                drawArc(Color.White.copy(alpha = 0.18f), 0f, 360f, false, style = Stroke(stroke))
+                drawArc(ringColor, -90f, 360f * fraction, false, style = Stroke(stroke, cap = StrokeCap.Round))
+            }
+            val art = p.art
+            Box(
+                Modifier
+                    .size(16.dp)
+                    .graphicsLayer { rotationZ = spin.value % 360f }
+                    .clip(CircleShape)
+                    .background(Color(0xFF2A2A2E)),
+            ) {
+                if (art != null) Image(art, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        if (p.durationMs > 0) {
+            RollingText(
+                "-" + formatDuration(p.durationMs - position),
+                color = Color.White.copy(alpha = if (p.playing) 0.9f else 0.55f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                down = true,
+            )
+        } else {
+            Equalizer(ringColor, p.playing, Modifier.size(20.dp, 14.dp))
         }
     }
 }

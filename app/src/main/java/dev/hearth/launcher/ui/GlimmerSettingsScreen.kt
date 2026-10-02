@@ -103,6 +103,17 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
     val askBluetooth = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         bluetoothAllowed = bluetoothGranted()
     }
+    // Screenshots in the island need to see new pictures.
+    val photosPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+    val photosGranted = { ContextCompat.checkSelfPermission(context, photosPermission) == PackageManager.PERMISSION_GRANTED }
+    var photosAllowed by remember { mutableStateOf(photosGranted()) }
+    val askPhotos = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        photosAllowed = photosGranted()
+    }
     val open: (Intent) -> Unit = { intent ->
         runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
@@ -214,6 +225,10 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
                             label = "Kopfhörer-Akku anzeigen",
                             description = if (bluetoothAllowed) "Erlaubt" else "Erlauben, damit Glimmer Name und Akku deiner Kopfhörer zeigt",
                         ) { askBluetooth.launch(Manifest.permission.BLUETOOTH_CONNECT) }
+                        if (app == FamilyApp.Glimmer && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ActionRow(
+                            label = "Bildschirmfotos zeigen",
+                            description = if (photosAllowed) "Erlaubt" else "Zugriff auf Fotos erlauben, damit neue Bildschirmfotos in Glimmer erscheinen",
+                        ) { askPhotos.launch(photosPermission) }
                         if (app == FamilyApp.Controls) ActionRow(
                             label = "Helligkeit & Drehung erlauben",
                             description = if (canWrite) "Erlaubt" else "„Systemeinstellungen ändern“ für das Kontrollzentrum",
@@ -310,6 +325,7 @@ private fun GlimmerPreview(chosen: LauncherSettings, media: MediaRepository) {
         listOf<IslandContent>(
             IslandContent.Idle,
             IslandContent.Charging(72),
+            IslandContent.Code("482913", "Bank", null),
             IslandContent.Alert(Glyph.Bell, "Klingeln", "An", Color(0xFFFF9F0A)),
             IslandContent.Torch,
             IslandContent.Lock(open = false),

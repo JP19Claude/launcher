@@ -616,6 +616,11 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             optionLabel = { it.label },
             onSelect = { c -> update { it.copy(glimmerGlowColor = c) } },
         )
+        SwitchRow(
+            label = "Atmendes Leuchten",
+            description = "Solange etwas läuft, atmet ein weiches Licht in seiner Farbe um die Insel – wie OPPOs Fluid Cloud",
+            checked = s.glimmerBreathe,
+        ) { v -> update { it.copy(glimmerBreathe = v) } }
         ChoiceRow(
             label = "Rand",
             options = GlimmerOutline.entries,
@@ -683,6 +688,16 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
     }
 
     Section("Was Glimmer zeigt") {
+        if (!di) SwitchRow(
+            label = "Bestätigungscodes zum Kopieren",
+            description = "Kommt ein Code per SMS oder App (Bank, Login), sitzt er in Glimmer; antippen kopiert ihn – wie bei vivo und OPPO",
+            checked = s.glimmerCodes,
+        ) { v -> update { it.copy(glimmerCodes = v) } }
+        if (!di) SwitchRow(
+            label = "Bildschirmfotos in der Insel",
+            description = "Ein neues Bildschirmfoto erscheint als kleines Bild: antippen öffnet es, aufgeklappt auch Teilen – wie vivos Origin Island (braucht den Zugriff auf Fotos, siehe Einrichten)",
+            checked = s.glimmerScreenshots,
+        ) { v -> update { it.copy(glimmerScreenshots = v) } }
         if (!di) SwitchRow(label = "Neue Nachrichten kurz zeigen", checked = s.glimmerMessages) { v ->
             update { it.copy(glimmerMessages = v) }
         }

@@ -1,10 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Glimmer: the island around the camera, Face ID moment, always-on display, lock screen
      notifications. Works with any launcher; with Hearth, apps fly into it. -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Earbuds' battery level in the island (Android 12+ asks the user once). -->
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- New screenshots as a little picture in the island (asked in the Glimmer app). -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"
+        tools:replace="android:maxSdkVersion" />
 
     <!-- Lets the app ask once not to be put to sleep, so its service survives standby. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />

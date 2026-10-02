@@ -335,6 +335,8 @@ class GlimmerController(private val service: GlimmerService) {
         settings = effective
         settingsState.value = effective
         refreshCharging()
+        // The permission may have been given since starting.
+        if (effective.glimmerScreenshots) watchScreenshots()
         if (moved) placeWindow()
     }
 
@@ -541,6 +543,9 @@ class GlimmerController(private val service: GlimmerService) {
                 NotificationHub.incoming.collect { if (settings.glimmerMessages) flashMessage(it) }
             }
             s.launch {
+                NotificationHub.codes.collect { if (settings.glimmerCodes) showCode(it) }
+            }
+            s.launch {
                 media.nowPlaying.collect { now ->
                     handler.removeCallbacks(dropMedia)
                     when {
@@ -553,6 +558,7 @@ class GlimmerController(private val service: GlimmerService) {
             }
         }
         addWindow()
+        watchScreenshots()
     }
 
     private fun startHeadphoneWatch() {
@@ -586,6 +592,10 @@ class GlimmerController(private val service: GlimmerService) {
         if (batteryReceiverRegistered) runCatching { service.unregisterReceiver(earbudsBattery) }
         batteryReceiverRegistered = false
         torchOn.value = false
+        if (screenshotsWatched) runCatching { service.contentResolver.unregisterContentObserver(screenshotObserver) }
+        screenshotsWatched = false
+        screenshot.value = null
+        code.value = null
         unlock.value = null
         watching = false
         lockOpening.value = false
@@ -726,6 +736,8 @@ class GlimmerController(private val service: GlimmerService) {
                 val aod by dozing.collectAsStateWithLifecycle()
                 val padlockOpen by lockOpening.collectAsStateWithLifecycle()
                 val landed by arrival.collectAsStateWithLifecycle()
+                val currentCode by code.collectAsStateWithLifecycle()
+                val currentShot by screenshot.collectAsStateWithLifecycle()
                 val chargeLevel by charging.collectAsStateWithLifecycle()
                 val inFullscreen by fullscreen.collectAsStateWithLifecycle()
                 // Read here, so the island follows changed settings at once.
@@ -738,6 +750,8 @@ class GlimmerController(private val service: GlimmerService) {
                 val ongoing = live.sortedBy { priority(it.kind) }
                 val ordered = buildList<IslandContent> {
                     currentAlert?.let { add(it) }
+                    currentCode?.let { add(it) }
+                    currentShot?.let { add(it) }
                     currentMessage?.let { add(IslandContent.Message(it)) }
                     ongoing.filter { it.kind == NoticeKind.Call || it.kind == NoticeKind.Alarm }.forEach { add(IslandContent.Live(it)) }
                     if (torch) add(IslandContent.Torch)
@@ -816,6 +830,8 @@ class GlimmerController(private val service: GlimmerService) {
                             onToggle = { expanded.value = !expanded.value },
                             onExpand = { expanded.value = true },
                             onSwap = this@GlimmerController::swap,
+                            onShare = this@GlimmerController::share,
+                            activityCount = visible.size,
                             onFocus = { item ->
                                 focusKey.value = islandKey(item)
                                 expanded.value = true
@@ -901,9 +917,116 @@ class GlimmerController(private val service: GlimmerService) {
     }
 
     /** Sideways swipe: the second activity comes to the front. */
-    private fun swap() {
-        val next = lastOrder.getOrNull(1) ?: return
-        focusKey.value = next
+    /**
+     * Sideways swipe: the next (or previous) activity comes to the front, going round through
+     * all of them like Samsung's Now Bar.
+     */
+    private fun swap(forward: Boolean = true) {
+        val order = lastOrder
+        if (order.size < 2) return
+        focusKey.value = if (forward) order[1] else order.last()
+    }
+
+    // ---- One-time codes (vivo, OPPO): in the island, a tap copies them ----
+
+    private val code = MutableStateFlow<IslandContent.Code?>(null)
+    private var codeToken = 0
+    private fun showCode(found: dev.hearth.launcher.data.VerificationCode) {
+        code.value = IslandContent.Code(found.code, found.appLabel, found.icon)
+        val token = ++codeToken
+        // Codes go stale; the island lets it go after a while.
+        handler.postDelayed({ if (token == codeToken && !expanded.value) code.value = null }, 45_000)
+    }
+    private fun copyCode(c: IslandContent.Code) {
+        val clipboard = service.getSystemService(android.content.ClipboardManager::class.java) ?: return
+        val clip = android.content.ClipData.newPlainText("Code", c.code)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Marked as sensitive, so the keyboard's clipboard preview doesn't show it around.
+            clip.description.extras = android.os.PersistableBundle().apply {
+                putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
+            }
+        }
+        runCatching { clipboard.setPrimaryClip(clip) }
+        code.value = c.copy(copied = true)
+        val token = ++codeToken
+        handler.postDelayed({ if (token == codeToken) code.value = null }, 1400)
+    }
+
+    // ---- Screenshots (vivo's Origin Island): a little picture in the island ----
+
+    private val screenshot = MutableStateFlow<IslandContent.Screenshot?>(null)
+    private var screenshotToken = 0
+    private var lastScreenshotId = -1L
+    private val screenshotObserver = object : android.database.ContentObserver(handler) {
+        override fun onChange(selfChange: Boolean) {
+            if (settings.glimmerScreenshots) scope?.launch { findScreenshot() }
+        }
+    }
+    private var screenshotsWatched = false
+
+    private fun canReadImages(): Boolean = ContextCompat.checkSelfPermission(
+        service,
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) android.Manifest.permission.READ_MEDIA_IMAGES
+        else android.Manifest.permission.READ_EXTERNAL_STORAGE,
+    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+    private fun watchScreenshots() {
+        if (screenshotsWatched || !canReadImages()) return
+        screenshotsWatched = runCatching {
+            service.contentResolver.registerContentObserver(
+                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, screenshotObserver,
+            )
+        }.isSuccess
+    }
+
+    /** The newest picture, if it's a screenshot taken just now. */
+    private suspend fun findScreenshot() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        val found = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val images = android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                val columns = arrayOf(
+                    android.provider.MediaStore.Images.Media._ID,
+                    android.provider.MediaStore.Images.Media.DATE_ADDED,
+                    android.provider.MediaStore.Images.Media.RELATIVE_PATH,
+                    android.provider.MediaStore.Images.Media.DISPLAY_NAME,
+                )
+                service.contentResolver.query(images, columns, null, null, "${android.provider.MediaStore.Images.Media.DATE_ADDED} DESC")?.use { c ->
+                    if (!c.moveToFirst()) return@use null
+                    val id = c.getLong(0)
+                    val added = c.getLong(1)
+                    val where = (c.getString(2).orEmpty() + "/" + c.getString(3).orEmpty()).lowercase()
+                    val fresh = System.currentTimeMillis() / 1000 - added < 15
+                    if (!fresh || id == lastScreenshotId || "screenshot" !in where) return@use null
+                    val uri = android.content.ContentUris.withAppendedId(images, id)
+                    val thumb = runCatching {
+                        service.contentResolver.loadThumbnail(uri, android.util.Size(240, 240), null).asImageBitmap()
+                    }.getOrNull()
+                    Triple(id, uri, thumb)
+                }
+            }.getOrNull()
+        } ?: return
+        lastScreenshotId = found.first
+        screenshot.value = IslandContent.Screenshot(found.second, found.third, found.first)
+        val token = ++screenshotToken
+        handler.postDelayed({ if (token == screenshotToken && !expanded.value) screenshot.value = null }, 5000)
+    }
+
+    private fun shareScreenshot(shot: IslandContent.Screenshot) {
+        val send = Intent(Intent.ACTION_SEND)
+            .setType("image/*")
+            .putExtra(Intent.EXTRA_STREAM, shot.uri)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        runCatching {
+            service.startActivity(Intent.createChooser(send, "Bildschirmfoto teilen").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+        screenshot.value = null
+    }
+
+    /** "Share" in the unfolded island. */
+    private fun share(content: IslandContent) {
+        collapse()
+        if (content is IslandContent.Screenshot) shareScreenshot(content)
     }
 
     private fun collapse() {
@@ -929,6 +1052,17 @@ class GlimmerController(private val service: GlimmerService) {
                 message.value = null
             }
             IslandContent.Torch -> torchOff()
+            is IslandContent.Code -> if (!content.copied) copyCode(content)
+            is IslandContent.Screenshot -> {
+                runCatching {
+                    service.startActivity(
+                        Intent(Intent.ACTION_VIEW)
+                            .setDataAndType(content.uri, "image/*")
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                    )
+                }
+                screenshot.value = null
+            }
             else -> Unit
         }
     }
