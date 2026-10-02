@@ -95,6 +95,9 @@ import dev.hearth.launcher.data.GlimmerOutline
 import dev.hearth.launcher.data.GlimmerMotion
 import dev.hearth.launcher.data.GlimmerDoubleTap
 import dev.hearth.launcher.data.DockStyle
+import dev.hearth.launcher.data.LabelSize
+import dev.hearth.launcher.data.ClockFont
+import dev.hearth.launcher.data.HomeGesture
 import dev.hearth.launcher.data.AppLock
 import dev.hearth.launcher.data.FlyInStyle
 import dev.hearth.launcher.data.GlassQuality
@@ -379,6 +382,15 @@ fun SettingsScreen(
                     SwitchRow(label = "Beschriftung anzeigen", checked = s.showLabels) { v ->
                         update { it.copy(showLabels = v) }
                     }
+                    if (s.showLabels) {
+                        ChoiceRow(
+                            label = "Schriftgröße der App-Namen",
+                            options = LabelSize.entries,
+                            selected = s.labelSize,
+                            optionLabel = { it.label },
+                            onSelect = { v -> update { it.copy(labelSize = v) } },
+                        )
+                    }
                     RowDivider()
                     ChoiceRow(
                         label = "Benachrichtigungs-Badges",
@@ -437,6 +449,13 @@ fun SettingsScreen(
                         optionLabel = { it.label },
                         onSelect = { style -> update { it.copy(clockStyle = style) } },
                     )
+                    ChoiceRow(
+                        label = "Schriftart der Uhr",
+                        options = ClockFont.entries,
+                        selected = s.clockFont,
+                        optionLabel = { it.label },
+                        onSelect = { f -> update { it.copy(clockFont = f) } },
+                    )
                     SwitchRow(label = "Begrüßung", checked = s.showGreeting) { v -> update { it.copy(showGreeting = v) } }
                     SwitchRow(label = "Akkustand in der Glas-Karte", checked = s.showBattery) { v ->
                         update { it.copy(showBattery = v) }
@@ -454,11 +473,14 @@ fun SettingsScreen(
                         description = "Hinter der letzten Seite: alle Apps in Glas-Ordnern",
                         checked = s.showAppLibrary,
                     ) { v -> update { it.copy(showAppLibrary = v) } }
-                    SwitchRow(
-                        label = "Doppeltippen sperrt den Bildschirm",
-                        description = "Auf eine freie Stelle; braucht die Bedienungshilfe",
-                        checked = s.doubleTapLock,
-                    ) { v -> update { it.copy(doubleTapLock = v) } }
+                    ChoiceRow(
+                        label = "Doppeltippen auf eine freie Stelle",
+                        options = HomeGesture.entries,
+                        selected = s.doubleTapAction,
+                        optionLabel = { it.label },
+                        onSelect = { g -> update { it.copy(doubleTapAction = g) } },
+                    )
+                    Note("Sperren braucht Glimmer (Bedienungshilfe).")
                     ActionRow(
                         label = "Anordnung zurücksetzen",
                         description = "Apps wieder automatisch sortieren (frei verschobene Plätze vergessen)",

@@ -80,6 +80,11 @@ mit Liquid Glass, und Claude dort, wo bei Samsung Galaxy AI sitzt.
   Startbildschirm und auf der Widget-Seite
 - Weitere Glas-Widgets: Schnellschalter (Taschenlampe, Nicht stören, Vibration, Drehen) und
   Notiz (antippen und schreiben, speichert sich selbst)
+- Doppeltippen auf eine freie Stelle frei belegbar: sperren, Claude, Suche, App-Übersicht,
+  Mitteilungen, Taschenlampe oder nichts
+- Schriftart der Uhr: wie der Look, schlicht, Serif, digital, hauchdünn oder fett
+- Schriftgröße der App-Namen: klein, normal, groß
+- „Teilen“ im App-Menü: Name und Play-Store-Link über das Teilen-Menü
 - Dock-Aussehen: Glasleiste, schwebende Glas-Kapsel oder ohne Hintergrund
 - Suchleiste der App-Übersicht und Knöpfe des Bearbeitungsmodus aus Liquid Glass
 - App-Übersicht: „Vorgeschlagene Apps“ oben, ⋮-Menü mit Sortieren (A–Z, Neueste zuerst,

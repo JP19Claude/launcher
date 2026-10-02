@@ -487,6 +487,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         repo.launch(app, sourceBounds, options)
     }
     fun openAppInfo(app: AppInfo) = repo.openAppInfo(app)
+
+    /** Shares an app: its name and the Play Store link, through Android's share sheet. */
+    fun shareApp(app: AppInfo) {
+        val text = "${app.label}: https://play.google.com/store/apps/details?id=${app.packageName}"
+        val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+        val chooser = Intent.createChooser(send, "„${app.label}“ teilen").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { getApplication<Application>().startActivity(chooser) }
+    }
     fun shortcuts(app: AppInfo) = repo.shortcuts(app)
     fun startShortcut(shortcut: dev.hearth.launcher.data.AppShortcut) = repo.startShortcut(shortcut)
     fun uninstall(app: AppInfo) = repo.uninstall(app)

@@ -211,6 +211,34 @@ enum class DesignPreset(val label: String) {
     Hearth("Hearth Klassik"),
 }
 
+/** What a double tap on an empty spot of the home screen does. */
+enum class HomeGesture(val label: String) {
+    Off("Nichts"),
+    Lock("Bildschirm sperren"),
+    Claude("Claude öffnen"),
+    Search("Suche"),
+    Drawer("App-Übersicht"),
+    Notifications("Mitteilungen"),
+    Torch("Taschenlampe"),
+}
+
+/** The home clock's typeface. */
+enum class ClockFont(val label: String) {
+    Default("Wie der Look"),
+    Sans("Schlicht"),
+    Serif("Serif"),
+    Mono("Digital"),
+    Thin("Hauchdünn"),
+    Bold("Fett"),
+}
+
+/** Size of the app names under the icons. */
+enum class LabelSize(val label: String, val sp: Float) {
+    Small("Klein", 10.5f),
+    Normal("Normal", 12f),
+    Large("Groß", 13.5f),
+}
+
 /** How the dock looks. */
 enum class DockStyle(val label: String) {
     Glass("Glasleiste"),
@@ -271,6 +299,9 @@ data class LauncherSettings(
     val drawerSort: DrawerSort = DrawerSort.Alphabet,
     val drawerSuggestions: Boolean = true,
     val dockStyle: DockStyle = DockStyle.Glass,
+    val doubleTapAction: HomeGesture = HomeGesture.Lock,
+    val clockFont: ClockFont = ClockFont.Default,
+    val labelSize: LabelSize = LabelSize.Normal,
     val showAppLibrary: Boolean = true,
     val showWidgetPage: Boolean = true,
     val triggerZone: TriggerZone = TriggerZone.RightHalf,
@@ -662,6 +693,13 @@ class SettingsRepository(context: Context) {
             drawerSort = enumOf("drawerSort", d.drawerSort),
             drawerSuggestions = prefs.getBoolean("drawerSuggestions", d.drawerSuggestions),
             dockStyle = enumOf("dockStyle", d.dockStyle),
+            // Older installs had only "double tap locks" on or off.
+            doubleTapAction = enumOf(
+                "doubleTapAction",
+                if (prefs.getBoolean("doubleTapLock", true)) HomeGesture.Lock else HomeGesture.Off,
+            ),
+            clockFont = enumOf("clockFont", d.clockFont),
+            labelSize = enumOf("labelSize", d.labelSize),
             showAppLibrary = prefs.getBoolean("showAppLibrary", d.showAppLibrary),
             showWidgetPage = prefs.getBoolean("showWidgetPage", d.showWidgetPage),
             triggerZone = enumOf("triggerZone", d.triggerZone),
@@ -770,6 +808,9 @@ class SettingsRepository(context: Context) {
             .putString("drawerSort", s.drawerSort.name)
             .putBoolean("drawerSuggestions", s.drawerSuggestions)
             .putString("dockStyle", s.dockStyle.name)
+            .putString("doubleTapAction", s.doubleTapAction.name)
+            .putString("clockFont", s.clockFont.name)
+            .putString("labelSize", s.labelSize.name)
             .putBoolean("showAppLibrary", s.showAppLibrary)
             .putBoolean("showWidgetPage", s.showWidgetPage)
             .putString("triggerZone", s.triggerZone.name)

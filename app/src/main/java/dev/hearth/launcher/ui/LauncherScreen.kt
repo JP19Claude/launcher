@@ -148,6 +148,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import dev.hearth.launcher.LauncherViewModel
 import dev.hearth.launcher.data.AppInfo
+import dev.hearth.launcher.data.ClockFont
+import dev.hearth.launcher.data.HomeGesture
+import androidx.compose.material.icons.rounded.Share
 import dev.hearth.launcher.data.HearthWidget
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.LauncherSettings
@@ -717,14 +720,23 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                 LongPressArea(
                                     onLongPress = homeMenu,
                                     onDoubleTap = {
-                                        if (settings.doubleTapLock) {
-                                            // Locking needs an accessibility service: Glimmer's.
-                                            if (GlimmerLink.isInstalled(context)) {
-                                                vm.controls.lockScreen()
-                                            } else {
-                                                toast = GlassToast("Zum Sperren per Doppeltippen: die App „Glimmer“ installieren und ihre Bedienungshilfe einschalten")
+                                        when (settings.doubleTapAction) {
+                                            HomeGesture.Off -> Unit
+                                            HomeGesture.Lock -> {
+                                                // Locking needs an accessibility service: Glimmer's.
+                                                if (GlimmerLink.isInstalled(context)) {
+                                                    vm.controls.lockScreen()
+                                                } else {
+                                                    toast = GlassToast("Zum Sperren per Doppeltippen: die App „Glimmer“ installieren und ihre Bedienungshilfe einschalten")
+                                                }
                                             }
+                                            HomeGesture.Claude -> vm.askClaude()
+                                            HomeGesture.Search -> searchOpen = true
+                                            HomeGesture.Drawer -> if (settings.galaxyClaude) drawerOpen = true else searchOpen = true
+                                            HomeGesture.Notifications -> openNotifications()
+                                            HomeGesture.Torch -> vm.controls.setTorch(!vm.controls.torchOn.value)
                                         }
+                                        Unit
                                     },
                                     modifier = Modifier.matchParentSize(),
                                 )
@@ -1106,6 +1118,7 @@ private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Un
     }
     // App lock: locking is instant, unlocking asks for the PIN or biometrics first.
     add(GlassMenuItem(if (vm.isLocked(app)) "Entsperren" else "Sperren", Icons.Rounded.Lock) { vm.toggleLock(app) })
+    add(GlassMenuItem("Teilen", Icons.Rounded.Share) { vm.shareApp(app) })
     add(GlassMenuItem("App-Info", Icons.Rounded.Info) { vm.openAppInfo(app) })
     if (vm.isInDock(app)) {
         val dockKeys = vm.dock.value.map { it.key }
@@ -1271,8 +1284,8 @@ private fun LargeClock(settings: LauncherSettings, modifier: Modifier = Modifier
         RollingText(
             text = time,
             color = Color.White,
-            fontFamily = FontFamily.Serif,
-            fontWeight = FontWeight.Light,
+            fontFamily = clockFamily(settings, FontFamily.Serif),
+            fontWeight = clockWeight(settings, FontWeight.Light),
             fontSize = 76.sp,
             lineHeight = 80.sp,
             style = OnWallpaperText,
@@ -1303,7 +1316,8 @@ private fun ColorOSClock(settings: LauncherSettings, modifier: Modifier = Modifi
         RollingText(
             text = time,
             color = Color.White,
-            fontWeight = FontWeight.Light,
+            fontFamily = clockFamily(settings, null),
+            fontWeight = clockWeight(settings, FontWeight.Light),
             fontSize = 84.sp,
             lineHeight = 86.sp,
             letterSpacing = (-2).sp,
@@ -1355,7 +1369,8 @@ private fun OneUIClock(settings: LauncherSettings, modifier: Modifier = Modifier
         RollingText(
             text = time,
             color = Color.White,
-            fontWeight = FontWeight.SemiBold,
+            fontFamily = clockFamily(settings, null),
+            fontWeight = clockWeight(settings, FontWeight.SemiBold),
             fontSize = 78.sp,
             lineHeight = 80.sp,
             letterSpacing = (-3).sp,
@@ -1944,4 +1959,19 @@ private fun RenameDialog(initial: String, onConfirm: (String) -> Unit, onDismiss
             }
         }
     }
+}
+
+/** The clock's typeface as chosen ("Wie der Look" keeps each clock's own). */
+internal fun clockFamily(settings: LauncherSettings, lookDefault: FontFamily?): FontFamily? = when (settings.clockFont) {
+    ClockFont.Default -> lookDefault
+    ClockFont.Serif -> FontFamily.Serif
+    ClockFont.Mono -> FontFamily.Monospace
+    ClockFont.Sans, ClockFont.Thin, ClockFont.Bold -> FontFamily.SansSerif
+}
+
+internal fun clockWeight(settings: LauncherSettings, lookDefault: FontWeight): FontWeight = when (settings.clockFont) {
+    ClockFont.Thin -> FontWeight.Thin
+    ClockFont.Bold -> FontWeight.Bold
+    ClockFont.Sans, ClockFont.Mono -> FontWeight.Normal
+    else -> lookDefault
 }

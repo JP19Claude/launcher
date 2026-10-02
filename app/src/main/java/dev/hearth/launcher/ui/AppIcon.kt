@@ -442,7 +442,7 @@ fun AppIcon(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
-                    fontSize = 12.sp,
+                    fontSize = settings.labelSize.sp.sp,
                     color = if (onWallpaper) Color.White else MaterialTheme.colorScheme.onSurface,
                     style = if (onWallpaper) OnWallpaperText else TextStyle.Default,
                     modifier = Modifier.padding(horizontal = 2.dp),
