@@ -170,6 +170,7 @@ enum class GlimmerStyle(val label: String) {
 enum class CcStyle(val label: String) {
     IOS("iOS 27"),
     ColorOS("ColorOS 17"),
+    OneUI("One UI 8"),
 }
 
 /** Brightness and volume sliders in the control center. */
@@ -457,13 +458,7 @@ data class LauncherSettings(
             showSearchPill = false,
             swipeDownAction = SwipeDownAction.Split,
             pageTransition = PageTransition.Flat,
-        ).withCcStyle(CcStyle.ColorOS).copy(
-            ccSliders = CcSliderStyle.Wide,
-            ccShape = CcToggleShape.Circle,
-            ccColors = CcColorMode.Accent,
-            ccGlow = false,
-            ccCorner = 28,
-        )
+        ).withCcStyle(CcStyle.OneUI)
         DesignPreset.ColorOSClaude -> copy(
             galaxyClaude = false,
             iconStyle = IconStyle.Original,
@@ -532,13 +527,26 @@ data class LauncherSettings(
             ccCorner = 26,
             ccToggleSize = 52,
         )
+        // Samsung's Quick Panel: Wi-Fi and Bluetooth as big buttons, round switches with names,
+        // wide sliders, Smart View and media output, all in glass.
+        CcStyle.OneUI -> copy(
+            ccStyle = style,
+            ccColors = CcColorMode.Accent,
+            ccGlow = false,
+            ccLabels = true,
+            ccShowClock = true,
+            ccShape = CcToggleShape.Circle,
+            ccSliders = CcSliderStyle.Wide,
+            ccCorner = 28,
+            ccToggleSize = 52,
+        )
     }
 
     companion object {
         const val MAX_DOCK = 6
 
         /** Current default look; installs with a lower [designVersion] get it once. */
-        const val DESIGN_VERSION = 6
+        const val DESIGN_VERSION = 7
     }
 }
 

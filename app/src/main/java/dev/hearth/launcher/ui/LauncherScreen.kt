@@ -1642,16 +1642,18 @@ private fun BatteryRing(battery: BatteryState) {
 /** Page indicator on a small glass capsule. */
 @Composable
 private fun PageDots(count: Int, current: Int, modifier: Modifier = Modifier) {
+    // One UI: round dots that only light up; elsewhere the current one stretches.
+    val oneUi = LocalSettings.current.galaxyClaude
     LiquidGlass(cornerRadius = 12.dp, refraction = 6.dp, blur = 10.dp, modifier = modifier) {
         Row(
             Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (oneUi) 9.dp else 7.dp),
         ) {
             repeat(count) { index ->
                 // The current page's dot stretches into a little capsule.
                 val active = index == current
                 val width by animateDpAsState(
-                    targetValue = if (active) 18.dp else 6.dp,
+                    targetValue = if (oneUi) 6.dp else if (active) 18.dp else 6.dp,
                     animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium),
                     label = "dotWidth",
                 )

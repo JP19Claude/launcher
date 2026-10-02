@@ -308,6 +308,7 @@ fun ControlCenter(
 
     // All switches, described once; the chosen look (iOS or ColorOS) decides where they go.
     val ios = settings.ccStyle == CcStyle.IOS
+    val oneUi = settings.ccStyle == CcStyle.OneUI
     val wifi = ToggleSpec(Glyph.Wifi, "WLAN", state.wifi, onClick = controls::openWifi)
     val mobile = ToggleSpec(Glyph.Cellular, "Mobile Daten", state.mobileData, onClick = controls::openInternet)
     val bluetooth = ToggleSpec(Glyph.Bluetooth, "Bluetooth", state.bluetooth, onClick = controls::openBluetooth)
@@ -352,6 +353,8 @@ fun ControlCenter(
     })
     // iOS: everything else as loose round buttons.
     val roundButtons = listOf(torchSpec, rotate, vibrate, dark, location, autoSun, battery, hotspot, nfc, screenshot, lock, power)
+    // One UI: the Quick Panel's round switches, in Samsung's order.
+    val oneUiButtons = listOf(mobile, torchSpec, dnd, airplane, rotate, location, battery, dark, vibrate, hotspot, nfc, autoSun, screenshot, lock, power, cast)
     // Height of a two-row module, from the switch size.
     val moduleHeight = (settings.ccToggleSize.coerceIn(44, 66).dp * 2 + (if (settings.ccLabels) 40.dp else 0.dp) + 36.dp)
         .coerceAtLeast(150.dp)
@@ -467,8 +470,8 @@ fun ControlCenter(
                             Text(
                                 text = now.format(DateTimeFormatter.ofPattern("HH:mm", locale)),
                                 color = OnGlass,
-                                fontSize = if (ios) 44.sp else 50.sp,
-                                fontWeight = if (ios) FontWeight.SemiBold else FontWeight.Light,
+                                fontSize = if (ios) 44.sp else if (oneUi) 36.sp else 50.sp,
+                                fontWeight = if (ios) FontWeight.SemiBold else if (oneUi) FontWeight.Normal else FontWeight.Light,
                                 style = OnWallpaperText,
                             )
                         }
@@ -564,6 +567,27 @@ fun ControlCenter(
 
                     // Loose round glass buttons, four to a row.
                     ToggleCard(roundButtons, columns = 4, modifier = Modifier.unfold(3, reveal).fillMaxWidth(), card = false)
+                } else if (oneUi) {
+                    // One UI 8's Quick Panel in liquid glass: Wi-Fi and Bluetooth as big buttons,
+                    // the round switches with their names, wide sliders, Smart View and media
+                    // output side by side, and the player below.
+                    Row(Modifier.unfold(1, reveal).fillMaxWidth().height(70.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        BigTile(wifi, status = if (state.wifi) "An" else "Aus", modifier = Modifier.weight(1f).fillMaxHeight())
+                        BigTile(bluetooth, status = if (state.bluetooth) "An" else "Aus", modifier = Modifier.weight(1f).fillMaxHeight())
+                    }
+                    ToggleCard(oneUiButtons, columns = 4, modifier = Modifier.unfold(2, reveal).fillMaxWidth())
+                    brightnessSlider(Modifier.unfold(3, reveal).fillMaxWidth().height(56.dp), false)
+                    volumeSlider(Modifier.unfold(3, reveal).fillMaxWidth().height(56.dp), false)
+                    Row(Modifier.unfold(4, reveal).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        GlassPill(Glyph.Cast, "Smart View", Modifier.weight(1f)) {
+                            controls.openCast()
+                            onClose()
+                        }
+                        GlassPill(Glyph.Speaker, "Medienausgabe", Modifier.weight(1f)) { audioOpen = true }
+                    }
+                    if (settings.ccShowMedia) {
+                        MediaCard(media, controls, accent, onClose, Modifier.unfold(4, reveal).fillMaxWidth().height(156.dp))
+                    }
                 } else {
                     // ColorOS: two big tiles, media beside four switches.
                     if (settings.ccBigTiles) {
@@ -633,8 +657,8 @@ fun ControlCenter(
                         Text(
                             text = if (settings.ccNotifications) "Nach rechts: Mitteilungen · nach oben: schließen" else "Nach oben wischen zum Schließen",
                             color = OnGlassDim,
-                            fontFamily = FontFamily.Serif,
-                            fontStyle = FontStyle.Italic,
+                            fontFamily = if (oneUi) FontFamily.Default else FontFamily.Serif,
+                            fontStyle = if (oneUi) FontStyle.Normal else FontStyle.Italic,
                             fontSize = 13.sp,
                             style = OnWallpaperText,
                         )

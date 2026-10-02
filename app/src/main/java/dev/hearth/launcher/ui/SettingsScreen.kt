@@ -156,8 +156,10 @@ fun SettingsScreen(
                     Text(
                         text = "Einstellungen",
                         color = TextPrimary,
-                        fontFamily = FontFamily.Serif,
-                        fontSize = 34.sp,
+                        // One UI: Samsung's plain big title instead of the serif one.
+                        fontFamily = if (s.galaxyClaude) FontFamily.Default else FontFamily.Serif,
+                        fontWeight = if (s.galaxyClaude) FontWeight.Medium else null,
+                        fontSize = if (s.galaxyClaude) 32.sp else 34.sp,
                         modifier = Modifier.weight(1f),
                         style = OnWallpaperText,
                     )
@@ -991,12 +993,14 @@ internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit)
             .staggeredEntrance(SectionOrder.indexOf(title).coerceAtLeast(0))
             .padding(vertical = 8.dp),
     ) {
+        // One UI: section names in normal case and Galaxy blue; otherwise small capitals.
+        val oneUi = LocalSettings.current.galaxyClaude
         Text(
-            text = title.uppercase(),
-            color = TextSecondary,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 1.sp,
+            text = if (oneUi) title else title.uppercase(),
+            color = if (oneUi) LocalSettings.current.accent.color else TextSecondary,
+            fontSize = if (oneUi) 14.sp else 13.sp,
+            fontWeight = if (oneUi) FontWeight.SemiBold else FontWeight.Medium,
+            letterSpacing = if (oneUi) 0.sp else 1.sp,
             style = OnWallpaperText,
             modifier = Modifier.padding(start = 10.dp, bottom = 8.dp),
         )

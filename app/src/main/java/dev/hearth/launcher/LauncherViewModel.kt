@@ -211,6 +211,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                         ccRefraction = s.ccRefraction.coerceAtLeast(1.6f),
                     )
                 }
+                // 7: Galaxy × Claude gets One UI's Quick Panel instead of the ColorOS one.
+                if (s.designVersion < 7 && s.galaxyClaude && s.ccStyle == CcStyle.ColorOS) s = s.withCcStyle(CcStyle.OneUI)
                 s.copy(designVersion = LauncherSettings.DESIGN_VERSION)
             }
         }

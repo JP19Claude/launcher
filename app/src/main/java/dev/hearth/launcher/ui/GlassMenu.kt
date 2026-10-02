@@ -107,13 +107,14 @@ fun GlassMenuOverlay(request: GlassMenuRequest?, onDismiss: () -> Unit) {
                     current.app?.let { app -> AppIconImage(app, previewSize) }
                 }
                 // Child 1: the glass panel.
+                val oneUi = LocalSettings.current.galaxyClaude
                 LiquidGlass(
-                    cornerRadius = 24.dp,
+                    cornerRadius = if (oneUi) 28.dp else 24.dp,
                     refraction = 20.dp,
                     blur = 22.dp,
                     tint = Color.Black.copy(alpha = 0.18f),
                     modifier = Modifier
-                        .width(250.dp)
+                        .width(if (oneUi) 284.dp else 250.dp)
                         .graphicsLayer {
                             val v = appear.value
                             alpha = v.coerceIn(0f, 1f)
@@ -121,9 +122,11 @@ fun GlassMenuOverlay(request: GlassMenuRequest?, onDismiss: () -> Unit) {
                             scaleY = 0.75f + 0.25f * v
                             transformOrigin = TransformOrigin(0.5f, 0f)
                         }
-                        .clip(RoundedCornerShape(24.dp)),
+                        .clip(RoundedCornerShape(if (oneUi) 28.dp else 24.dp)),
                 ) {
-                    Column(Modifier.padding(vertical = 6.dp)) {
+                    if (oneUi) {
+                        OneUIMenuContent(current, onDismiss)
+                    } else Column(Modifier.padding(vertical = 6.dp)) {
                         val title = current.title ?: current.app?.label
                         if (title != null) {
                             Text(
@@ -146,6 +149,85 @@ fun GlassMenuOverlay(request: GlassMenuRequest?, onDismiss: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+/**
+ * One UI's app popup: the app's name, its shortcuts as a list, and the actions as a row of
+ * round icons with small names underneath (as on a Galaxy), all on liquid glass.
+ */
+@Composable
+private fun OneUIMenuContent(request: GlassMenuRequest, onDismiss: () -> Unit) {
+    val shortcuts = request.items.filter { it.image != null }
+    val actions = request.items.filter { it.image == null }
+    Column(Modifier.padding(top = 10.dp, bottom = 8.dp)) {
+        val title = request.title ?: request.app?.label
+        if (title != null) {
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp),
+            )
+        }
+        shortcuts.forEach { item ->
+            MenuRow(item) {
+                onDismiss()
+                item.onClick()
+            }
+        }
+        if (actions.isNotEmpty()) {
+            if (shortcuts.isNotEmpty() || title != null) {
+                Spacer(Modifier.height(4.dp))
+                MenuDivider()
+            }
+            actions.chunked(4).forEach { row ->
+                Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp)) {
+                    row.forEach { item ->
+                        OneUIAction(item, Modifier.weight(1f)) {
+                            onDismiss()
+                            item.onClick()
+                        }
+                    }
+                    // Keep the icons in their columns on a short last row.
+                    repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OneUIAction(item: GlassMenuItem, modifier: Modifier, onClick: () -> Unit) {
+    val color = if (item.destructive) Color(0xFFFF8A80) else Color.White
+    Column(
+        modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier
+                .size(40.dp)
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .background(Color.White.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(item.icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.height(5.dp))
+        Text(
+            item.label,
+            color = color.copy(alpha = 0.9f),
+            fontSize = 11.sp,
+            lineHeight = 13.sp,
+            maxLines = 2,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 2.dp),
+        )
     }
 }
 
