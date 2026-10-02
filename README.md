@@ -13,6 +13,8 @@ mit der Abfrage des Systems, Hearth sieht davon nichts.
 - Aus Hearth heraus fragt die Sperre immer (auch wenn Claude eine gesperrte App öffnet).
 - Mit Glimmer (Bedienungshilfe an) fragt sie auch beim Öffnen über Benachrichtigungen, die
   letzten Apps oder andere Apps. Glimmer sieht dafür nur, welche App nach vorne kommt.
+- Die Abfrage startet, sobald der Sperrbildschirm sichtbar ist; „Entsperren“ startet sie jederzeit
+  neu, „Mit PIN entsperren“ öffnet direkt die PIN-, Muster- oder Passwort-Abfrage des Handys.
 - Entsperrt bleibt eine App, bis der Bildschirm ausgeht oder der Startbildschirm kommt.
 - Abbrechen schickt zum Startbildschirm. Die Sperre aufzuheben braucht ebenfalls PIN oder
   Biometrie. Ohne eingerichtete Bildschirmsperre kann die App-Sperre nicht schützen.

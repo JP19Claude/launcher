@@ -63,6 +63,8 @@ class AppLockActivity : ComponentActivity() {
     /** Confirming that the lock may be taken off (instead of opening the app). */
     private var removing by mutableStateOf(false)
     private var authenticating = false
+    /** The first question waits until the screen is really in front (see [onResume]). */
+    private var askOnResume = false
     private var cancel: CancellationSignal? = null
 
     private var message by mutableStateOf<String?>(null)
@@ -91,7 +93,17 @@ class AppLockActivity : ComponentActivity() {
                 LockScreen()
             }
         }
-        if (savedInstanceState == null) window.decorView.post { authenticate() }
+        // Asked once the screen is in front: some phones (Samsung among them) silently drop a
+        // fingerprint dialog requested while the screen is still opening.
+        askOnResume = savedInstanceState == null
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (askOnResume) {
+            askOnResume = false
+            window.decorView.postDelayed({ if (!isFinishing) authenticate() }, 250)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -99,7 +111,7 @@ class AppLockActivity : ComponentActivity() {
         setIntent(intent)
         if (readTarget(intent)) {
             message = null
-            authenticate()
+            askOnResume = true
         }
     }
 
@@ -122,8 +134,18 @@ class AppLockActivity : ComponentActivity() {
         return true
     }
 
-    private fun authenticate() {
-        if (authenticating || isFinishing) return
+    /**
+     * Asks for the fingerprint, face or PIN. A tap on "Entsperren" always starts afresh, even
+     * if an earlier dialog never showed up (so the button can never get stuck).
+     */
+    private fun authenticate(restart: Boolean = false) {
+        if (isFinishing) return
+        if (authenticating && !restart) return
+        if (restart) {
+            runCatching { cancel?.cancel() }
+            cancel = null
+            authenticating = false
+        }
         val keyguard = getSystemService(KeyguardManager::class.java)
         if (keyguard == null || !keyguard.isDeviceSecure) {
             // Without a screen lock there's nothing to ask for.
@@ -170,7 +192,36 @@ class AppLockActivity : ComponentActivity() {
             }
         } catch (e: Exception) {
             authenticating = false
-            message = "Die Abfrage ließ sich nicht öffnen. Tippe auf „Entsperren“."
+            // The fingerprint dialog didn't work out: the phone's own PIN screen instead.
+            askWithPin()
+        }
+    }
+
+    /** The phone's own PIN, pattern or password screen – works on every Android version. */
+    private fun askWithPin() {
+        if (isFinishing) return
+        runCatching { cancel?.cancel() }
+        cancel = null
+        val keyguard = getSystemService(KeyguardManager::class.java)
+        if (keyguard == null || !keyguard.isDeviceSecure) {
+            authenticate()
+            return
+        }
+        @Suppress("DEPRECATION")
+        val confirm = runCatching {
+            keyguard.createConfirmDeviceCredentialIntent(
+                if (removing) "App-Sperre für „$label“ aufheben" else "„$label“ entsperren",
+                "Gib die PIN, das Muster oder das Passwort deines Handys ein",
+            )
+        }.getOrNull()
+        if (confirm == null) {
+            message = "Die PIN-Abfrage ließ sich nicht öffnen."
+            return
+        }
+        authenticating = true
+        runCatching { confirmCredential.launch(confirm) }.onFailure {
+            authenticating = false
+            message = "Die PIN-Abfrage ließ sich nicht öffnen."
         }
     }
 
@@ -281,8 +332,12 @@ class AppLockActivity : ComponentActivity() {
                     if (noScreenLock) {
                         runCatching { startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                     } else {
-                        authenticate()
+                        authenticate(restart = true)
                     }
+                }
+                if (!noScreenLock) {
+                    Spacer(Modifier.size(12.dp))
+                    Pill("Mit PIN entsperren", primary = false) { askWithPin() }
                 }
                 Spacer(Modifier.size(12.dp))
                 Pill("Abbrechen", primary = false) { leave() }
