@@ -24,6 +24,7 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
+import dev.hearth.launcher.data.AppLock
 import dev.hearth.launcher.data.SettingsRepository
 
 /**
@@ -53,6 +54,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
         when (key) {
+            AppLock.KEY -> applyEventScope()
             // Applied while running, so sliders and switches show at once without a flicker.
             in SettingsRepository.GLIMMER_LIVE_KEYS -> glimmer?.update(SettingsRepository(this).settings.value)
             in SettingsRepository.GLIMMER_KEYS -> restartGlimmer()
@@ -62,7 +64,10 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
-                Intent.ACTION_SCREEN_OFF -> stopAppSnapshots()
+                Intent.ACTION_SCREEN_OFF -> {
+                    stopAppSnapshots()
+                    AppLockGuard.relock()
+                }
             }
         }
     }
@@ -86,6 +91,20 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         glimmer = GlimmerController(this)
         restartGlimmer()
+        applyEventScope()
+    }
+
+    /**
+     * Normally only the system UI's events arrive. With locked apps, Glimmer also needs to
+     * hear which app comes to the front (nothing else of other apps is looked at).
+     */
+    private fun applyEventScope() {
+        runCatching {
+            val info = serviceInfo ?: return
+            val guard = AppLock.lockedPackages(this).isNotEmpty()
+            info.packageNames = if (guard) null else arrayOf(SYSTEM_UI)
+            serviceInfo = info
+        }
     }
 
     /**
@@ -93,8 +112,17 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
      * for one thing: a face or finger that wasn't recognized, so Glimmer's symbol can shake.
      */
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event == null) return
+        val pkg = event.packageName?.toString() ?: return
+        // App lock: a locked app came to the front.
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && pkg != SYSTEM_UI) {
+            AppLockGuard.onWindow(this, pkg, event.className?.toString())
+            return
+        }
+        // Everything else is only about the system UI (the lock screen's messages).
+        if (pkg != SYSTEM_UI) return
         val g = glimmer ?: return
-        if (event == null || !g.wantsUnlockTexts()) return
+        if (!g.wantsUnlockTexts()) return
         when (event.eventType) {
             AccessibilityEvent.TYPE_ANNOUNCEMENT -> event.text?.forEach { g.onLockScreenText(it) }
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
@@ -233,5 +261,6 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         val isEnabled: Boolean get() = instance != null
 
         private const val SNAPSHOT_INTERVAL_MS = 900L
+        private const val SYSTEM_UI = "com.android.systemui"
     }
 }

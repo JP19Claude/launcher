@@ -80,6 +80,7 @@ import dev.hearth.launcher.data.GlimmerOutline
 import dev.hearth.launcher.data.GlimmerMotion
 import dev.hearth.launcher.data.GlimmerDoubleTap
 import dev.hearth.launcher.data.DockStyle
+import dev.hearth.launcher.data.AppLock
 import dev.hearth.launcher.data.FlyInStyle
 import dev.hearth.launcher.data.GlassQuality
 import dev.hearth.launcher.data.GlassTint
@@ -132,6 +133,7 @@ fun SettingsScreen(
     LaunchedEffect(Unit) { vm.refreshIconPacks() }
 
     var pickerOpen by remember { mutableStateOf(false) }
+    var lockPickerOpen by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize()) {
         GlassBackdropFill(blur = 36.dp, modifier = Modifier.matchParentSize())
@@ -519,6 +521,23 @@ fun SettingsScreen(
             }
 
             item {
+                Section("App-Sperre") {
+                    ActionRow(
+                        label = "Apps sperren …",
+                        description = if (s.lockedApps.isEmpty()) {
+                            "Gesperrte Apps öffnen sich erst nach der PIN, dem Fingerabdruck oder dem Gesicht deines Handys"
+                        } else {
+                            "${s.lockedApps.size} gesperrt · Sperre aufheben braucht ebenfalls PIN oder Fingerabdruck"
+                        },
+                    ) { lockPickerOpen = true }
+                    Note(
+                        "Aus Hearth heraus fragt die Sperre immer. Damit sie auch beim Öffnen über Benachrichtigungen, die letzten Apps oder andere Apps fragt, muss Glimmer an sein (Bedienungshilfe). " +
+                            "Entsperrt bleibt eine App, bis der Bildschirm ausgeht oder du zum Startbildschirm gehst. Auch über das App-Menü: lange drücken → „Sperren“.",
+                    )
+                }
+            }
+
+            item {
                 val hidden = allApps.filter { it.key in s.hiddenApps }
                 Section("Ausgeblendete Apps") {
                     ActionRow(
@@ -568,6 +587,19 @@ fun SettingsScreen(
                     )
                 }
             }
+        }
+
+        if (lockPickerOpen) {
+            val lockable = allApps.filterNot { it.packageName.startsWith("dev.hearth.") }
+            HiddenAppsPicker(
+                apps = lockable,
+                hidden = lockable.filter { it.packageName in s.lockedApps }.map { it.key }.toSet(),
+                // Locking is instant; taking it off asks for the PIN or biometrics.
+                onToggle = { app, lock -> if (lock) vm.setLocked(app.packageName, true) else AppLock.requestRemove(context, app.packageName) },
+                onDone = { lockPickerOpen = false },
+                title = "Apps sperren",
+                summary = { "$it gesperrt" },
+            )
         }
 
         if (pickerOpen) {
@@ -938,6 +970,8 @@ private fun HiddenAppsPicker(
     hidden: Set<String>,
     onToggle: (AppInfo, Boolean) -> Unit,
     onDone: () -> Unit,
+    title: String = "Apps ausblenden",
+    summary: (Int) -> String = { "$it ausgeblendet" },
 ) {
     Box(
         Modifier
@@ -948,8 +982,8 @@ private fun HiddenAppsPicker(
         Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 6.dp, bottom = 12.dp)) {
                 Column(Modifier.weight(1f)) {
-                    Text("Apps ausblenden", color = TextPrimary, fontFamily = FontFamily.Serif, fontSize = 28.sp)
-                    Text("${hidden.size} ausgeblendet", color = TextSecondary, fontSize = 14.sp)
+                    Text(title, color = TextPrimary, fontFamily = FontFamily.Serif, fontSize = 28.sp)
+                    Text(summary(hidden.size), color = TextSecondary, fontSize = 14.sp)
                 }
                 GlassChip("Fertig", onClick = onDone)
             }
@@ -992,7 +1026,7 @@ private fun HiddenAppsPicker(
 
 private val SectionOrder = listOf(
     "Design-Vorlage", "Claude-Assistent", "Liquid Glass", "Animationen", "Icons", "Icon-Pack", "Homescreen",
-    "Glimmer", "Gesten & Kontrollzentrum", "Dock", "Suche", "Allgemein", "Ausgeblendete Apps",
+    "Glimmer", "Gesten & Kontrollzentrum", "Dock", "Suche", "Allgemein", "App-Sperre", "Ausgeblendete Apps",
 )
 
 @Composable

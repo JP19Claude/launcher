@@ -371,6 +371,8 @@ data class LauncherSettings(
     val theme: ThemeMode = ThemeMode.System,
     val haptics: Boolean = true,
     val hiddenApps: Set<String> = emptySet(),
+    /** App lock: packages that need the phone's PIN, fingerprint or face to open. */
+    val lockedApps: Set<String> = emptySet(),
     /** Bumped when a new default look should be applied once to existing installs. */
     val designVersion: Int = 0,
 ) {
@@ -686,6 +688,8 @@ class SettingsRepository(context: Context) {
             theme = enumOf("theme", d.theme),
             haptics = prefs.getBoolean("haptics", d.haptics),
             hiddenApps = prefs.getStringSet("hiddenApps", null)?.toSet() ?: d.hiddenApps,
+            // A plain string, so it can be handed to Glimmer, which guards the apps elsewhere too.
+            lockedApps = prefs.getString(AppLock.KEY, "").orEmpty().split('|').filter { it.isNotBlank() }.toSet(),
             designVersion = prefs.getInt("designVersion", d.designVersion),
         )
     }
@@ -788,6 +792,7 @@ class SettingsRepository(context: Context) {
             .putString("theme", s.theme.name)
             .putBoolean("haptics", s.haptics)
             .putStringSet("hiddenApps", s.hiddenApps)
+            .putString(AppLock.KEY, s.lockedApps.sorted().joinToString("|"))
             .putInt("designVersion", s.designVersion)
             .apply()
     }
@@ -796,7 +801,7 @@ class SettingsRepository(context: Context) {
         const val PREFS_NAME = "hearth_settings"
 
         /** Settings Hearth hands to Glimmer: the control center's look and the accent color. */
-        fun isShared(key: String) = key.startsWith("cc") || key == "accent"
+        fun isShared(key: String) = key.startsWith("cc") || key == "accent" || key == AppLock.KEY
 
         /** The shared settings as they are stored, for [writeRaw] in the other app. */
         fun readShared(context: Context): Bundle = Bundle().apply {

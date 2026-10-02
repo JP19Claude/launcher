@@ -89,6 +89,17 @@
             android:permission="dev.hearth.permission.BRIDGE"
             android:targetActivity=".ClaudeAssistActivity" />
 
+        <!-- App lock: asks for the phone's PIN or biometrics before a locked app shows. Only the
+             family's apps may open it (Hearth itself, and Glimmer when it sees a locked app). -->
+        <activity
+            android:name=".AppLockActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:permission="dev.hearth.permission.BRIDGE"
+            android:taskAffinity="dev.hearth.launcher.lock"
+            android:theme="@style/Theme.Hearth" />
+
         <!-- "Claude" tile in the system's quick settings -->
         <service
             android:name=".system.ClaudeTileService"

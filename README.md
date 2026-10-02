@@ -4,6 +4,19 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
 plus **Glimmer**, die Insel um die Frontkamera, und dem **Kontrollzentrum** als eigene Apps.
 
 
+## App-Sperre
+
+Einstellungen → App-Sperre (oder lange auf eine App drücken → „Sperren“): gesperrte Apps öffnen
+sich erst nach der PIN, dem Muster, dem Passwort, dem Fingerabdruck oder dem Gesicht des Handys –
+mit der Abfrage des Systems, Hearth sieht davon nichts.
+
+- Aus Hearth heraus fragt die Sperre immer (auch wenn Claude eine gesperrte App öffnet).
+- Mit Glimmer (Bedienungshilfe an) fragt sie auch beim Öffnen über Benachrichtigungen, die
+  letzten Apps oder andere Apps. Glimmer sieht dafür nur, welche App nach vorne kommt.
+- Entsperrt bleibt eine App, bis der Bildschirm ausgeht oder der Startbildschirm kommt.
+- Abbrechen schickt zum Startbildschirm. Die Sperre aufzuheben braucht ebenfalls PIN oder
+  Biometrie. Ohne eingerichtete Bildschirmsperre kann die App-Sperre nicht schützen.
+
 ## Claude im System
 
 Claude ist in Hearth eingebaut und erledigt Dinge direkt auf dem Handy, statt nur zu antworten.

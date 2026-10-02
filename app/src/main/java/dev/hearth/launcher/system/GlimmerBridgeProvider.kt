@@ -112,6 +112,10 @@ class GlimmerBridgeProvider : ContentProvider() {
                     if (extras != null) SettingsRepository.writeRaw(context, extras)
                     null
                 }
+                GlimmerLink.APP_UNLOCKED -> {
+                    if (!arg.isNullOrBlank()) AppLockGuard.unlocked(arg)
+                    null
+                }
                 else -> null
             }
         }

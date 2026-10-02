@@ -74,6 +74,12 @@ object GlimmerLink : HearthApp("dev.hearth.glimmer", "dev.hearth.glimmer.bridge"
     internal const val NOTIFICATIONS = "notifications"
     internal const val QUICK_SETTINGS = "quickSettings"
     internal const val SYNC_SETTINGS = "syncSettings"
+    internal const val APP_UNLOCKED = "appUnlocked"
+
+    /** App lock: [packageName] was just unlocked, so Glimmer lets it open without asking again. */
+    fun appUnlocked(context: Context, packageName: String) {
+        call(context, APP_UNLOCKED, packageName)
+    }
 
     /** Glimmer's state: is its accessibility service on, is the island shown, how big is it. */
     class Status(val running: Boolean, val glimmerOn: Boolean, val island: DpSize?)

@@ -71,6 +71,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Search
@@ -1103,6 +1104,8 @@ private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Un
             vm.controls.openClaudeApp("Wie nutze ich die App „${app.label}“ am besten? Gib mir ein paar Tipps und versteckte Funktionen.")
         })
     }
+    // App lock: locking is instant, unlocking asks for the PIN or biometrics first.
+    add(GlassMenuItem(if (vm.isLocked(app)) "Entsperren" else "Sperren", Icons.Rounded.Lock) { vm.toggleLock(app) })
     add(GlassMenuItem("App-Info", Icons.Rounded.Info) { vm.openAppInfo(app) })
     if (vm.isInDock(app)) {
         val dockKeys = vm.dock.value.map { it.key }

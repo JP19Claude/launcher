@@ -14,6 +14,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.hearth.launcher.data.AppInfo
+import dev.hearth.launcher.data.AppLock
 import dev.hearth.launcher.data.AppRepository
 import dev.hearth.launcher.data.AppUsage
 import dev.hearth.launcher.data.CellPos
@@ -196,6 +197,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     init {
         ClaudeAssistant.init(application)
         ClaudeAssistant.host = assistantHost
+        AppLock.removeHandler = { pkg -> setLocked(pkg, false) }
 
         // New default looks, each applied once to existing installs:
         // 2 = ColorOS × Claude.
@@ -334,6 +336,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /** Locks an app, or (after the PIN or biometrics) takes the lock off. */
+    fun toggleLock(app: AppInfo) {
+        if (isLocked(app)) AppLock.requestRemove(getApplication(), app.packageName) else setLocked(app.packageName, true)
+    }
+
+    /** App lock on or off for an app (by package, so Glimmer can match it). */
+    fun setLocked(packageName: String, locked: Boolean) {
+        settingsRepo.update { s -> s.copy(lockedApps = if (locked) s.lockedApps + packageName else s.lockedApps - packageName) }
+    }
+
+    fun isLocked(app: AppInfo): Boolean = app.packageName in settings.value.lockedApps
+
     fun setHidden(key: String, hidden: Boolean) {
         if (hidden) hideAll(listOf(key)) else unhide(key)
     }
@@ -460,6 +474,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun refreshWallpaper() = wallpaper.refresh()
 
     fun launch(app: AppInfo, sourceBounds: Rect? = null, options: Bundle? = null) {
+        // App lock: a locked app opens only after the phone's PIN or biometrics.
+        if (AppLock.guardLaunch(getApplication(), app.component, app.user)) {
+            usage.recordLaunch(app.key)
+            return
+        }
         usage.recordLaunch(app.key)
         pendingFlyIn = app
         if (settingsRepo.settings.value.glimmerFlyIn) {
@@ -499,6 +518,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     override fun onCleared() {
+        AppLock.removeHandler = null
         if (ClaudeAssistant.host === assistantHost) ClaudeAssistant.host = null
         repo.close()
         wallpaper.close()

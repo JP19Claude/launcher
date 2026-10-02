@@ -247,6 +247,10 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
         val app = findApp(name)
             ?: return ToolResult(false, "Keine App passt zu „$name“. Ähnliche: ${similar(name)}", label = "„$name“ nicht gefunden")
         val label = app.label.toString()
+        // A locked app goes through the app lock (PIN or biometrics) first.
+        if (AppLock.guardLaunch(context, app.componentName, app.user)) {
+            return ToolResult(true, "$label ist gesperrt; die App-Sperre fragt nach PIN oder Fingerabdruck.", label = "$label (gesperrt) – entsperren", opensScreen = true)
+        }
         val ok = runCatching {
             context.getSystemService(LauncherApps::class.java).startMainActivity(app.componentName, app.user, null, null)
         }.isSuccess
