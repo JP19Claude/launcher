@@ -170,6 +170,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     var controlPage by remember { mutableIntStateOf(0) }
     // The app that was just closed, flying into Glimmer.
     var flyApp by remember { mutableStateOf<Triple<AppInfo, ImageBitmap?, DpSize?>?>(null) }
+    var flyLanding by remember { mutableStateOf(GlimmerLink.Landing()) }
     var menu by remember { mutableStateOf<GlassMenuRequest?>(null) }
     var widgetPickerOpen by remember { mutableStateOf(false) }
     var selecting by remember { mutableStateOf(false) }
@@ -404,6 +405,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 // Apps that hide their screen (banking, passwords) give a black picture: then the
                 // card in the app's colors flies instead.
                 val shot = fly.snapshot?.takeIf { withContext(Dispatchers.Default) { snapshotLooksReal(it) } }
+                flyLanding = fly.landing
                 flyApp = Triple(fly.app, shot?.asImageBitmap(), fly.island)
             }
         }
@@ -871,6 +873,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     snapshot = shot,
                     island = island,
                     style = settings.glimmerFlyInStyle,
+                    landing = flyLanding,
+                    onArrive = vm::arriveGlimmer,
                     onPulse = vm::pulseGlimmer,
                     onDone = { flyApp = null },
                 )

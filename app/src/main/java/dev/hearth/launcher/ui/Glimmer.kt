@@ -16,6 +16,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.SolidColor
+import dev.hearth.launcher.data.GlimmerGlowColor
+import dev.hearth.launcher.data.GlimmerMotion
+import dev.hearth.launcher.data.GlimmerOutline
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.SizeTransform
@@ -97,6 +102,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import kotlinx.coroutines.launch
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.ImageBitmap
 import dev.hearth.launcher.data.GlimmerMusicStyle
 import kotlin.math.cos
 import kotlin.math.sin
@@ -134,6 +140,12 @@ sealed interface IslandContent {
     /** The flashlight is on; tap (or hold) turns it off. */
     data object Torch : IslandContent
 
+    /** Charging, kept in the island while plugged in (if chosen). */
+    data class Charging(val level: Int) : IslandContent
+
+    /** A closed app just landed (HyperOS fly-in): its icon sits in the island for a moment. */
+    data class Arrival(val icon: ImageBitmap?, val color: Color, val id: Int) : IslandContent
+
     /**
      * Face ID moment: scanning while the phone checks, a green tick once it's unlocked,
      * red and a shake when it didn't recognize you ([attempt] counts tries, so each one shakes).
@@ -159,6 +171,10 @@ private val Green = Color(0xFF34C759)
 private val Orange = Color(0xFFFF9F0A)
 private val Red = Color(0xFFFF453A)
 private val Yellow = Color(0xFFFFD60A)
+private val RainbowColors = listOf(
+    Color(0xFFFF453A), Color(0xFFFF9F0A), Color(0xFFFFD60A), Color(0xFF30D158),
+    Color(0xFF0A84FF), Color(0xFFBF5AF2), Color(0xFFFF453A),
+)
 
 /** Height of the pill when not expanded: as tall as the status bar row, like the camera ring. */
 const val ISLAND_HEIGHT_DP = 30f
@@ -179,14 +195,21 @@ private val SecondaryExtra = 36.dp
  * Compact stays narrow (about 45 % of the screen), so it fits between the clock and
  * notification icons on the left and the status icons on the right.
  */
-fun islandSize(content: IslandContent, expanded: Boolean, screenWidthDp: Float, hasSecondary: Boolean): DpSize {
+fun islandSize(
+    content: IslandContent,
+    expanded: Boolean,
+    screenWidthDp: Float,
+    hasSecondary: Boolean,
+    widthScale: Float = 1f,
+): DpSize {
     val full = min(screenWidthDp - 16f, 420f).dp
-    val compact = (screenWidthDp * 0.44f).coerceIn(150f, 190f).dp
+    val compact = ((screenWidthDp * 0.44f).coerceIn(150f, 190f) * widthScale).coerceAtMost(screenWidthDp - 60f).dp
+    val idle = (screenWidthDp * 0.27f).coerceIn(86f, 110f) * widthScale
     return when {
         content is IslandContent.Hidden -> DpSize(0.dp, 0.dp)
-        content is IslandContent.Idle -> DpSize((screenWidthDp * 0.27f).coerceIn(86f, 110f).dp, ISLAND_HEIGHT_DP.dp)
+        content is IslandContent.Idle -> DpSize(idle.dp, ISLAND_HEIGHT_DP.dp)
         // A little wider than the idle pill, for the padlock on its left.
-        content is IslandContent.Lock -> DpSize((screenWidthDp * 0.27f).coerceIn(86f, 110f).dp + 26.dp, ISLAND_HEIGHT_DP.dp)
+        content is IslandContent.Lock -> DpSize(idle.dp + 26.dp, ISLAND_HEIGHT_DP.dp)
         // Like Face ID on the iPhone: the island becomes a rounded square for the moment.
         content is IslandContent.Unlock -> DpSize(UNLOCK_SIZE_DP.dp, UNLOCK_SIZE_DP.dp)
         !expanded -> DpSize(compact, ISLAND_HEIGHT_DP.dp)
@@ -196,6 +219,7 @@ fun islandSize(content: IslandContent, expanded: Boolean, screenWidthDp: Float, 
                 is IslandContent.Media -> 178.dp
                 is IslandContent.Live -> if (content.notice.actions.isNotEmpty()) 158.dp else 116.dp
                 is IslandContent.Message -> if (content.notice.actions.isNotEmpty()) 160.dp else 124.dp
+                is IslandContent.Charging -> 96.dp
                 else -> 96.dp
             },
         )
@@ -244,31 +268,50 @@ fun GlimmerIsland(
     onTargetSize: (DpSize) -> Unit,
     /** Always-on display: dimmed and without motion. */
     dimmed: Boolean = false,
+    /** Double tap, if something is set for it (otherwise taps aren't held back to wait for one). */
+    onDoubleTap: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    val haptics = LocalHapticFeedback.current
+    val settings = LocalSettings.current
+    val systemHaptics = LocalHapticFeedback.current
+    // Vibration can be switched off in the settings.
+    val haptics = remember(systemHaptics, settings.glimmerHaptics) {
+        object {
+            fun performHapticFeedback(type: HapticFeedbackType) {
+                if (settings.glimmerHaptics) systemHaptics.performHapticFeedback(type)
+            }
+        }
+    }
     val hasSecondary = secondary != null && !expanded
-    val target = islandSize(content, expanded, screenWidthDp, hasSecondary)
+    val target = islandSize(content, expanded, screenWidthDp, hasSecondary, settings.glimmerWidth)
     LaunchedEffect(target) { onTargetSize(target) }
-    LaunchedEffect(expanded, content) {
-        if (expanded) {
-            delay(9000)
+    val collapseAfter = settings.glimmerAutoCollapse
+    LaunchedEffect(expanded, content, collapseAfter) {
+        if (expanded && collapseAfter > 0) {
+            delay(collapseAfter * 1000L)
             onCollapse()
         }
     }
+    // How springy everything is: calmer settles without bouncing, playful wobbles more.
+    val springiness = when (settings.glimmerMotion) {
+        GlimmerMotion.Calm -> 0.22f
+        GlimmerMotion.Normal -> 0f
+        GlimmerMotion.Playful -> -0.2f
+    }
+    fun damp(ratio: Float) = (ratio + springiness).coerceIn(0.25f, 1f)
 
     // Like the Dynamic Island: unfolding stretches out sideways first and then drops down with
     // a little bounce; folding pulls up first and is quicker; going away has no bounce at all.
     val hidden = content is IslandContent.Hidden
     val widthSpec = when {
         hidden -> spring<Dp>(dampingRatio = 1f, stiffness = 520f)
-        expanded -> spring(dampingRatio = 0.68f, stiffness = 330f)
-        else -> spring(dampingRatio = 0.78f, stiffness = 380f)
+        expanded -> spring(dampingRatio = damp(0.68f), stiffness = 330f)
+        else -> spring(dampingRatio = damp(0.78f), stiffness = 380f)
     }
     val heightSpec = when {
         hidden -> spring<Dp>(dampingRatio = 1f, stiffness = 520f)
-        expanded -> spring(dampingRatio = 0.72f, stiffness = 240f)
-        else -> spring(dampingRatio = 0.86f, stiffness = 520f)
+        expanded -> spring(dampingRatio = damp(0.72f), stiffness = 240f)
+        else -> spring(dampingRatio = damp(0.86f), stiffness = 520f)
     }
     val mainWidth = if (hasSecondary) target.width - SecondaryExtra else target.width
     val width = animateDpAsState(mainWidth, widthSpec, label = "islandWidth").value.coerceAtLeast(0.dp)
@@ -310,12 +353,12 @@ fun GlimmerIsland(
             if (pulsed) {
                 squash.snapTo(0f)
                 squash.animateTo(1f, tween(110))
-                squash.animateTo(0f, spring(dampingRatio = 0.3f, stiffness = 380f))
+                squash.animateTo(0f, spring(dampingRatio = damp(0.3f), stiffness = 380f))
             } else {
                 // Like the Dynamic Island: a quick squeeze, then it springs open past its size.
                 hop.snapTo(1f)
                 hop.animateTo(0.93f, tween(90))
-                hop.animateTo(1f, spring(dampingRatio = 0.42f, stiffness = 420f))
+                hop.animateTo(1f, spring(dampingRatio = damp(0.42f), stiffness = 420f))
             }
         }
         if (glow) {
@@ -324,7 +367,15 @@ fun GlimmerIsland(
             shimmer.animateTo(0f, tween(1400))
         }
     }
-    val glowColor = glowColorOf(content, LocalSettings.current.accent.color)
+    val glowColor = when (settings.glimmerGlowColor) {
+        GlimmerGlowColor.Activity, GlimmerGlowColor.Rainbow -> glowColorOf(content, settings.accent.color)
+        GlimmerGlowColor.Accent -> settings.accent.color
+        GlimmerGlowColor.White -> Color.White
+    }
+    val rainbow = settings.glimmerGlowColor == GlimmerGlowColor.Rainbow
+    // Swiping over music: the content leans the way the track goes.
+    val nudge = remember { Animatable(0f) }
+    val nudgeScope = rememberCoroutineScope()
     // Face or finger not recognized: the whole island shakes its head, like the iPhone's.
     val denied = remember { Animatable(0f) }
     val deniedKey = (content as? IslandContent.Unlock)?.takeIf { it.failed }?.attempt
@@ -411,17 +462,38 @@ fun GlimmerIsland(
                             // Soft rings growing outwards, fading: the "glimmer".
                             for (i in 1..4) {
                                 val spread = i * 1.6.dp.toPx()
-                                drawRoundRect(
-                                    color = glowColor.copy(alpha = a * 0.32f / i),
-                                    topLeft = Offset(-spread, -spread),
-                                    size = Size(size.width + spread * 2, size.height + spread * 2),
-                                    cornerRadius = CornerRadius(size.height / 2 + spread),
-                                )
+                                if (rainbow) {
+                                    drawRoundRect(
+                                        brush = Brush.sweepGradient(RainbowColors, center = center),
+                                        topLeft = Offset(-spread, -spread),
+                                        size = Size(size.width + spread * 2, size.height + spread * 2),
+                                        cornerRadius = CornerRadius(size.height / 2 + spread),
+                                        alpha = a * 0.4f / i,
+                                    )
+                                } else {
+                                    drawRoundRect(
+                                        color = glowColor.copy(alpha = a * 0.32f / i),
+                                        topLeft = Offset(-spread, -spread),
+                                        size = Size(size.width + spread * 2, size.height + spread * 2),
+                                        cornerRadius = CornerRadius(size.height / 2 + spread),
+                                    )
+                                }
                             }
                         }
                     }
                     .size(width, height)
-                    .pointerInput(content, expanded, tapOpens) {
+                    .then(
+                        when (settings.glimmerOutline) {
+                            GlimmerOutline.Off -> Modifier
+                            GlimmerOutline.Subtle -> Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(corner))
+                            GlimmerOutline.Colored -> Modifier.border(
+                                1.5.dp,
+                                if (rainbow) Brush.sweepGradient(RainbowColors) else SolidColor(glowColorOf(drawn, settings.accent.color).copy(alpha = 0.75f)),
+                                RoundedCornerShape(corner),
+                            )
+                        },
+                    )
+                    .pointerInput(content, expanded, tapOpens, onDoubleTap) {
                         detectTapGestures(
                             onPress = {
                                 val pressable = !dimmed && !isPassive(content)
@@ -432,6 +504,12 @@ fun GlimmerIsland(
                                 }
                             },
                             onTap = { tap() },
+                            onDoubleTap = onDoubleTap?.let { action ->
+                                { _: Offset ->
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    action()
+                                }
+                            },
                             onLongPress = { hold() },
                         )
                     }
@@ -450,6 +528,17 @@ fun GlimmerIsland(
                                         onExpand()
                                     }
                                     vertical && total.y < -threshold && expanded -> onCollapse()
+                                    // Music alone in the island: sideways skips the track.
+                                    !vertical && abs(total.x) > threshold * 2 && !expanded &&
+                                        content is IslandContent.Media && secondary == null && settings.glimmerSwipeTracks -> {
+                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        val forward = total.x < 0
+                                        if (forward) media.next() else media.previous()
+                                        nudgeScope.launch {
+                                            nudge.snapTo(if (forward) -1f else 1f)
+                                            nudge.animateTo(0f, spring(dampingRatio = damp(0.45f), stiffness = 380f))
+                                        }
+                                    }
                                     !vertical && abs(total.x) > threshold * 2 && !expanded -> {
                                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         onSwap()
@@ -465,6 +554,7 @@ fun GlimmerIsland(
                 AnimatedContent(
                     // New content surfaces out of a soft blur, as on the iPhone (Android 12+).
                     modifier = Modifier.graphicsLayer {
+                        translationX = nudge.value * 14.dp.toPx()
                         val r = (1f - clarity.value) * 9.dp.toPx()
                         renderEffect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && r > 0.5f) {
                             BlurEffect(r, r, TileMode.Decal)
@@ -557,6 +647,8 @@ private fun glowColorOf(content: IslandContent, accent: Color): Color = when (co
     is IslandContent.Message -> accent
     is IslandContent.Media -> content.playing.artPalette.firstOrNull() ?: content.playing.artColor ?: Color.White
     is IslandContent.Live -> noticeColor(content.notice.kind)
+    is IslandContent.Charging -> Green
+    is IslandContent.Arrival -> content.color
     is IslandContent.Unlock -> if (content.failed) Red else Color.White
     IslandContent.Torch -> Yellow
     else -> Color.White
@@ -565,7 +657,7 @@ private fun glowColorOf(content: IslandContent, accent: Color): Color = when (co
 /** Things that only sit there: no tapping, pulling or pressing. */
 private fun isPassive(content: IslandContent): Boolean =
     content is IslandContent.Idle || content is IslandContent.Hidden ||
-        content is IslandContent.Unlock || content is IslandContent.Lock
+        content is IslandContent.Unlock || content is IslandContent.Lock || content is IslandContent.Arrival
 
 internal fun islandKey(content: IslandContent): String = when (content) {
     is IslandContent.Media -> "media"
@@ -575,6 +667,8 @@ internal fun islandKey(content: IslandContent): String = when (content) {
     IslandContent.Idle -> "idle"
     // One key for closed and open, so the padlock opens in place.
     is IslandContent.Lock -> "lock"
+    is IslandContent.Charging -> "charging"
+    is IslandContent.Arrival -> "arrival-${content.id}"
     IslandContent.Hidden -> "hidden"
     // One key for scanning, done and failed, so the scan turns into the tick in place.
     is IslandContent.Unlock -> "unlock"
@@ -733,6 +827,15 @@ private fun LeadingBadgeIcon(content: IslandContent, size: Dp) {
             GlyphIcon(content.glyph, content.color, Modifier.size(size).graphicsLayer { rotationZ = shake.value })
         }
         IslandContent.Torch -> GlyphIcon(Glyph.Torch, Yellow, Modifier.size(size))
+        is IslandContent.Charging -> GlyphIcon(Glyph.Spark, Green, Modifier.size(size))
+        is IslandContent.Arrival -> {
+            val icon = content.icon
+            if (icon != null) {
+                Image(icon, null, contentScale = ContentScale.Fit, modifier = Modifier.size(size).clip(RoundedCornerShape(size * 0.28f)))
+            } else {
+                Box(Modifier.size(size).clip(CircleShape).background(content.color))
+            }
+        }
         else -> Unit
     }
 }
@@ -873,6 +976,9 @@ private fun CompactContent(content: IslandContent) {
             }
             is IslandContent.Message -> PulseDot(LocalSettings.current.accent.color)
             IslandContent.Torch -> Text("An", color = Yellow, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            is IslandContent.Charging -> RollingText("${content.level} %", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            // Just landed: a soft light in the app's color.
+            is IslandContent.Arrival -> PulseDot(content.color)
             is IslandContent.Alert -> Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     content.value,
@@ -1026,6 +1132,15 @@ private fun ExpandedContent(
                     Text(content.value, color = content.color, fontSize = 15.sp)
                 }
                 content.level?.let { LevelBar(it, content.color, Modifier.size(52.dp, 24.dp)) }
+            }
+            is IslandContent.Charging -> Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                GlyphIcon(Glyph.Spark, Green, Modifier.size(40.dp))
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Lädt", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    RollingText("${content.level} %", color = Green, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                }
+                LevelBar(content.level / 100f, Green, Modifier.size(52.dp, 24.dp))
             }
             IslandContent.Torch -> Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 GlyphIcon(Glyph.Torch, Yellow, Modifier.size(40.dp))

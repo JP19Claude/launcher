@@ -371,7 +371,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     /** An app flying into Glimmer, with the last picture of it (if one could be taken). */
-    class FlyIn(val app: AppInfo, val snapshot: Bitmap?, val island: DpSize?, val ready: Boolean)
+    class FlyIn(
+        val app: AppInfo,
+        val snapshot: Bitmap?,
+        val island: DpSize?,
+        val ready: Boolean,
+        val landing: GlimmerLink.Landing = GlimmerLink.Landing(),
+    )
 
     /** The app opened last from Hearth; it flies into Glimmer when we're back home. */
     private var pendingFlyIn: AppInfo? = null
@@ -388,7 +394,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             // Always tell Glimmer (it stops capturing), even without an app to fly.
             val back = GlimmerLink.returnedHome(getApplication<Application>(), before)
             if (app != null && back != null) {
-                _flyIns.emit(FlyIn(app, back.snapshot, back.island, back.ready))
+                _flyIns.emit(FlyIn(app, back.snapshot, back.island, back.ready, back.landing))
             }
         }
     }
@@ -396,6 +402,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Glimmer hops as the app arrives. */
     fun pulseGlimmer() {
         viewModelScope.launch(Dispatchers.IO) { GlimmerLink.pulse(getApplication<Application>()) }
+    }
+
+    /** HyperOS fly-in: Glimmer shows the app's icon as it lands. */
+    fun arriveGlimmer(icon: Bitmap?, color: Int) {
+        viewModelScope.launch(Dispatchers.IO) { GlimmerLink.arrive(getApplication<Application>(), icon, color) }
     }
 
     private fun buildLibrary(all: List<AppInfo>, used: Map<String, AppUsage>): AppLibraryData {

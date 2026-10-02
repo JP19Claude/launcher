@@ -34,6 +34,7 @@ import android.widget.FrameLayout
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -42,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import dev.hearth.launcher.data.GlimmerStyle
+import dev.hearth.launcher.data.GlimmerDoubleTap
 import dev.hearth.launcher.data.GlimmerUnlock
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.LiveNotice
@@ -323,6 +325,54 @@ class GlimmerController(private val service: GlimmerService) {
     private var params: WindowManager.LayoutParams? = null
     private var scope: CoroutineScope? = null
     private var settings = LauncherSettings()
+    /** The same settings for the island itself, so changes show without restarting. */
+    private val settingsState = MutableStateFlow(LauncherSettings())
+
+    /** Settings that apply while running (see [SettingsRepository.GLIMMER_LIVE_KEYS]). */
+    fun update(newSettings: LauncherSettings) {
+        val moved = newSettings.glimmerOffsetX != settings.glimmerOffsetX || newSettings.glimmerOffsetY != settings.glimmerOffsetY
+        settings = newSettings
+        settingsState.value = newSettings
+        if (!newSettings.glimmerCharging) charging.value = null
+        if (moved) placeWindow()
+    }
+
+    /** An app just landed (HyperOS fly-in): its icon sits in the island for a moment. */
+    private val arrival = MutableStateFlow<IslandContent.Arrival?>(null)
+    private var arrivalId = 0
+    fun arrive(icon: android.graphics.Bitmap?, color: Int) {
+        val id = ++arrivalId
+        arrival.value = IslandContent.Arrival(
+            icon = icon?.asImageBitmap(),
+            color = if (color != 0) Color(color) else Color.White,
+            id = id,
+        )
+        handler.postDelayed({ if (id == arrivalId) arrival.value = null }, 1150)
+    }
+
+    /** Battery level while charging, when it should stay in the island. */
+    private val charging = MutableStateFlow<Int?>(null)
+
+    private fun torchToggle() {
+        val id = torchId ?: return
+        runCatching { camera?.setTorchMode(id, !torchOn.value) }
+    }
+
+    /** Double tap on the island: whatever was chosen in the settings. */
+    private fun doubleTap() {
+        when (settings.glimmerDoubleTap) {
+            GlimmerDoubleTap.Off -> Unit
+            GlimmerDoubleTap.PlayPause -> media.playPause()
+            GlimmerDoubleTap.Torch -> torchToggle()
+            GlimmerDoubleTap.Screenshot -> {
+                collapse()
+                // A moment for the island to fold up first.
+                handler.postDelayed({
+                    runCatching { service.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT) }
+                }, 350)
+            }
+        }
+    }
     private var receiverRegistered = false
 
     private val density get() = service.resources.displayMetrics.density
@@ -369,6 +419,7 @@ class GlimmerController(private val service: GlimmerService) {
                         intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_FULL ||
                             level * 100 / scale >= 100
                         )
+                    charging.value = if (plugged && settings.glimmerCharging) level * 100 / scale else null
                     if (full && !batteryFull && settings.glimmerAlerts) {
                         flash(IslandContent.Alert(Glyph.Battery, "Vollständig geladen", "100 %", GREEN, 1f))
                     }
@@ -431,6 +482,7 @@ class GlimmerController(private val service: GlimmerService) {
 
     fun start(newSettings: LauncherSettings) {
         settings = newSettings
+        settingsState.value = newSettings
         if (root != null) return
         landscape.value = service.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         media.start()
@@ -549,7 +601,7 @@ class GlimmerController(private val service: GlimmerService) {
     private fun placeWindow() {
         val p = params ?: return
         val view = root ?: return
-        val (x, _) = cameraCenter()
+        val x = windowX()
         insetTop.value = topInsetPx()
         p.x = x
         runCatching { windowManager.updateViewLayout(view, p) }
@@ -567,7 +619,7 @@ class GlimmerController(private val service: GlimmerService) {
             // Still there: make sure it sits over the camera (measured only while the screen is
             // on; the AOD may report the screen without its cutout).
             if (service.getSystemService(PowerManager::class.java)?.isInteractive == false) return
-            val (x, _) = cameraCenter()
+            val x = windowX()
             val top = topInsetPx()
             if (params?.x != x || insetTop.value != top) placeWindow()
             return
@@ -598,11 +650,15 @@ class GlimmerController(private val service: GlimmerService) {
         return 0 to statusBar / 2
     }
 
-    private fun topInsetPx(): Int = (cameraCenter().second - dp(IDLE_HEIGHT) / 2).coerceAtLeast(dp(4f))
+    private fun topInsetPx(): Int =
+        ((cameraCenter().second - dp(IDLE_HEIGHT) / 2).coerceAtLeast(dp(4f)) + dp(settings.glimmerOffsetY.toFloat())).coerceAtLeast(0)
+
+    /** Where the window sits sideways: over the camera, plus the nudge from the settings. */
+    private fun windowX(): Int = cameraCenter().first + dp(settings.glimmerOffsetX.toFloat())
 
     @SuppressLint("ClickableViewAccessibility")
     private fun addWindow() {
-        val (cameraX, _) = cameraCenter()
+        val cameraX = windowX()
         val topInset = topInsetPx()
         insetTop.value = topInset
         screenWidth.value = service.resources.configuration.screenWidthDp.toFloat()
@@ -635,6 +691,10 @@ class GlimmerController(private val service: GlimmerService) {
                 val unlocking by unlock.collectAsStateWithLifecycle()
                 val aod by dozing.collectAsStateWithLifecycle()
                 val padlockOpen by lockOpening.collectAsStateWithLifecycle()
+                val landed by arrival.collectAsStateWithLifecycle()
+                val chargeLevel by charging.collectAsStateWithLifecycle()
+                // Read here, so the island follows changed settings at once.
+                val settings by settingsState.collectAsStateWithLifecycle()
                 val torch by torchOn.collectAsStateWithLifecycle()
                 val top by insetTop.collectAsStateWithLifecycle()
                 val widthDp by screenWidth.collectAsStateWithLifecycle()
@@ -646,6 +706,7 @@ class GlimmerController(private val service: GlimmerService) {
                     currentMessage?.let { add(IslandContent.Message(it)) }
                     ongoing.filter { it.kind == NoticeKind.Call || it.kind == NoticeKind.Alarm }.forEach { add(IslandContent.Live(it)) }
                     if (torch) add(IslandContent.Torch)
+                    chargeLevel?.let { add(IslandContent.Charging(it)) }
                     playing?.takeIf { it.playing }?.let { add(IslandContent.Media(it)) }
                     ongoing.filter { it.kind != NoticeKind.Call && it.kind != NoticeKind.Alarm }.forEach { add(IslandContent.Live(it)) }
                     // Paused, but still there to resume.
@@ -670,7 +731,7 @@ class GlimmerController(private val service: GlimmerService) {
                 // On the always-on display only music and live activities, still and dimmed.
                 val shown = when {
                     aod && !settings.glimmerAod -> emptyList()
-                    onAod -> activities.filter { it is IslandContent.Media || it is IslandContent.Live }
+                    onAod -> activities.filter { it is IslandContent.Media || it is IslandContent.Live || it is IslandContent.Charging }
                     else -> activities
                 }
                 // On the lock screen too, but without the empty idle pill there.
@@ -678,6 +739,7 @@ class GlimmerController(private val service: GlimmerService) {
                 // On the lock screen the pill wears a padlock, so Glimmer is always there; it opens
                 // when unlocking.
                 val main = unlocking
+                    ?: landed
                     ?: shown.firstOrNull()
                     ?: when {
                         !settings.glimmerIdlePill || sideways || aod -> IslandContent.Hidden
@@ -685,7 +747,7 @@ class GlimmerController(private val service: GlimmerService) {
                         onLockScreen -> IslandContent.Lock(open = false)
                         else -> IslandContent.Idle
                     }
-                val second = if (unlocking != null) null else shown.drop(1).firstOrNull()
+                val second = if (unlocking != null || landed != null) null else shown.drop(1).firstOrNull()
 
                 HearthTheme(dark = true) {
                     CompositionLocalProvider(
@@ -696,7 +758,7 @@ class GlimmerController(private val service: GlimmerService) {
                             content = main,
                             secondary = second,
                             expanded = isExpanded && !aod && main !is IslandContent.Idle && main !is IslandContent.Hidden &&
-                                main !is IslandContent.Unlock && main !is IslandContent.Lock,
+                                main !is IslandContent.Unlock && main !is IslandContent.Lock && main !is IslandContent.Arrival,
                             dimmed = onAod,
                             style = settings.glimmerStyle,
                             screenWidthDp = widthDp,
@@ -715,6 +777,7 @@ class GlimmerController(private val service: GlimmerService) {
                             },
                             onCollapse = this@GlimmerController::collapse,
                             onOpen = this@GlimmerController::open,
+                            onDoubleTap = if (settings.glimmerDoubleTap != GlimmerDoubleTap.Off) this@GlimmerController::doubleTap else null,
                             onTargetSize = this@GlimmerController::resizeTo,
                         )
                     }

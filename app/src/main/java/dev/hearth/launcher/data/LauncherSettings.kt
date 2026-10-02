@@ -101,6 +101,36 @@ enum class GlimmerUnlock(val label: String) {
     Off("Aus"),
 }
 
+/** The color Glimmer shimmers in when something new arrives. */
+enum class GlimmerGlowColor(val label: String) {
+    Activity("Farbe der Aktivität"),
+    Accent("Akzentfarbe"),
+    White("Weiß"),
+    Rainbow("Regenbogen"),
+}
+
+/** A fine edge around the island. */
+enum class GlimmerOutline(val label: String) {
+    Off("Aus"),
+    Subtle("Dezent"),
+    Colored("In Farbe der Aktivität"),
+}
+
+/** How springy Glimmer moves. */
+enum class GlimmerMotion(val label: String) {
+    Calm("Ruhig"),
+    Normal("Normal"),
+    Playful("Verspielt"),
+}
+
+/** What a double tap on the island does. */
+enum class GlimmerDoubleTap(val label: String) {
+    Off("Nichts"),
+    PlayPause("Musik Play/Pause"),
+    Torch("Taschenlampe"),
+    Screenshot("Bildschirmfoto"),
+}
+
 /** How a closing app flies into Glimmer. */
 enum class FlyInStyle(val label: String) {
     HarmonyOS("HarmonyOS"),
@@ -259,6 +289,22 @@ data class LauncherSettings(
     val glimmerUnlock: GlimmerUnlock = GlimmerUnlock.FaceId,
     /** Keep showing music and live activities on the always-on display (dimmed, still). */
     val glimmerAod: Boolean = true,
+    val glimmerGlowColor: GlimmerGlowColor = GlimmerGlowColor.Activity,
+    val glimmerOutline: GlimmerOutline = GlimmerOutline.Off,
+    /** Nudges the island off the camera, in dp (for phones where it doesn't sit quite right). */
+    val glimmerOffsetX: Int = 0,
+    val glimmerOffsetY: Int = 0,
+    /** How wide the small island is, relative to normal. */
+    val glimmerWidth: Float = 1f,
+    val glimmerMotion: GlimmerMotion = GlimmerMotion.Normal,
+    /** Seconds until an unfolded island folds back up by itself; 0 = never. */
+    val glimmerAutoCollapse: Int = 9,
+    val glimmerDoubleTap: GlimmerDoubleTap = GlimmerDoubleTap.Off,
+    /** Swiping sideways over music skips tracks (when there's no second activity). */
+    val glimmerSwipeTracks: Boolean = true,
+    /** Keep the battery in the island while charging. */
+    val glimmerCharging: Boolean = false,
+    val glimmerHaptics: Boolean = true,
     val badgeStyle: BadgeStyle = BadgeStyle.Number,
     /** Double tap on empty home screen space locks the phone (needs the accessibility service). */
     val doubleTapLock: Boolean = true,
@@ -435,6 +481,17 @@ class SettingsRepository(context: Context) {
             glimmerMusicStyle = enumOf("glimmerMusicStyle", d.glimmerMusicStyle),
             glimmerUnlock = enumOf("glimmerUnlock", d.glimmerUnlock),
             glimmerAod = prefs.getBoolean("glimmerAod", d.glimmerAod),
+            glimmerGlowColor = enumOf("glimmerGlowColor", d.glimmerGlowColor),
+            glimmerOutline = enumOf("glimmerOutline", d.glimmerOutline),
+            glimmerOffsetX = prefs.getInt("glimmerOffsetX", d.glimmerOffsetX),
+            glimmerOffsetY = prefs.getInt("glimmerOffsetY", d.glimmerOffsetY),
+            glimmerWidth = prefs.getFloat("glimmerWidth", d.glimmerWidth),
+            glimmerMotion = enumOf("glimmerMotion", d.glimmerMotion),
+            glimmerAutoCollapse = prefs.getInt("glimmerAutoCollapse", d.glimmerAutoCollapse),
+            glimmerDoubleTap = enumOf("glimmerDoubleTap", d.glimmerDoubleTap),
+            glimmerSwipeTracks = prefs.getBoolean("glimmerSwipeTracks", d.glimmerSwipeTracks),
+            glimmerCharging = prefs.getBoolean("glimmerCharging", d.glimmerCharging),
+            glimmerHaptics = prefs.getBoolean("glimmerHaptics", d.glimmerHaptics),
             badgeStyle = enumOf("badgeStyle", d.badgeStyle),
             doubleTapLock = prefs.getBoolean("doubleTapLock", d.doubleTapLock),
             dockSize = prefs.getInt("dockSize", d.dockSize),
@@ -519,6 +576,17 @@ class SettingsRepository(context: Context) {
             .putString("glimmerMusicStyle", s.glimmerMusicStyle.name)
             .putString("glimmerUnlock", s.glimmerUnlock.name)
             .putBoolean("glimmerAod", s.glimmerAod)
+            .putString("glimmerGlowColor", s.glimmerGlowColor.name)
+            .putString("glimmerOutline", s.glimmerOutline.name)
+            .putInt("glimmerOffsetX", s.glimmerOffsetX)
+            .putInt("glimmerOffsetY", s.glimmerOffsetY)
+            .putFloat("glimmerWidth", s.glimmerWidth)
+            .putString("glimmerMotion", s.glimmerMotion.name)
+            .putInt("glimmerAutoCollapse", s.glimmerAutoCollapse)
+            .putString("glimmerDoubleTap", s.glimmerDoubleTap.name)
+            .putBoolean("glimmerSwipeTracks", s.glimmerSwipeTracks)
+            .putBoolean("glimmerCharging", s.glimmerCharging)
+            .putBoolean("glimmerHaptics", s.glimmerHaptics)
             .putString("badgeStyle", s.badgeStyle.name)
             .putBoolean("doubleTapLock", s.doubleTapLock)
             .putInt("dockSize", s.dockSize)
@@ -574,6 +642,17 @@ class SettingsRepository(context: Context) {
             KEY_GLIMMER, "glimmerStyle", "glimmerIdlePill", "glimmerMessages",
             "glimmerTapOpens", "glimmerAlerts", "glimmerGlow", "glimmerMusicStyle",
             "glimmerUnlock", "glimmerAod",
+        )
+
+        /**
+         * Glimmer settings that apply while it runs (no restart, so sliders move it live).
+         * Only the switch itself and the look (black or glass, which changes the window) restart it.
+         */
+        val GLIMMER_LIVE_KEYS = setOf(
+            "glimmerIdlePill", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
+            "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
+            "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerAutoCollapse",
+            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "accent", "animations",
         )
         const val KEY_CC_ENABLED = "ccEnabled"
     }

@@ -37,6 +37,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import dev.hearth.launcher.data.AppInfo
 import dev.hearth.launcher.data.FlyInStyle
+import dev.hearth.launcher.system.GlimmerLink
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.animation.core.CubicBezierEasing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -112,9 +116,13 @@ fun GlimmerFlyIn(
     /** The last picture of the app (Android 11+); with it, the app itself flies, 1:1 like HarmonyOS. */
     snapshot: ImageBitmap? = null,
     style: FlyInStyle = FlyInStyle.HarmonyOS,
+    /** HyperOS: where in Glimmer the app lands. */
+    landing: GlimmerLink.Landing = GlimmerLink.Landing(),
+    /** HyperOS: Glimmer takes the app's icon (small picture, color) as it lands. */
+    onArrive: (Bitmap?, Int) -> Unit = { _, _ -> },
 ) {
     if (style == FlyInStyle.HyperOS) {
-        HyperFlyIn(app, island, onPulse, onDone, snapshot)
+        HyperFlyIn(app, landing, onArrive, onDone, snapshot)
         return
     }
     val view = LocalView.current
@@ -340,116 +348,101 @@ fun GlimmerFlyIn(
 private val HyperEase = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 
 /**
- * Closing an app, the way HyperOS does it: the app stays whole and keeps its shape, shrinks in
- * one quick arc towards the camera, turns into its icon on the way, and lands in the island,
- * which opens up wide for a moment to take it in (the icon sits in it, like in Xiaomi's
- * Hyper Island) and then closes over it with a springy squash.
+ * Closing an app, the way HyperOS does it: the app stays whole and keeps its shape, lifts off
+ * with a soft shadow, shrinks in one quick arc towards the camera and turns into its icon on
+ * the way. Just before it gets there Glimmer itself takes over: the island opens for the app,
+ * its icon sits in it for a moment (like Xiaomi's Hyper Island) and it closes again. So the
+ * landing happens in the real island, in its own style and place, not in a copy drawn here.
  */
 @Composable
 private fun HyperFlyIn(
     app: AppInfo,
-    island: DpSize?,
-    onPulse: () -> Unit,
+    landing: GlimmerLink.Landing,
+    onArrive: (Bitmap?, Int) -> Unit,
     onDone: () -> Unit,
     snapshot: ImageBitmap?,
 ) {
     val view = LocalView.current
-    val density = LocalDensity.current
     val context = LocalContext.current
     val travel = remember(app) { Animatable(0f) }
-    val settle = remember(app) { Animatable(0f) }
-    val pulse by rememberUpdatedState(onPulse)
+    val arrive by rememberUpdatedState(onArrive)
     val done by rememberUpdatedState(onDone)
     val color = remember(app) {
         val icon = iconColor(app)
         appWindowColor(context, app)?.let { lerpColor(it, icon, 0.25f) } ?: icon
     }
     val icon = app.icon
+    // A small copy of the icon for Glimmer (it can't look up other apps' icons itself).
+    val smallIcon = remember(app) {
+        runCatching {
+            val bitmap = icon.asAndroidBitmap()
+            val soft = if (bitmap.config == Bitmap.Config.HARDWARE) bitmap.copy(Bitmap.Config.ARGB_8888, false) else bitmap
+            Bitmap.createScaledBitmap(soft, 96, 96, true)
+        }.getOrNull()
+    }
     val camera = remember(view) {
         val rects: List<Rect> = view.rootWindowInsets?.displayCutout?.boundingRects.orEmpty()
         rects.minByOrNull { it.top }?.takeIf { it.top < view.height / 4 }
     }
-    val islandShown = island != null && island.width.value > 0f
-    val pillH = with(density) { ISLAND_HEIGHT_DP.dp.toPx() }
-    val baseW = with(density) { if (islandShown) island!!.width.toPx() else ISLAND_HEIGHT_DP.dp.toPx() }
-    // How much wider the island gets to hold the icon.
-    val roomFor = with(density) { 40.dp.toPx() }
-    val iconEnd = with(density) { 22.dp.toPx() }
+    val shadowPaint = remember { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG) }
 
     LaunchedEffect(app) {
         launch {
-            var pulsed = false
+            var sent = false
             snapshotFlow { travel.value }.collect { t ->
-                if (!pulsed && t > 0.93f) {
-                    pulsed = true
-                    pulse()
+                // Late enough that the app is small, early enough that the island has opened
+                // by the time it gets there.
+                if (!sent && t > 0.9f) {
+                    sent = true
+                    arrive(smallIcon, color.toArgb())
                 }
             }
         }
-        travel.animateTo(1f, tween(560, easing = HyperEase))
-        // The island holds the icon for a beat, then closes over it.
-        delay(280)
-        settle.animateTo(1f, spring(dampingRatio = 0.7f, stiffness = 320f, visibilityThreshold = 0.002f))
+        travel.animateTo(1f, tween(620, easing = HyperEase))
+        delay(140)
         done()
     }
 
     Canvas(Modifier.fillMaxSize()) {
         val w = size.width.coerceAtLeast(1f)
         val h = size.height.coerceAtLeast(1f)
-        val camX = camera?.exactCenterX() ?: (w / 2f)
-        val camY = camera?.exactCenterY() ?: 15.dp.toPx()
-        val t = travel.value.coerceIn(0f, 1f)
-        val s = settle.value.coerceIn(0f, 1.2f)
-
-        // The island opening up for the icon (to the left, Glimmer itself stays where it is),
-        // then closing again. Without an island, a pill appears at the camera to take it.
-        val open = smoothstep(0.55f, 0.9f, t) * (1f - s.coerceIn(0f, 1f))
-        val pillW = baseW + roomFor * open
-        val pillLeft = if (islandShown) camX + baseW / 2f - pillW else camX - pillW / 2f
-        if (open > 0.001f || !islandShown) {
-            val a = if (islandShown) 1f else smoothstep(0.5f, 0.7f, t) * (1f - smoothstep(0.6f, 1f, s))
-            drawRoundRect(
-                Color.Black,
-                Offset(pillLeft, camY - pillH / 2f),
-                Size(pillW, pillH),
-                CornerRadius(pillH / 2f),
-                alpha = a,
-            )
-        }
-
-        // Where the icon lands: the left end of the opened island.
-        val endX = if (islandShown) pillLeft + pillH / 2f + 2.dp.toPx() else camX
+        val camX = (camera?.exactCenterX() ?: (w / 2f)) + landing.dx.dp.toPx()
+        val camY = (camera?.exactCenterY() ?: 15.dp.toPx()) + landing.dy.dp.toPx()
+        // The icon's place in the small island: its left end (as Glimmer draws it).
+        val landW = if (landing.width > 0f) landing.width.dp.toPx() else 170.dp.toPx()
+        val endX = camX - landW / 2f + 16.dp.toPx()
         val endY = camY
-        // The app keeps its proportions while it shrinks, and only near the end rounds into
-        // a square icon.
-        val k = t
+        val iconEnd = 20.dp.toPx()
+
+        val k = travel.value.coerceIn(0f, 1f)
+        // Keeps its proportions while shrinking, only near the end it rounds into a square.
         val square = smoothstep(0.45f, 0.85f, k)
-        val cardW = lerp(w, iconEnd, k)
-        // Same scale as the width until it turns square.
-        val cardH = lerp(h * (cardW / w), cardW, square)
+        val cw = lerp(w, iconEnd, k)
+        val ch = lerp(h * (cw / w), cw, square)
         // A quick arc: up faster than across, like a flick towards the top.
         val cx = lerp(w / 2f, endX, 1f - (1f - k).pow(1.3f))
         val cy = lerp(h / 2f, endY, 1f - (1f - k).pow(2.2f))
-        // Once landed, the icon sinks into the closing island.
-        val sink = s.coerceIn(0f, 1f)
-        val iconScale = 1f - 0.5f * sink
-        val cw = cardW * iconScale
-        val ch = cardH * iconScale
         val pos = Offset(cx - cw / 2f, cy - ch / 2f)
         val r = lerp(36.dp.toPx(), min(cw, ch) * 0.3f, square).coerceAtMost(min(cw, ch) / 2f)
-        val fadeAll = 1f - smoothstep(0.2f, 0.9f, sink)
+        // The real island covers it in the end; what's left here fades as Glimmer takes over.
+        val fadeAll = 1f - smoothstep(0.93f, 1f, k)
         if (fadeAll <= 0.001f) return@Canvas
 
-        // A soft shadow under the flying app, as HyperOS lifts it off the screen.
-        val shadow = (1f - k) * 0.35f * fadeAll
+        // A soft shadow under the lifted app (only while the app itself still covers it).
+        val shadow = (1f - smoothstep(0.15f, 0.4f, k)) * 0.45f
         if (shadow > 0.01f) {
-            drawRoundRect(
-                Color.Black.copy(alpha = shadow),
-                pos + Offset(0f, 10.dp.toPx() * (1f - k)),
-                Size(cw, ch),
-                CornerRadius(r),
-            )
+            drawIntoCanvas { canvas ->
+                shadowPaint.color = color.toArgb()
+                shadowPaint.setShadowLayer(
+                    lerp(28.dp.toPx(), 8.dp.toPx(), k),
+                    0f,
+                    lerp(12.dp.toPx(), 2.dp.toPx(), k),
+                    Color.Black.copy(alpha = shadow).toArgb(),
+                )
+                canvas.nativeCanvas.drawRoundRect(pos.x, pos.y, pos.x + cw, pos.y + ch, r, r, shadowPaint)
+            }
         }
+
         val clip = Path().apply { addRoundRect(RoundRect(pos.x, pos.y, pos.x + cw, pos.y + ch, CornerRadius(r))) }
         // The app: its own picture (or its colors) at first, its icon at the end.
         val content = 1f - smoothstep(0.4f, 0.72f, k)

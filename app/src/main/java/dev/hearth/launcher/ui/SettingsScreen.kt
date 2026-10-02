@@ -74,6 +74,10 @@ import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.GlimmerMusicStyle
 import dev.hearth.launcher.data.GlimmerStyle
 import dev.hearth.launcher.data.GlimmerUnlock
+import dev.hearth.launcher.data.GlimmerGlowColor
+import dev.hearth.launcher.data.GlimmerOutline
+import dev.hearth.launcher.data.GlimmerMotion
+import dev.hearth.launcher.data.GlimmerDoubleTap
 import dev.hearth.launcher.data.FlyInStyle
 import dev.hearth.launcher.data.GlassQuality
 import dev.hearth.launcher.data.GlassTint
@@ -610,6 +614,67 @@ internal fun GlimmerOptionRows(s: LauncherSettings, update: ((LauncherSettings) 
         ) { v -> update { it.copy(glimmerTapOpens = v) } }
         SwitchRow(label = "Leuchten bei Neuem", description = "Glimmer schimmert kurz in der Farbe der Aktivität", checked = s.glimmerGlow) { v ->
             update { it.copy(glimmerGlow = v) }
+        }
+        if (s.glimmerGlow) ChoiceRow(
+            label = "Leuchtfarbe",
+            options = GlimmerGlowColor.entries,
+            selected = s.glimmerGlowColor,
+            optionLabel = { it.label },
+            onSelect = { c -> update { it.copy(glimmerGlowColor = c) } },
+        )
+
+        // Design
+        ChoiceRow(
+            label = "Rand",
+            options = GlimmerOutline.entries,
+            selected = s.glimmerOutline,
+            optionLabel = { it.label },
+            onSelect = { o -> update { it.copy(glimmerOutline = o) } },
+        )
+        ChoiceRow(
+            label = "Bewegung",
+            options = GlimmerMotion.entries,
+            selected = s.glimmerMotion,
+            optionLabel = { it.label },
+            onSelect = { m -> update { it.copy(glimmerMotion = m) } },
+        )
+        SliderRow(
+            label = "Breite",
+            value = s.glimmerWidth,
+            range = 0.8f..1.3f,
+            valueText = "${(s.glimmerWidth * 100).roundToInt()} %",
+        ) { v -> update { it.copy(glimmerWidth = (v * 20).roundToInt() / 20f) } }
+        IntSlider("Nach links / rechts", s.glimmerOffsetX, -40..40, " dp") { v -> update { it.copy(glimmerOffsetX = v) } }
+        IntSlider("Nach oben / unten", s.glimmerOffsetY, -10..24, " dp") { v -> update { it.copy(glimmerOffsetY = v) } }
+        Note("Sitzt Glimmer nicht genau um deine Kamera, schieb es hier zurecht. Die Änderung siehst du sofort.")
+
+        // Functions
+        ChoiceRow(
+            label = "Doppeltippen",
+            options = GlimmerDoubleTap.entries,
+            selected = s.glimmerDoubleTap,
+            optionLabel = { it.label },
+            onSelect = { d -> update { it.copy(glimmerDoubleTap = d) } },
+        )
+        ChoiceRow(
+            label = "Von selbst zuklappen",
+            options = listOf(5, 9, 15, 30, 0),
+            selected = s.glimmerAutoCollapse,
+            optionLabel = { if (it == 0) "Nie" else "nach $it s" },
+            onSelect = { secs -> update { it.copy(glimmerAutoCollapse = secs) } },
+        )
+        SwitchRow(
+            label = "Zur Seite wischen wechselt den Titel",
+            description = "Läuft nur Musik: über Glimmer nach links für den nächsten, nach rechts für den vorherigen Titel",
+            checked = s.glimmerSwipeTracks,
+        ) { v -> update { it.copy(glimmerSwipeTracks = v) } }
+        SwitchRow(
+            label = "Akku beim Laden zeigen",
+            description = "Solange das Handy lädt, bleibt der Akkustand mit rollenden Zahlen in Glimmer",
+            checked = s.glimmerCharging,
+        ) { v -> update { it.copy(glimmerCharging = v) } }
+        SwitchRow(label = "Vibration", description = "Leichtes Feedback beim Antippen, Aufklappen und Wischen", checked = s.glimmerHaptics) { v ->
+            update { it.copy(glimmerHaptics = v) }
         }
 }
 

@@ -114,8 +114,9 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     beide verschmelzen über eine flüssige Brücke (Android 12+), dann drückt sich die Insel
     kurz breit und federt zurück (für Apps, die über Hearth geöffnet wurden; abschaltbar)
   - Oder wie bei HyperOS (in Hearth unter „So fliegt sie hinein“): die App bleibt als Ganzes,
-    schrumpft in einem schnellen Bogen zur Kamera, wird zu ihrem Icon und landet in der Insel,
-    die sich kurz nach links für sie öffnet und sich dann federnd darüber schließt
+    hebt mit weichem Schatten ab, schrumpft in einem schnellen Bogen zur Kamera und wird zu ihrem
+    Icon; kurz vor der Ankunft übernimmt Glimmer selbst: die Insel öffnet sich, das Icon sitzt
+    einen Moment darin (wie Xiaomis Hyper Island), dann schließt sie sich wieder
   - Auf dem Sperrbildschirm ist Glimmer immer da: die Pille trägt ein Schloss, das beim
     Entsperren aufspringt; Aktivitäten erscheinen dort wie sonst, Antippen klappt auf statt eine
     App zu öffnen; die Mitteilungen dort bleiben beim System
@@ -136,6 +137,11 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
   - Zahlen rollen wie beim iPhone (Timer zählen nach unten, Stoppuhr und Anrufe nach oben),
     Icons neuer Aktivitäten springen mit leichtem Überschwingen hinein, Knöpfe geben unter dem
     Finger nach
+  - Gestaltung: Leuchtfarbe (Aktivität, Akzent, Weiß, Regenbogen), Rand (dezent oder in Farbe),
+    Bewegung (ruhig, normal, verspielt), Breite, Position (links/rechts, oben/unten) – alles
+    wirkt sofort, ohne Neustart
+  - Funktionen: Doppeltippen (Musik, Taschenlampe, Bildschirmfoto), Zuklappen nach 5–30 s oder
+    nie, Wischen über Musik wechselt den Titel, Akku beim Laden dauerhaft zeigen, Vibration
   - Laden zeigt eine kleine Batterie, die sich füllt
   - Stoppuhr und Timer laufen in Glimmer weiter, auch bei der Samsung-Uhr und anderen Uhr-Apps
     (Zeit aus Chronometer oder Text, Stoppuhr mit Zehnteln, angehalten bleibt sie stehen)

@@ -60,6 +60,18 @@ class GlimmerBridgeProvider : ContentProvider() {
                 val size = service?.glimmerIslandSize()
                 putFloat("w", size?.width?.value ?: 0f)
                 putFloat("h", size?.height?.value ?: 0f)
+                // Where an app lands with the HyperOS fly-in: the small island's width and
+                // Glimmer's nudge off the camera.
+                val landing = dev.hearth.launcher.ui.islandSize(
+                    dev.hearth.launcher.ui.IslandContent.Arrival(null, androidx.compose.ui.graphics.Color.White, 0),
+                    expanded = false,
+                    screenWidthDp = context.resources.configuration.screenWidthDp.toFloat(),
+                    hasSecondary = false,
+                    widthScale = settings.glimmerWidth,
+                )
+                putFloat("lw", landing.width.value)
+                putInt("ox", settings.glimmerOffsetX)
+                putInt("oy", settings.glimmerOffsetY)
             }
             when (method) {
                 GlimmerLink.STATUS -> status(Bundle())
@@ -74,6 +86,12 @@ class GlimmerBridgeProvider : ContentProvider() {
                 }
                 GlimmerLink.PULSE -> {
                     service?.pulseGlimmer()
+                    null
+                }
+                GlimmerLink.ARRIVE -> {
+                    @Suppress("DEPRECATION")
+                    val icon = extras?.getParcelable<android.graphics.Bitmap>("icon")
+                    service?.arriveGlimmer(icon, extras?.getInt("color") ?: 0)
                     null
                 }
                 GlimmerLink.GLOBAL_ACTION -> Bundle().apply {

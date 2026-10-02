@@ -69,6 +69,7 @@ object GlimmerLink : HearthApp("dev.hearth.glimmer", "dev.hearth.glimmer.bridge"
     internal const val APP_LAUNCHED = "appLaunched"
     internal const val RETURNED_HOME = "returnedHome"
     internal const val PULSE = "pulse"
+    internal const val ARRIVE = "arrive"
     internal const val GLOBAL_ACTION = "globalAction"
     internal const val NOTIFICATIONS = "notifications"
     internal const val QUICK_SETTINGS = "quickSettings"
@@ -91,7 +92,10 @@ object GlimmerLink : HearthApp("dev.hearth.glimmer", "dev.hearth.glimmer.bridge"
     }
 
     /** What Hearth needs for the fly-in when it's back home. */
-    class Return(val ready: Boolean, val snapshot: Bitmap?, val island: DpSize?)
+    class Return(val ready: Boolean, val snapshot: Bitmap?, val island: DpSize?, val landing: Landing)
+
+    /** Where a HyperOS fly-in lands: the small island's width (dp, 0 = unknown) and Glimmer's nudge. */
+    class Landing(val width: Float = 0f, val dx: Int = 0, val dy: Int = 0)
 
     /** Back home: Glimmer stops capturing and hands over the picture from before [beforeUptime]. */
     fun returnedHome(context: Context, beforeUptime: Long): Return? {
@@ -110,11 +114,20 @@ object GlimmerLink : HearthApp("dev.hearth.glimmer", "dev.hearth.glimmer.bridge"
             ready = b.getBoolean("running") && b.getBoolean("glimmer"),
             snapshot = bitmap,
             island = b.getFloat("w").takeIf { it > 0f }?.let { DpSize(it.dp, b.getFloat("h").dp) },
+            landing = Landing(b.getFloat("lw"), b.getInt("ox"), b.getInt("oy")),
         )
     }
 
     /** Glimmer hops and shimmers (an app just flew into it). */
     fun pulse(context: Context) {
         call(context, PULSE)
+    }
+
+    /** An app lands in Glimmer (HyperOS fly-in): Glimmer shows its icon for a moment. */
+    fun arrive(context: Context, icon: Bitmap?, color: Int) {
+        call(context, ARRIVE, extras = Bundle().apply {
+            if (icon != null) putParcelable("icon", icon)
+            putInt("color", color)
+        })
     }
 }

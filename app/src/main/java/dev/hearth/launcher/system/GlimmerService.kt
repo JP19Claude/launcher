@@ -53,6 +53,8 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
         when (key) {
+            // Applied while running, so sliders and switches show at once without a flicker.
+            in SettingsRepository.GLIMMER_LIVE_KEYS -> glimmer?.update(SettingsRepository(this).settings.value)
             in SettingsRepository.GLIMMER_KEYS -> restartGlimmer()
         }
     }
@@ -206,6 +208,11 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
     /** Glimmer hops and shimmers (an app just flew into it). */
     fun pulseGlimmer() {
         glimmer?.pulse()
+    }
+
+    /** An app lands in the island (HyperOS fly-in): its icon sits in it for a moment. */
+    fun arriveGlimmer(icon: android.graphics.Bitmap?, color: Int) {
+        glimmer?.arrive(icon, color)
     }
 
     /** Size of Glimmer's island right now, or null without Glimmer. */
