@@ -70,8 +70,10 @@ jobs:
               tag="$slug-v$v"
               gh release view "$tag" >/dev/null 2>&1 && continue
               cp "$dir/$file" "$dir/$name-$v.apk"
+              # Tagged on this commit: the build token may not tag old commits (their
+              # workflow file differs); the notes name the commit the APK was built from.
               gh release create "$tag" "$dir/$name-$v.apk" \
-                --target "$sha" \
+                --target "$GITHUB_SHA" \
                 --title "$name $v" \
                 --notes "$name $v – $what. Debug-APK aus Build $n (Commit $sha)." \
                 --latest=false
