@@ -101,12 +101,14 @@ private val Warn = Color(0xFFFFB35C)
 /** Things to try, before anything is typed. */
 private val OfflineSuggestions = listOf(
     "Taschenlampe an",
-    "Wecker 7 Uhr",
+    "Wecker halb 7",
     "Timer 10 Minuten",
+    "Ruf Mama an",
+    "Was ist 17 mal 23?",
     "Wie voll ist mein Akku?",
     "Mach den Bildschirm heller",
     "Nicht stören an",
-    "Öffne die Kamera",
+    "Navigiere nach Hause",
 )
 
 private val ClaudeSuggestions = listOf(
@@ -348,7 +350,7 @@ private fun Welcome(suggestions: List<String>, offline: Boolean, onPick: (String
         Spacer(Modifier.size(6.dp))
         Text(
             if (offline) {
-                "Ich verstehe einfache Befehle schon jetzt, auch ohne Internet. Mit deinem Anthropic-API-Schlüssel erledige ich fast alles: Wecker, Termine, Nachrichten, Navigation, Einstellungen, mehrere Dinge auf einmal."
+                "Kostenlos und ohne Internet: Licht, Ton, Helligkeit, Wecker, Timer, Anrufe und Nachrichten an Kontakte, Navigation, Rechnen, Apps und Einstellungen. Alles andere gebe ich an die Claude-App weiter (dein normales Claude-Konto, keine API-Kosten)."
             } else {
                 "Ich kann Dinge auf deinem Handy tun: Wecker, Timer, Termine, Nachrichten, Anrufe, Navigation, Apps, Einstellungen, Musik, Licht und Ton. Sag es einfach."
             },
@@ -688,7 +690,7 @@ internal fun ClaudeAssistantSettings() {
         RowDivider()
         Column(Modifier.padding(horizontal = 18.dp, vertical = 10.dp)) {
             Text(
-                if (s.hasKey) "API-Schlüssel: gespeichert (…${s.apiKey.takeLast(4)})" else "API-Schlüssel: keiner – nur einfache Befehle",
+                if (s.hasKey) "API-Schlüssel: gespeichert (…${s.apiKey.takeLast(4)})" else "API-Schlüssel: keiner (kostenlos: Offline-Befehle, der Rest geht an die Claude-App)",
                 color = Color.White,
                 fontSize = 15.sp,
             )
@@ -707,6 +709,11 @@ internal fun ClaudeAssistantSettings() {
             onSelect = { m -> ClaudeAssistant.updateSettings { it.copy(model = m) } },
         )
         SwitchRow(
+            label = "Sparmodus",
+            description = "Alles, was Hearth selbst versteht (Licht, Wecker, Anrufe, Rechnen …), läuft kostenlos ohne API. Nur der Rest geht an Claude",
+            checked = s.saver,
+        ) { v -> ClaudeAssistant.updateSettings { it.copy(saver = v) } }
+        SwitchRow(
             label = "Antworten vorlesen",
             description = "Wenn du per Sprache fragst",
             checked = s.speak,
@@ -723,6 +730,6 @@ internal fun ClaudeAssistantSettings() {
             if (!opened) runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         }
         ActionRow(label = "Verlauf löschen", onClick = ClaudeAssistant::clear)
-        Note("Weitere Wege zu Claude: die Kachel „Claude“ in den Schnelleinstellungen (Bearbeiten → hinzufügen) und Doppeltippen auf Glimmer (Glimmer → Bedienung). Der Schlüssel bleibt nur auf diesem Handy. Anfragen gehen direkt an Anthropic und kosten nach deinem API-Tarif. Anrufe, Nachrichten und Termine bestätigst du immer selbst.")
+        Note("Weitere Wege zu Claude: die Kachel „Claude“ in den Schnelleinstellungen (Bearbeiten → hinzufügen) und Doppeltippen auf Glimmer (Glimmer → Bedienung). Ohne Schlüssel entstehen keine Kosten: Hearth erledigt einfache Befehle selbst und gibt alles andere an die Claude-App (dein Claude-Konto) weiter. Mit Schlüssel bleibt er nur auf diesem Handy; die API wird getrennt vom Claude-Abo abgerechnet. Anrufe, Nachrichten und Termine bestätigst du immer selbst.")
     }
 }

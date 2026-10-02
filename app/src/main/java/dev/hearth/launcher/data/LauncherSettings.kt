@@ -373,8 +373,8 @@ data class LauncherSettings(
                 glimmerSmall == d.glimmerSmall
         }
 
-    /** How big Glimmer is drawn: the 85 % mode shrinks everything alike. */
-    val glimmerScale: Float get() = if (glimmerSmall) 0.85f else 1f
+    /** How wide Glimmer is: the 85 % mode makes it narrower (height, content and text stay as they are). */
+    val glimmerNarrow: Float get() = if (glimmerSmall) 0.85f else 1f
 
     /** True when Glimmer copies the iPhone's Dynamic Island. */
     val glimmerIsDynamicIsland: Boolean get() = glimmerMode == GlimmerMode.DynamicIsland

@@ -36,8 +36,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -860,12 +858,9 @@ class GlimmerController(private val service: GlimmerService) {
                 val second = if (unlocking != null || landed != null) null else visible.drop(1).firstOrNull()
 
                 HearthTheme(dark = true) {
-                    val baseDensity = LocalDensity.current
                     CompositionLocalProvider(
                         LocalSettings provides settings,
                         LocalGlassStyle provides GlassStyle.from(settings),
-                        // The 85 % mode: the whole island, text included, drawn smaller alike.
-                        LocalDensity provides Density(baseDensity.density * settings.glimmerScale, baseDensity.fontScale),
                     ) {
                         GlimmerIsland(
                             content = main,
@@ -875,10 +870,9 @@ class GlimmerController(private val service: GlimmerService) {
                             dimmed = onAod,
                             style = settings.glimmerStyle,
                             screenWidthDp = widthDp,
-                            topInset = (top / (density * settings.glimmerScale)).dp,
+                            topInset = (top / density).dp,
                             camera = run {
-                                // In the island's own units (smaller in the 85 % mode).
-                                val unit = density * settings.glimmerScale
+                                val unit = density
                                 val (hx, hy, hw, hh) = holePx
                                 val known = hw > 0 && hh > 0
                                 CameraHole(
@@ -960,15 +954,13 @@ class GlimmerController(private val service: GlimmerService) {
      */
     private fun resizeTo(size: DpSize) {
         lastTarget = size
-        // The 85 % mode draws everything smaller; the window follows the real size.
-        val scale = settings.glimmerScale
-        islandSize = DpSize(size.width * scale, size.height * scale)
+        islandSize = size
         val p = params ?: return
         val view = root ?: return
         val topInset = insetTop.value
         val hidden = size.width.value <= 0f
-        val w = if (hidden) 1 else dp(size.width.value * scale + 2 * PAD)
-        val h = if (hidden) 1 else topInset + dp(size.height.value * scale + PAD)
+        val w = if (hidden) 1 else dp(size.width.value + 2 * PAD)
+        val h = if (hidden) 1 else topInset + dp(size.height.value + PAD)
         val token = ++resizeToken
         fun applySize(width: Int, height: Int) {
             p.width = width

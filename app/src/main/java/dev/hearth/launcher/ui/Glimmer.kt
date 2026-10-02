@@ -250,14 +250,16 @@ fun islandSize(
     dynamicIsland: Boolean = false,
     /** Unfolded content starts below the camera, so the card grows this much taller for it. */
     cameraClearance: Dp = 0.dp,
+    /** The 85 % mode: every state narrower, the height as it is. */
+    narrow: Float = 1f,
 ): DpSize {
-    val full = if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, 420f).dp
+    val full = (if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, 420f).dp) * narrow
     val compact = if (dynamicIsland) {
-        (ISLAND_HEIGHT_DP * 6.2f).coerceAtMost(screenWidthDp - 60f).dp
+        (ISLAND_HEIGHT_DP * 6.2f).coerceAtMost(screenWidthDp - 60f).dp * narrow
     } else {
-        ((screenWidthDp * 0.44f).coerceIn(150f, 190f) * widthScale).coerceAtMost(screenWidthDp - 60f).dp
+        ((screenWidthDp * 0.44f).coerceIn(150f, 190f) * widthScale * narrow).coerceAtMost(screenWidthDp - 60f).dp
     }
-    val idle = if (dynamicIsland) ISLAND_HEIGHT_DP * 3.375f else (screenWidthDp * 0.27f).coerceIn(86f, 110f) * widthScale
+    val idle = (if (dynamicIsland) ISLAND_HEIGHT_DP * 3.375f else (screenWidthDp * 0.27f).coerceIn(86f, 110f) * widthScale) * narrow
     return when {
         content is IslandContent.Hidden -> DpSize(0.dp, 0.dp)
         content is IslandContent.Idle -> DpSize(idle.dp, ISLAND_HEIGHT_DP.dp)
@@ -353,6 +355,7 @@ fun GlimmerIsland(
         settings.glimmerWidth,
         settings.glimmerIsDynamicIsland,
         cameraClearance = cameraClearance(camera),
+        narrow = settings.glimmerNarrow,
     )
     LaunchedEffect(target) { onTargetSize(target) }
     val collapseAfter = settings.glimmerAutoCollapse

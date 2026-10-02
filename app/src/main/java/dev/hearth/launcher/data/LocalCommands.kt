@@ -27,17 +27,19 @@ object LocalCommands {
     )
 
     /** "Taschenlampe an und Wecker 7 Uhr": each part on its own; all must be understood. */
-    fun parse(text: String, tools: ClaudeTools, onlySafe: Boolean): List<Step>? {
+    fun parse(text: String, tools: ClaudeTools, onlySafe: Boolean, canAskClaude: Boolean = false): List<Step>? {
+        // Whole sentences first: a message or a sum may contain "und" or a comma themselves.
+        parseWhole(text.trim(), onlySafe)?.let { return it }
         val parts = text.split(Regex("\\s+(und|and|dann|danach)\\s+|[,;]\\s*", RegexOption.IGNORE_CASE))
             .map { it.trim() }
             .filter { it.isNotEmpty() }
         if (parts.isEmpty() || parts.size > 4) return null
         val steps = mutableListOf<Step>()
-        for (part in parts) steps += parseOne(part, tools, onlySafe) ?: return null
+        for (part in parts) steps += parseOne(part, tools, onlySafe, canAskClaude) ?: return null
         return steps
     }
 
-    private fun parseOne(text: String, tools: ClaudeTools, onlySafe: Boolean): List<Step>? {
+    private fun parseOne(text: String, tools: ClaudeTools, onlySafe: Boolean, canAskClaude: Boolean): List<Step>? {
         // Umlauts folded (ö → o), punctuation gone; then number words as digits.
         val raw = ClaudeTools.fold(text)
         val t = raw.split(' ').joinToString(" ") { w -> Numbers[w]?.toString() ?: w }
@@ -149,6 +151,31 @@ object LocalCommands {
         if (t == "auto drehen aus" || t == "automatisch drehen aus" || t == "bildschirm drehen aus") return tool("auto_rotate", "on" to false)
         SettingsWords[t]?.let { return tool("open_settings", "page" to it) }
 
+        // Connections: Android doesn't let apps switch these, so their switches open.
+        Regex("^(wlan|wifi|bluetooth|flugmodus|hotspot|standort|gps|nfc|mobile daten)( an| aus| einschalten| ausschalten| umschalten)?$").find(t)?.let { m ->
+            val page = when (m.groupValues[1]) {
+                "wlan", "wifi" -> "wifi"
+                "flugmodus" -> "airplane"
+                "standort", "gps" -> "location"
+                "mobile daten" -> "internet"
+                else -> m.groupValues[1]
+            }
+            return tool("open_settings", "page" to page)
+        }
+        if (Regex("^(dunkelmodus|dark mode|dunkles design)( an| aus)?$").matches(t)) return tool("open_settings", "page" to "display")
+        if (Regex("^(energiesparmodus|energie sparen|stromsparmodus)( an| aus)?$").matches(t)) return tool("open_settings", "page" to "battery_saver")
+        if (Regex("^(kamera|foto|selfie|ein foto|foto machen|mach ein foto|mach ein selfie|kamera offnen)$").matches(t)) return tool("camera")
+        if (Regex("^(musik|spiel musik|spiel musik ab|musik abspielen|musik bitte)$").matches(t)) return tool("media", "action" to "play")
+        if (Regex("^(wecker|meine wecker|wecker anzeigen|alle wecker)$").matches(t)) return tool("show_alarms")
+        if (Regex("^(neustart|neu starten|handy neu starten|ausschalten|handy ausschalten|aus schalten)$").matches(t)) {
+            return tool("system_action", "action" to "power_menu")
+        }
+        if (Regex("^(benachrichtigungen|mitteilungen)( anzeigen| offnen)?$").matches(t)) return tool("system_action", "action" to "notifications")
+        if (Regex("^(wann klingelt mein wecker|nachster wecker|wann ist mein nachster wecker|wann werde ich geweckt)$").matches(t)) {
+            val alarm = tools.deviceStatus().lines().firstOrNull { it.startsWith("Nächster Wecker:") }?.removePrefix("Nächster Wecker: ")
+            return listOf(Step.Say(if (alarm == null || alarm == "keiner") "Du hast keinen Wecker gestellt." else "Dein nächster Wecker klingelt $alarm."))
+        }
+
         // Status
         // Only the level ("Wie viel Akku?"); "Warum ist der Akku so schnell leer?" is Claude's.
         if (Regex("\\b(akku|batterie|akkustand)\\b").containsMatchIn(t) && words.size <= 6 &&
@@ -169,27 +196,77 @@ object LocalCommands {
         if (appName != null) {
             val app = tools.findApp(appName, strict = true)
             if (app != null) return tool("open_app", "name" to app.label.toString())
-            if (!onlySafe) return listOf(Step.Say("Ich finde keine App namens „$appName“."))
-            return null
+            // Claude may know what was meant; without it, say so.
+            if (canAskClaude) return null
+            return listOf(Step.Say("Ich finde keine App namens „$appName“."))
         }
 
         // Without a key, a few more (that Claude would otherwise do better).
         if (onlySafe) return null
 
-        Regex("^(ruf|rufe|anrufen) ([+\\d][\\d ]{3,}) ?(an)?$").find(t)?.let { m ->
-            return tool("call", "number" to m.groupValues[2].replace(" ", ""))
-        }
-        // Destinations and searches keep the user's own spelling (München, not munchen).
-        Regex("^(navigiere|navigation|route|fahr mich|bring mich|wegbeschreibung)\\s+(zu |nach |zum |zur |in die )?(.+)$", RegexOption.IGNORE_CASE)
-            .find(text.trim())?.let { m -> return tool("navigate", "destination" to m.groupValues[3].trim()) }
-        Regex("^(suche nach|such nach|google|suche|such|search)\\s+(.+)$", RegexOption.IGNORE_CASE)
-            .find(text.trim())?.let { m -> return tool("web_search", "query" to m.groupValues[2].trim()) }
         if (Regex("^(danke|dankeschon|vielen dank|thx|thanks)$").matches(t)) return listOf(Step.Say("Gern geschehen!"))
         if (Regex("^(hallo|hi|hey|hey claude|hallo claude|moin|servus)$").matches(t)) {
             return listOf(Step.Say("Hallo! Sag mir, was ich auf dem Handy erledigen soll."))
         }
         return null
     }
+
+    /** Sentences that are taken as a whole: sums, messages, calls, routes, searches. */
+    private fun parseWhole(text: String, onlySafe: Boolean): List<Step>? {
+        fun tool(name: String, vararg pairs: Pair<String, Any>) =
+            listOf(Step.Tool(name, JSONObject().apply { pairs.forEach { (k, v) -> put(k, v) } }))
+
+        // Sums: "Was ist 17 mal 23?", "15 % von 80", "3,5 + 2"
+        Calculator.answer(text)?.let { return listOf(Step.Say(it)) }
+
+        if (onlySafe) return null
+        val clean = text.trim().trimEnd('.', '!', '?')
+
+        // "Schreib Mama per WhatsApp, dass ich später komme" / "SMS an Tom: bin gleich da"
+        Regex(
+            "^(?:schreib|schreibe|schick|schicke|sende|sms an|nachricht an)\\s+(?:an\\s+|eine nachricht an\\s+|eine sms an\\s+)?([\\p{L}][\\p{L}\\-]*)\\s*[:,]?\\s+(.+)$",
+            RegexOption.IGNORE_CASE,
+        ).find(clean)?.takeIf { it.groupValues[1].lowercase() !in NotNames }?.let { m ->
+            var body = m.groupValues[2]
+            var app = ""
+            Regex("\\b(?:per|über|ueber|auf|mit|in)\\s+(whatsapp|telegram|signal|threema)\\b[,:]?\\s*", RegexOption.IGNORE_CASE).find(body)?.let { a ->
+                app = a.groupValues[1]
+                body = body.removeRange(a.range)
+            }
+            body = body.replaceFirst(Regex("^(?:eine nachricht|eine sms|nachricht|sms)\\s*[,:]?\\s*", RegexOption.IGNORE_CASE), "")
+                .replaceFirst(Regex("^(?:dass|das)\\s+", RegexOption.IGNORE_CASE), "")
+                .trim()
+            if (body.isNotEmpty()) {
+                return tool("message_contact", "name" to m.groupValues[1], "text" to body.replaceFirstChar { it.uppercase() }, "app" to app)
+            }
+        }
+
+        // "Ruf Mama an" / "Ruf 0151 2345678 an" / "Anrufen Tom"
+        Regex("^(?:ruf|rufe)\\s+(.+?)\\s+an$|^(?:anrufen|call)\\s+(.+)$", RegexOption.IGNORE_CASE).find(clean)?.let { m ->
+            val who = m.groupValues[1].ifEmpty { m.groupValues[2] }.trim()
+            if (who.lowercase() in NotNames) return null
+            return if (who.any { it.isDigit() } && who.count { it.isDigit() } >= 3) {
+                tool("call", "number" to who.filter { it.isDigit() || it == '+' })
+            } else {
+                tool("call_contact", "name" to who.removePrefix("die ").removePrefix("den ").removePrefix("der "))
+            }
+        }
+
+        // Routes and searches keep the user's own spelling (München, not munchen).
+        Regex("^(?:navigiere|navigation|route|fahr mich|bring mich|wegbeschreibung)\\s+(?:zu |nach |zum |zur |in die )?(.+)$", RegexOption.IGNORE_CASE)
+            .find(clean)?.let { m -> return tool("navigate", "destination" to m.groupValues[1].trim()) }
+        Regex("^(?:suche nach|such nach|google|suche|such|search)\\s+(.+)$", RegexOption.IGNORE_CASE)
+            .find(clean)?.let { m -> return tool("web_search", "query" to m.groupValues[1].trim()) }
+        Regex("^(?:wie wird das wetter|wie ist das wetter|wetter)(.*)$", RegexOption.IGNORE_CASE)
+            .find(clean)?.let { m -> return tool("web_search", "query" to ("Wetter" + m.groupValues[1]).trim()) }
+        return null
+    }
+
+    /** Words after "schreib" or "ruf" that aren't a person ("schreib mir eine E-Mail"). */
+    private val NotNames = setOf(
+        "mir", "mich", "uns", "dir", "ihm", "ihr", "ein", "eine", "einen", "bitte", "was", "etwas", "den", "die",
+        "das", "der", "mal", "noch", "jetzt", "e-mail", "email", "mail", "sms", "nachricht", "nachrichten",
+    )
 
     private val SettingsWords = mapOf(
         "einstellungen" to "main", "einstellungen offnen" to "main",
@@ -204,5 +281,106 @@ object LocalCommands {
         val status = tools.deviceStatus().lines()
         val battery = status.firstOrNull { it.startsWith("Akku:") }?.removePrefix("Akku: ")
         return if (battery != null) "Dein Akku ist bei $battery." else "Den Akkustand konnte ich nicht lesen."
+    }
+}
+
+/**
+ * Sums Hearth works out on its own: + − × ÷, powers, brackets, "15 % von 80", in words too
+ * ("17 mal 23", "100 geteilt durch 8"). Anything else: null.
+ */
+internal object Calculator {
+
+    fun answer(question: String): String? {
+        var q = question.lowercase(java.util.Locale.GERMAN).trim().trimEnd('?', '!', '.', '=', ' ')
+        q = q.replaceFirst(Regex("^(was ist|was sind|was ergibt|wie viel ist|wieviel ist|wie viel sind|rechne|berechne|was macht)\\s+"), "")
+        // "15 % von 80" / "15 prozent von 80"
+        Regex("^(\\d+(?:[.,]\\d+)?)\\s*(?:%|prozent)\\s+(?:von|aus)\\s+(\\d+(?:[.,]\\d+)?)$").find(q)?.let { m ->
+            val p = m.groupValues[1].replace(',', '.').toDoubleOrNull() ?: return null
+            val of = m.groupValues[2].replace(',', '.').toDoubleOrNull() ?: return null
+            return "${m.groupValues[1]} % von ${m.groupValues[2]} sind ${format(p * of / 100)}."
+        }
+        val expr = q
+            .replace(Regex("geteilt durch|durch|:"), "/")
+            .replace(Regex("\\bmal\\b|×|\\bx\\b"), "*")
+            .replace(Regex("\\bplus\\b|\\bund\\b"), "+")
+            .replace(Regex("\\bminus\\b|−"), "-")
+            .replace(Regex("\\bhoch\\b"), "^")
+            .replace(Regex("(\\d),(\\d)"), "$1.$2")
+            .replace(" ", "")
+        if (expr.isEmpty() || !Regex("^[0-9.+\\-*/^()]+$").matches(expr)) return null
+        // A sum needs an operator between two numbers ("2026" alone isn't one).
+        if (!Regex("\\d[)]*[+\\-*/^][(]*-?\\d").containsMatchIn(expr)) return null
+        val value = runCatching { Parser(expr).parse() }.getOrNull() ?: return null
+        if (value.isNaN()) return null
+        if (value.isInfinite()) return "Durch null kann ich nicht teilen."
+        return "Das ergibt ${format(value)}."
+    }
+
+    private fun format(v: Double): String {
+        val rounded = Math.round(v * 1_000_000.0) / 1_000_000.0
+        return if (rounded == Math.floor(rounded) && kotlin.math.abs(rounded) < 1e15) {
+            String.format(java.util.Locale.GERMAN, "%,d", rounded.toLong())
+        } else {
+            String.format(java.util.Locale.GERMAN, "%,.6f", rounded).trimEnd('0').trimEnd(',')
+        }
+    }
+
+    /** expr := term (+|- term)*, term := power (*|/ power)*, power := unary (^ power)?, unary := -unary | number | (expr) */
+    private class Parser(private val s: String) {
+        private var i = 0
+
+        fun parse(): Double {
+            val v = expr()
+            require(i == s.length)
+            return v
+        }
+
+        private fun expr(): Double {
+            var v = term()
+            while (i < s.length && (s[i] == '+' || s[i] == '-')) {
+                val op = s[i++]
+                val t = term()
+                v = if (op == '+') v + t else v - t
+            }
+            return v
+        }
+
+        private fun term(): Double {
+            var v = power()
+            while (i < s.length && (s[i] == '*' || s[i] == '/')) {
+                val op = s[i++]
+                val p = power()
+                v = if (op == '*') v * p else v / p
+            }
+            return v
+        }
+
+        private fun power(): Double {
+            val base = unary()
+            if (i < s.length && s[i] == '^') {
+                i++
+                return Math.pow(base, power())
+            }
+            return base
+        }
+
+        private fun unary(): Double {
+            require(i < s.length)
+            if (s[i] == '-') {
+                i++
+                return -unary()
+            }
+            if (s[i] == '(') {
+                i++
+                val v = expr()
+                require(i < s.length && s[i] == ')')
+                i++
+                return v
+            }
+            val start = i
+            while (i < s.length && (s[i].isDigit() || s[i] == '.')) i++
+            require(i > start)
+            return s.substring(start, i).toDouble()
+        }
     }
 }

@@ -19,6 +19,7 @@ import android.os.UserManager
 import android.provider.AlarmClock
 import android.provider.CalendarContract
 import android.provider.ContactsContract
+import android.provider.MediaStore
 import android.provider.Settings
 import android.view.KeyEvent
 import dev.hearth.launcher.MainActivity
@@ -169,6 +170,10 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
         "copy_text" -> copyText(a.optString("text"))
         "device_status" -> ToolResult(true, deviceStatus())
         "launcher" -> launcher(a.optString("action"), a.optString("design"))
+        // Only for Hearth's own offline commands (Claude uses find_contact, call and send_message).
+        "call_contact" -> callContact(a.optString("name"))
+        "message_contact" -> messageContact(a.optString("name"), a.optString("text"), a.optString("app"))
+        "camera" -> openScreen("Kamera", Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA), Intent(MediaStore.ACTION_IMAGE_CAPTURE))
         else -> ToolResult(false, "Unbekanntes Werkzeug $name")
     }
 
@@ -486,6 +491,65 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
         } else {
             ToolResult(true, lines.joinToString("\n"))
         }
+    }
+
+    /** Phone numbers of contacts matching a name; null without permission. */
+    private suspend fun contactNumbers(name: String): List<Pair<String, String>>? {
+        if (context.checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) return null
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val out = mutableListOf<Pair<String, String>>()
+                context.contentResolver.query(
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER),
+                    "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?",
+                    arrayOf("%$name%"),
+                    null,
+                )?.use { c ->
+                    while (c.moveToNext() && out.size < 20) {
+                        val n = c.getString(0).orEmpty()
+                        val number = c.getString(1).orEmpty()
+                        if (n.isNotBlank() && number.isNotBlank()) out += n to number
+                    }
+                }
+                out
+            }.getOrDefault(emptyList())
+        }
+    }
+
+    /**
+     * The one person meant by a name: an exact match wins, else the only person matching.
+     * Several people: a sentence asking which one.
+     */
+    private suspend fun pickContact(name: String): Pair<Pair<String, String>?, ToolResult?> {
+        val all = contactNumbers(name) ?: return null to ToolResult(
+            false,
+            "Hearth darf die Kontakte noch nicht lesen. Tippe auf „Kontakte erlauben“ und frag noch einmal.",
+            label = "Erlaubnis fehlt: Kontakte",
+            fix = ClaudeFix.Contacts,
+        )
+        if (all.isEmpty()) return null to ToolResult(true, "Kein Kontakt „$name“.", say = "Ich finde keinen Kontakt „$name“.")
+        val exact = all.filter { fold(it.first) == fold(name) }
+        val pool = exact.ifEmpty { all }
+        val people = pool.map { it.first }.distinct()
+        if (people.size > 1) {
+            return null to ToolResult(true, "Mehrere: ${people.joinToString()}", say = "Wen meinst du: ${people.take(5).joinToString()}?")
+        }
+        return pool.first() to null
+    }
+
+    private suspend fun callContact(name: String): ToolResult {
+        val (contact, answer) = pickContact(name)
+        if (contact == null) return answer ?: ToolResult(false, "Kein Kontakt.")
+        val r = call(contact.second)
+        return if (r.ok) ToolResult(true, r.forClaude, label = "Anruf an ${contact.first} – tippe auf Anrufen", say = "Ich rufe ${contact.first} an.", opensScreen = true) else r
+    }
+
+    private suspend fun messageContact(name: String, text: String, app: String): ToolResult {
+        val (contact, answer) = pickContact(name)
+        if (contact == null) return answer ?: ToolResult(false, "Kein Kontakt.")
+        val r = sendMessage(text, contact.second, app)
+        return if (r.ok) ToolResult(true, r.forClaude, label = "Nachricht an ${contact.first} bereit – tippe auf Senden", say = "Die Nachricht an ${contact.first} ist bereit.", opensScreen = true) else r
     }
 
     private fun call(number: String): ToolResult {

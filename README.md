@@ -7,8 +7,16 @@ plus **Glimmer**, die Insel um die Frontkamera, und dem **Kontrollzentrum** als 
 ## Claude im System
 
 Claude ist in Hearth eingebaut und erledigt Dinge direkt auf dem Handy, statt nur zu antworten.
-Es nutzt dafür die Werkzeuge der Anthropic-API mit deinem eigenen API-Schlüssel. Ohne Schlüssel
-versteht Hearth einfache Befehle trotzdem, offline.
+
+- Kostenlos, ohne Schlüssel und offline: Hearth versteht viele Befehle selbst – Licht, Ton,
+  Helligkeit, Lautstärke, Wecker („halb 7“, „7 Uhr abends“), Timer, Anrufe und Nachrichten an
+  Kontakte („Ruf Mama an“, „Schreib Tom per WhatsApp: bin gleich da“), Navigation, Websuche,
+  Wetter, Rechnen („17 mal 23“, „15 % von 80“), Apps, Kamera, Einstellungen, Akku, Uhrzeit,
+  mehrere Befehle mit „und“. Alles andere geht an die Claude-App (dein Claude-Konto, keine
+  API-Kosten).
+- Mit eigenem API-Schlüssel (getrennt vom Claude-Abo abgerechnet) erledigt Claude auch
+  Komplexes mit Werkzeugen. Sparmodus (Standard): was Hearth selbst versteht, kostet nichts;
+  Standardmodell Haiku 4.5, wenig Denkaufwand.
 
 - Was Claude kann:
   - Taschenlampe, Helligkeit, Lautstärke, Ton, Vibration, lautlos, Nicht stören, Auto-Drehen
@@ -27,7 +35,7 @@ versteht Hearth einfache Befehle trotzdem, offline.
 - Spracheingabe; Antworten werden vorgelesen, wenn du per Sprache fragst.
 - Anrufe, Nachrichten und Termine bestätigst du immer selbst.
 - Fragen nimmt Claude nur von den Hearth-Apps an (geschützt über die Signatur).
-- Einstellungen → Claude-Assistent: Schlüssel, Modell (Sonnet 5.5, Haiku 4.5, Opus 5.5), Vorlesen.
+- Einstellungen → Claude-Assistent: Schlüssel, Modell (Haiku 4.5, Sonnet 5.5, Opus 5.5), Sparmodus, Vorlesen.
 
 ## Galaxy × Claude
 
@@ -203,8 +211,9 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     aufgeklappt mit Punkten (Samsungs Now Bar); Aussehen „Farbig getönt“ in der Farbe der Aktivität
   - Gesperrt zeigt Glimmer keine Codes und Nachrichten (ein frischer Code erscheint nach dem
     Entsperren); Antippen und Wischen reagieren auch, während Timer oder Musik laufen
-  - „Kleiner (85 %)“: Glimmer samt Inhalt und Schrift 15 % kleiner, aufgeklappt beginnt der
-    Inhalt unterhalb der Frontkamera, damit sie nichts verdeckt
+  - „Kleiner (85 %)“: Glimmer in jedem Zustand 15 % schmaler; Höhe, Inhalt und Schrift bleiben
+  - Nichts liegt unter der Frontkamera: Glimmer kennt Lage und Größe des Kameralochs, kompakt
+    stehen Inhalte links und rechts davon, aufgeklappt beginnt der Inhalt darunter
   - Live-Vorschau oben in der Glimmer-App: zeigt Aussehen, Breite, Rand, Leuchten, Bewegung und
     Position sofort, wechselt durch ein paar Inhalte, antippen klappt auf; Einstellungen in
     Abschnitten (Gestaltung, Größe & Position, Bedienung, Was Glimmer zeigt, Sperrbildschirm & AOD)

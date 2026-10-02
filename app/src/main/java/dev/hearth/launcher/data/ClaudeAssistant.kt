@@ -35,8 +35,8 @@ import java.util.concurrent.atomic.AtomicLong
 
 /** The Claude model the assistant talks to. */
 enum class ClaudeModel(val id: String, val label: String) {
+    Haiku("claude-haiku-4-5", "Haiku 4.5 (am günstigsten)"),
     Sonnet("claude-sonnet-5-5", "Sonnet 5.5"),
-    Haiku("claude-haiku-4-5-20251001", "Haiku 4.5 (am schnellsten)"),
     Opus("claude-opus-5-5", "Opus 5.5 (am klügsten)"),
 }
 
@@ -45,9 +45,14 @@ data class ClaudeSettings(
     /** "Frag Claude" opens Hearth's assistant (instead of the Claude app). */
     val enabled: Boolean = true,
     val apiKey: String = "",
-    val model: ClaudeModel = ClaudeModel.Sonnet,
+    val model: ClaudeModel = ClaudeModel.Haiku,
     /** Read answers aloud when the question was spoken. */
     val speak: Boolean = true,
+    /**
+     * Saving mode: everything Hearth understands on its own is done without the API (free);
+     * only the rest goes to Claude.
+     */
+    val saver: Boolean = true,
 ) {
     val hasKey: Boolean get() = apiKey.isNotBlank()
 }
@@ -125,8 +130,9 @@ object ClaudeAssistant {
             enabled = prefs.getBoolean("enabled", true),
             apiKey = prefs.getString("apiKey", "").orEmpty(),
             model = prefs.getString("model", null)?.let { n -> ClaudeModel.entries.firstOrNull { it.name == n } }
-                ?: ClaudeModel.Sonnet,
+                ?: ClaudeModel.Haiku,
             speak = prefs.getBoolean("speak", true),
+            saver = prefs.getBoolean("saver", true),
         )
         tools = ClaudeTools(app) { host }
     }
@@ -140,6 +146,7 @@ object ClaudeAssistant {
             .putString("apiKey", s.apiKey.trim())
             .putString("model", s.model.name)
             .putBoolean("speak", s.speak)
+            .putBoolean("saver", s.saver)
             .apply()
     }
 
@@ -154,6 +161,12 @@ object ClaudeAssistant {
         cancelTurn()
         lastQuestion = q
         add(ChatItem.User(id(), q))
+        // A long conversation starts afresh (instead of cutting earlier turns out of it, which
+        // the API doesn't allow once Claude has thought about them).
+        if (history.size > MAX_HISTORY) {
+            history.clear()
+            conversationSystem = null
+        }
         val mark = history.size
         turnMark = mark
         // Started lazily, so `job` is set before the first line runs (the main dispatcher is
@@ -163,14 +176,20 @@ object ClaudeAssistant {
             _busy.value = true
             try {
                 val key = settings.value.hasKey
-                val quick = LocalCommands.parse(q, tools, onlySafe = key)
+                // Without a key or in saving mode, everything Hearth understands itself is free.
+                val quick = LocalCommands.parse(q, tools, onlySafe = key && !settings.value.saver, canAskClaude = key)
                 when {
                     quick != null -> runLocal(quick, spoken)
                     key -> runClaude(q, spoken)
+                    // Without a key the question goes to the Claude app (your plan, no API costs).
+                    openClaudeApp(app, q) -> {
+                        add(ChatItem.Reply(id(), "Das gebe ich an die Claude-App weiter."))
+                        _openedScreen.tryEmit(Unit)
+                    }
                     else -> add(
                         ChatItem.Problem(
                             id(),
-                            "Das kann ich ohne Internet-Claude nicht. Mit deinem API-Schlüssel erledige ich fast alles auf dem Handy. Einfache Befehle wie „Taschenlampe an“, „Wecker 7 Uhr“ oder „Öffne Spotify“ gehen auch so.",
+                            "Das kann ich ohne API-Schlüssel nicht, und die Claude-App ließ sich nicht öffnen. Einfache Befehle wie „Taschenlampe an“, „Wecker 7 Uhr“ oder „Öffne Spotify“ gehen auch so.",
                             ClaudeFix.ApiKey,
                         ),
                     )
@@ -228,6 +247,7 @@ object ClaudeAssistant {
     fun clear() {
         stop()
         history.clear()
+        conversationSystem = null
         _items.value = emptyList()
         lastQuestion = null
     }
@@ -273,8 +293,9 @@ object ClaudeAssistant {
     }
 
     private suspend fun runClaude(question: String, spoken: Boolean) {
-        addUserText(question)
-        trimHistory()
+        if (history.isEmpty()) conversationSystem = systemPrompt()
+        // The time goes with each question, so the start of the conversation never changes.
+        addUserText("[Jetzt: ${now()}]\n$question")
         var steps = 0
         while (true) {
             if (steps++ >= MAX_STEPS) {
@@ -282,6 +303,9 @@ object ClaudeAssistant {
                 return
             }
             val response = request()
+            if (response.optString("stop_reason") == "refusal") {
+                throw ClaudeApiException("Dabei kann ich leider nicht helfen.")
+            }
             val content = response.optJSONArray("content") ?: JSONArray()
             history += JSONObject().put("role", "assistant").put("content", content)
 
@@ -337,26 +361,19 @@ object ClaudeAssistant {
         }
     }
 
-    /** Keeps the conversation short; it may only start at a question (not at a tool result). */
-    private fun trimHistory() {
-        while (history.size > MAX_HISTORY) {
-            val start = (1 until history.size).firstOrNull { i ->
-                val m = history[i]
-                m.optString("role") == "user" &&
-                    m.optJSONArray("content")?.optJSONObject(0)?.optString("type") == "text"
-            } ?: break
-            repeat(start) { history.removeAt(0) }
-        }
-    }
+    /** The system prompt, fixed for the whole conversation. */
+    private var conversationSystem: String? = null
 
     private suspend fun request(): JSONObject {
         val s = settings.value
         val body = JSONObject()
             .put("model", s.model.id)
-            .put("max_tokens", 1024)
-            .put("system", systemPrompt())
+            .put("max_tokens", 4096)
+            .put("system", conversationSystem ?: systemPrompt())
             .put("tools", tools.schema)
             .put("messages", JSONArray(history))
+            // Phone tasks are short: little thinking, fast and cheap (Haiku has no effort setting).
+            .apply { if (s.model != ClaudeModel.Haiku) put("output_config", JSONObject().put("effort", "low")) }
             .toString()
         var attempt = 0
         while (true) {
@@ -425,11 +442,15 @@ object ClaudeAssistant {
         }
     }
 
+    /** Date and time for a question, readable and as ISO (for alarms and appointments). */
+    private fun now(): String {
+        val d = Date()
+        return SimpleDateFormat("EEEE, d. MMMM yyyy, HH:mm", Locale.GERMAN).format(d) +
+            " (" + SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US).format(d) + ")"
+    }
+
     private fun systemPrompt(): String {
-        val now = Date()
         val locale = Locale.getDefault()
-        val date = SimpleDateFormat("EEEE, d. MMMM yyyy, HH:mm", Locale.GERMAN).format(now)
-        val iso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US).format(now)
         return """
             Du bist Claude, tief eingebaut in Hearth, den Launcher auf dem Android-Handy des Nutzers. Du bist sein Assistent im System: Mit deinen Werkzeugen erledigst du Dinge direkt auf dem Handy – Taschenlampe, Helligkeit, Lautstärke, Ton, Nicht stören, Wecker, Timer, Termine, Anrufe, Nachrichten, E-Mails, Navigation, Apps öffnen, Einstellungen, Musik, Bildschirmfoto, Sperren, das Aussehen des Launchers.
 
@@ -443,7 +464,7 @@ object ClaudeAssistant {
             - Für Fragen zum Handy (Akku, Uhrzeit, Wecker, was läuft) nutze device_status.
             - Wissensfragen beantwortest du direkt aus deinem Wissen, kurz und hilfreich.
 
-            Jetzt ist $date (ISO: $iso). Gerät: ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE}.
+            Jede Frage beginnt mit der aktuellen Zeit in eckigen Klammern; nutze sie für Wecker, Timer und Termine. Gerät: ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE}.
         """.trimIndent()
     }
 

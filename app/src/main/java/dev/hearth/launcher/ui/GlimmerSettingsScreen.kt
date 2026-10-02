@@ -41,7 +41,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -359,10 +358,8 @@ private fun GlimmerPreview(chosen: LauncherSettings, media: MediaRepository) {
                     .fillMaxSize()
                     .offset(x = s.glimmerOffsetX.dp, y = s.glimmerOffsetY.dp),
             ) {
-                val baseDensity = LocalDensity.current
                 CompositionLocalProvider(
                     LocalSettings provides s,
-                    LocalDensity provides androidx.compose.ui.unit.Density(baseDensity.density * s.glimmerScale, baseDensity.fontScale),
                 ) {
                     GlimmerIsland(
                         content = if (s.glimmerEnabled) content else IslandContent.Hidden,
