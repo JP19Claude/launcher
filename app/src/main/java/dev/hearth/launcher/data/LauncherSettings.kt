@@ -24,6 +24,8 @@ enum class IconShape(val label: String) {
 
 enum class ClockStyle(val label: String) {
     ColorOS("ColorOS"),
+    /** Samsung's home clock: big, bold, tight digits over the date. */
+    OneUI("One UI"),
     Glass("Glas-Karte"),
     Large("Groß"),
     Hidden("Aus"),
@@ -32,6 +34,8 @@ enum class ClockStyle(val label: String) {
 /** Base color the glass is tinted with. */
 enum class GlassTint(val label: String, val color: Color) {
     Claude("Claude", Color(0xFFD97757).copy(alpha = 0.14f)),
+    /** Cool blue-violet, like One UI's glass. */
+    Galaxy("Galaxy", Color(0xFF7C8CFF).copy(alpha = 0.16f)),
     Clear("Klar", Color.White.copy(alpha = 0.04f)),
     Light("Hell", Color.White.copy(alpha = 0.20f)),
     Dark("Dunkel", Color.Black.copy(alpha = 0.26f)),
@@ -48,6 +52,8 @@ enum class GlassQuality(val label: String, val lensMinDp: Float) {
 /** Color for tinted icons and highlights. */
 enum class AccentColor(val label: String, val color: Color) {
     Claude("Claude", Color(0xFFD97757)),
+    /** Samsung's One UI blue. */
+    Galaxy("Galaxy-Blau", Color(0xFF4F8DFF)),
     White("Weiß", Color(0xFFF5F5F5)),
     Ochre("Ocker", Color(0xFFE0B158)),
     Blue("Blau", Color(0xFF8DB8FF)),
@@ -196,6 +202,8 @@ enum class CcToggleShape(val label: String) {
 
 /** Ready-made looks that set many options at once. */
 enum class DesignPreset(val label: String) {
+    /** One UI's look with liquid glass, and Claude woven through the launcher. */
+    GalaxyClaude("Galaxy × Claude"),
     ColorOSClaude("ColorOS × Claude"),
     IOSGlass("iOS Liquid Glass"),
     Hearth("Hearth Klassik"),
@@ -238,6 +246,11 @@ data class LauncherSettings(
     val swipeOpensSearch: Boolean = true,
     val swipeDownAction: SwipeDownAction = SwipeDownAction.Split,
     val showClaudeCard: Boolean = true,
+    /**
+     * Galaxy × Claude: Claude woven into the launcher like Galaxy AI into One UI – the Now Brief
+     * card on the home screen, Claude first in the search, "Ask Claude" in every app's menu.
+     */
+    val galaxyClaude: Boolean = false,
     val showAppLibrary: Boolean = true,
     val showWidgetPage: Boolean = true,
     val triggerZone: TriggerZone = TriggerZone.RightHalf,
@@ -410,7 +423,35 @@ data class LauncherSettings(
     }
 
     fun withPreset(preset: DesignPreset): LauncherSettings = when (preset) {
+        // One UI: squircle icons, its bold clock, blue, split panels, a plain slide between
+        // pages, round toggles and wide sliders; the glass tinted cool; Claude in Galaxy AI's place.
+        DesignPreset.GalaxyClaude -> copy(
+            iconStyle = IconStyle.Original,
+            iconShape = IconShape.Squircle,
+            iconSize = 56,
+            accent = AccentColor.Galaxy,
+            glassTint = GlassTint.Galaxy,
+            glassTintStrength = 1f,
+            glassRefraction = 1.2f,
+            glassBlur = 1f,
+            glassDispersion = 0.5f,
+            glassSpecular = 0.95f,
+            clockStyle = ClockStyle.OneUI,
+            showGreeting = true,
+            showClaudeCard = false,
+            galaxyClaude = true,
+            showSearchPill = true,
+            swipeDownAction = SwipeDownAction.Split,
+            pageTransition = PageTransition.Flat,
+        ).withCcStyle(CcStyle.ColorOS).copy(
+            ccSliders = CcSliderStyle.Wide,
+            ccShape = CcToggleShape.Circle,
+            ccColors = CcColorMode.Accent,
+            ccGlow = false,
+            ccCorner = 28,
+        )
         DesignPreset.ColorOSClaude -> copy(
+            galaxyClaude = false,
             iconStyle = IconStyle.Original,
             iconShape = IconShape.Rounded,
             iconSize = 56,
@@ -427,6 +468,7 @@ data class LauncherSettings(
             swipeDownAction = SwipeDownAction.Split,
         ).withCcStyle(CcStyle.ColorOS)
         DesignPreset.IOSGlass -> copy(
+            galaxyClaude = false,
             iconStyle = IconStyle.Glass,
             iconShape = IconShape.Squircle,
             iconSize = 58,
@@ -442,6 +484,7 @@ data class LauncherSettings(
             swipeDownAction = SwipeDownAction.ControlCenter,
         ).withCcStyle(CcStyle.IOS)
         DesignPreset.Hearth -> copy(
+            galaxyClaude = false,
             iconStyle = IconStyle.Original,
             iconShape = IconShape.Squircle,
             iconSize = 58,
@@ -530,6 +573,7 @@ class SettingsRepository(context: Context) {
             swipeOpensSearch = prefs.getBoolean("swipeOpensSearch", d.swipeOpensSearch),
             swipeDownAction = enumOf("swipeDownAction", d.swipeDownAction),
             showClaudeCard = prefs.getBoolean("showClaudeCard", d.showClaudeCard),
+            galaxyClaude = prefs.getBoolean("galaxyClaude", d.galaxyClaude),
             showAppLibrary = prefs.getBoolean("showAppLibrary", d.showAppLibrary),
             showWidgetPage = prefs.getBoolean("showWidgetPage", d.showWidgetPage),
             triggerZone = enumOf("triggerZone", d.triggerZone),
@@ -630,6 +674,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("swipeOpensSearch", s.swipeOpensSearch)
             .putString("swipeDownAction", s.swipeDownAction.name)
             .putBoolean("showClaudeCard", s.showClaudeCard)
+            .putBoolean("galaxyClaude", s.galaxyClaude)
             .putBoolean("showAppLibrary", s.showAppLibrary)
             .putBoolean("showWidgetPage", s.showWidgetPage)
             .putString("triggerZone", s.triggerZone.name)

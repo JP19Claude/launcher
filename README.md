@@ -3,6 +3,23 @@
 Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und Liquid Glass –
 plus **Glimmer**, die Insel um die Frontkamera, und dem **Kontrollzentrum** als eigene Apps.
 
+
+## Galaxy × Claude
+
+Design-Vorlage „Galaxy × Claude“ (Einstellungen → Design-Vorlage): der Launcher im Stil von One UI
+mit Liquid Glass, und Claude dort, wo bei Samsung Galaxy AI sitzt.
+
+- One UI: Squircle-Icons, die große, fette One-UI-Uhr mit Datum und Akku, Galaxy-Blau,
+  kühl getöntes Glas, einfaches Wischen zwischen den Seiten, links Mitteilungen und rechts
+  Schnelleinstellungen; im Kontrollzentrum runde Schalter und breite Regler wie bei One UI
+- Now Brief von Claude auf dem Startbildschirm: ein Satz zur Tageszeit, nächster Wecker und
+  Akku auf einen Blick, Vorschläge zum Antippen („Plane meinen Tag“, „Schreib für mich“,
+  „Übersetzen“ …), die Claude direkt damit öffnen
+- Such-Pille „Frag Claude oder suche“: in der Suche steht Claude ganz oben, „Los“ ohne passende
+  App fragt Claude, vor dem Tippen gibt es Claude-Vorschläge
+- „Claude fragen“ im Menü jeder App (lange drücken): Tipps und versteckte Funktionen der App
+- Einzeln ein- und ausschaltbar: „Claude im System (Galaxy × Claude)“
+
 ## Drei Apps
 
 - **Hearth** (`Hearth.apk`, `dev.hearth.launcher`): der Launcher mit Homescreen, Dock,

@@ -189,7 +189,12 @@ fun SettingsScreen(
                         optionLabel = { it.label },
                         onSelect = { preset -> vm.applyPreset(preset) },
                     )
-                    Note("Setzt Icons, Uhr, Farben und Glas auf einmal. Danach kannst du alles einzeln anpassen.")
+                    Note("Setzt Icons, Uhr, Farben und Glas auf einmal. Danach kannst du alles einzeln anpassen. „Galaxy × Claude“ macht den Launcher zu One UI mit Glas und Claude im System.")
+                    SwitchRow(
+                        label = "Claude im System (Galaxy × Claude)",
+                        description = "Wie Galaxy AI, nur mit Claude: Now Brief auf dem Startbildschirm, Claude zuerst in der Suche (Los ohne passende App fragt Claude), Vorschläge zum Antippen und „Claude fragen“ im Menü jeder App",
+                        checked = s.galaxyClaude,
+                    ) { v -> update { it.copy(galaxyClaude = v) } }
                 }
             }
 

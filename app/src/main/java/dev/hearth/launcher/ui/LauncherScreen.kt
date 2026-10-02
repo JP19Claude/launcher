@@ -76,6 +76,9 @@ import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Face
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -203,7 +206,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val columns = settings.columns.coerceIn(3, 6)
     val rows = settings.rows.coerceIn(3, 9)
     val clockRows = if (settings.clockStyle == ClockStyle.Hidden) 0 else 2
-    val claudeRows = if (settings.showClaudeCard) 1 else 0
+    // Galaxy × Claude's Now Brief is about two rows tall, the Claude card one.
+    val claudeRows = when {
+        settings.galaxyClaude -> 2
+        settings.showClaudeCard -> 1
+        else -> 0
+    }
     val firstPageRows = (rows - clockRows - claudeRows).coerceAtLeast(1)
     val homeApps = remember(apps, dock, settings.removedFromHome) {
         val dockKeys = dock.map { it.key }.toSet()
@@ -686,7 +694,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                 Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
                                     if (page == 0) {
                                         HomeHeader(settings, Modifier.padding(start = 4.dp, end = 4.dp, top = 20.dp, bottom = 12.dp))
-                                        if (settings.showClaudeCard) {
+                                        if (settings.galaxyClaude) {
+                                            NowBriefCard(
+                                                onAsk = { vm.askClaude(it) },
+                                                modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp),
+                                            )
+                                        } else if (settings.showClaudeCard) {
                                             ClaudeCard(
                                                 onClick = { vm.askClaude() },
                                                 modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp),
@@ -821,6 +834,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             vm.askClaude(it)
                             searchOpen = false
                         },
+                        claudeFirst = settings.galaxyClaude,
                         onDismiss = { searchOpen = false },
                         suggestions = library.suggestions,
                     )
@@ -978,6 +992,12 @@ private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Un
     vm.shortcuts(app).forEach { shortcut ->
         add(GlassMenuItem(shortcut.label, Icons.Rounded.Star, image = shortcut.icon) { vm.startShortcut(shortcut) })
     }
+    // Galaxy × Claude: Claude knows every app, right from its menu.
+    if (vm.settings.value.galaxyClaude) {
+        add(GlassMenuItem("Claude fragen", Icons.Rounded.Face) {
+            vm.askClaude("Wie nutze ich die App „${app.label}“ am besten? Gib mir ein paar Tipps und versteckte Funktionen.")
+        })
+    }
     add(GlassMenuItem("App-Info", Icons.Rounded.Info) { vm.openAppInfo(app) })
     if (vm.isInDock(app)) {
         val dockKeys = vm.dock.value.map { it.key }
@@ -1113,6 +1133,7 @@ private fun HomeHeader(settings: LauncherSettings, modifier: Modifier = Modifier
     when (settings.clockStyle) {
         ClockStyle.Hidden -> Spacer(modifier)
         ClockStyle.ColorOS -> ColorOSClock(settings, modifier.padding(start = 8.dp))
+        ClockStyle.OneUI -> OneUIClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Large -> LargeClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Glass -> GlassClockCard(settings, modifier)
     }
@@ -1204,6 +1225,155 @@ private fun ColorOSClock(settings: LauncherSettings, modifier: Modifier = Modifi
                     fontSize = 18.sp,
                     style = OnWallpaperText,
                 )
+            }
+        }
+    }
+}
+
+private val ClaudeTerracotta = Color(0xFFD97757)
+
+/** One UI's home clock: big, bold digits set close, the date and battery underneath. */
+@Composable
+private fun OneUIClock(settings: LauncherSettings, modifier: Modifier = Modifier) {
+    val now by rememberNow()
+    val battery by rememberBattery()
+    val locale = Locale.getDefault()
+    val time = remember(now) { now.format(DateTimeFormatter.ofPattern("HH:mm", locale)) }
+    val date = remember(now) {
+        now.format(DateTimeFormatter.ofPattern("EEE, d. MMMM", locale))
+            .replaceFirstChar { it.titlecase(locale) }
+    }
+    Column(modifier) {
+        RollingText(
+            text = time,
+            color = Color.White,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 78.sp,
+            lineHeight = 80.sp,
+            letterSpacing = (-3).sp,
+            style = OnWallpaperText,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text = date, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Medium, style = OnWallpaperText)
+            val level = battery
+            if (settings.showBattery && level != null) {
+                Text(
+                    text = "   " + (if (level.charging) "⚡" else "") + "${level.percent} %",
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 17.sp,
+                    style = OnWallpaperText,
+                )
+            }
+        }
+        if (settings.showGreeting && !settings.galaxyClaude) {
+            Text(
+                text = greetingFor(now.hour),
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = 15.sp,
+                modifier = Modifier.padding(top = 4.dp),
+                style = OnWallpaperText,
+            )
+        }
+    }
+}
+
+/** Things to start with Claude straight away, like Galaxy AI's suggestions. */
+internal val ClaudePrompts = listOf(
+    "Plane meinen Tag" to "Hilf mir, meinen Tag heute zu planen. Frag mich kurz, was ansteht.",
+    "Schreib für mich" to "Hilf mir, eine Nachricht zu schreiben. Frag mich zuerst, an wen und worum es geht.",
+    "Erklär mir was" to "Erklär mir in zwei Minuten etwas Überraschendes, das ich noch nicht weiß.",
+    "Übersetzen" to "Ich brauche eine Übersetzung. Frag mich nach dem Text und der Sprache.",
+    "Idee für heute" to "Gib mir eine kleine, konkrete Idee, was ich heute Schönes machen könnte.",
+)
+
+/** What Claude says in the Now Brief, by the time of day. */
+private fun briefLine(hour: Int): String = when (hour) {
+    in 5..10 -> "Guten Morgen! Wenn du willst, planen wir zusammen deinen Tag."
+    in 11..13 -> "Mittagszeit. Brauchst du schnell Hilfe bei etwas?"
+    in 14..17 -> "Schönen Nachmittag. Ich bin da, wenn du etwas fragen willst."
+    in 18..22 -> "Guten Abend. Soll ich dir helfen, den Tag abzuschließen?"
+    else -> "Spät geworden. Noch kurz etwas fragen, bevor du schläfst?"
+}
+
+/**
+ * Galaxy × Claude: One UI's Now Brief, written by Claude – a word for the time of day, the
+ * next alarm and the battery at a glance, and things to ask Claude with one tap.
+ */
+@Composable
+private fun NowBriefCard(onAsk: (String?) -> Unit, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val now by rememberNow()
+    val battery by rememberBattery()
+    val locale = Locale.getDefault()
+    val nextAlarm = remember(now.hour, now.minute / 5) {
+        context.getSystemService(android.app.AlarmManager::class.java)?.nextAlarmClock?.triggerTime?.let { at ->
+            java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault())
+        }
+    }
+    val facts = buildList {
+        nextAlarm?.let { alarm ->
+            val day = if (alarm.toLocalDate() == now.toLocalDate()) "" else if (alarm.toLocalDate() == now.toLocalDate().plusDays(1)) "morgen " else alarm.format(DateTimeFormatter.ofPattern("EEE ", locale))
+            add("Wecker $day" + alarm.format(DateTimeFormatter.ofPattern("HH:mm", locale)))
+        }
+        battery?.let { add((if (it.charging) "Lädt · " else "Akku ") + "${it.percent} %") }
+    }
+    LiquidGlass(
+        cornerRadius = 28.dp,
+        refraction = 20.dp,
+        interactive = true,
+        tint = Color(0xFF7C8CFF).copy(alpha = 0.14f),
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp)),
+    ) {
+        Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onAsk(null) },
+            ) {
+                ClaudeSpark(ClaudeTerracotta, Modifier.size(22.dp))
+                Spacer(Modifier.width(9.dp))
+                Text("Now Brief", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, style = OnWallpaperText)
+                Text("  ·  Claude", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp, style = OnWallpaperText)
+                Spacer(Modifier.weight(1f))
+                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = Color.White.copy(alpha = 0.8f))
+            }
+            Text(
+                text = briefLine(now.hour),
+                color = Color.White.copy(alpha = 0.92f),
+                fontFamily = FontFamily.Serif,
+                fontSize = 15.sp,
+                modifier = Modifier.padding(top = 6.dp),
+                style = OnWallpaperText,
+            )
+            if (facts.isNotEmpty()) {
+                Text(
+                    text = facts.joinToString("   ·   "),
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(top = 4.dp),
+                    style = OnWallpaperText,
+                )
+            }
+            Row(
+                Modifier
+                    .padding(top = 10.dp)
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ClaudePrompts.forEach { (label, prompt) ->
+                    Box(
+                        Modifier
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.14f))
+                            .clickable { onAsk(prompt) }
+                            .padding(horizontal = 13.dp, vertical = 7.dp),
+                    ) {
+                        Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
             }
         }
     }
@@ -1410,6 +1580,8 @@ private fun PageDots(count: Int, current: Int, modifier: Modifier = Modifier) {
 /** Glass capsule; swells and glows under the finger, like liquid glass. */
 @Composable
 private fun SearchPill(onClick: () -> Unit) {
+    // Galaxy × Claude: the pill asks Claude first, like Galaxy AI's search bar.
+    val galaxy = LocalSettings.current.galaxyClaude
     LiquidGlass(
         cornerRadius = 20.dp,
         refraction = 10.dp,
@@ -1422,14 +1594,18 @@ private fun SearchPill(onClick: () -> Unit) {
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = Icons.Rounded.Search,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(16.dp),
-            )
+            if (galaxy) {
+                ClaudeSpark(ClaudeTerracotta, Modifier.size(16.dp))
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
             Spacer(Modifier.width(6.dp))
-            Text("Suchen", color = Color.White, fontSize = 14.sp, style = OnWallpaperText)
+            Text(if (galaxy) "Frag Claude oder suche" else "Suchen", color = Color.White, fontSize = 14.sp, style = OnWallpaperText)
         }
     }
 }

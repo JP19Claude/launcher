@@ -1,6 +1,9 @@
 package dev.hearth.launcher.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,6 +67,8 @@ fun SearchOverlay(
     onAskClaude: (String) -> Unit,
     onDismiss: () -> Unit,
     suggestions: List<AppInfo> = emptyList(),
+    /** Galaxy × Claude: Claude comes first, and "Go" without a matching app asks Claude. */
+    claudeFirst: Boolean = false,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
@@ -105,9 +110,15 @@ fun SearchOverlay(
             SearchField(
                 value = query,
                 onValueChange = { query = it },
+                placeholder = if (claudeFirst) "Frag Claude oder suche Apps" else "Apps und Web durchsuchen",
                 onSubmit = {
                     val first = results.firstOrNull()
-                    if (first != null) onLaunch(first, null) else if (trimmed.isNotEmpty()) onWebSearch(trimmed)
+                    when {
+                        first != null -> onLaunch(first, null)
+                        trimmed.isEmpty() -> Unit
+                        claudeFirst -> onAskClaude(trimmed)
+                        else -> onWebSearch(trimmed)
+                    }
                 },
                 modifier = Modifier
                     .weight(1f)
@@ -163,6 +174,41 @@ fun SearchOverlay(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 24.dp),
         ) {
+            // Galaxy × Claude: things to ask Claude, before anything is typed.
+            if (trimmed.isEmpty() && claudeFirst) {
+                item(span = { GridItemSpan(maxLineSpan) }, key = "claude-prompts") {
+                    Column(Modifier.padding(top = 4.dp, bottom = 8.dp)) {
+                        Text(
+                            "Claude",
+                            color = colors.onSurfaceVariant,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(start = 12.dp, bottom = 6.dp),
+                        )
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            ClaudePrompts.forEach { (label, prompt) ->
+                                Row(
+                                    Modifier
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFD97757).copy(alpha = 0.18f))
+                                        .clickable { onAskClaude(prompt) }
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    ClaudeSpark(Color(0xFFD97757), Modifier.size(14.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(label, color = colors.onSurface, fontSize = 14.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             if (trimmed.isEmpty() && suggestions.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }, key = "suggestions") {
                     Column(Modifier.padding(top = 4.dp, bottom = 8.dp)) {
@@ -188,6 +234,12 @@ fun SearchOverlay(
                         CalculatorRow(trimmed, result, onDone = onDismiss)
                     }
                 }
+                // Galaxy × Claude: asking Claude comes first.
+                if (claudeFirst) {
+                    item(span = { GridItemSpan(maxLineSpan) }, key = "claude-first") {
+                        ClaudeRow(query = trimmed, onClick = { onAskClaude(trimmed) })
+                    }
+                }
                 matchingSettings(trimmed).forEach { setting ->
                     item(span = { GridItemSpan(maxLineSpan) }, key = "setting-${setting.label}") {
                         SettingRow(setting, onDone = onDismiss)
@@ -201,7 +253,7 @@ fun SearchOverlay(
                 }
             }
             if (trimmed.isNotEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
+                if (!claudeFirst) item(span = { GridItemSpan(maxLineSpan) }) {
                     ClaudeRow(query = trimmed, onClick = { onAskClaude(trimmed) })
                 }
                 item(span = { GridItemSpan(maxLineSpan) }) {
@@ -220,6 +272,7 @@ private fun SearchField(
     onValueChange: (String) -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
+    placeholder: String = "Apps und Web durchsuchen",
 ) {
     val colors = MaterialTheme.colorScheme
     BasicTextField(
@@ -250,7 +303,7 @@ private fun SearchField(
                 Spacer(Modifier.width(8.dp))
                 Box(Modifier.weight(1f)) {
                     if (value.isEmpty()) {
-                        Text("Apps und Web durchsuchen", color = colors.onSurfaceVariant, fontSize = 17.sp)
+                        Text(placeholder, color = colors.onSurfaceVariant, fontSize = 17.sp)
                     }
                     innerTextField()
                 }
