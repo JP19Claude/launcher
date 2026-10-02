@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Glimmer: the island around the camera, Face ID moment, always-on display, lock screen
-     notifications. Works with any launcher; with Hearth, apps fly into it. -->
+<!-- Kontrollzentrum: the glass control center over every app, replacing One UI's on request.
+     Works with any launcher; Hearth hands it the look of its own control center. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <!-- Earbuds' battery level in the island (Android 12+ asks the user once). -->
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <application>
         <activity
-            android:name=".GlimmerActivity"
+            android:name=".ControlsActivity"
             android:exported="true"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">
@@ -18,24 +15,24 @@
             </intent-filter>
         </activity>
 
-        <!-- The island over every app, the Face ID moment, lock screen notifications. -->
+        <!-- The control center over any app (swipe down over the status bar). -->
         <service
-            android:name=".system.GlimmerService"
+            android:name=".system.ControlCenterService"
             android:exported="true"
-            android:label="@string/glimmer_service_label"
+            android:label="@string/control_center_service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
             <meta-data
                 android:name="android.accessibilityservice"
-                android:resource="@xml/glimmer_service" />
+                android:resource="@xml/control_center_service" />
         </service>
 
-        <!-- Hearth asks Glimmer through this (signature-protected). -->
+        <!-- Hearth hands over its look and asks for system actions through this (signature-protected). -->
         <provider
             android:name=".system.GlimmerBridgeProvider"
-            android:authorities="dev.hearth.glimmer.bridge"
+            android:authorities="dev.hearth.controls.bridge"
             android:exported="true"
             android:permission="dev.hearth.permission.BRIDGE" />
     </application>

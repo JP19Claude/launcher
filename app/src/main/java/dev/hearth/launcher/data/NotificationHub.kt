@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /** What a notification is about, as far as Glimmer cares. */
-enum class NoticeKind { Call, Alarm, Navigation, Timer, Recording, Progress, Message }
+enum class NoticeKind { Call, Alarm, Navigation, Timer, Recording, Hotspot, Update, Progress, Message }
 
 @Immutable
 class NoticeAction(val title: String, val intent: PendingIntent)
@@ -51,6 +51,8 @@ class LiveNotice(
     val hasTime: Boolean = true,
     /** A stopwatch counting up (rather than a timer counting down). */
     val stopwatch: Boolean = false,
+    /** Android 16 live updates: the app's own short text for the island ("5 min", "2 Stopps"). */
+    val shortText: String? = null,
 ) {
     /** The time to show right now (ms), or null without one. */
     fun timeMs(now: Long): Long? = when {
@@ -299,6 +301,10 @@ object NotificationHub {
         "com.oneplus.deskclock", "com.coloros.alarmclock", "com.oplus.alarmclock", "com.android.BBKClock",
         "com.huawei.deskclock", "com.hihonor.deskclock", "com.miui.clock", "com.motorola.timeweatherwidget",
     )
+    /** Android 16's promoted (live update) flag and short island text, by value for older SDKs. */
+    private const val FLAG_PROMOTED_ONGOING = 0x00040000
+    private const val EXTRA_SHORT_CRITICAL_TEXT = "android.shortCriticalText"
+    private val HotspotWords = listOf("hotspot", "tethering", "mobiler hotspot", "wlan-hotspot")
     private val StopwatchWords = listOf("stoppuhr", "stopwatch", "chronometer", "chronomètre", "cronometro")
     private val TimerWords = listOf("timer", "countdown", "kurzzeitwecker", "minuteur", "temporizador")
     private val RecordingWords = listOf("bildschirmaufnahme", "screen recording", "screen recorder", "aufnahme läuft", "recording")
@@ -341,6 +347,10 @@ object NotificationHub {
             n.category == Notification.CATEGORY_NAVIGATION -> NoticeKind.Navigation
             recording -> NoticeKind.Recording
             timerLike -> NoticeKind.Timer
+            sbn.isOngoing && HotspotWords.any { it in words } -> NoticeKind.Hotspot
+            // Android 16 live updates (promoted ongoing notifications), like iPhone live activities.
+            sbn.isOngoing && (n.flags and FLAG_PROMOTED_ONGOING != 0 || extras.containsKey(EXTRA_SHORT_CRITICAL_TEXT)) &&
+                !(progressMax > 0 || indeterminate) -> NoticeKind.Update
             sbn.isOngoing && (progressMax > 0 || indeterminate) -> NoticeKind.Progress
             n.category == Notification.CATEGORY_MESSAGE || n.category == Notification.CATEGORY_EMAIL ||
                 n.category == Notification.CATEGORY_SOCIAL -> NoticeKind.Message
@@ -391,6 +401,8 @@ object NotificationHub {
             pausedMs = pausedMs,
             hasTime = hasTime,
             stopwatch = stopwatch && !countDown,
+            shortText = extras.getCharSequence(EXTRA_SHORT_CRITICAL_TEXT)?.toString()?.takeIf { it.isNotBlank() }
+                ?: if (kind == NoticeKind.Hotspot) Regex("""\d+""").find(body)?.value else null,
             progress = extras.getInt(Notification.EXTRA_PROGRESS, 0),
             progressMax = progressMax,
             indeterminate = indeterminate,

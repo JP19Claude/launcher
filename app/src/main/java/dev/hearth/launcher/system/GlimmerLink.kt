@@ -12,11 +12,54 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 
 /**
- * Talks to Glimmer. Inside the Glimmer app that's a direct call; from Hearth (the launcher)
- * it goes through Glimmer's [GlimmerBridgeProvider], which only apps signed with the same key
- * may use. Every call is harmless when Glimmer isn't installed or not running.
+ * One of the Hearth family's apps, reached through its [GlimmerBridgeProvider]. Inside that
+ * app the call is direct; from another app it goes through the bridge, which only apps
+ * signed with the same key may use. Harmless when the app isn't installed or not running.
  */
-object GlimmerLink {
+open class HearthApp internal constructor(val packageName: String, authority: String) {
+
+    private val bridge: Uri = Uri.parse("content://$authority")
+
+    internal fun call(context: Context, method: String, arg: String? = null, extras: Bundle? = null): Bundle? {
+        if (context.packageName == packageName) return GlimmerBridgeProvider.handle(context, method, arg, extras)
+        return runCatching { context.contentResolver.call(bridge, method, arg, extras) }.getOrNull()
+    }
+
+    fun isInstalled(context: Context): Boolean =
+        context.packageName == packageName ||
+            runCatching { context.packageManager.getPackageInfo(packageName, 0); true }.getOrDefault(false)
+
+    /** Opens the app (its settings screen). */
+    fun openApp(context: Context) {
+        val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return
+        runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
+
+    /** Is the app's accessibility service on? Null if the app couldn't be asked. */
+    fun isRunning(context: Context): Boolean? = call(context, GlimmerLink.STATUS)?.getBoolean("running")
+
+    /** Lock, screenshot, power menu…: only an accessibility service may do these. */
+    fun globalAction(context: Context, action: Int): Boolean =
+        call(context, GlimmerLink.GLOBAL_ACTION, action.toString())?.getBoolean("ok") == true
+
+    fun showNotifications(context: Context): Boolean = call(context, GlimmerLink.NOTIFICATIONS)?.getBoolean("ok") == true
+
+    fun showQuickSettings(context: Context): Boolean = call(context, GlimmerLink.QUICK_SETTINGS)?.getBoolean("ok") == true
+
+    /** Hands Hearth's control center look (and accent color) over. */
+    fun syncSettings(context: Context, values: Bundle) {
+        if (context.packageName == packageName) return
+        call(context, GlimmerLink.SYNC_SETTINGS, extras = values)
+    }
+}
+
+/** The control center app: the glass control center over other apps, replacing One UI's. */
+object ControlsLink : HearthApp("dev.hearth.controls", "dev.hearth.controls.bridge") {
+    const val DOWNLOAD_URL = "https://github.com/Vinted7777/launcher/releases/latest/download/Kontrollzentrum.apk"
+}
+
+/** Glimmer: the island; also takes the app picture for Hearth's fly-in. */
+object GlimmerLink : HearthApp("dev.hearth.glimmer", "dev.hearth.glimmer.bridge") {
 
     const val GLIMMER_PACKAGE = "dev.hearth.glimmer"
     const val HEARTH_PACKAGE = "dev.hearth.launcher"
@@ -30,24 +73,6 @@ object GlimmerLink {
     internal const val NOTIFICATIONS = "notifications"
     internal const val QUICK_SETTINGS = "quickSettings"
     internal const val SYNC_SETTINGS = "syncSettings"
-
-    private val bridge: Uri = Uri.parse("content://dev.hearth.glimmer.bridge")
-
-    private fun isGlimmer(context: Context) = context.packageName == GLIMMER_PACKAGE
-
-    private fun call(context: Context, method: String, arg: String? = null, extras: Bundle? = null): Bundle? {
-        if (isGlimmer(context)) return GlimmerBridgeProvider.handle(context, method, arg, extras)
-        return runCatching { context.contentResolver.call(bridge, method, arg, extras) }.getOrNull()
-    }
-
-    fun isInstalled(context: Context): Boolean =
-        isGlimmer(context) || runCatching { context.packageManager.getPackageInfo(GLIMMER_PACKAGE, 0); true }.getOrDefault(false)
-
-    /** Opens the Glimmer app (its settings). */
-    fun openApp(context: Context) {
-        val intent = context.packageManager.getLaunchIntentForPackage(GLIMMER_PACKAGE) ?: return
-        runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-    }
 
     /** Glimmer's state: is its accessibility service on, is the island shown, how big is it. */
     class Status(val running: Boolean, val glimmerOn: Boolean, val island: DpSize?)
@@ -91,19 +116,5 @@ object GlimmerLink {
     /** Glimmer hops and shimmers (an app just flew into it). */
     fun pulse(context: Context) {
         call(context, PULSE)
-    }
-
-    /** Lock, screenshot, power menu…: only Glimmer's accessibility service may do these. */
-    fun globalAction(context: Context, action: Int): Boolean =
-        call(context, GLOBAL_ACTION, action.toString())?.getBoolean("ok") == true
-
-    fun showNotifications(context: Context): Boolean = call(context, NOTIFICATIONS)?.getBoolean("ok") == true
-
-    fun showQuickSettings(context: Context): Boolean = call(context, QUICK_SETTINGS)?.getBoolean("ok") == true
-
-    /** Hands Hearth's control center look (and accent color) to Glimmer, so both look the same. */
-    fun syncSettings(context: Context, values: Bundle) {
-        if (isGlimmer(context)) return
-        call(context, SYNC_SETTINGS, extras = values)
     }
 }

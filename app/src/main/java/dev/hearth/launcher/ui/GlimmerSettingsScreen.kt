@@ -1,5 +1,11 @@
 package dev.hearth.launcher.ui
 
+import androidx.core.content.ContextCompat
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import android.os.Build
+import android.content.pm.PackageManager
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -42,24 +48,36 @@ import dev.hearth.launcher.data.SettingsRepository
 import dev.hearth.launcher.data.TriggerZone
 import dev.hearth.launcher.system.ControlCenterService
 import dev.hearth.launcher.system.GlimmerLink
+import dev.hearth.launcher.system.GlimmerService
 import kotlinx.coroutines.delay
 
-/** The Glimmer app: setting it up, then everything about the island and the control center. */
+/** Which app of the family this screen belongs to. */
+enum class FamilyApp { Glimmer, Controls }
+
+/** The Glimmer app: setting it up, then everything about the island and the lock screen. */
 @Composable
-fun GlimmerSettingsScreen(repo: SettingsRepository, media: MediaRepository) {
+fun GlimmerSettingsScreen(repo: SettingsRepository, media: MediaRepository) = FamilySettingsScreen(FamilyApp.Glimmer, repo, media)
+
+/** The control center app: setting it up, then the control center over other apps and its look. */
+@Composable
+fun ControlsSettingsScreen(repo: SettingsRepository, media: MediaRepository) = FamilySettingsScreen(FamilyApp.Controls, repo, media)
+
+@Composable
+private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media: MediaRepository) {
     val s by repo.settings.collectAsStateWithLifecycle()
     val update: ((LauncherSettings) -> LauncherSettings) -> Unit = { repo.update(it) }
     val context = LocalContext.current
     val light = rememberGlassLight(false)
 
     // Picks up switches flipped in the system settings when coming back.
-    var serviceOn by remember { mutableStateOf(ControlCenterService.isEnabled) }
+    val serviceEnabled = { if (app == FamilyApp.Glimmer) GlimmerService.isEnabled else ControlCenterService.isEnabled }
+    var serviceOn by remember { mutableStateOf(serviceEnabled()) }
     var notificationAccess by remember { mutableStateOf(media.hasAccess()) }
     var canWrite by remember { mutableStateOf(Settings.System.canWrite(context)) }
     var hearthInstalled by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         while (true) {
-            serviceOn = ControlCenterService.isEnabled
+            serviceOn = serviceEnabled()
             notificationAccess = media.hasAccess()
             canWrite = Settings.System.canWrite(context)
             hearthInstalled = runCatching {
@@ -68,6 +86,14 @@ fun GlimmerSettingsScreen(repo: SettingsRepository, media: MediaRepository) {
             }.getOrDefault(false)
             delay(1000)
         }
+    }
+    val bluetoothGranted = {
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+    }
+    var bluetoothAllowed by remember { mutableStateOf(bluetoothGranted()) }
+    val askBluetooth = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        bluetoothAllowed = bluetoothGranted()
     }
     val open: (Intent) -> Unit = { intent ->
         runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -97,26 +123,45 @@ fun GlimmerSettingsScreen(repo: SettingsRepository, media: MediaRepository) {
                             .padding(top = 18.dp, bottom = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        // A little island, as a logo.
-                        Box(
-                            Modifier
-                                .size(width = 120.dp, height = 34.dp)
-                                .clip(RoundedCornerShape(17.dp))
-                                .background(Color.Black),
-                            contentAlignment = Alignment.CenterEnd,
-                        ) {
+                        if (app == FamilyApp.Glimmer) {
+                            // A little island, as a logo.
                             Box(
                                 Modifier
-                                    .padding(end = 12.dp)
-                                    .size(12.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(Color(0xFF1C1C22)),
-                            )
+                                    .size(width = 120.dp, height = 34.dp)
+                                    .clip(RoundedCornerShape(17.dp))
+                                    .background(Color.Black),
+                                contentAlignment = Alignment.CenterEnd,
+                            ) {
+                                Box(
+                                    Modifier
+                                        .padding(end = 12.dp)
+                                        .size(12.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFF1C1C22)),
+                                )
+                            }
+                        } else {
+                            // Four glass switches, as a logo.
+                            Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                                listOf(Color(0xFF0A84FF), Color(0xFF30D158), Color.White.copy(alpha = 0.25f), Color(0xFFFF9F0A)).forEach { c ->
+                                    Box(
+                                        Modifier
+                                            .size(30.dp)
+                                            .clip(RoundedCornerShape(15.dp))
+                                            .background(c),
+                                    )
+                                }
+                            }
                         }
                         Spacer(Modifier.height(14.dp))
-                        Text("Glimmer", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.SemiBold)
                         Text(
-                            "Die Insel um deine Kamera, in jeder App",
+                            if (app == FamilyApp.Glimmer) "Glimmer" else "Kontrollzentrum",
+                            color = Color.White,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            if (app == FamilyApp.Glimmer) "Die Insel um deine Kamera, in jeder App" else "Glas-Kontrollzentrum über jeder App",
                             color = Color.White.copy(alpha = 0.65f),
                             fontSize = 14.sp,
                         )
@@ -126,38 +171,60 @@ fun GlimmerSettingsScreen(repo: SettingsRepository, media: MediaRepository) {
                 item {
                     Section("Einrichten") {
                         ActionRow(
-                            label = "Bedienungshilfe „Glimmer“",
-                            description = if (serviceOn) "An" else "Aus: tippen und unter „Installierte Apps“ einschalten. Nötig für die Insel und das Kontrollzentrum.",
+                            label = if (app == FamilyApp.Glimmer) "Bedienungshilfe „Glimmer“" else "Bedienungshilfe „Kontrollzentrum“",
+                            description = if (serviceOn) {
+                                "An"
+                            } else {
+                                "Aus: tippen und unter „Installierte Apps“ einschalten."
+                            },
                         ) { open(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
                         ActionRow(
                             label = "Benachrichtigungszugriff",
-                            description = if (notificationAccess) "An" else "Aus: für Musik, Anrufe, Timer, Stoppuhr und Nachrichten",
+                            description = when {
+                                notificationAccess -> "An"
+                                app == FamilyApp.Glimmer -> "Aus: für Musik, Anrufe, Timer, Stoppuhr und Nachrichten"
+                                else -> "Aus: für die Medien-Karte und die Mitteilungen im Kontrollzentrum"
+                            },
                         ) { media.requestAccess() }
-                        ActionRow(
+                        if (app == FamilyApp.Glimmer && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) ActionRow(
+                            label = "Kopfhörer-Akku anzeigen",
+                            description = if (bluetoothAllowed) "Erlaubt" else "Erlauben, damit Glimmer Name und Akku deiner Kopfhörer zeigt",
+                        ) { askBluetooth.launch(Manifest.permission.BLUETOOTH_CONNECT) }
+                        if (app == FamilyApp.Controls) ActionRow(
                             label = "Helligkeit & Drehung erlauben",
                             description = if (canWrite) "Erlaubt" else "„Systemeinstellungen ändern“ für das Kontrollzentrum",
                         ) {
                             open(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${context.packageName}")))
                         }
-                        ActionRow(
+                        if (app == FamilyApp.Controls) ActionRow(
                             label = "„Nicht stören“ erlauben",
                             description = "Zugriff auf „Bitte nicht stören“ für das Kontrollzentrum",
                         ) { open(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
                         Note(
-                            if (hearthInstalled) {
-                                "Mit Hearth: Apps, die du über Hearth öffnest, fliegen beim Schließen in Glimmer, und Hearth reicht das Aussehen seines Kontrollzentrums hierher weiter."
-                            } else {
-                                "Glimmer läuft mit jedem Launcher. Mit Hearth als Launcher fliegen geschlossene Apps zusätzlich in die Insel."
+                            when {
+                                app == FamilyApp.Controls && hearthInstalled ->
+                                    "Mit Hearth: Das Aussehen stellst du in Hearth ein, es gilt dann auch hier."
+                                app == FamilyApp.Controls ->
+                                    "Läuft mit jedem Launcher. Die Insel um die Kamera ist die App „Glimmer“."
+                                hearthInstalled ->
+                                    "Mit Hearth: Apps, die du über Hearth öffnest, fliegen beim Schließen in Glimmer."
+                                else ->
+                                    "Glimmer läuft mit jedem Launcher. Mit Hearth als Launcher fliegen geschlossene Apps zusätzlich in die Insel."
                             },
                         )
                     }
                 }
 
-                item {
-                    Section("Glimmer") { GlimmerOptionRows(s, update) }
+                if (app == FamilyApp.Glimmer) {
+                    item {
+                        Section("Glimmer") { GlimmerOptionRows(s, update) }
+                    }
+                    item {
+                        Section("Sperrbildschirm") { LockScreenRows(s, update) }
+                    }
                 }
 
-                item {
+                if (app == FamilyApp.Controls) item {
                     Section("Kontrollzentrum über anderen Apps") {
                         SwitchRow(
                             label = "Glas-Kontrollzentrum verwenden",
@@ -186,24 +253,24 @@ fun GlimmerSettingsScreen(repo: SettingsRepository, media: MediaRepository) {
                     }
                 }
 
-                item {
+                if (app == FamilyApp.Controls) item {
                     Section("Kontrollzentrum: Aussehen") {
                         if (hearthInstalled) {
-                            Note("Änderst du das Aussehen in Hearth, übernimmt Glimmer es.")
+                            Note("Änderst du das Aussehen in Hearth, übernimmt das Kontrollzentrum es.")
                         }
                         CcLookRows(s, update)
                     }
                 }
 
                 item {
-                    Section("Sperrbildschirm") { LockScreenRows(s, update) }
-                }
-
-                item {
                     Row(Modifier.fillMaxWidth().padding(vertical = 18.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center) {
                         ClaudeSpark(s.accent.color, Modifier.size(14.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Glimmer · Teil von Hearth", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                        Text(
+                            if (app == FamilyApp.Glimmer) "Glimmer · Teil von Hearth" else "Kontrollzentrum · Teil von Hearth",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 12.sp,
+                        )
                     }
                 }
             }

@@ -27,7 +27,7 @@ import kotlin.math.roundToInt
  * the screen, above fingerprint sensor and shortcuts, only while the phone is locked and on.
  * It's only as tall as what it shows, so the rest of the lock screen still unlocks as usual.
  */
-class LockNotificationsController(private val service: ControlCenterService) {
+class LockNotificationsController(private val service: GlimmerService) {
 
     private val windowManager = service.getSystemService(WindowManager::class.java)
     private val handler = Handler(Looper.getMainLooper())

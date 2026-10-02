@@ -50,10 +50,12 @@ class GlimmerBridgeProvider : ContentProvider() {
         }
 
         fun handle(context: Context, method: String, arg: String?, extras: Bundle?): Bundle? = onMain {
-            val service = ControlCenterService.instance
+            // Glimmer's service in the Glimmer app, the control center's in its app.
+            val service = GlimmerService.instance
+            val controlCenter = ControlCenterService.instance
             val settings = SettingsRepository(context).settings.value
             fun status(into: Bundle) = into.apply {
-                putBoolean("running", service != null)
+                putBoolean("running", if (context.packageName == ControlsLink.packageName) controlCenter != null else service != null)
                 putBoolean("glimmer", settings.glimmerEnabled)
                 val size = service?.glimmerIslandSize()
                 putFloat("w", size?.width?.value ?: 0f)
@@ -76,10 +78,16 @@ class GlimmerBridgeProvider : ContentProvider() {
                 }
                 GlimmerLink.GLOBAL_ACTION -> Bundle().apply {
                     val action = arg?.toIntOrNull()
-                    putBoolean("ok", service != null && action != null && service.performGlobalAction(action))
+                    val any = controlCenter ?: service
+                    putBoolean("ok", action != null && any?.performGlobalAction(action) == true)
                 }
-                GlimmerLink.NOTIFICATIONS -> Bundle().apply { putBoolean("ok", service?.showNotifications() == true) }
-                GlimmerLink.QUICK_SETTINGS -> Bundle().apply { putBoolean("ok", service?.showSystemQuickSettings() == true) }
+                // The control center lets the system shade it opened itself stay open.
+                GlimmerLink.NOTIFICATIONS -> Bundle().apply {
+                    putBoolean("ok", controlCenter?.showNotifications() ?: service?.showNotifications() ?: false)
+                }
+                GlimmerLink.QUICK_SETTINGS -> Bundle().apply {
+                    putBoolean("ok", controlCenter?.showSystemQuickSettings() ?: service?.showSystemQuickSettings() ?: false)
+                }
                 GlimmerLink.SYNC_SETTINGS -> {
                     if (extras != null) SettingsRepository.writeRaw(context, extras)
                     null

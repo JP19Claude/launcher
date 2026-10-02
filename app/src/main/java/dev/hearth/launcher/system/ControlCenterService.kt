@@ -42,7 +42,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import dev.hearth.launcher.GlimmerActivity
+import dev.hearth.launcher.ControlsActivity
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.MediaRepository
 import dev.hearth.launcher.data.SettingsRepository
@@ -71,7 +71,6 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
     private var trigger: View? = null
     private var controls: SystemControls? = null
     private var media: MediaRepository? = null
-    private var glimmer: GlimmerController? = null
 
     /**
      * The panel window stays added and only hides between uses, so opening doesn't have to
@@ -85,11 +84,6 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
     private val reveal = PanelReveal()
     private var blurRadius = -1
 
-    private fun restartGlimmer() {
-        val current = SettingsRepository(this).settings.value
-        glimmer?.stop()
-        if (current.glimmerEnabled) glimmer?.start(current)
-    }
     private val handler = Handler(Looper.getMainLooper())
 
     /** Read from the settings; see [onAccessibilityEvent]. */
@@ -97,9 +91,6 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
 
     /** "Hearth-Kontrollzentrum verwenden": off = no strip, no replacing, One UI's own panel. */
     @Volatile private var ccEnabled = true
-
-    /** Hearth's lock screen notifications are on (worth watching the lock screen). */
-    @Volatile private var lockOn = false
 
     /** Replacing the system shade needs both switches. */
     private val replacing: Boolean get() = interceptShade && ccEnabled
@@ -126,11 +117,6 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
                 // Covering the whole status bar is what makes the replacement reliable.
                 if (trigger != null) addTrigger()
             }
-            in SettingsRepository.GLIMMER_KEYS -> restartGlimmer()
-            SettingsRepository.KEY_LOCK_LAYOUT, SettingsRepository.KEY_LOCK_CONTENT -> {
-                lockOn = readLockOn(prefs)
-                lockNotes?.update()
-            }
             SettingsRepository.KEY_CC_ENABLED -> {
                 ccEnabled = prefs.getBoolean(key, true)
                 if (ccEnabled) {
@@ -143,10 +129,6 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         }
     }
 
-    /** iOS-style notifications on the lock screen. */
-    private var lockNotes: LockNotificationsController? = null
-    private var lockCheckPending = false
-
     // Hide the strip on the lock screen, bring it back as soon as the phone is usable.
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -154,19 +136,11 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
                 Intent.ACTION_SCREEN_OFF -> {
                     hidePanel(immediately = true)
                     removeTrigger()
-                    lockNotes?.update()
-                    stopAppSnapshots()
                 }
                 // Screen back on without the lock screen (it locks only after a while):
                 // there's no "user present" then, the strip used to stay missing.
-                Intent.ACTION_SCREEN_ON -> {
-                    handler.postDelayed({ ensureTrigger() }, 300)
-                    lockNotes?.updateSoon()
-                }
-                Intent.ACTION_USER_PRESENT -> {
-                    ensureTrigger()
-                    lockNotes?.update()
-                }
+                Intent.ACTION_SCREEN_ON -> handler.postDelayed({ ensureTrigger() }, 300)
+                Intent.ACTION_USER_PRESENT -> ensureTrigger()
             }
         }
     }
@@ -187,7 +161,6 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
         interceptShade = prefs.getBoolean(SettingsRepository.KEY_INTERCEPT, false)
         ccEnabled = prefs.getBoolean(SettingsRepository.KEY_CC_ENABLED, true)
-        lockOn = readLockOn(prefs)
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
@@ -197,9 +170,6 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         controls = SystemControls(this).also { it.prefetch() }
         media = MediaRepository(this)
         ensureTrigger()
-        glimmer = GlimmerController(this)
-        restartGlimmer()
-        lockNotes = LockNotificationsController(this).also { it.update() }
         // Warm up the panel window once the service is settled.
         handler.postDelayed({ ensurePanelWindow() }, 1200)
     }
@@ -213,14 +183,6 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         if (event == null) return
         // Any sign of life from the status bar: make sure the strip is there.
         if (trigger == null) ensureTrigger()
-        // The lock screen changed (camera opened over it, unlocked): look again, in batches.
-        if (lockNotes != null && lockOn && !lockCheckPending && (trigger == null || !ccEnabled)) {
-            lockCheckPending = true
-            handler.postDelayed({
-                lockCheckPending = false
-                lockNotes?.update()
-            }, 400)
-        }
         if (!replacing) return
         if (event.packageName?.toString() != SYSTEM_UI) return
         when (event.eventType) {
@@ -336,7 +298,6 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         super.onConfigurationChanged(newConfig)
         // Width and status bar height change with rotation.
         if (trigger != null) addTrigger()
-        glimmer?.onConfigurationChanged(newConfig)
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
@@ -354,10 +315,6 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         if (instance === this) instance = null
         removePanelWindow()
         removeTrigger()
-        glimmer?.stop()
-        glimmer = null
-        lockNotes?.stop()
-        lockNotes = null
         runCatching { unregisterReceiver(screenReceiver) }
         getSharedPreferences(SettingsRepository.PREFS_NAME, MODE_PRIVATE)
             .unregisterOnSharedPreferenceChangeListener(prefsListener)
@@ -365,7 +322,6 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         controls = null
         handler.removeCallbacksAndMessages(null)
         shadeCheckPending = false
-        lockCheckPending = false
     }
 
     private fun allowSystemShade() {
@@ -374,81 +330,6 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         allowShadeUntil = SystemClock.elapsedRealtime() + SYSTEM_SHADE_GRACE_MS
     }
 
-    /** Glimmer hops and shimmers (an app just flew into it). */
-    // ---- App snapshots for the fly-in ----
-
-    /**
-     * While an app opened from Hearth is in front, its look is captured about once a second
-     * (Android 11+), so that when it's closed, the app itself (not just its color) can fly
-     * into Glimmer. Only the last two pictures are kept, in memory; nothing is saved.
-     */
-    private var snapshotting = false
-    private val snapshots = ArrayDeque<Pair<Long, HardwareBuffer>>()
-    private val snapshotTick = object : Runnable {
-        override fun run() {
-            if (!snapshotting || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
-            val usable = !isLocked() && !panelVisible &&
-                getSystemService(PowerManager::class.java)?.isInteractive != false
-            if (usable) {
-                runCatching {
-                    takeScreenshot(
-                        Display.DEFAULT_DISPLAY,
-                        mainExecutor,
-                        object : TakeScreenshotCallback {
-                            override fun onSuccess(result: ScreenshotResult) {
-                                val buffer = result.hardwareBuffer
-                                if (!snapshotting) {
-                                    buffer.close()
-                                    return
-                                }
-                                snapshots.addLast(SystemClock.uptimeMillis() to buffer)
-                                while (snapshots.size > 2) snapshots.removeFirst().second.close()
-                            }
-
-                            override fun onFailure(errorCode: Int) = Unit
-                        },
-                    )
-                }
-            }
-            handler.postDelayed(this, SNAPSHOT_INTERVAL_MS)
-        }
-    }
-
-    /** An app opened from Hearth came to the front. */
-    fun startAppSnapshots() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
-        snapshots.clear()
-        snapshotting = true
-        handler.removeCallbacks(snapshotTick)
-        // Give the app a moment to draw its first screen.
-        handler.postDelayed(snapshotTick, 700)
-    }
-
-    /**
-     * Back home: stop capturing and hand out the last picture taken before [beforeUptime]
-     * (pictures from during the home gesture would show the window already shrinking).
-     */
-    fun finishAppSnapshots(beforeUptime: Long): HardwareBuffer? {
-        val pick = snapshots.lastOrNull { it.first <= beforeUptime && beforeUptime - it.first < 4000 }
-        if (pick != null) snapshots.remove(pick)
-        stopAppSnapshots()
-        // Handed on to Hearth (the parcel shares it); closed here once that's done.
-        return pick?.second?.also { buffer -> handler.postDelayed({ runCatching { buffer.close() } }, 5000) }
-    }
-
-    private fun stopAppSnapshots() {
-        snapshotting = false
-        handler.removeCallbacks(snapshotTick)
-        snapshots.forEach { runCatching { it.second.close() } }
-        snapshots.clear()
-    }
-
-    fun pulseGlimmer() {
-        glimmer?.pulse()
-    }
-
-    /** Size of Glimmer's island right now, or null without Glimmer. */
-    fun glimmerIslandSize(): androidx.compose.ui.unit.DpSize? = glimmer?.islandSize
 
     /** Pulls down the normal notification shade. */
     fun showNotifications(): Boolean {
@@ -470,9 +351,6 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         val height = if (id != 0) resources.getDimensionPixelSize(id) else 0
         return height.coerceAtLeast(dp(24))
     }
-
-    private fun readLockOn(prefs: SharedPreferences): Boolean =
-        prefs.getString(SettingsRepository.KEY_LOCK_LAYOUT, null).let { it != null && it != "Off" }
 
     private fun ensureTrigger() {
         if (!ccEnabled) return
@@ -605,8 +483,8 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
                         onRevealChanged = this@ControlCenterService::setPanelBlur,
                         onOpenLauncherSettings = {
                             hidePanel(immediately = true)
-                            // Glimmer's own settings (control center look, Glimmer, lock screen).
-                            val intent = Intent(this@ControlCenterService, GlimmerActivity::class.java)
+                            // The control center app's own settings.
+                            val intent = Intent(this@ControlCenterService, ControlsActivity::class.java)
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             runCatching { startActivity(intent) }
                         },
@@ -756,7 +634,6 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         val isEnabled: Boolean get() = instance != null
 
         private const val SYSTEM_UI = "com.android.systemui"
-        private const val SNAPSHOT_INTERVAL_MS = 900L
         private const val SYSTEM_UI_ID = "com.android.systemui:id/"
         private const val SYSTEM_SHADE_GRACE_MS = 20_000L
         private const val PULL_DISTANCE_DP = 260

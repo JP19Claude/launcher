@@ -497,8 +497,12 @@ private fun noticeColor(kind: NoticeKind): Color = when (kind) {
     NoticeKind.Timer -> Orange
     NoticeKind.Recording -> Red
     NoticeKind.Alarm -> Orange
+    NoticeKind.Hotspot -> Green
     else -> Color.White
 }
+
+/** Times with equally wide digits, so a running clock doesn't wobble (like the iPhone's). */
+private val TimeStyle = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum")
 
 /** Answer in green, hang up / decline / stop in red, the rest in glass. */
 private fun actionColor(notice: LiveNotice, title: String): Color {
@@ -561,6 +565,7 @@ private fun LeadingBadge(content: IslandContent, size: Dp) {
             NoticeKind.Call -> Icon(Icons.Rounded.Call, null, tint = Green, modifier = Modifier.size(size))
             NoticeKind.Timer, NoticeKind.Alarm -> GlyphIcon(Glyph.Alarm, Orange, Modifier.size(size))
             NoticeKind.Recording -> Box(Modifier.size(size), contentAlignment = Alignment.Center) { PulseDot(Red) }
+            NoticeKind.Hotspot -> GlyphIcon(Glyph.Hotspot, Green, Modifier.size(size))
             else -> AppBadge(content.notice, size)
         }
         is IslandContent.Message -> AppBadge(content.notice, size)
@@ -609,7 +614,7 @@ private fun CompactContent(content: IslandContent) {
         ) {
             Icon(Icons.Rounded.Call, null, tint = Green, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(5.dp))
-            Text(liveTimeText(content.notice, now) ?: "", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(liveTimeText(content.notice, now) ?: "", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, style = TimeStyle)
             Spacer(Modifier.weight(1f))
             HyperWave(listOf(Green, Color(0xFF7CF29A)), playing = true, modifier = Modifier.size(26.dp, 14.dp))
         }
@@ -645,6 +650,7 @@ private fun CompactContent(content: IslandContent) {
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
+                                style = TimeStyle,
                             )
                         } else {
                             PulseDot(noticeColor(notice.kind))
@@ -659,6 +665,25 @@ private fun CompactContent(content: IslandContent) {
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 90.dp),
+                    )
+                    // Hotspot: how many are connected.
+                    NoticeKind.Hotspot -> Text(
+                        notice.shortText ?: "An",
+                        color = Green,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                    )
+                    // Android 16 live updates: the app's own short text, else its title.
+                    NoticeKind.Update -> Text(
+                        notice.shortText ?: notice.title,
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = TimeStyle,
                         modifier = Modifier.widthIn(max = 90.dp),
                     )
                     // Navigation: the next distance ("200 m").
@@ -792,8 +817,10 @@ private fun ExpandedContent(
                             Text(
                                 time,
                                 color = noticeColor(notice.kind).copy(alpha = if (notice.paused) 0.6f else 1f),
-                                fontSize = 26.sp,
-                                fontWeight = FontWeight.Light,
+                                // Big like the iPhone's timer, digits that don't wobble.
+                                fontSize = 34.sp,
+                                fontWeight = FontWeight.Medium,
+                                style = TimeStyle,
                             )
                         }
                     } else if (notice.kind == NoticeKind.Progress) {

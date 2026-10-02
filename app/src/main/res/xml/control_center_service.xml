@@ -2,15 +2,13 @@
 <!-- Accessibility service that draws the control center over other apps and, if turned on,
      replaces the system shade. It only hears about the system UI (status bar and shade) and
      only looks at the system UI's windows to tell whether the shade was pulled down.
-     Screenshots: only while an app opened from Hearth is in front, kept in memory (never
-     saved), so the app itself can fly into Glimmer when it's closed. -->
+-->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows|flagReportViewIds|flagIncludeNotImportantViews"
     android:packageNames="com.android.systemui"
     android:canRetrieveWindowContent="true"
-    android:canTakeScreenshot="true"
     android:description="@string/control_center_service_description"
     android:notificationTimeout="0"
     android:summary="@string/control_center_service_summary" />

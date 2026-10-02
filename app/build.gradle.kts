@@ -12,8 +12,8 @@ android {
         applicationId = "dev.hearth.launcher"
         minSdk = 28
         targetSdk = 35
-        versionCode = 31
-        versionName = "4.0"
+        versionCode = 32
+        versionName = "4.1"
     }
 
     // Fixed debug key in the repo, so every CI build installs as an update over the last one.
@@ -26,8 +26,8 @@ android {
         }
     }
 
-    // Two apps from one code base: Hearth (the launcher) and Glimmer (island, control center
-    // over apps, lock screen). They talk through a signature-protected bridge.
+    // Three apps from one code base: Hearth (the launcher), Glimmer (the island, lock screen)
+    // and the control center over other apps. They talk through a signature-protected bridge.
     flavorDimensions += "app"
     productFlavors {
         create("hearth") {
@@ -37,6 +37,10 @@ android {
         create("glimmer") {
             dimension = "app"
             applicationId = "dev.hearth.glimmer"
+        }
+        create("controls") {
+            dimension = "app"
+            applicationId = "dev.hearth.controls"
         }
     }
 

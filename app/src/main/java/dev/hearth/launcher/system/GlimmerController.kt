@@ -1,5 +1,8 @@
 package dev.hearth.launcher.system
 
+import android.os.SystemClock
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothClass
 import androidx.compose.runtime.LaunchedEffect
 import android.os.PowerManager
 import android.hardware.camera2.CameraManager
@@ -67,7 +70,7 @@ import kotlin.math.roundToInt
  * Glimmer, Hearth's island around the front camera, shown over every app.
  * Lives in the accessibility service, because only its windows may sit on the status bar.
  */
-class GlimmerController(private val service: ControlCenterService) {
+class GlimmerController(private val service: GlimmerService) {
 
     private val windowManager = service.getSystemService(WindowManager::class.java)
     private val handler = Handler(Looper.getMainLooper())
@@ -114,6 +117,36 @@ class GlimmerController(private val service: ControlCenterService) {
         unlock.value = IslandContent.Unlock(success = success, face = symbol == GlimmerUnlock.FaceId)
         val token = ++unlockToken
         handler.postDelayed({ if (token == unlockToken) unlock.value = null }, hideAfter)
+    }
+
+    /**
+     * Earbuds report their battery: shown once after connecting, like AirPods on the iPhone
+     * ("Galaxy Buds 85 %"). Names need the Bluetooth permission (asked in the Glimmer app).
+     */
+    private val lastBattery = HashMap<String, Long>()
+    private var batteryReceiverRegistered = false
+    private val earbudsBattery = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val level = intent.getIntExtra(EXTRA_BATTERY_LEVEL, -1)
+            if (level !in 0..100 || !settings.glimmerAlerts) return
+            val device: BluetoothDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+            }
+            // Headphones and speakers only (not watches or keyboards), when that can be told.
+            val audio = runCatching {
+                device?.bluetoothClass?.majorDeviceClass == BluetoothClass.Device.Major.AUDIO_VIDEO
+            }.getOrDefault(true)
+            if (!audio) return
+            val key = runCatching { device?.address }.getOrNull() ?: "earbuds"
+            val now = SystemClock.elapsedRealtime()
+            if (now - (lastBattery[key] ?: Long.MIN_VALUE / 2) < 10 * 60_000L) return
+            lastBattery[key] = now
+            val name = runCatching { device?.name }.getOrNull()?.takeIf { it.isNotBlank() } ?: "Kopfhörer"
+            flash(IslandContent.Alert(Glyph.Headphones, name, "$level %", if (level <= 20) RED else GREEN, level / 100f))
+        }
     }
 
     /** The flashlight is on: a live activity, tap turns it off. */
@@ -284,6 +317,12 @@ class GlimmerController(private val service: ControlCenterService) {
         startHeadphoneWatch()
         runCatching { service.getSystemService(DisplayManager::class.java)?.registerDisplayListener(displayListener, handler) }
         runCatching { camera?.registerTorchCallback(torchCallback, handler) }
+        // Sent by the Bluetooth stack only (a protected broadcast).
+        batteryReceiverRegistered = runCatching {
+            ContextCompat.registerReceiver(
+                service, earbudsBattery, IntentFilter(ACTION_BATTERY_LEVEL_CHANGED), ContextCompat.RECEIVER_EXPORTED,
+            )
+        }.isSuccess
         updateDozing()
         ContextCompat.registerReceiver(service, systemReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         receiverRegistered = true
@@ -334,6 +373,8 @@ class GlimmerController(private val service: ControlCenterService) {
     fun stop() {
         runCatching { service.getSystemService(DisplayManager::class.java)?.unregisterDisplayListener(displayListener) }
         runCatching { camera?.unregisterTorchCallback(torchCallback) }
+        if (batteryReceiverRegistered) runCatching { service.unregisterReceiver(earbudsBattery) }
+        batteryReceiverRegistered = false
         torchOn.value = false
         unlock.value = null
         audioCallback?.let { cb ->
@@ -594,6 +635,8 @@ class GlimmerController(private val service: ControlCenterService) {
         NoticeKind.Navigation -> 1
         NoticeKind.Timer -> 2
         NoticeKind.Recording -> 2
+        NoticeKind.Update -> 2
+        NoticeKind.Hotspot -> 3
         NoticeKind.Progress -> 3
         NoticeKind.Message -> 4
     }
@@ -607,6 +650,8 @@ class GlimmerController(private val service: ControlCenterService) {
         val RED = Color(0xFFFF453A)
         val PURPLE = Color(0xFF8E7CFF)
         val YELLOW = Color(0xFFFFD60A)
+        const val ACTION_BATTERY_LEVEL_CHANGED = "android.bluetooth.device.action.BATTERY_LEVEL_CHANGED"
+        const val EXTRA_BATTERY_LEVEL = "android.bluetooth.device.extra.BATTERY_LEVEL"
         const val KEEP_PAUSED_MS = 10 * 60 * 1000L
         val HeadphoneTypes = buildSet {
             add(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)

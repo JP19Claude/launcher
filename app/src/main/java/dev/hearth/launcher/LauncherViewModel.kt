@@ -1,6 +1,7 @@
 package dev.hearth.launcher
 
 import androidx.compose.ui.unit.DpSize
+import dev.hearth.launcher.system.ControlsLink
 import dev.hearth.launcher.system.GlimmerLink
 import android.os.SystemClock
 import android.graphics.Bitmap
@@ -208,7 +209,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     } to shared
                 }
                 .distinctUntilChanged { a, b -> a.first == b.first }
-                .collect { (_, shared) -> GlimmerLink.syncSettings(getApplication<Application>(), shared) }
+                .collect { (_, shared) ->
+                    ControlsLink.syncSettings(getApplication<Application>(), shared)
+                    GlimmerLink.syncSettings(getApplication<Application>(), shared)
+                }
         }
 
         // Re-render icons whenever the icon pack or icon style changes.

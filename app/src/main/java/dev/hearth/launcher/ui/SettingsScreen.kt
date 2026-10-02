@@ -2,7 +2,9 @@ package dev.hearth.launcher.ui
 
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
+import dev.hearth.launcher.system.ControlsLink
 import dev.hearth.launcher.system.GlimmerLink
+import dev.hearth.launcher.system.HearthApp
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -399,7 +401,7 @@ fun SettingsScreen(
             }
 
             item {
-                Section("Glimmer") {
+                Section("Glimmer & Kontrollzentrum") {
                     GlimmerLinkRows(s, update)
                 }
             }
@@ -420,7 +422,7 @@ fun SettingsScreen(
                     SwitchRow(
                         label = "Hearth-Kontrollzentrum verwenden",
                         description = if (s.ccEnabled) {
-                            "An: Hearths Glas-Kontrollzentrum beim Herunterwischen auf dem Homescreen (über anderen Apps: in der Glimmer-App)"
+                            "An: Hearths Glas-Kontrollzentrum beim Herunterwischen auf dem Homescreen (über anderen Apps: App „Kontrollzentrum“)"
                         } else {
                             "Aus: auf dem Homescreen das normale Kontrollzentrum von One UI"
                         },
@@ -445,7 +447,7 @@ fun SettingsScreen(
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         runCatching { context.startActivity(intent) }
                     }
-                    Note("Das Kontrollzentrum über anderen Apps und das Ersetzen von One UIs Kontrollzentrum stellst du in der Glimmer-App ein; das Aussehen unten gilt auch dort.")
+                    Note("Das Kontrollzentrum über anderen Apps und das Ersetzen von One UIs Kontrollzentrum sind die App „Kontrollzentrum“; das Aussehen unten gilt auch dort.")
                 }
             }
 
@@ -720,44 +722,51 @@ internal fun LockScreenRows(s: LauncherSettings, update: ((LauncherSettings) -> 
         Note("Standard ist „Aus“: dann zeigt der Sperrbildschirm die normalen Mitteilungen des Systems. Stapel: die neueste unten, die anderen dahinter, antippen fächert sie auf. Anzahl: „3 Mitteilungen“, antippen zeigt sie. Liste: alle untereinander. Nach links wischen löscht, antippen öffnet nach dem Entsperren. Braucht die Bedienungshilfe „Glimmer“ und den Benachrichtigungszugriff. Damit nichts doppelt erscheint, stell die Mitteilungen des Systems auf dem Sperrbildschirm auf „Nur Symbole“ oder aus.")
 }
 
-/** In Hearth: where Glimmer lives now, and the fly-in. */
+/** In Hearth: the family's other apps (Glimmer, control center), and the fly-in. */
 @Composable
 private fun GlimmerLinkRows(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
-    val context = LocalContext.current
-    var installed by remember { mutableStateOf(GlimmerLink.isInstalled(context)) }
-    var running by remember { mutableStateOf<Boolean?>(null) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            installed = GlimmerLink.isInstalled(context)
-            running = if (installed) withContext(Dispatchers.IO) { GlimmerLink.status(context)?.running } else null
-            delay(1500)
-        }
-    }
-    Note("Glimmer, die Insel um die Kamera, ist jetzt eine eigene App: mit dem Kontrollzentrum über anderen Apps, dem Face-ID-Moment, Live-Aktivitäten und den Mitteilungen auf dem Sperrbildschirm. Sie läuft mit jedem Launcher; mit Hearth fliegen geschlossene Apps hinein.")
-    if (installed) {
-        ActionRow(
-            label = "Glimmer öffnen",
-            description = when (running) {
-                true -> "Läuft"
-                false -> "Installiert, aber die Bedienungshilfe „Glimmer“ ist aus"
-                null -> "Installiert"
-            },
-        ) { GlimmerLink.openApp(context) }
-    } else {
-        ActionRow(
-            label = "Glimmer installieren",
-            description = "Lädt Glimmer.apk aus dem neuesten Release",
-        ) {
-            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(GlimmerLink.DOWNLOAD_URL))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            runCatching { context.startActivity(intent) }
-        }
-    }
+    Note("Die Insel um die Kamera und das Kontrollzentrum über anderen Apps sind eigene Apps: „Glimmer“ (Insel, Face-ID-Moment, Live-Aktivitäten, Sperrbildschirm) und „Kontrollzentrum“ (Glas-Kontrollzentrum in jeder App, ersetzt One UIs). Beide laufen mit jedem Launcher; mit Hearth fliegen geschlossene Apps in Glimmer.")
+    FamilyAppRow("Glimmer", GlimmerLink, GlimmerLink.DOWNLOAD_URL)
+    FamilyAppRow("Kontrollzentrum", ControlsLink, ControlsLink.DOWNLOAD_URL)
     SwitchRow(
         label = "Apps fliegen in Glimmer",
         description = "Schließt du eine App, die du über Hearth geöffnet hast, fliegt sie selbst in die Insel (wie bei HarmonyOS). Braucht Glimmer.",
         checked = s.glimmerFlyIn,
     ) { v -> update { it.copy(glimmerFlyIn = v) } }
+}
+
+/** One of the other apps: open it (with its state), or get it. */
+@Composable
+private fun FamilyAppRow(name: String, link: HearthApp, downloadUrl: String) {
+    val context = LocalContext.current
+    var installed by remember { mutableStateOf(link.isInstalled(context)) }
+    var running by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            installed = link.isInstalled(context)
+            running = if (installed) withContext(Dispatchers.IO) { link.isRunning(context) } else null
+            delay(1500)
+        }
+    }
+    if (installed) {
+        ActionRow(
+            label = "$name öffnen",
+            description = when (running) {
+                true -> "Läuft"
+                false -> "Installiert, aber die Bedienungshilfe „$name“ ist aus"
+                null -> "Installiert"
+            },
+        ) { link.openApp(context) }
+    } else {
+        ActionRow(
+            label = "$name installieren",
+            description = "Lädt die APK aus dem neuesten Release",
+        ) {
+            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(downloadUrl))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            runCatching { context.startActivity(intent) }
+        }
+    }
 }
 
 @Composable

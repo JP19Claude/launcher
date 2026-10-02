@@ -36,9 +36,10 @@
 
     <!-- Package visibility (Android 11+): which apps the launcher may see -->
     <queries>
-        <!-- The other half: Hearth (launcher) and Glimmer (island, control center) -->
+        <!-- The family: Hearth (launcher), Glimmer (island), control center -->
         <package android:name="dev.hearth.launcher" />
         <package android:name="dev.hearth.glimmer" />
+        <package android:name="dev.hearth.controls" />
         <!-- Claude app, for "Frag Claude" -->
         <package android:name="com.anthropic.claude" />
         <!-- Earbud companion apps, opened for noise cancelling -->
