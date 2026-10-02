@@ -240,6 +240,9 @@ Effekt je nach Android-Version:
 1. Neues GitHub-Repository anlegen und den Projektordner hochladen
 2. GitHub baut die APK bei jedem Push automatisch (Tab "Actions")
 3. Jeder erfolgreiche Build erscheint als Release (`build-<Nummer>`) mit `Hearth.apk`, `Glimmer.apk` und `Kontrollzentrum.apk`
+   und zusätzlich jede App als eigenes Release ihrer Version: `hearth-v<Version>` („Hearth 5.0“),
+   `glimmer-v<Version>` und `kontrollzentrum-v<Version>`, mit `<App>-<Version>.apk`. Alle früheren
+   Versionen werden dabei einmalig nachgetragen (Hearth ab 1.0, Glimmer ab 4.0, Kontrollzentrum ab 4.1).
 4. Neueste APKs direkt laden: `https://github.com/<Besitzer>/<Repo>/releases/latest/download/Hearth.apk`
    sowie `.../Glimmer.apk` und `.../Kontrollzentrum.apk`
 

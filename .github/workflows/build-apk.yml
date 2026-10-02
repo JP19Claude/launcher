@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The whole history, so earlier versions can be read for the per-app releases.
+          fetch-depth: 0
 
       - uses: actions/setup-java@v4
         with:
@@ -36,6 +39,74 @@ jobs:
             Glimmer.apk
             Kontrollzentrum.apk
 
+      # Once: every earlier version of every app as its own release (oldest first, so they
+      # line up in order). A marker tag remembers it's done.
+      - name: Per-app releases for earlier versions (once)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          if gh api "repos/$REPO/git/refs/tags/per-app-releases-done" >/dev/null 2>&1; then
+            echo "Already done."
+            exit 0
+          fi
+          # The last build of each version wins (some versions were built twice).
+          declare -A last
+          for n in $(gh release list --limit 300 --json tagName --jq '.[].tagName' | grep '^build-[0-9]*$' | sed 's/^build-//' | sort -n); do
+            sha=$(gh release view "build-$n" --json targetCommitish --jq .targetCommitish)
+            v=$(git show "$sha:app/build.gradle.kts" 2>/dev/null | grep -o 'versionName = "[^"]*"' | cut -d'"' -f2)
+            [ -n "$v" ] && last[$v]="$n $sha"
+          done
+          for n in $(for v in "${!last[@]}"; do echo "${last[$v]%% *}"; done | sort -n); do
+            sha=$(gh release view "build-$n" --json targetCommitish --jq .targetCommitish)
+            v=$(git show "$sha:app/build.gradle.kts" | grep -o 'versionName = "[^"]*"' | cut -d'"' -f2)
+            dir=$(mktemp -d)
+            gh release download "build-$n" -D "$dir"
+            for entry in "Hearth.apk|hearth|Hearth|der Launcher" \
+                         "Glimmer.apk|glimmer|Glimmer|die Insel um die Kamera" \
+                         "Kontrollzentrum.apk|kontrollzentrum|Kontrollzentrum|das Glas-Kontrollzentrum über allen Apps"; do
+              IFS='|' read -r file slug name what <<< "$entry"
+              [ -f "$dir/$file" ] || continue
+              tag="$slug-v$v"
+              gh release view "$tag" >/dev/null 2>&1 && continue
+              cp "$dir/$file" "$dir/$name-$v.apk"
+              gh release create "$tag" "$dir/$name-$v.apk" \
+                --target "$sha" \
+                --title "$name $v" \
+                --notes "$name $v – $what. Debug-APK aus Build $n (Commit $sha)." \
+                --latest=false
+            done
+            rm -rf "$dir"
+          done
+          gh api -X POST "repos/$REPO/git/refs" -f ref=refs/tags/per-app-releases-done -f sha="$GITHUB_SHA" >/dev/null
+
+      # Each app's own release for this version (updated if the version wasn't raised).
+      - name: Per-app releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=$(grep -o 'versionName = "[^"]*"' app/build.gradle.kts | cut -d'"' -f2)
+          for entry in "Hearth.apk|hearth|Hearth|der Launcher" \
+                       "Glimmer.apk|glimmer|Glimmer|die Insel um die Kamera" \
+                       "Kontrollzentrum.apk|kontrollzentrum|Kontrollzentrum|das Glas-Kontrollzentrum über allen Apps"; do
+            IFS='|' read -r file slug name what <<< "$entry"
+            tag="$slug-v$v"
+            cp "$file" "$name-$v.apk"
+            notes="$name $v – $what. Debug-APK aus Build ${{ github.run_number }} (Commit ${{ github.sha }})."
+            if gh release view "$tag" >/dev/null 2>&1; then
+              gh release upload "$tag" "$name-$v.apk" --clobber
+              gh release edit "$tag" --notes "$notes" --latest=false
+            else
+              gh release create "$tag" "$name-$v.apk" \
+                --target "${{ github.sha }}" \
+                --title "$name $v" \
+                --notes "$notes" \
+                --latest=false
+            fi
+          done
+
+      # All three together, marked as latest: the download links in the apps and the README
+      # (releases/latest/download/…) point here.
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
