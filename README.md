@@ -31,8 +31,9 @@ wippt, trippelt beim Nachdenken, tanzt, schlägt Salto und schickt Herzen.
 - Clawd in Glimmer (ein- und ausschaltbar, ganz oben in der Glimmer-App oder in Hearth unter
   Einstellungen → Clawd): Er ist bei allem dabei, was die Insel zeigt – in der Pille (nachts
   schläft er), bei Musik (er tanzt mit), Anrufen, Timern, Navigation, Nachrichten, Codes,
-  Bildschirmfotos, Laden, Taschenlampe, Sperren und Face ID; aufgeklappt sitzt er neben der
-  Kamera und sagt, was los ist.
+  Bildschirmfotos, Laden und Taschenlampe – vorne im Inhalt, mit dessen Farben unter ihm;
+  aufgeklappt sitzt er neben der Kamera und sagt, was los ist. Beim Sperren und Entsperren
+  hält er sich raus.
 - Noch mehr Widgets: Clawd-Modenschau, Clawd-Wasser, Clawd-Würfel, Clawd-Motivation,
   Clawd-Wochenende und Clawd-Spiel. Alle 16 Clawd-Widgets gibt es im Launcher und in der
   Clawd-App (für jeden Launcher).

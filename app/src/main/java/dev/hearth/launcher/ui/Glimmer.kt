@@ -276,10 +276,10 @@ fun islandSize(
         content is IslandContent.Hidden -> DpSize(0.dp, 0.dp)
         content is IslandContent.Idle -> DpSize(idle.dp, ISLAND_HEIGHT_DP.dp)
         // A little wider than the idle pill, for the padlock on its left.
-        content is IslandContent.Lock -> DpSize(idle.dp + 26.dp + if (clawd) ClawdExtra else 0.dp, ISLAND_HEIGHT_DP.dp)
+        content is IslandContent.Lock -> DpSize(idle.dp + 26.dp, ISLAND_HEIGHT_DP.dp)
         // Like Face ID on the iPhone: the island becomes a rounded square for the moment.
         content is IslandContent.Unlock -> DpSize(UNLOCK_SIZE_DP.dp, UNLOCK_SIZE_DP.dp)
-        !expanded -> DpSize(compact + if (clawd) ClawdExtra else 0.dp, ISLAND_HEIGHT_DP.dp)
+        !expanded -> DpSize(compact + if (clawd && content !is IslandContent.Hidden) ClawdExtra else 0.dp, ISLAND_HEIGHT_DP.dp)
         else -> DpSize(
             full,
             cameraClearance + when (content) {
@@ -775,7 +775,9 @@ fun GlimmerIsland(
                                 topPadding = ExpandedTop + cameraClearance(camera),
                             )
                             // Clawd rides along, in the band beside the camera.
-                            if (settings.glimmerClawd) ExpandedClawd(c, band = ExpandedTop + cameraClearance(camera))
+                            if (settings.glimmerClawd && c !is IslandContent.Lock && c !is IslandContent.Unlock) {
+                                ExpandedClawd(c, band = ExpandedTop + cameraClearance(camera))
+                            }
                             // Several things running: little dots like Samsung's Now Bar; swipe for the next.
                             if (activityCount > 1) {
                                 Row(
@@ -1114,16 +1116,6 @@ private fun CompactContent(content: IslandContent) {
             contentAlignment = Alignment.Center,
         ) {
             UnlockGlyph(content, Modifier.size(46.dp))
-            if (LocalSettings.current.glimmerClawd) {
-                Clawd(
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 6.dp, bottom = 6.dp)
-                        .size(width = 22.dp, height = 19.dp),
-                    mood = clawdMoodFor(content),
-                    animate = LocalSettings.current.animations && !LocalGlimmerStill.current,
-                )
-            }
         }
         return
     }
@@ -1301,8 +1293,17 @@ private fun AroundCamera(
                 .clipToBounds()
                 .padding(start = edge.coerceAtMost(holeStart)),
             verticalAlignment = Alignment.CenterVertically,
-            content = left,
-        )
+        ) {
+            LocalClawdRider.current?.let { mood ->
+                Clawd(
+                    Modifier.size(width = 20.dp, height = 17.dp),
+                    mood = mood,
+                    animate = LocalSettings.current.animations && !LocalGlimmerStill.current,
+                )
+                Spacer(Modifier.width(5.dp))
+            }
+            left()
+        }
         Row(
             Modifier
                 .align(Alignment.CenterEnd)
@@ -1317,8 +1318,14 @@ private fun AroundCamera(
     }
 }
 
-/** The room the small states get on the left for Clawd. */
-private val ClawdExtra = 28.dp
+/**
+ * How much wider the small states get with Clawd: half of it lands left of the camera, where
+ * he rides at the front of the content.
+ */
+private val ClawdExtra = 40.dp
+
+/** Clawd riding along at the start of the island's left part (set while he's switched on). */
+private val LocalClawdRider = compositionLocalOf<ClawdMood?> { null }
 
 /** How Clawd feels about what the island shows. */
 private fun clawdMoodFor(content: IslandContent): ClawdMood = when (content) {
@@ -1366,31 +1373,21 @@ private fun clawdLine(content: IslandContent): String = when (content) {
 }
 
 /**
- * The small island with Clawd riding along: he sits on the far left, everything else as
- * always beside him (still kept off the camera). Idle and Face ID have their own places for him.
+ * The small island with Clawd riding along: he sits at the very front of the left part, inside
+ * the content (so its colors and glow reach under him too), and everything else follows him.
+ * Not with the padlock and Face ID; idle has its own place for him.
  */
 @Composable
 private fun CompactWithClawd(content: IslandContent) {
-    val on = LocalSettings.current.glimmerClawd
-    if (!on || content is IslandContent.Idle || content is IslandContent.Hidden || content is IslandContent.Unlock) {
+    val rides = LocalSettings.current.glimmerClawd &&
+        content !is IslandContent.Idle && content !is IslandContent.Hidden &&
+        content !is IslandContent.Unlock && content !is IslandContent.Lock
+    if (!rides) {
         CompactContent(content)
         return
     }
-    val hole = LocalCameraHole.current
-    Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.width(ClawdExtra).fillMaxHeight().padding(start = 9.dp), contentAlignment = Alignment.CenterStart) {
-            Clawd(
-                Modifier.size(width = 20.dp, height = 17.dp),
-                mood = clawdMoodFor(content),
-                animate = LocalSettings.current.animations && !LocalGlimmerStill.current,
-            )
-        }
-        // The rest is shifted right by Clawd's room: seen from here, the camera moves left.
-        Box(Modifier.weight(1f).fillMaxHeight()) {
-            CompositionLocalProvider(LocalCameraHole provides hole.copy(x = hole.x - ClawdExtra / 2)) {
-                CompactContent(content)
-            }
-        }
+    CompositionLocalProvider(LocalClawdRider provides clawdMoodFor(content)) {
+        CompactContent(content)
     }
 }
 
