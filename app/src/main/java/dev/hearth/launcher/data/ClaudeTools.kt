@@ -132,6 +132,32 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
         }
     }
 
+    /** The same tools in the OpenAI format (NVIDIA, Groq, Gemini, OpenRouter, Mistral …). */
+    val openAiSchema: JSONArray by lazy {
+        JSONArray().apply {
+            for (i in 0 until schema.length()) {
+                val t = schema.optJSONObject(i) ?: continue
+                put(
+                    JSONObject().put("type", "function").put(
+                        "function",
+                        JSONObject()
+                            .put("name", t.optString("name"))
+                            .put("description", t.optString("description"))
+                            .put("parameters", parametersOf(t)),
+                    ),
+                )
+            }
+        }
+    }
+
+    /** Some services refuse an empty "properties"; a tool without inputs simply leaves it out. */
+    private fun parametersOf(tool: JSONObject): JSONObject {
+        val schema = tool.optJSONObject("input_schema") ?: return JSONObject().put("type", "object")
+        val copy = JSONObject(schema.toString())
+        if (copy.optJSONObject("properties")?.length() == 0) copy.remove("properties")
+        return copy
+    }
+
     // Running a tool
 
     suspend fun execute(name: String, input: JSONObject): ToolResult = try {

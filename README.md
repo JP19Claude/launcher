@@ -14,6 +14,11 @@ Claude ist in Hearth eingebaut und erledigt Dinge direkt auf dem Handy, statt nu
   Wetter, Rechnen („17 mal 23“, „15 % von 80“), Apps, Kamera, Einstellungen, Akku, Uhrzeit,
   mehrere Befehle mit „und“. Alles andere geht an die Claude-App (dein Claude-Konto, keine
   API-Kosten).
+- Andere KI-Anbieter, oft mit kostenlosem Kontingent: NVIDIA (build.nvidia.com), Groq,
+  Google Gemini, OpenRouter (Gratis-Modelle mit „:free“), Mistral, Cerebras oder ein eigener
+  OpenAI-kompatibler Dienst (https). Einstellungen → Claude-Assistent → KI-Anbieter, Schlüssel
+  eintragen, Modellname änderbar (es muss Werkzeuge/Function Calling können). Jeder Anbieter
+  behält seinen eigenen Schlüssel.
 - Mit eigenem API-Schlüssel (getrennt vom Claude-Abo abgerechnet) erledigt Claude auch
   Komplexes mit Werkzeugen. Sparmodus (Standard): was Hearth selbst versteht, kostet nichts;
   Standardmodell Haiku 4.5, wenig Denkaufwand.

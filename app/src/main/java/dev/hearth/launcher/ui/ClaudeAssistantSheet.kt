@@ -84,10 +84,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hearth.launcher.data.ChatItem
+import dev.hearth.launcher.data.AiProvider
 import dev.hearth.launcher.data.ClaudeAssistant
 import dev.hearth.launcher.data.ClaudeFix
 import dev.hearth.launcher.data.ClaudeModel
@@ -236,7 +239,8 @@ fun ClaudeAssistantSheet(
                         .background(Brush.verticalGradient(listOf(Terracotta.copy(alpha = 0.20f), Color.Transparent))),
                 ) {
                     Header(
-                        subtitle = if (settings.hasKey) settings.model.label else "Offline-Befehle",
+                        title = if (settings.isClaude || !settings.hasKey) "Claude" else "Assistent",
+                        subtitle = if (settings.hasKey) settings.modelLabel else "Offline-Befehle",
                         canClear = items.isNotEmpty(),
                         onClear = ClaudeAssistant::clear,
                         onSettings = onOpenSettings?.let { open -> { onDismiss(); open() } },
@@ -300,6 +304,7 @@ fun ClaudeAssistantSheet(
 
 @Composable
 private fun Header(
+    title: String,
     subtitle: String,
     canClear: Boolean,
     onClear: () -> Unit,
@@ -315,8 +320,8 @@ private fun Header(
         ClaudeSpark(Terracotta, Modifier.size(26.dp))
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Text("Claude", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
+            Text(title, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (canClear) HeaderButton(Icons.Rounded.Refresh, "Neuer Chat", onClear)
         if (onSettings != null) HeaderButton(Icons.Rounded.Settings, "Einstellungen", onSettings)
@@ -603,10 +608,11 @@ private fun MicGlyph(color: Color, modifier: Modifier = Modifier) {
     }
 }
 
-/** Entering the Anthropic API key; it stays on the phone, in Hearth's own storage. */
+/** Entering the chosen service's API key; it stays on the phone, in Hearth's own storage. */
 @Composable
 internal fun ClaudeKeyField(modifier: Modifier = Modifier, onSaved: () -> Unit = {}) {
     val context = LocalContext.current
+    val s by ClaudeAssistant.settings.collectAsStateWithLifecycle()
     var key by rememberSaveable { mutableStateOf("") }
     Column(modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -620,7 +626,7 @@ internal fun ClaudeKeyField(modifier: Modifier = Modifier, onSaved: () -> Unit =
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = {
                     if (key.isNotBlank()) {
-                        ClaudeAssistant.updateSettings { it.copy(apiKey = key) }
+                        ClaudeAssistant.updateSettings { it.withKey(key) }
                         key = ""
                         onSaved()
                     }
@@ -634,7 +640,7 @@ internal fun ClaudeKeyField(modifier: Modifier = Modifier, onSaved: () -> Unit =
                             .border(0.8.dp, Terracotta.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                     ) {
-                        if (key.isEmpty()) Text("sk-ant-…", color = Color.White.copy(alpha = 0.4f), fontSize = 15.sp)
+                        if (key.isEmpty()) Text(s.provider.keyHint, color = Color.White.copy(alpha = 0.4f), fontSize = 15.sp)
                         inner()
                     }
                 },
@@ -649,15 +655,15 @@ internal fun ClaudeKeyField(modifier: Modifier = Modifier, onSaved: () -> Unit =
                     .clip(CircleShape)
                     .background(if (key.isNotBlank()) Color.White.copy(alpha = 0.92f) else Color.White.copy(alpha = 0.08f))
                     .clickable(enabled = key.isNotBlank()) {
-                        ClaudeAssistant.updateSettings { it.copy(apiKey = key) }
+                        ClaudeAssistant.updateSettings { it.withKey(key) }
                         key = ""
                         onSaved()
                     }
                     .padding(horizontal = 14.dp, vertical = 10.dp),
             )
         }
-        Text(
-            "Schlüssel holen: console.anthropic.com → API Keys",
+        if (s.provider.keyUrl.isNotEmpty()) Text(
+            "Schlüssel holen: " + Uri.parse(s.provider.keyUrl).host.orEmpty(),
             color = Terracotta,
             fontSize = 13.sp,
             modifier = Modifier
@@ -666,7 +672,7 @@ internal fun ClaudeKeyField(modifier: Modifier = Modifier, onSaved: () -> Unit =
                 .clickable {
                     runCatching {
                         context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse("https://console.anthropic.com/settings/keys"))
+                            Intent(Intent.ACTION_VIEW, Uri.parse(s.provider.keyUrl))
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                         )
                     }
@@ -674,6 +680,41 @@ internal fun ClaudeKeyField(modifier: Modifier = Modifier, onSaved: () -> Unit =
                 .padding(vertical = 4.dp),
         )
     }
+}
+
+/** A one-line text setting, saved when done (or when leaving the field). */
+@Composable
+private fun SettingsTextField(
+    value: String,
+    placeholder: String,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    onSave: (String) -> Unit,
+) {
+    var text by rememberSaveable(value) { mutableStateOf(value) }
+    BasicTextField(
+        value = text,
+        onValueChange = { text = it },
+        singleLine = true,
+        textStyle = TextStyle(color = Color.White, fontSize = 15.sp),
+        cursorBrush = SolidColor(Terracotta),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { if (text != value) onSave(text) }),
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { if (!it.isFocused && text != value) onSave(text) },
+        decorationBox = { inner ->
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White.copy(alpha = 0.09f))
+                    .border(0.8.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(16.dp))
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                if (text.isEmpty()) Text(placeholder, color = Color.White.copy(alpha = 0.4f), fontSize = 15.sp)
+                inner()
+            }
+        },
+    )
 }
 
 /** The assistant's part of Hearth's settings. */
@@ -688,29 +729,71 @@ internal fun ClaudeAssistantSettings() {
             checked = s.enabled,
         ) { v -> ClaudeAssistant.updateSettings { it.copy(enabled = v) } }
         RowDivider()
+        ChoiceRow(
+            label = "KI-Anbieter",
+            options = AiProvider.entries,
+            selected = s.provider,
+            optionLabel = { it.label },
+            onSelect = { p -> ClaudeAssistant.updateSettings { it.copy(provider = p) } },
+        )
+        Note(
+            if (s.isClaude) {
+                "Claude von Anthropic. Die API wird getrennt vom Claude-Abo abgerechnet."
+            } else {
+                "${s.provider.label} spricht die OpenAI-Schnittstelle. Viele Anbieter haben ein kostenloses Kontingent (Bedingungen ändern sich). Das Modell muss Werkzeuge (Function Calling) können, sonst kann es auf dem Handy nichts tun."
+            },
+        )
+        if (s.provider == AiProvider.Custom) {
+            Column(Modifier.padding(horizontal = 18.dp, vertical = 6.dp)) {
+                Text("Adresse (OpenAI-kompatibel, endet meist auf /v1)", color = Color.White, fontSize = 15.sp)
+                Spacer(Modifier.size(8.dp))
+                SettingsTextField(
+                    value = s.customUrl,
+                    placeholder = "https://…/v1",
+                    keyboardType = KeyboardType.Uri,
+                ) { v -> ClaudeAssistant.updateSettings { it.copy(customUrl = v.trim()) } }
+            }
+        }
         Column(Modifier.padding(horizontal = 18.dp, vertical = 10.dp)) {
             Text(
-                if (s.hasKey) "API-Schlüssel: gespeichert (…${s.apiKey.takeLast(4)})" else "API-Schlüssel: keiner (kostenlos: Offline-Befehle, der Rest geht an die Claude-App)",
+                if (s.apiKey.isNotBlank()) "API-Schlüssel für ${s.provider.label}: gespeichert (…${s.apiKey.takeLast(4)})" else "API-Schlüssel für ${s.provider.label}: keiner (kostenlos: Offline-Befehle, der Rest geht an die Claude-App)",
                 color = Color.White,
                 fontSize = 15.sp,
             )
             Spacer(Modifier.size(8.dp))
             ClaudeKeyField()
         }
-        if (s.hasKey) {
-            ActionRow(label = "Schlüssel entfernen") { ClaudeAssistant.updateSettings { it.copy(apiKey = "") } }
+        if (s.apiKey.isNotBlank()) {
+            ActionRow(label = "Schlüssel entfernen") { ClaudeAssistant.updateSettings { it.withKey("") } }
         }
         RowDivider()
-        ChoiceRow(
-            label = "Modell",
-            options = ClaudeModel.entries,
-            selected = s.model,
-            optionLabel = { it.label },
-            onSelect = { m -> ClaudeAssistant.updateSettings { it.copy(model = m) } },
-        )
+        if (s.isClaude) {
+            ChoiceRow(
+                label = "Modell",
+                options = ClaudeModel.entries,
+                selected = s.model,
+                optionLabel = { it.label },
+                onSelect = { m -> ClaudeAssistant.updateSettings { it.copy(model = m) } },
+            )
+        } else {
+            Column(Modifier.padding(horizontal = 18.dp, vertical = 10.dp)) {
+                Text("Modell", color = Color.White, fontSize = 15.sp)
+                Spacer(Modifier.size(8.dp))
+                SettingsTextField(
+                    value = s.models[s.provider].orEmpty(),
+                    placeholder = s.provider.defaultModel.ifEmpty { "Modellname" },
+                ) { v -> ClaudeAssistant.updateSettings { it.copy(models = it.models + (it.provider to v.trim())) } }
+                Text(
+                    "Leer lassen für ${s.provider.defaultModel.ifEmpty { "–" }}",
+                    color = Color.White.copy(alpha = 0.55f),
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+        }
         SwitchRow(
             label = "Sparmodus",
-            description = "Alles, was Hearth selbst versteht (Licht, Wecker, Anrufe, Rechnen …), läuft kostenlos ohne API. Nur der Rest geht an Claude",
+            description = "Alles, was Hearth selbst versteht (Licht, Wecker, Anrufe, Rechnen …), läuft kostenlos ohne API. Nur der Rest geht an die KI",
             checked = s.saver,
         ) { v -> ClaudeAssistant.updateSettings { it.copy(saver = v) } }
         SwitchRow(

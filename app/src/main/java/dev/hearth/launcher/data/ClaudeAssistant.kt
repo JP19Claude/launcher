@@ -40,12 +40,43 @@ enum class ClaudeModel(val id: String, val label: String) {
     Opus("claude-opus-5-5", "Opus 5.5 (am klügsten)"),
 }
 
-/** The assistant's own settings. Kept apart from the launcher's, so the key never leaves Hearth. */
+/**
+ * Who answers when Hearth doesn't understand something itself: Claude, or another AI service
+ * with an OpenAI-compatible API (many have a free allowance). Model names can be changed in
+ * the settings; the model must support tools (function calling).
+ */
+enum class AiProvider(
+    val label: String,
+    /** Base address of the API (…/v1); empty for the own entry. */
+    val baseUrl: String,
+    val defaultModel: String,
+    /** Where to get a key. */
+    val keyUrl: String,
+    val keyHint: String,
+) {
+    Anthropic("Claude", "https://api.anthropic.com/v1", "", "https://console.anthropic.com/settings/keys", "sk-ant-…"),
+    Nvidia("NVIDIA", "https://integrate.api.nvidia.com/v1", "meta/llama-3.3-70b-instruct", "https://build.nvidia.com/settings/api-keys", "nvapi-…"),
+    Groq("Groq", "https://api.groq.com/openai/v1", "llama-3.3-70b-versatile", "https://console.groq.com/keys", "gsk_…"),
+    Gemini("Google Gemini", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-2.5-flash", "https://aistudio.google.com/apikey", "AIza…"),
+    OpenRouter("OpenRouter", "https://openrouter.ai/api/v1", "meta-llama/llama-3.3-70b-instruct:free", "https://openrouter.ai/keys", "sk-or-…"),
+    Mistral("Mistral", "https://api.mistral.ai/v1", "mistral-small-latest", "https://console.mistral.ai/api-keys", "API-Schlüssel"),
+    Cerebras("Cerebras", "https://api.cerebras.ai/v1", "llama-3.3-70b", "https://cloud.cerebras.ai", "csk-…"),
+    Custom("Eigener", "", "", "", "API-Schlüssel"),
+}
+
+/** The assistant's own settings. Kept apart from the launcher's, so keys never leave Hearth. */
 data class ClaudeSettings(
     /** "Frag Claude" opens Hearth's assistant (instead of the Claude app). */
     val enabled: Boolean = true,
-    val apiKey: String = "",
+    val provider: AiProvider = AiProvider.Anthropic,
+    /** A key per service, so switching back and forth keeps them. */
+    val keys: Map<AiProvider, String> = emptyMap(),
+    /** Claude's model. */
     val model: ClaudeModel = ClaudeModel.Haiku,
+    /** Other services' models, where changed from their default. */
+    val models: Map<AiProvider, String> = emptyMap(),
+    /** Address of the own OpenAI-compatible service (https://…/v1). */
+    val customUrl: String = "",
     /** Read answers aloud when the question was spoken. */
     val speak: Boolean = true,
     /**
@@ -54,7 +85,23 @@ data class ClaudeSettings(
      */
     val saver: Boolean = true,
 ) {
-    val hasKey: Boolean get() = apiKey.isNotBlank()
+    /** The key of the chosen service. */
+    val apiKey: String get() = keys[provider].orEmpty()
+
+    val hasKey: Boolean get() = apiKey.isNotBlank() && (provider != AiProvider.Custom || customUrl.startsWith("https://"))
+
+    val isClaude: Boolean get() = provider == AiProvider.Anthropic
+
+    /** The model asked for, as the service names it. */
+    val modelId: String get() = if (isClaude) model.id else models[provider]?.takeIf { it.isNotBlank() } ?: provider.defaultModel
+
+    /** For the header: "Haiku 4.5" or "NVIDIA · meta/llama-3.3-70b-instruct". */
+    val modelLabel: String get() = if (isClaude) model.label else "${provider.label} · $modelId"
+
+    /** Base address for the chosen service. */
+    val baseUrl: String get() = (if (provider == AiProvider.Custom) customUrl.trim() else provider.baseUrl).trimEnd('/')
+
+    fun withKey(key: String): ClaudeSettings = copy(keys = keys + (provider to key.trim()))
 }
 
 /** Something the user can do to let Claude go further. */
@@ -128,7 +175,17 @@ object ClaudeAssistant {
         prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         _settings.value = ClaudeSettings(
             enabled = prefs.getBoolean("enabled", true),
-            apiKey = prefs.getString("apiKey", "").orEmpty(),
+            provider = prefs.getString("provider", null)?.let { n -> AiProvider.entries.firstOrNull { it.name == n } }
+                ?: AiProvider.Anthropic,
+            // Claude's key keeps its old place ("apiKey").
+            keys = AiProvider.entries.mapNotNull { p ->
+                val k = prefs.getString(if (p == AiProvider.Anthropic) "apiKey" else "key_${p.name}", "").orEmpty()
+                if (k.isBlank()) null else p to k
+            }.toMap(),
+            models = AiProvider.entries.mapNotNull { p ->
+                prefs.getString("model_${p.name}", null)?.takeIf { it.isNotBlank() }?.let { p to it }
+            }.toMap(),
+            customUrl = prefs.getString("customUrl", "").orEmpty(),
             model = prefs.getString("model", null)?.let { n -> ClaudeModel.entries.firstOrNull { it.name == n } }
                 ?: ClaudeModel.Haiku,
             speak = prefs.getBoolean("speak", true),
@@ -141,13 +198,18 @@ object ClaudeAssistant {
         if (!::app.isInitialized) return
         _settings.update(transform)
         val s = _settings.value
-        prefs.edit()
+        val edit = prefs.edit()
             .putBoolean("enabled", s.enabled)
-            .putString("apiKey", s.apiKey.trim())
+            .putString("provider", s.provider.name)
             .putString("model", s.model.name)
+            .putString("customUrl", s.customUrl.trim())
             .putBoolean("speak", s.speak)
             .putBoolean("saver", s.saver)
-            .apply()
+        AiProvider.entries.forEach { p ->
+            edit.putString(if (p == AiProvider.Anthropic) "apiKey" else "key_${p.name}", s.keys[p].orEmpty().trim())
+            if (p != AiProvider.Anthropic) edit.putString("model_${p.name}", s.models[p].orEmpty().trim())
+        }
+        edit.apply()
     }
 
     // Conversation
@@ -163,7 +225,7 @@ object ClaudeAssistant {
         add(ChatItem.User(id(), q))
         // A long conversation starts afresh (instead of cutting earlier turns out of it, which
         // the API doesn't allow once Claude has thought about them).
-        if (history.size > MAX_HISTORY) {
+        if (history.size > MAX_HISTORY || (history.isNotEmpty() && historyProvider != settings.value.provider)) {
             history.clear()
             conversationSystem = null
         }
@@ -292,60 +354,62 @@ object ClaudeAssistant {
         }
     }
 
+    /** One answer from the AI: what it says, and which tools it wants to use. */
+    private class Turn(val text: String, val calls: List<Call>)
+    private class Call(val id: String, val name: String, val input: JSONObject)
+
+    /** Which service the history is in (Claude's and the OpenAI format differ). */
+    private var historyProvider: AiProvider? = null
+
     private suspend fun runClaude(question: String, spoken: Boolean) {
-        if (history.isEmpty()) conversationSystem = systemPrompt()
+        val s = settings.value
+        if (history.isEmpty()) {
+            conversationSystem = systemPrompt(s)
+            historyProvider = s.provider
+        }
         // The time goes with each question, so the start of the conversation never changes.
-        addUserText("[Jetzt: ${now()}]\n$question")
+        val asked = "[Jetzt: ${now()}]\n$question"
+        if (s.isClaude) addUserText(asked) else history += JSONObject().put("role", "user").put("content", asked)
         var steps = 0
         while (true) {
             if (steps++ >= MAX_STEPS) {
                 add(ChatItem.Reply(id(), "Das waren viele Schritte auf einmal – sag mir, wie es weitergehen soll."))
                 return
             }
-            val response = request()
-            if (response.optString("stop_reason") == "refusal") {
-                throw ClaudeApiException("Dabei kann ich leider nicht helfen.")
-            }
-            val content = response.optJSONArray("content") ?: JSONArray()
-            history += JSONObject().put("role", "assistant").put("content", content)
-
-            val text = StringBuilder()
-            val uses = mutableListOf<JSONObject>()
-            for (i in 0 until content.length()) {
-                val block = content.optJSONObject(i) ?: continue
-                when (block.optString("type")) {
-                    "text" -> text.append(block.optString("text"))
-                    "tool_use" -> uses += block
-                }
-            }
-            val said = text.toString().trim()
+            val turn = if (s.isClaude) requestClaude(s) else requestOpenAi(s)
+            val said = turn.text.trim()
             if (said.isNotEmpty()) add(ChatItem.Reply(id(), said))
 
-            if (uses.isEmpty()) {
+            if (turn.calls.isEmpty()) {
                 if (said.isEmpty()) add(ChatItem.Reply(id(), "Erledigt."))
                 if (spoken && said.isNotEmpty()) speak(said)
                 return
             }
 
             // Every tool call gets its result in the next message, also when it failed.
-            val results = JSONArray()
+            val claudeResults = JSONArray()
             var opened = false
-            for (use in uses) {
-                val name = use.optString("name")
-                val input = use.optJSONObject("input") ?: JSONObject()
-                val r = tools.execute(name, input)
+            for (call in turn.calls) {
+                val r = tools.execute(call.name, call.input)
                 r.label?.let { add(ChatItem.Action(id(), it, r.ok)) }
                 if (!r.ok && r.fix != null) add(ChatItem.Problem(id(), r.forClaude, r.fix))
                 if (r.opensScreen) opened = true
-                results.put(
-                    JSONObject()
-                        .put("type", "tool_result")
-                        .put("tool_use_id", use.optString("id"))
-                        .put("content", r.forClaude)
-                        .put("is_error", !r.ok),
-                )
+                if (s.isClaude) {
+                    claudeResults.put(
+                        JSONObject()
+                            .put("type", "tool_result")
+                            .put("tool_use_id", call.id)
+                            .put("content", r.forClaude)
+                            .put("is_error", !r.ok),
+                    )
+                } else {
+                    history += JSONObject()
+                        .put("role", "tool")
+                        .put("tool_call_id", call.id)
+                        .put("content", (if (r.ok) "" else "Fehler: ") + r.forClaude)
+                }
             }
-            history += JSONObject().put("role", "user").put("content", results)
+            if (s.isClaude) history += JSONObject().put("role", "user").put("content", claudeResults)
             if (opened) _openedScreen.tryEmit(Unit)
         }
     }
@@ -364,23 +428,112 @@ object ClaudeAssistant {
     /** The system prompt, fixed for the whole conversation. */
     private var conversationSystem: String? = null
 
-    private suspend fun request(): JSONObject {
-        val s = settings.value
+    /** Claude through Anthropic's Messages API. */
+    private suspend fun requestClaude(s: ClaudeSettings): Turn {
         val body = JSONObject()
-            .put("model", s.model.id)
+            .put("model", s.modelId)
             .put("max_tokens", 4096)
-            .put("system", conversationSystem ?: systemPrompt())
+            .put("system", conversationSystem ?: systemPrompt(s))
             .put("tools", tools.schema)
             .put("messages", JSONArray(history))
             // Phone tasks are short: little thinking, fast and cheap (Haiku has no effort setting).
             .apply { if (s.model != ClaudeModel.Haiku) put("output_config", JSONObject().put("effort", "low")) }
             .toString()
+        val response = send(s, "${s.baseUrl}/messages", body) { connection ->
+            connection.setRequestProperty("x-api-key", s.apiKey.trim())
+            connection.setRequestProperty("anthropic-version", "2023-06-01")
+        }
+        if (response.optString("stop_reason") == "refusal") {
+            throw ClaudeApiException("Dabei kann ich leider nicht helfen.")
+        }
+        val content = response.optJSONArray("content") ?: JSONArray()
+        history += JSONObject().put("role", "assistant").put("content", content)
+        val text = StringBuilder()
+        val calls = mutableListOf<Call>()
+        for (i in 0 until content.length()) {
+            val block = content.optJSONObject(i) ?: continue
+            when (block.optString("type")) {
+                "text" -> text.append(block.optString("text"))
+                "tool_use" -> calls += Call(block.optString("id"), block.optString("name"), block.optJSONObject("input") ?: JSONObject())
+            }
+        }
+        return Turn(text.toString(), calls)
+    }
+
+    /**
+     * NVIDIA, Groq, Gemini, OpenRouter, Mistral, Cerebras or an own service: the OpenAI chat
+     * format with function calling, which they all speak.
+     */
+    private suspend fun requestOpenAi(s: ClaudeSettings): Turn {
+        val messages = JSONArray().put(JSONObject().put("role", "system").put("content", conversationSystem ?: systemPrompt(s)))
+        history.forEach { messages.put(it) }
+        val body = JSONObject()
+            .put("model", s.modelId)
+            .put("messages", messages)
+            .put("tools", tools.openAiSchema)
+            .put("tool_choice", "auto")
+            .put("max_tokens", 2048)
+            .put("temperature", 0.3)
+            .toString()
+        val response = send(s, "${s.baseUrl}/chat/completions", body) { connection ->
+            connection.setRequestProperty("Authorization", "Bearer ${s.apiKey.trim()}")
+            if (s.provider == AiProvider.OpenRouter) {
+                connection.setRequestProperty("HTTP-Referer", "https://github.com/Vinted7777/launcher")
+                connection.setRequestProperty("X-Title", "Hearth")
+            }
+        }
+        val message = response.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")
+            ?: throw ClaudeApiException("${s.provider.label} hat keine Antwort geschickt. Versuch es noch einmal.", retry = true)
+        val raw = if (message.isNull("content")) "" else message.optString("content")
+        // Some models think out loud in <think> tags; that's not for the user.
+        val text = raw.replace(Regex("(?s)<think>.*?</think>"), "").trim()
+        val calls = mutableListOf<Call>()
+        val echoed = JSONArray()
+        val toolCalls = message.optJSONArray("tool_calls")
+        if (toolCalls != null) {
+            for (i in 0 until toolCalls.length()) {
+                val tc = toolCalls.optJSONObject(i) ?: continue
+                val fn = tc.optJSONObject("function") ?: continue
+                val name = fn.optString("name")
+                if (name.isBlank()) continue
+                // Arguments come as a JSON string (some services send an object).
+                val args = fn.opt("arguments")
+                val input = when (args) {
+                    is JSONObject -> args
+                    is String -> runCatching { JSONObject(args.ifBlank { "{}" }) }.getOrDefault(JSONObject())
+                    else -> JSONObject()
+                }
+                val callId = tc.optString("id").ifBlank { "call_" + id() }
+                calls += Call(callId, name, input)
+                echoed.put(
+                    JSONObject().put("id", callId).put("type", "function")
+                        .put("function", JSONObject().put("name", name).put("arguments", input.toString())),
+                )
+            }
+        }
+        val assistant = JSONObject().put("role", "assistant")
+        if (calls.isEmpty()) {
+            assistant.put("content", text)
+        } else {
+            assistant.put("content", if (text.isEmpty()) JSONObject.NULL else text).put("tool_calls", echoed)
+        }
+        history += assistant
+        return Turn(text, calls)
+    }
+
+    /** Sends a request, with one more try when the service is overloaded. */
+    private suspend fun send(
+        s: ClaudeSettings,
+        url: String,
+        body: String,
+        headers: (HttpURLConnection) -> Unit,
+    ): JSONObject {
+        val name = if (s.isClaude) "Claude" else s.provider.label
         var attempt = 0
         while (true) {
             try {
-                return runInterruptible(Dispatchers.IO) { post(s.apiKey.trim(), body) }
+                return runInterruptible(Dispatchers.IO) { post(url, body, name, s, headers) }
             } catch (e: ClaudeApiException) {
-                // Overloaded or a hiccup on the server: once more, after a moment.
                 if (e.retry && attempt++ < 1) {
                     delay(1500)
                     continue
@@ -390,11 +543,18 @@ object ClaudeAssistant {
         }
     }
 
-    private fun post(key: String, body: String): JSONObject {
+    private fun post(
+        url: String,
+        body: String,
+        name: String,
+        s: ClaudeSettings,
+        headers: (HttpURLConnection) -> Unit,
+    ): JSONObject {
+        if (!url.startsWith("https://")) throw ClaudeApiException("Die Adresse muss mit https:// beginnen.", fix = ClaudeFix.ApiKey)
         val connection = try {
-            URL(API_URL).openConnection() as HttpURLConnection
-        } catch (e: IOException) {
-            throw ClaudeApiException("Keine Verbindung zu Claude. Bist du online?")
+            URL(url).openConnection() as HttpURLConnection
+        } catch (e: Exception) {
+            throw ClaudeApiException("Die Adresse von $name stimmt nicht.")
         }
         try {
             connection.requestMethod = "POST"
@@ -402,41 +562,50 @@ object ClaudeAssistant {
             connection.readTimeout = 90_000
             connection.doOutput = true
             connection.setRequestProperty("content-type", "application/json")
-            connection.setRequestProperty("x-api-key", key)
-            connection.setRequestProperty("anthropic-version", "2023-06-01")
+            headers(connection)
             connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
             val code = connection.responseCode
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
             val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
             if (code in 200..299) {
                 return runCatching { JSONObject(text) }.getOrElse {
-                    throw ClaudeApiException("Claude hat unverständlich geantwortet. Versuch es noch einmal.", retry = true)
+                    throw ClaudeApiException("$name hat unverständlich geantwortet. Versuch es noch einmal.", retry = true)
                 }
             }
-            val detail = runCatching { JSONObject(text).optJSONObject("error")?.optString("message") }.getOrNull()
+            val detail = runCatching {
+                val json = JSONObject(text)
+                json.optJSONObject("error")?.optString("message")?.takeIf { it.isNotBlank() }
+                    ?: json.optString("message").takeIf { it.isNotBlank() }
+                    ?: json.optString("detail").takeIf { it.isNotBlank() }
+                    ?: json.optString("error").takeIf { it.isNotBlank() }
+            }.getOrNull()?.take(200)
             throw when (code) {
-                401 -> ClaudeApiException("Der API-Schlüssel stimmt nicht. Trag ihn bitte neu ein.", fix = ClaudeFix.ApiKey)
-                403 -> ClaudeApiException("Der API-Schlüssel darf das nicht (${detail ?: "keine Berechtigung"}).", fix = ClaudeFix.ApiKey)
-                404 -> ClaudeApiException("Dieses Claude-Modell gibt es für deinen Schlüssel nicht. Wähl in den Einstellungen ein anderes.")
-                429 -> ClaudeApiException("Gerade zu viele Anfragen. Warte kurz und versuch es noch einmal.")
-                400 -> ClaudeApiException(
-                    if (detail?.contains("credit", ignoreCase = true) == true) {
-                        "Auf deinem Anthropic-Konto ist kein Guthaben mehr."
-                    } else {
-                        "Claude konnte die Anfrage nicht lesen (${detail ?: "Fehler 400"}). Starte am besten einen neuen Chat."
+                401 -> ClaudeApiException("Der API-Schlüssel für $name stimmt nicht. Trag ihn bitte neu ein.", fix = ClaudeFix.ApiKey)
+                403 -> ClaudeApiException("Der Schlüssel für $name darf das nicht (${detail ?: "keine Berechtigung"}).", fix = ClaudeFix.ApiKey)
+                404 -> ClaudeApiException(
+                    if (s.isClaude) "Dieses Claude-Modell gibt es für deinen Schlüssel nicht. Wähl in den Einstellungen ein anderes."
+                    else "Das Modell „${s.modelId}“ oder die Adresse gibt es bei $name nicht. Ändere den Modellnamen in den Einstellungen.",
+                )
+                429 -> ClaudeApiException("$name: gerade zu viele Anfragen oder das Gratis-Kontingent ist aufgebraucht. Warte kurz und versuch es noch einmal.")
+                400, 422 -> ClaudeApiException(
+                    when {
+                        detail?.contains("credit", ignoreCase = true) == true -> "Auf deinem $name-Konto ist kein Guthaben mehr."
+                        detail?.contains("tool", ignoreCase = true) == true || detail?.contains("function", ignoreCase = true) == true ->
+                            "Das Modell „${s.modelId}“ kann bei $name keine Werkzeuge benutzen. Wähl in den Einstellungen ein anderes Modell."
+                        else -> "$name konnte die Anfrage nicht lesen (${detail ?: "Fehler $code"}). Starte am besten einen neuen Chat."
                     },
                 )
-                in 500..599 -> ClaudeApiException("Claude ist gerade überlastet. Versuch es gleich noch einmal.", retry = true)
-                else -> ClaudeApiException("Claude hat mit Fehler $code geantwortet.")
+                in 500..599 -> ClaudeApiException("$name ist gerade überlastet. Versuch es gleich noch einmal.", retry = true)
+                else -> ClaudeApiException("$name hat mit Fehler $code geantwortet${detail?.let { " ($it)" } ?: ""}.")
             }
         } catch (e: ClaudeApiException) {
             throw e
         } catch (e: UnknownHostException) {
             throw ClaudeApiException("Kein Internet. Einfache Befehle gehen trotzdem, z. B. „Taschenlampe an“.")
         } catch (e: SocketTimeoutException) {
-            throw ClaudeApiException("Claude hat zu lange gebraucht. Versuch es noch einmal.", retry = true)
+            throw ClaudeApiException("$name hat zu lange gebraucht. Versuch es noch einmal.", retry = true)
         } catch (e: IOException) {
-            throw ClaudeApiException("Keine Verbindung zu Claude (${e.javaClass.simpleName}).")
+            throw ClaudeApiException("Keine Verbindung zu $name (${e.javaClass.simpleName}).")
         } finally {
             connection.disconnect()
         }
@@ -449,13 +618,16 @@ object ClaudeAssistant {
             " (" + SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US).format(d) + ")"
     }
 
-    private fun systemPrompt(): String {
+    private fun systemPrompt(s: ClaudeSettings): String {
         val locale = Locale.getDefault()
+        // Only Claude calls itself Claude; another model is Hearth's assistant.
+        val who = if (s.isClaude) "Claude" else "der KI-Assistent von Hearth"
         return """
-            Du bist Claude, tief eingebaut in Hearth, den Launcher auf dem Android-Handy des Nutzers. Du bist sein Assistent im System: Mit deinen Werkzeugen erledigst du Dinge direkt auf dem Handy – Taschenlampe, Helligkeit, Lautstärke, Ton, Nicht stören, Wecker, Timer, Termine, Anrufe, Nachrichten, E-Mails, Navigation, Apps öffnen, Einstellungen, Musik, Bildschirmfoto, Sperren, das Aussehen des Launchers.
+            Du bist $who, tief eingebaut in Hearth, den Launcher auf dem Android-Handy des Nutzers. Du bist sein Assistent im System: Mit deinen Werkzeugen erledigst du Dinge direkt auf dem Handy – Taschenlampe, Helligkeit, Lautstärke, Ton, Nicht stören, Wecker, Timer, Termine, Anrufe, Nachrichten, E-Mails, Navigation, Apps öffnen, Einstellungen, Musik, Bildschirmfoto, Sperren, das Aussehen des Launchers.
 
             So arbeitest du:
             - Erledige Aufgaben sofort mit den Werkzeugen, statt zu erklären, wie es geht. Frag nur nach, wenn etwas wirklich unklar ist.
+            - Rufe Werkzeuge nur über die Werkzeug-Funktion auf, nie als Text.
             - Antworte kurz wie ein Sprachassistent: ein bis drei Sätze, ohne Markdown, ohne Aufzählungszeichen. Sprich die Sprache des Nutzers (meist Deutsch, Locale ${locale.toLanguageTag()}).
             - Nach einer Aktion sag knapp, was du getan hast. Wenn ein Werkzeug fehlschlägt, sag ehrlich, warum, und was der Nutzer tun kann.
             - Anrufe, SMS, Nachrichten, E-Mails und Termine: Du öffnest das fertige Fenster, der Nutzer bestätigt oder sendet selbst. Sag das dazu.
@@ -553,7 +725,6 @@ object ClaudeAssistant {
     const val EXTRA_PROMPT = "dev.hearth.launcher.CLAUDE_PROMPT"
 
     private const val PREFS = "hearth_claude"
-    private const val API_URL = "https://api.anthropic.com/v1/messages"
     private const val MAX_STEPS = 8
     private const val MAX_HISTORY = 40
     private const val MAX_ITEMS = 80
