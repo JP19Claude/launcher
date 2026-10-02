@@ -142,6 +142,15 @@ class GlimmerController(private val service: GlimmerService) {
         val token = ++unlockToken
         handler.postDelayed({ if (token == unlockToken) unlock.value = null }, hideAfter)
     }
+    /** The padlock on the lock screen pill opens for a moment when unlocking without the symbol. */
+    private val lockOpening = MutableStateFlow(false)
+    private var lockOpenToken = 0
+    private fun openPadlock() {
+        lockOpening.value = true
+        val token = ++lockOpenToken
+        handler.postDelayed({ if (token == lockOpenToken) lockOpening.value = false }, 950)
+    }
+
     private fun hideUnlock() {
         unlockToken++
         scanStartedAt = 0L
@@ -162,12 +171,10 @@ class GlimmerController(private val service: GlimmerService) {
                 return
             }
             val now = SystemClock.uptimeMillis()
-            // The scan ran out without the lock screen saying anything.
-            if (scanStartedAt != 0L && now - scanStartedAt > UNLOCK_SCAN_MS) {
-                // Face ID looks on its own, so finding no one counts as a miss; the finger may
-                // simply not have been put on yet, so its symbol just goes quietly.
-                if (settings.glimmerUnlock == GlimmerUnlock.FaceId) failUnlock() else hideUnlock()
-            }
+            // The scan ran out without the lock screen saying anything: it goes quietly (the
+            // phone may have no face set up, or you just looked at the time). Only a real
+            // "not recognized" from the lock screen turns it red.
+            if (scanStartedAt != 0L && now - scanStartedAt > UNLOCK_SCAN_MS) hideUnlock()
             if (now < watchUntil) {
                 watching = true
                 handler.postDelayed(this, UNLOCK_POLL_MS)
@@ -334,6 +341,9 @@ class GlimmerController(private val service: GlimmerService) {
                         // Unlocked (PIN, pattern, or a biometric that wasn't caught): the tick,
                         // unless it was already shown for this wake-up.
                         Intent.ACTION_USER_PRESENT -> {
+                            if (settings.glimmerUnlock == GlimmerUnlock.Off || keyguard()?.isDeviceSecure != true) {
+                                if (settings.glimmerIdlePill) openPadlock()
+                            }
                             if (!unlockTicked && keyguard()?.isDeviceSecure == true) {
                                 showUnlock(success = true, hideAfter = UNLOCK_DONE_MS)
                             } else if (unlock.value?.success != true) {
@@ -506,6 +516,7 @@ class GlimmerController(private val service: GlimmerService) {
         torchOn.value = false
         unlock.value = null
         watching = false
+        lockOpening.value = false
         // Their timers are cancelled below, so they would otherwise stay forever.
         alert.value = null
         message.value = null
@@ -623,6 +634,7 @@ class GlimmerController(private val service: GlimmerService) {
                 val onLockScreen by locked.collectAsStateWithLifecycle()
                 val unlocking by unlock.collectAsStateWithLifecycle()
                 val aod by dozing.collectAsStateWithLifecycle()
+                val padlockOpen by lockOpening.collectAsStateWithLifecycle()
                 val torch by torchOn.collectAsStateWithLifecycle()
                 val top by insetTop.collectAsStateWithLifecycle()
                 val widthDp by screenWidth.collectAsStateWithLifecycle()
@@ -663,9 +675,16 @@ class GlimmerController(private val service: GlimmerService) {
                 }
                 // On the lock screen too, but without the empty idle pill there.
                 // Unlocking (Face ID moment) goes before everything else.
+                // On the lock screen the pill wears a padlock, so Glimmer is always there; it opens
+                // when unlocking.
                 val main = unlocking
                     ?: shown.firstOrNull()
-                    ?: if (settings.glimmerIdlePill && !sideways && !onLockScreen && !aod) IslandContent.Idle else IslandContent.Hidden
+                    ?: when {
+                        !settings.glimmerIdlePill || sideways || aod -> IslandContent.Hidden
+                        padlockOpen -> IslandContent.Lock(open = true)
+                        onLockScreen -> IslandContent.Lock(open = false)
+                        else -> IslandContent.Idle
+                    }
                 val second = if (unlocking != null) null else shown.drop(1).firstOrNull()
 
                 HearthTheme(dark = true) {
@@ -677,13 +696,14 @@ class GlimmerController(private val service: GlimmerService) {
                             content = main,
                             secondary = second,
                             expanded = isExpanded && !aod && main !is IslandContent.Idle && main !is IslandContent.Hidden &&
-                                main !is IslandContent.Unlock,
+                                main !is IslandContent.Unlock && main !is IslandContent.Lock,
                             dimmed = onAod,
                             style = settings.glimmerStyle,
                             screenWidthDp = widthDp,
                             topInset = (top / density).dp,
                             media = media,
-                            tapOpens = settings.glimmerTapOpens,
+                            // Locked, apps can't come up anyway: a tap unfolds instead.
+                            tapOpens = settings.glimmerTapOpens && !onLockScreen,
                             pulse = pulseCount,
                             glow = settings.glimmerGlow,
                             onToggle = { expanded.value = !expanded.value },
@@ -831,7 +851,7 @@ class GlimmerController(private val service: GlimmerService) {
         const val KEEP_PAUSED_MS = 10 * 60 * 1000L
         const val UNLOCK_POLL_MS = 120L
         /** How long the face is looked for before the shake (Samsung gives up after about as long). */
-        const val UNLOCK_SCAN_MS = 4000L
+        const val UNLOCK_SCAN_MS = 3000L
         const val UNLOCK_DONE_MS = 1300L
         const val UNLOCK_FAIL_MS = 1100L
         /** How long after waking further tries are watched for (a second finger, a PIN). */

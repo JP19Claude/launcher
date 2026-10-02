@@ -16,6 +16,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.SizeTransform
+import androidx.compose.runtime.key
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.RepeatMode
@@ -99,6 +107,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.animation.core.keyframes
 import androidx.compose.ui.graphics.BlurEffect
@@ -112,6 +121,9 @@ sealed interface IslandContent {
 
     /** Nothing going on: a small black pill around the camera. */
     data object Idle : IslandContent
+
+    /** On the lock screen: the pill with a padlock, which opens when the phone unlocks. */
+    data class Lock(val open: Boolean) : IslandContent
 
     data class Media(val playing: NowPlaying) : IslandContent
 
@@ -173,6 +185,8 @@ fun islandSize(content: IslandContent, expanded: Boolean, screenWidthDp: Float, 
     return when {
         content is IslandContent.Hidden -> DpSize(0.dp, 0.dp)
         content is IslandContent.Idle -> DpSize((screenWidthDp * 0.27f).coerceIn(86f, 110f).dp, ISLAND_HEIGHT_DP.dp)
+        // A little wider than the idle pill, for the padlock on its left.
+        content is IslandContent.Lock -> DpSize((screenWidthDp * 0.27f).coerceIn(86f, 110f).dp + 26.dp, ISLAND_HEIGHT_DP.dp)
         // Like Face ID on the iPhone: the island becomes a rounded square for the moment.
         content is IslandContent.Unlock -> DpSize(UNLOCK_SIZE_DP.dp, UNLOCK_SIZE_DP.dp)
         !expanded -> DpSize(compact, ISLAND_HEIGHT_DP.dp)
@@ -185,7 +199,7 @@ fun islandSize(content: IslandContent, expanded: Boolean, screenWidthDp: Float, 
                 else -> 96.dp
             },
         )
-    }.let { if (hasSecondary && !expanded && content !is IslandContent.Idle) DpSize(it.width + SecondaryExtra, it.height) else it }
+    }.let { if (hasSecondary && !expanded && !isPassive(content)) DpSize(it.width + SecondaryExtra, it.height) else it }
 }
 
 /** Sends a notification's intent; Android 14+ wants the sender to vouch for opening a screen. */
@@ -291,7 +305,7 @@ fun GlimmerIsland(
         if (!animations || dimmed || content is IslandContent.Hidden || content is IslandContent.Unlock) return@LaunchedEffect
         val pulsed = pulse != lastPulse[0]
         lastPulse[0] = pulse
-        if (content is IslandContent.Idle && !pulsed) return@LaunchedEffect
+        if ((content is IslandContent.Idle || content is IslandContent.Lock) && !pulsed) return@LaunchedEffect
         launch {
             if (pulsed) {
                 squash.snapTo(0f)
@@ -332,7 +346,7 @@ fun GlimmerIsland(
     // How sharp the content is: from a blur to clear whenever it changes or unfolds.
     val clarity = remember { Animatable(1f) }
     LaunchedEffect(key, expanded) {
-        if (!animations || dimmed || content is IslandContent.Hidden || content is IslandContent.Idle || content is IslandContent.Unlock) {
+        if (!animations || dimmed || isPassive(content)) {
             clarity.snapTo(1f)
             return@LaunchedEffect
         }
@@ -340,13 +354,13 @@ fun GlimmerIsland(
         clarity.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
     }
     val tap: () -> Unit = {
-        if (content !is IslandContent.Idle && content !is IslandContent.Unlock && content !is IslandContent.Hidden) {
+        if (!isPassive(content)) {
             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             if (tapOpens && !expanded) onOpen(content) else onToggle()
         }
     }
     val hold: () -> Unit = {
-        if (content !is IslandContent.Idle && content !is IslandContent.Unlock && content !is IslandContent.Hidden) {
+        if (!isPassive(content)) {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             if (tapOpens && !expanded) onExpand() else onOpen(content)
         }
@@ -410,8 +424,7 @@ fun GlimmerIsland(
                     .pointerInput(content, expanded, tapOpens) {
                         detectTapGestures(
                             onPress = {
-                                val pressable = !dimmed && content !is IslandContent.Idle &&
-                                    content !is IslandContent.Hidden && content !is IslandContent.Unlock
+                                val pressable = !dimmed && !isPassive(content)
                                 if (pressable && animations) {
                                     pressScope.launch { press.animateTo(if (expanded) 1.015f else 1.06f, spring(dampingRatio = 0.7f, stiffness = 700f)) }
                                     tryAwaitRelease()
@@ -431,7 +444,7 @@ fun GlimmerIsland(
                                 val threshold = 18.dp.toPx()
                                 val vertical = abs(total.y) > abs(total.x)
                                 when {
-                                    content is IslandContent.Idle -> Unit
+                                    isPassive(content) -> Unit
                                     vertical && total.y > threshold && !expanded -> {
                                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         onExpand()
@@ -549,12 +562,19 @@ private fun glowColorOf(content: IslandContent, accent: Color): Color = when (co
     else -> Color.White
 }
 
+/** Things that only sit there: no tapping, pulling or pressing. */
+private fun isPassive(content: IslandContent): Boolean =
+    content is IslandContent.Idle || content is IslandContent.Hidden ||
+        content is IslandContent.Unlock || content is IslandContent.Lock
+
 internal fun islandKey(content: IslandContent): String = when (content) {
     is IslandContent.Media -> "media"
     is IslandContent.Live -> "live-${content.notice.key}"
     is IslandContent.Message -> "msg-${content.notice.key}"
     is IslandContent.Alert -> "alert-${content.title}"
     IslandContent.Idle -> "idle"
+    // One key for closed and open, so the padlock opens in place.
+    is IslandContent.Lock -> "lock"
     IslandContent.Hidden -> "hidden"
     // One key for scanning, done and failed, so the scan turns into the tick in place.
     is IslandContent.Unlock -> "unlock"
@@ -659,6 +679,21 @@ private fun rememberLiveNow(notice: LiveNotice): Long {
 /** Small picture on the left: cover, call or timer symbol, or the app's icon. */
 @Composable
 private fun LeadingBadge(content: IslandContent, size: Dp) {
+    // Each new activity's icon pops in with a little overshoot, like on the iPhone.
+    val still = LocalGlimmerStill.current
+    val pop = remember(islandKey(content)) { Animatable(if (still) 1f else 0.4f) }
+    LaunchedEffect(islandKey(content)) { pop.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = 420f)) }
+    Box(
+        Modifier.graphicsLayer {
+            scaleX = pop.value
+            scaleY = pop.value
+            alpha = ((pop.value - 0.4f) / 0.5f).coerceIn(0f, 1f)
+        },
+    ) { LeadingBadgeIcon(content, size) }
+}
+
+@Composable
+private fun LeadingBadgeIcon(content: IslandContent, size: Dp) {
     when (content) {
         is IslandContent.Media -> {
             val art = content.playing.art
@@ -719,6 +754,17 @@ private fun AppBadge(notice: LiveNotice, size: Dp) {
 @Composable
 private fun CompactContent(content: IslandContent) {
     if (content is IslandContent.Idle || content is IslandContent.Hidden) return
+    if (content is IslandContent.Lock) {
+        Row(
+            Modifier
+                .fillMaxSize()
+                .padding(start = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PadlockGlyph(content.open, Modifier.size(width = 13.dp, height = 17.dp))
+        }
+        return
+    }
     if (content is IslandContent.Unlock) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             UnlockGlyph(content, Modifier.size(50.dp))
@@ -741,7 +787,7 @@ private fun CompactContent(content: IslandContent) {
         ) {
             Icon(Icons.Rounded.Call, null, tint = Green, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(5.dp))
-            Text(liveTimeText(content.notice, now) ?: "", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, style = TimeStyle)
+            RollingText(liveTimeText(content.notice, now) ?: "", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.weight(1f))
             HyperWave(listOf(Green, Color(0xFF7CF29A)), playing = true, modifier = Modifier.size(26.dp, 14.dp))
         }
@@ -770,14 +816,13 @@ private fun CompactContent(content: IslandContent) {
                         val now = rememberLiveNow(notice)
                         val time = liveTimeText(notice, now)
                         if (time != null) {
-                            Text(
+                            RollingText(
                                 time,
                                 // On hold: the time stands, a little dimmer.
                                 color = noticeColor(notice.kind).copy(alpha = if (notice.paused) 0.55f else 1f),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                style = TimeStyle,
+                                down = countsDown(notice),
                             )
                         } else {
                             PulseDot(noticeColor(notice.kind))
@@ -941,13 +986,13 @@ private fun ExpandedContent(
                     if (notice.kind == NoticeKind.Call || notice.kind == NoticeKind.Timer || notice.kind == NoticeKind.Recording) {
                         val now = rememberLiveNow(notice)
                         liveTimeText(notice, now)?.let { time ->
-                            Text(
+                            RollingText(
                                 time,
                                 color = noticeColor(notice.kind).copy(alpha = if (notice.paused) 0.6f else 1f),
                                 // Big like the iPhone's timer, digits that don't wobble.
                                 fontSize = 34.sp,
                                 fontWeight = FontWeight.Medium,
-                                style = TimeStyle,
+                                down = countsDown(notice),
                             )
                         }
                     } else if (notice.kind == NoticeKind.Progress) {
@@ -1244,12 +1289,24 @@ private fun HyperExpanded(p: NowPlaying, media: MediaRepository, onOpen: () -> U
 
 @Composable
 private fun IslandButton(glyph: Glyph, big: Boolean = false, onClick: () -> Unit) {
+    // Gives under the finger and springs back, like the iPhone's island buttons.
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val squeeze by animateFloatAsState(
+        if (pressed) 0.84f else 1f,
+        spring(dampingRatio = if (pressed) 0.8f else 0.4f, stiffness = 600f),
+        label = "islandButton",
+    )
     Box(
         Modifier
             .size(if (big) 52.dp else 44.dp)
+            .graphicsLayer {
+                scaleX = squeeze
+                scaleY = squeeze
+            }
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = if (big) 0.16f else 0f))
-            .clickable(onClick = onClick),
+            .background(Color.White.copy(alpha = (if (big) 0.16f else 0f) + if (pressed) 0.12f else 0f))
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         GlyphIcon(glyph, Color.White, Modifier.size(if (big) 26.dp else 22.dp))
@@ -1362,6 +1419,101 @@ private fun UnlockGlyph(content: IslandContent.Unlock, modifier: Modifier) {
             measure.getSegment(0f, measure.length * tickProgress, part, true)
             // The green tick, like Face ID's.
             drawPath(part, Green, style = Stroke(width = stroke * 1.25f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+    }
+}
+
+/** Timers count down, everything else (calls, recordings, stopwatches) counts up. */
+private fun countsDown(notice: LiveNotice): Boolean = notice.kind == NoticeKind.Timer && !notice.stopwatch
+
+/**
+ * Numbers that roll like the iPhone's: a digit that changes slides out and the new one slides
+ * in after it (up when counting up, down when counting down). Still on the always-on display.
+ */
+@Composable
+private fun RollingText(
+    text: String,
+    color: Color,
+    fontSize: TextUnit,
+    fontWeight: FontWeight,
+    modifier: Modifier = Modifier,
+    down: Boolean = false,
+) {
+    if (LocalGlimmerStill.current || !LocalSettings.current.animations) {
+        Text(text, color = color, fontSize = fontSize, fontWeight = fontWeight, maxLines = 1, style = TimeStyle, modifier = modifier)
+        return
+    }
+    Row(modifier) {
+        val count = text.length
+        text.forEachIndexed { i, ch ->
+            // Counted from the right, so "9:59" to "10:00" keeps the seconds in place.
+            key(count - i) {
+                AnimatedContent(
+                    targetState = ch,
+                    transitionSpec = {
+                        if (initialState.isDigit() && targetState.isDigit()) {
+                            val sign = if (down) -1 else 1
+                            (slideInVertically(tween(240, easing = FastOutSlowInEasing)) { sign * it } + fadeIn(tween(180)))
+                                .togetherWith(slideOutVertically(tween(240, easing = FastOutSlowInEasing)) { -sign * it } + fadeOut(tween(140)))
+                                .using(SizeTransform(clip = true))
+                        } else {
+                            fadeIn(tween(150)).togetherWith(fadeOut(tween(120)))
+                        }
+                    },
+                    label = "rollingDigit",
+                ) { c ->
+                    Text(c.toString(), color = color, fontSize = fontSize, fontWeight = fontWeight, maxLines = 1, style = TimeStyle)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The lock screen's padlock in the pill: closed while locked; on unlocking the shackle springs
+ * up and swings open, like the iPhone's lock in the Dynamic Island.
+ */
+@Composable
+private fun PadlockGlyph(open: Boolean, modifier: Modifier) {
+    val still = LocalGlimmerStill.current
+    val o = remember { Animatable(if (open) 1f else 0f) }
+    LaunchedEffect(open) {
+        if (still) o.snapTo(if (open) 1f else 0f)
+        else o.animateTo(if (open) 1f else 0f, spring(dampingRatio = 0.45f, stiffness = 380f))
+    }
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        val stroke = w * 0.16f
+        val bodyTop = h * 0.46f
+        // The body.
+        drawRoundRect(
+            Color.White,
+            topLeft = Offset(0f, bodyTop),
+            size = Size(w, h - bodyTop),
+            cornerRadius = CornerRadius(w * 0.2f),
+        )
+        // The shackle: lifts up and tips open around its left leg.
+        val lift = o.value * h * 0.16f
+        val swing = 0f
+        val left = w * 0.22f
+        val right = w * 0.78f
+        val r = (right - left) / 2f
+        val top = h * 0.08f - lift
+        val shackle = Path().apply {
+            moveTo(left + swing, bodyTop + stroke * 0.3f - lift * 0.6f)
+            lineTo(left + swing, top + r)
+            arcTo(
+                androidx.compose.ui.geometry.Rect(left + swing, top, right + swing, top + 2 * r),
+                startAngleDegrees = 180f,
+                sweepAngleDegrees = 180f,
+                forceMoveTo = false,
+            )
+            // Open: the right leg comes out of the body.
+            lineTo(right + swing, (bodyTop + stroke * 0.3f) - lift - o.value * h * 0.12f)
+        }
+        rotate(degrees = -14f * o.value, pivot = Offset(left, bodyTop)) {
+            drawPath(shackle, Color.White, style = Stroke(width = stroke, cap = StrokeCap.Round))
         }
     }
 }

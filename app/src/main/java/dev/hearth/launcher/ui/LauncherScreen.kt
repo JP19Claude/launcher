@@ -870,6 +870,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     app = app,
                     snapshot = shot,
                     island = island,
+                    style = settings.glimmerFlyInStyle,
                     onPulse = vm::pulseGlimmer,
                     onDone = { flyApp = null },
                 )

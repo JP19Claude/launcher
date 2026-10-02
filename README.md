@@ -113,12 +113,16 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     zur Kamera, wird flach wie eine Kapsel und dunkel; die Insel streckt sich ihr entgegen,
     beide verschmelzen über eine flüssige Brücke (Android 12+), dann drückt sich die Insel
     kurz breit und federt zurück (für Apps, die über Hearth geöffnet wurden; abschaltbar)
-  - Auf dem Sperrbildschirm zeigt Glimmer Aktivitäten (ohne leere Pille); die Mitteilungen
-    dort bleiben beim System
+  - Oder wie bei HyperOS (in Hearth unter „So fliegt sie hinein“): die App bleibt als Ganzes,
+    schrumpft in einem schnellen Bogen zur Kamera, wird zu ihrem Icon und landet in der Insel,
+    die sich kurz nach links für sie öffnet und sich dann federnd darüber schließt
+  - Auf dem Sperrbildschirm ist Glimmer immer da: die Pille trägt ein Schloss, das beim
+    Entsperren aufspringt; Aktivitäten erscheinen dort wie sonst, Antippen klappt auf statt eine
+    App zu öffnen; die Mitteilungen dort bleiben beim System
   - Entsperren wie Face ID: wacht das Handy gesperrt auf, wird Glimmer zum abgerundeten
     Quadrat mit Face-ID-Symbol (oder Fingerabdruck), das atmet und sich umsieht; sobald das
     Handy dich erkennt (auch wenn es auf dem Sperrbildschirm bleibt), wird daraus ein grüner
-    Haken; schlägt Fingerabdruck oder Face ID fehl (der Sperrbildschirm meldet „nicht
+    Haken (findet es niemanden, verschwindet das Symbol still); schlägt Fingerabdruck oder Face ID fehl (der Sperrbildschirm meldet „nicht
     erkannt“, „erneut versuchen“, falsche PIN …), wird das ganze Symbol rot und die Insel
     schüttelt sich wie beim iPhone, bei jedem Versuch neu
   - Always-On-Display: Musik und Aktivitäten bleiben sichtbar, gedimmt und ohne Bewegung
@@ -129,6 +133,9 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     mehr läuft, zieht sie sich in die Kamera zurück statt einfach zu verschwinden
   - Bleibt nach dem Standby da: Sperrbildschirm, AOD und Fenster werden nach dem Ein- und
     Ausschalten mehrmals neu geprüft, ein verlorenes Fenster wird neu angelegt
+  - Zahlen rollen wie beim iPhone (Timer zählen nach unten, Stoppuhr und Anrufe nach oben),
+    Icons neuer Aktivitäten springen mit leichtem Überschwingen hinein, Knöpfe geben unter dem
+    Finger nach
   - Laden zeigt eine kleine Batterie, die sich füllt
   - Stoppuhr und Timer laufen in Glimmer weiter, auch bei der Samsung-Uhr und anderen Uhr-Apps
     (Zeit aus Chronometer oder Text, Stoppuhr mit Zehnteln, angehalten bleibt sie stehen)

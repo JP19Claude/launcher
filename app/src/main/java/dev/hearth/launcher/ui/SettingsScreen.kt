@@ -74,6 +74,7 @@ import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.GlimmerMusicStyle
 import dev.hearth.launcher.data.GlimmerStyle
 import dev.hearth.launcher.data.GlimmerUnlock
+import dev.hearth.launcher.data.FlyInStyle
 import dev.hearth.launcher.data.GlassQuality
 import dev.hearth.launcher.data.GlassTint
 import dev.hearth.launcher.data.IconShape
@@ -714,6 +715,20 @@ private fun GlimmerLinkRows(s: LauncherSettings, update: ((LauncherSettings) -> 
         description = "Schließt du eine App, die du über Hearth geöffnet hast, fliegt sie selbst in die Insel (wie bei HarmonyOS). Braucht Glimmer.",
         checked = s.glimmerFlyIn,
     ) { v -> update { it.copy(glimmerFlyIn = v) } }
+    if (s.glimmerFlyIn) ChoiceRow(
+        label = "So fliegt sie hinein",
+        options = FlyInStyle.entries,
+        selected = s.glimmerFlyInStyle,
+        optionLabel = { it.label },
+        onSelect = { style -> update { it.copy(glimmerFlyInStyle = style) } },
+    )
+    if (s.glimmerFlyIn) Note(
+        if (s.glimmerFlyInStyle == FlyInStyle.HyperOS) {
+            "HyperOS: Die App bleibt als Ganzes, schrumpft in einem schnellen Bogen zur Kamera, wird dabei zu ihrem Icon und landet in der Insel, die sich kurz für sie öffnet."
+        } else {
+            "HarmonyOS: Die App steigt zur Kamera, wird flach wie eine Kapsel und dunkel und verschmilzt über eine flüssige Brücke mit der Insel."
+        },
+    )
 }
 
 /** One of the other apps: open it (with its state), or get it. */
