@@ -82,6 +82,11 @@ internal fun ClawdSettings(
             preview = { h -> s.clawdOutfit to h },
             onSelect = { v -> update { it.copy(clawdHat = v) } },
         )
+        RowDivider()
+        ActionRow(
+            label = "Clawd Jump spielen",
+            description = "Clawd rennt, du tippst zum Springen: über Bugs hüpfen, Herzen sammeln. Rekord: ${dev.hearth.launcher.data.ClawdGameScore.best(context)}",
+        ) { dev.hearth.launcher.data.ClawdGameScore.open(context) }
         if (inLauncher) {
             RowDivider()
             SwitchRow(

@@ -223,6 +223,54 @@
                 android:resource="@xml/clawd_weekend_info" />
         </receiver>
 
+        <receiver
+            android:name=".clawd.ClawdWorldWidget"
+            android:exported="true"
+            android:label="@string/clawd_w_world">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="dev.hearth.clawd.REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clawd_world_info" />
+        </receiver>
+
+        <receiver
+            android:name=".clawd.ClawdFocusWidget"
+            android:exported="true"
+            android:label="@string/clawd_w_focus">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="dev.hearth.clawd.REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clawd_focus_info" />
+        </receiver>
+
+        <receiver
+            android:name=".clawd.ClawdGameWidget"
+            android:exported="true"
+            android:label="@string/clawd_w_game">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="dev.hearth.clawd.REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clawd_game_info" />
+        </receiver>
+
         <!-- Hearth hands over Clawd's look through this (signature-protected). -->
         <provider
             android:name=".system.GlimmerBridgeProvider"

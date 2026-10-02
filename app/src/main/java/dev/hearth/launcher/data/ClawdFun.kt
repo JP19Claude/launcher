@@ -20,7 +20,7 @@ fun clawdAsleep(hour: Int): Boolean = hour >= 23 || hour < 6
  */
 object ClawdPet {
 
-    class State(val food: Int, val joy: Int) {
+    class State(val food: Int, val joy: Int, val level: Int = 1) {
         val mood: ClawdMood
             get() = when {
                 food < 25 -> ClawdMood.Sleep
@@ -53,7 +53,15 @@ object ClawdPet {
     }
 
     fun state(context: Context): State =
-        State(decayed(context, "food", FOOD_PER_HOUR), decayed(context, "joy", JOY_PER_HOUR))
+        State(decayed(context, "food", FOOD_PER_HOUR), decayed(context, "joy", JOY_PER_HOUR), level(context))
+
+    /** Every bit of care counts: a new level every twelve. */
+    private fun level(context: Context): Int = 1 + prefs(context).getInt("care", 0) / 12
+
+    private fun cared(context: Context) {
+        val p = prefs(context)
+        p.edit().putInt("care", p.getInt("care", 0) + 1).apply()
+    }
 
     private fun set(context: Context, food: Int, joy: Int) {
         val now = System.currentTimeMillis()
@@ -65,18 +73,21 @@ object ClawdPet {
 
     fun feed(context: Context): State {
         val s = state(context)
+        cared(context)
         set(context, s.food + 35, s.joy + 5)
         return state(context)
     }
 
     fun play(context: Context): State {
         val s = state(context)
+        cared(context)
         set(context, s.food - 5, s.joy + 30)
         return state(context)
     }
 
     fun pet(context: Context): State {
         val s = state(context)
+        cared(context)
         set(context, s.food, s.joy + 12)
         return state(context)
     }
@@ -224,5 +235,34 @@ fun clawdWeekend(now: java.time.LocalDateTime = java.time.LocalDateTime.now()): 
         6, 7 -> "🎉" to "Wochenende! Genieß es."
         5 -> if (now.hour >= 17) "🎉" to "Feierabend – Wochenende!" else "1" to "Morgen ist Wochenende!"
         else -> "${6 - day}" to "Tage bis zum Wochenende"
+    }
+}
+
+/** Clawd Jump: the best score on this phone. */
+object ClawdGameScore {
+    private fun prefs(context: Context) = context.getSharedPreferences("clawd_game", Context.MODE_PRIVATE)
+
+    fun best(context: Context): Int = prefs(context).getInt("best", 0)
+
+    /** Saves [score] if it beats the record; true when it did. */
+    fun submit(context: Context, score: Int): Boolean {
+        if (score <= best(context)) return false
+        prefs(context).edit().putInt("best", score).apply()
+        // The Clawd app's game widget shows the new record right away.
+        runCatching {
+            context.sendBroadcast(android.content.Intent("dev.hearth.clawd.REFRESH").setPackage(context.packageName))
+        }
+        return true
+    }
+
+    /** Opens the game (from widgets, the chat, the settings). */
+    fun open(context: Context) {
+        runCatching {
+            context.startActivity(
+                android.content.Intent()
+                    .setClassName(context.packageName, "dev.hearth.launcher.ClawdGameActivity")
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
     }
 }

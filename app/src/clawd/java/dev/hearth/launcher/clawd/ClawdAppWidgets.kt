@@ -23,6 +23,10 @@ import dev.hearth.launcher.data.ClawdHat
 import dev.hearth.launcher.data.ClawdOutfit
 import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.ClawdOracle
+import dev.hearth.launcher.data.ClawdFocus
+import dev.hearth.launcher.data.ClawdGameScore
+import dev.hearth.launcher.ui.drawClawdAt
+import dev.hearth.launcher.ui.drawClawdWorldScenery
 import dev.hearth.launcher.data.ClawdDice
 import dev.hearth.launcher.data.ClawdMotivation
 import dev.hearth.launcher.data.ClawdWater
@@ -157,6 +161,9 @@ abstract class ClawdWidgetProvider : AppWidgetProvider() {
             ClawdDiceWidget::class.java,
             ClawdMotivationWidget::class.java,
             ClawdWeekendWidget::class.java,
+            ClawdWorldWidget::class.java,
+            ClawdFocusWidget::class.java,
+            ClawdGameWidget::class.java,
         )
 
         /** Draws every placed widget again (his look changed, the pet was fed in the app …). */
@@ -330,7 +337,7 @@ class ClawdPetWidget : ClawdWidgetProvider() {
         val shown = prefs.getString("petMood_$id", null)?.let { n -> ClawdMood.entries.firstOrNull { it.name == n } }
         return RemoteViews(context.packageName, R.layout.clawd_widget_pet).apply {
             setImageViewBitmap(R.id.image, clawdPicture(context, shown ?: state.mood))
-            setTextViewText(R.id.status, state.status)
+            setTextViewText(R.id.status, "Lv. ${state.level} · ${state.status}")
             setProgressBar(R.id.food, 100, state.food, false)
             setProgressBar(R.id.joy, 100, state.joy, false)
             setOnClickPendingIntent(R.id.feed, tap(context, id, "feed"))
@@ -496,6 +503,138 @@ class ClawdWeekendWidget : ClawdWidgetProvider() {
             setTextViewText(R.id.line, line)
             setTextColor(R.id.line, (if (look.accent == Color.White) Color(0xFFE8A07F) else look.accent).toArgb())
             setOnClickPendingIntent(R.id.root, tap(context, id, "refresh"))
+        }
+    }
+}
+
+// Clawd-Welt
+
+class ClawdWorldWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews {
+        val prefs = widgetPrefs(context)
+        val now = LocalDateTime.now()
+        val night = now.hour >= 21 || now.hour < 6
+        val evening = now.hour in 17..20
+        val pos = prefs.getFloat("world_$id", 0.5f)
+        val left = prefs.getBoolean("worldLeft_$id", false)
+        val pose = prefs.getInt("worldPose_$id", 0)
+        val mood = if (night) ClawdMood.Sleep else listOf(ClawdMood.Wave, ClawdMood.Thinking, ClawdMood.Dance, ClawdMood.Love)[pose % 4]
+        val look = Look.of(context)
+        val picture = renderPicture(720, 360) {
+            val sky = when {
+                night -> listOf(Color(0xFF0B1028), Color(0xFF1E2550))
+                evening -> listOf(Color(0xFF4E3D7A), Color(0xFFE07F6F), Color(0xFFF5BE7A))
+                else -> listOf(Color(0xFF5CA9F0), Color(0xFFA9D8FA))
+            }
+            drawRoundRect(Brush.verticalGradient(sky), cornerRadius = CornerRadius(size.height * 0.12f))
+            if (night) {
+                val s = size.height / 60f
+                listOf(0.1f to 0.15f, 0.3f to 0.32f, 0.45f to 0.1f, 0.62f to 0.28f, 0.9f to 0.4f, 0.2f to 0.5f)
+                    .forEach { (x, y) -> drawRect(Color.White.copy(alpha = 0.8f), Offset(size.width * x, size.height * y), Size(s * 1.6f, s * 1.6f)) }
+            }
+            drawClawdWorldScenery(night, evening, drift = (now.hour * 60 + now.minute) / 1440f)
+            val ch = size.height * 0.5f
+            val cw = ch * 14f / 11f
+            val ground = size.height * 0.8f
+            drawClawdAt(
+                Offset((size.width - cw) * pos, ground - ch * 0.955f),
+                cw,
+                ch,
+                mood,
+                look.color,
+                look.hat,
+                look.outfit,
+                mirrored = left,
+            )
+        }
+        return RemoteViews(context.packageName, R.layout.clawd_widget_world).apply {
+            setImageViewBitmap(R.id.image, picture)
+            setOnClickPendingIntent(R.id.root, tap(context, id, "walk"))
+        }
+    }
+
+    override fun act(context: Context, id: Int, what: String) {
+        val prefs = widgetPrefs(context)
+        val from = prefs.getFloat("world_$id", 0.5f)
+        val to = kotlin.random.Random.nextFloat()
+        prefs.edit()
+            .putFloat("world_$id", to)
+            .putBoolean("worldLeft_$id", to < from)
+            .putInt("worldPose_$id", prefs.getInt("worldPose_$id", 0) + 1)
+            .apply()
+    }
+}
+
+// Clawd-Fokus
+
+class ClawdFocusWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews {
+        val prefs = widgetPrefs(context)
+        val now = System.currentTimeMillis()
+        var end = ClawdFocus.endsAt(context)
+        // Time's up (the alarm, or the next update): counted, and Clawd celebrates a while.
+        if (end in 1..now) {
+            ClawdFocus.finished(context)
+            prefs.edit().putLong("focusDone", now).apply()
+            end = 0L
+        }
+        val running = end > 0L
+        val celebrating = !running && now - prefs.getLong("focusDone", 0L) < 10 * 60_000L
+        val left = if (running) end - now else ClawdFocus.MINUTES * 60_000L
+        val done = ClawdFocus.done(context)
+        return RemoteViews(context.packageName, R.layout.clawd_widget_focus).apply {
+            setImageViewBitmap(
+                R.id.image,
+                clawdPicture(context, if (running) ClawdMood.Thinking else if (celebrating) ClawdMood.Dance else ClawdMood.Idle),
+            )
+            setChronometer(R.id.timer, android.os.SystemClock.elapsedRealtime() + left, null, running)
+            setChronometerCountDown(R.id.timer, true)
+            setTextViewText(
+                R.id.status,
+                when {
+                    running -> "Wir arbeiten · tippen stoppt"
+                    celebrating -> "Geschafft! 🎉 Pause verdient"
+                    done > 0 -> "Fokus · tippen startet · $done ✓"
+                    else -> "Fokus · tippen startet"
+                },
+            )
+            setOnClickPendingIntent(R.id.root, tap(context, id, "toggle"))
+        }
+    }
+
+    override fun act(context: Context, id: Int, what: String) {
+        if (what != "toggle") return
+        val alarms = context.getSystemService(android.app.AlarmManager::class.java)
+        val finish = tap(context, id, "finish")
+        if (ClawdFocus.endsAt(context) > 0L) {
+            ClawdFocus.stop(context)
+            alarms?.cancel(finish)
+        } else {
+            ClawdFocus.start(context)
+            widgetPrefs(context).edit().remove("focusDone").apply()
+            // Wakes the widget when the time is up, so Clawd can celebrate.
+            runCatching { alarms?.set(android.app.AlarmManager.RTC_WAKEUP, ClawdFocus.endsAt(context), finish) }
+        }
+        // One session for all focus widgets.
+        refreshAll(context)
+    }
+}
+
+// Clawd-Spiel
+
+class ClawdGameWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews {
+        val best = ClawdGameScore.best(context)
+        val open = PendingIntent.getActivity(
+            context,
+            2,
+            Intent().setClassName(context.packageName, "dev.hearth.launcher.ClawdGameActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        return RemoteViews(context.packageName, R.layout.clawd_widget_game).apply {
+            setImageViewBitmap(R.id.image, clawdPicture(context, ClawdMood.Dance))
+            setTextViewText(R.id.best, if (best > 0) "Rekord $best · tippen zum Spielen" else "Tippen zum Spielen")
+            setOnClickPendingIntent(R.id.root, open)
         }
     }
 }

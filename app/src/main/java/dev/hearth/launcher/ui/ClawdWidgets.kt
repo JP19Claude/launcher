@@ -235,36 +235,7 @@ internal fun ClawdWorldWidget(modifier: Modifier) {
             .tap { player.play(if (night) ClawdMood.Wave else ClawdMood.Dance) },
     ) {
         if (night) PixelStars(Modifier.fillMaxSize())
-        Canvas(Modifier.fillMaxSize()) {
-            val px = size.height / 40f
-            // Sun or moon, as a pixel block.
-            val orb = if (night) Color(0xFFF2F0E6) else if (evening) Color(0xFFFFD27A) else Color(0xFFFFE07A)
-            val ox = size.width * 0.8f
-            val oy = size.height * 0.14f
-            drawRect(orb, Offset(ox, oy), Size(px * 6, px * 6))
-            drawRect(orb, Offset(ox - px, oy + px), Size(px * 8, px * 4))
-            drawRect(orb, Offset(ox + px, oy - px), Size(px * 4, px * 8))
-            if (night) drawRect(Color(0xFF1E2550), Offset(ox + px * 3, oy), Size(px * 4, px * 4))
-            // Two pixel clouds drifting by (by day and in the evening).
-            if (!night) {
-                val cloud = Color.White.copy(alpha = if (evening) 0.55f else 0.9f)
-                listOf(0f to 0.18f, 0.55f to 0.32f).forEach { (start, y) ->
-                    val x = ((drift + start) % 1f) * (size.width + px * 20) - px * 14
-                    val cy = size.height * y
-                    drawRect(cloud, Offset(x, cy), Size(px * 12, px * 3))
-                    drawRect(cloud, Offset(x + px * 3, cy - px * 2), Size(px * 5, px * 2))
-                }
-            }
-            // The ground: pixel grass on top of earth.
-            val ground = size.height * 0.8f
-            drawRect(if (night) Color(0xFF2D4A3A) else Color(0xFF6CC070), Offset(0f, ground), Size(size.width, px * 2))
-            drawRect(if (night) Color(0xFF3B2F2A) else Color(0xFFB07A55), Offset(0f, ground + px * 2), Size(size.width, size.height - ground))
-            var gx = px
-            while (gx < size.width) {
-                drawRect(if (night) Color(0xFF3F6450) else Color(0xFF8ED68E), Offset(gx, ground - px), Size(px, px))
-                gx += px * 7
-            }
-        }
+        Canvas(Modifier.fillMaxSize()) { drawClawdWorldScenery(night, evening, drift) }
         // Clawd walks to the right, then back to the left; asleep at night, in the middle.
         val clawdH = maxHeight * 0.5f
         val clawdW = clawdH * (14f / 11f)
@@ -278,6 +249,38 @@ internal fun ClawdWorldWidget(modifier: Modifier) {
                 .graphicsLayer { scaleX = if (goingRight || sleeping) 1f else -1f },
             mood = player.mood ?: if (sleeping) ClawdMood.Sleep else if (animate) ClawdMood.Thinking else ClawdMood.Idle,
         )
+    }
+}
+
+/** Clawd's little world: sun or moon, clouds by day, grass and earth (also for the Clawd app). */
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawdWorldScenery(night: Boolean, evening: Boolean, drift: Float) {
+    val px = size.height / 40f
+    // Sun or moon, as a pixel block.
+    val orb = if (night) Color(0xFFF2F0E6) else if (evening) Color(0xFFFFD27A) else Color(0xFFFFE07A)
+    val ox = size.width * 0.8f
+    val oy = size.height * 0.14f
+    drawRect(orb, Offset(ox, oy), Size(px * 6, px * 6))
+    drawRect(orb, Offset(ox - px, oy + px), Size(px * 8, px * 4))
+    drawRect(orb, Offset(ox + px, oy - px), Size(px * 4, px * 8))
+    if (night) drawRect(Color(0xFF1E2550), Offset(ox + px * 3, oy), Size(px * 4, px * 4))
+    // Two pixel clouds drifting by (by day and in the evening).
+    if (!night) {
+        val cloud = Color.White.copy(alpha = if (evening) 0.55f else 0.9f)
+        listOf(0f to 0.18f, 0.55f to 0.32f).forEach { (start, y) ->
+            val x = ((drift + start) % 1f) * (size.width + px * 20) - px * 14
+            val cy = size.height * y
+            drawRect(cloud, Offset(x, cy), Size(px * 12, px * 3))
+            drawRect(cloud, Offset(x + px * 3, cy - px * 2), Size(px * 5, px * 2))
+        }
+    }
+    // The ground: pixel grass on top of earth.
+    val ground = size.height * 0.8f
+    drawRect(if (night) Color(0xFF2D4A3A) else Color(0xFF6CC070), Offset(0f, ground), Size(size.width, px * 2))
+    drawRect(if (night) Color(0xFF3B2F2A) else Color(0xFFB07A55), Offset(0f, ground + px * 2), Size(size.width, size.height - ground))
+    var gx = px
+    while (gx < size.width) {
+        drawRect(if (night) Color(0xFF3F6450) else Color(0xFF8ED68E), Offset(gx, ground - px), Size(px, px))
+        gx += px * 7
     }
 }
 
@@ -503,7 +506,7 @@ internal fun ClawdPetWidget(modifier: Modifier) {
         )
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(state.status, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("Lv. ${state.level} · ${state.status}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             PetBar("Satt", state.food, Color(0xFFFFB04A))
             PetBar("Laune", state.joy, Color(0xFFFF6FA8))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1016,6 +1019,39 @@ internal fun ClawdFashionWidget(id: Int, modifier: Modifier) {
                 overflow = TextOverflow.Ellipsis,
             )
             Text("Antippen: nächster Look", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp, maxLines = 1)
+        }
+    }
+}
+
+// Clawd-Spiel: Clawd Jump from the home screen
+
+/** Clawd Jump on the home screen: the record, and a tap starts the game. */
+@Composable
+internal fun ClawdGameWidget(modifier: Modifier) {
+    val context = LocalContext.current
+    // The record changes while playing: read it again now and then.
+    val best by androidx.compose.runtime.produceState(dev.hearth.launcher.data.ClawdGameScore.best(context)) {
+        while (true) {
+            delay(3000)
+            value = dev.hearth.launcher.data.ClawdGameScore.best(context)
+        }
+    }
+    BoxWithConstraints(modifier.tap { dev.hearth.launcher.data.ClawdGameScore.open(context) }) {
+        val boxH = maxHeight
+        Column(
+            Modifier.fillMaxSize().padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Clawd(Modifier.fillMaxWidth(0.55f).height(boxH * 0.4f), mood = ClawdMood.Dance)
+            Text("Clawd Jump", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(
+                if (best > 0) "Rekord $best · tippen zum Spielen" else "Tippen zum Spielen",
+                color = LocalSettings.current.accent.color.copy(alpha = 0.85f),
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

@@ -117,6 +117,13 @@
         android:theme="@style/Theme.Hearth">
 
 
+        <!-- Clawd Jump: Clawd's little game, in every app of the family that has him. -->
+        <activity
+            android:name=".ClawdGameActivity"
+            android:exported="false"
+            android:label="Clawd Jump"
+            android:taskAffinity="dev.hearth.clawd.game" />
+
         <!-- Only there to get notification access, which Android requires for "now playing". -->
         <service
             android:name=".system.MediaListenerService"

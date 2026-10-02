@@ -28,4 +28,10 @@
     <string name="clawd_w_weekend_d">Wie lange noch bis zum Wochenende</string>
     <string name="clawd_w_fashion">Clawd-Modenschau</string>
     <string name="clawd_w_fashion_d">Clawd probiert Outfits und Hüte an: antippen für den nächsten Look</string>
+    <string name="clawd_w_world">Clawd-Welt</string>
+    <string name="clawd_w_world_d">Clawd in seiner Pixel-Landschaft, mit Tag, Abend und Nacht: antippen und er läuft woanders hin</string>
+    <string name="clawd_w_focus">Clawd-Fokus</string>
+    <string name="clawd_w_focus_d">25 Minuten Fokus-Timer, Clawd arbeitet mit</string>
+    <string name="clawd_w_game">Clawd-Spiel</string>
+    <string name="clawd_w_game_d">Clawd Jump: antippen und losspielen, dein Rekord im Blick</string>
 </resources>

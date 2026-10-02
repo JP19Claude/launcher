@@ -271,6 +271,7 @@ object ClaudeAssistant {
                         add(ChatItem.Reply(id(), talk.text))
                         talk.mood?.let { react(it) }
                         talk.egg?.let { EasterEggs.find(app, it) }
+                        if (talk.game) ClawdGameScore.open(app)
                         if (spoken) speak(talk.text)
                     }
                     quick != null -> runLocal(quick, spoken)

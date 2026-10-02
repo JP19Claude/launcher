@@ -130,6 +130,32 @@ internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawdPose(mood
     }
 }
 
+/** Clawd in his pose inside the box at [topLeft] of [w] × [h], facing left when [mirrored]. */
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawdAt(
+    topLeft: Offset,
+    w: Float,
+    h: Float,
+    mood: ClawdMood,
+    color: Color,
+    hat: ClawdHat,
+    outfit: ClawdOutfit,
+    mirrored: Boolean = false,
+) {
+    val full = size
+    translate(left = topLeft.x, top = topLeft.y) {
+        androidx.compose.ui.graphics.drawscope.scale(
+            scaleX = if (mirrored) -1f else 1f,
+            scaleY = 1f,
+            pivot = Offset(w / 2f, h / 2f),
+        ) {
+            // drawClawd fits him into the scope's size: shrink it to his box for a moment.
+            drawContext.size = Size(w, h)
+            drawClawdPose(mood, color, hat, outfit)
+            drawContext.size = full
+        }
+    }
+}
+
 /**
  * Clawd as a picture, for places without Compose (home screen widgets of other launchers):
  * [background] is drawn first, then Clawd in his pose filling [clawdScale] of the picture.

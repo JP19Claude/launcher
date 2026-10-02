@@ -135,6 +135,9 @@ private val Entries = listOf(
     WidgetEntry(ClawdDiceWidget::class.java, "Clawd-Würfel", "Antippen und er würfelt", ClawdMood.Dance),
     WidgetEntry(ClawdMotivationWidget::class.java, "Clawd-Motivation", "Jeden Tag ein liebes Wort", ClawdMood.Wave),
     WidgetEntry(ClawdWeekendWidget::class.java, "Clawd-Wochenende", "Wie lange noch bis zum Wochenende", ClawdMood.Thinking),
+    WidgetEntry(ClawdWorldWidget::class.java, "Clawd-Welt", "Er in seiner Pixel-Landschaft mit Tag und Nacht, antippen und er läuft woanders hin", ClawdMood.Thinking),
+    WidgetEntry(ClawdFocusWidget::class.java, "Clawd-Fokus", "25-Minuten-Timer, Clawd arbeitet mit und feiert am Ende", ClawdMood.Thinking),
+    WidgetEntry(ClawdGameWidget::class.java, "Clawd-Spiel", "Clawd Jump mit einem Tipp starten, Rekord im Blick", ClawdMood.Dance),
 )
 
 private val Terracotta = Color(0xFFD97757)
@@ -163,6 +166,7 @@ private fun ClawdAppScreen(
         if (answer != null) {
             said = answer.text
             mood = answer.mood ?: ClawdMood.Wave
+            if (answer.game) dev.hearth.launcher.data.ClawdGameScore.open(context)
             return
         }
         if (q.lowercase().startsWith("orakel")) {
@@ -251,7 +255,7 @@ private fun ClawdAppScreen(
             }
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(listOf("Hallo!", "Erzähl einen Witz", "Tanz mal", "Wer bist du?", "Orakel: Wird heute gut?", "Ich hab dich lieb")) { chip ->
+                    items(listOf("Hallo!", "Erzähl einen Witz", "Lass uns spielen", "Erzähl mir was", "Tanz mal", "Wie spät ist es?", "Was kannst du?", "Orakel: Wird heute gut?", "Ich hab dich lieb")) { chip ->
                         Text(
                             chip,
                             color = Color.White,
@@ -266,10 +270,27 @@ private fun ClawdAppScreen(
                 }
             }
 
+            // His game.
+            item {
+                Card("Clawd Jump") {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Spring über die Bugs, sammle Herzen", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Rekord: ${dev.hearth.launcher.data.ClawdGameScore.best(context)}",
+                                color = Color.White.copy(alpha = 0.6f),
+                                fontSize = 13.sp,
+                            )
+                        }
+                        Button("▶ Spielen") { dev.hearth.launcher.data.ClawdGameScore.open(context) }
+                    }
+                }
+            }
+
             // His pet side.
             item {
                 Card("Clawd-Tamagotchi") {
-                    Text(pet.status, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Level ${pet.level} · ${pet.status}", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(8.dp))
                     Bar("Satt", pet.food, Color(0xFFFFB04A))
                     Spacer(Modifier.height(6.dp))
