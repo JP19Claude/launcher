@@ -1,5 +1,7 @@
 package dev.hearth.launcher.ui
 
+import androidx.compose.ui.unit.DpSize
+import dev.hearth.launcher.system.GlimmerLink
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.ui.graphics.asImageBitmap
@@ -167,7 +169,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     var controlOpen by rememberSaveable { mutableStateOf(false) }
     var controlPage by remember { mutableIntStateOf(0) }
     // The app that was just closed, flying into Glimmer.
-    var flyApp by remember { mutableStateOf<Pair<AppInfo, ImageBitmap?>?>(null) }
+    var flyApp by remember { mutableStateOf<Triple<AppInfo, ImageBitmap?, DpSize?>?>(null) }
     var menu by remember { mutableStateOf<GlassMenuRequest?>(null) }
     var widgetPickerOpen by remember { mutableStateOf(false) }
     var selecting by remember { mutableStateOf(false) }
@@ -397,11 +399,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
     LaunchedEffect(Unit) {
         vm.flyIns.collect { fly ->
             val s = currentSettings
-            if (s.glimmerFlyIn && s.glimmerEnabled && s.animations && ControlCenterService.isEnabled) {
+            // Needs the Glimmer app running with its island on.
+            if (s.glimmerFlyIn && s.animations && fly.ready) {
                 // Apps that hide their screen (banking, passwords) give a black picture: then the
                 // card in the app's colors flies instead.
                 val shot = fly.snapshot?.takeIf { withContext(Dispatchers.Default) { snapshotLooksReal(it) } }
-                flyApp = fly.app to shot?.asImageBitmap()
+                flyApp = Triple(fly.app, shot?.asImageBitmap(), fly.island)
             }
         }
     }
@@ -668,11 +671,11 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                     onLongPress = homeMenu,
                                     onDoubleTap = {
                                         if (settings.doubleTapLock) {
-                                            val service = ControlCenterService.instance
-                                            if (service != null) {
-                                                service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
+                                            // Locking needs an accessibility service: Glimmer's.
+                                            if (GlimmerLink.isInstalled(context)) {
+                                                vm.controls.lockScreen()
                                             } else {
-                                                toast = GlassToast("Zum Sperren per Doppeltippen: Bedienungshilfe „Hearth Kontrollzentrum“ einschalten")
+                                                toast = GlassToast("Zum Sperren per Doppeltippen: die App „Glimmer“ installieren und ihre Bedienungshilfe einschalten")
                                             }
                                         }
                                     },
@@ -854,22 +857,20 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         vm.controls.expandNotifications()
                         Unit
                     },
-                    onShowSystemQuickSettings = ControlCenterService.instance?.let { service ->
-                        val open: () -> Unit = {
-                            controlOpen = false
-                            service.showSystemQuickSettings()
-                        }
-                        open
+                    onShowSystemQuickSettings = {
+                        controlOpen = false
+                        vm.controls.expandQuickSettings()
+                        Unit
                     },
                 )
             }
 
-            flyApp?.let { (app, shot) ->
+            flyApp?.let { (app, shot, island) ->
                 GlimmerFlyIn(
                     app = app,
                     snapshot = shot,
-                    island = remember(app) { ControlCenterService.instance?.glimmerIslandSize() },
-                    onPulse = { ControlCenterService.instance?.pulseGlimmer() },
+                    island = island,
+                    onPulse = vm::pulseGlimmer,
                     onDone = { flyApp = null },
                 )
             }

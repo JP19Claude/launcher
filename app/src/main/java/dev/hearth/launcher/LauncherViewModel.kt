@@ -1,6 +1,7 @@
 package dev.hearth.launcher
 
-import dev.hearth.launcher.system.ControlCenterService
+import androidx.compose.ui.unit.DpSize
+import dev.hearth.launcher.system.GlimmerLink
 import android.os.SystemClock
 import android.graphics.Bitmap
 import android.app.Application
@@ -195,6 +196,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             }
         }
 
+        // Hand the control center's look to Glimmer (also on every start), so the one over other
+        // apps looks like Hearth's own.
+        viewModelScope.launch(Dispatchers.IO) {
+            settings
+                .map {
+                    val shared = SettingsRepository.readShared(getApplication<Application>())
+                    shared.keySet().sorted().joinToString(";") { key ->
+                        @Suppress("DEPRECATION")
+                        "$key=${shared.get(key)}"
+                    } to shared
+                }
+                .distinctUntilChanged { a, b -> a.first == b.first }
+                .collect { (_, shared) -> GlimmerLink.syncSettings(getApplication<Application>(), shared) }
+        }
+
         // Re-render icons whenever the icon pack or icon style changes.
         viewModelScope.launch {
             settings
@@ -354,7 +370,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     /** An app flying into Glimmer, with the last picture of it (if one could be taken). */
-    class FlyIn(val app: AppInfo, val snapshot: Bitmap?)
+    class FlyIn(val app: AppInfo, val snapshot: Bitmap?, val island: DpSize?, val ready: Boolean)
 
     /** The app opened last from Hearth; it flies into Glimmer when we're back home. */
     private var pendingFlyIn: AppInfo? = null
@@ -363,11 +379,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     /** Back on the home screen after the launcher was in the background. */
     fun onReturnedHome() {
-        // A picture from just before the home gesture, not one of the window already shrinking.
-        val shot = ControlCenterService.instance?.finishAppSnapshots(SystemClock.uptimeMillis() - 300)
-        val app = pendingFlyIn ?: return
+        val app = pendingFlyIn
         pendingFlyIn = null
-        _flyIns.tryEmit(FlyIn(app, shot))
+        // A picture from just before the home gesture, not one of the window already shrinking.
+        val before = SystemClock.uptimeMillis() - 300
+        viewModelScope.launch(Dispatchers.IO) {
+            // Always tell Glimmer (it stops capturing), even without an app to fly.
+            val back = GlimmerLink.returnedHome(getApplication<Application>(), before)
+            if (app != null && back != null) {
+                _flyIns.emit(FlyIn(app, back.snapshot, back.island, back.ready))
+            }
+        }
+    }
+
+    /** Glimmer hops as the app arrives. */
+    fun pulseGlimmer() {
+        viewModelScope.launch(Dispatchers.IO) { GlimmerLink.pulse(getApplication<Application>()) }
     }
 
     private fun buildLibrary(all: List<AppInfo>, used: Map<String, AppUsage>): AppLibraryData {
@@ -397,7 +424,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun launch(app: AppInfo, sourceBounds: Rect? = null, options: Bundle? = null) {
         usage.recordLaunch(app.key)
         pendingFlyIn = app
-        if (settingsRepo.settings.value.glimmerFlyIn) ControlCenterService.instance?.startAppSnapshots()
+        if (settingsRepo.settings.value.glimmerFlyIn) {
+            viewModelScope.launch(Dispatchers.IO) { GlimmerLink.appLaunched(getApplication<Application>()) }
+        }
         repo.launch(app, sourceBounds, options)
     }
     fun openAppInfo(app: AppInfo) = repo.openAppInfo(app)

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Glimmer: the island around the camera, the control center over other apps, Face ID moment,
+     lock screen notifications. Works with any launcher; with Hearth, apps fly into it. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <activity
+            android:name=".GlimmerActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Glimmer and the control center over any app. -->
+        <service
+            android:name=".system.ControlCenterService"
+            android:exported="true"
+            android:label="@string/control_center_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/control_center_service" />
+        </service>
+
+        <!-- Hearth asks Glimmer through this (signature-protected). -->
+        <provider
+            android:name=".system.GlimmerBridgeProvider"
+            android:authorities="dev.hearth.glimmer.bridge"
+            android:exported="true"
+            android:permission="dev.hearth.permission.BRIDGE" />
+    </application>
+</manifest>

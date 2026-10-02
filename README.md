@@ -1,6 +1,23 @@
 # Hearth Launcher
 
-Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und Liquid Glass.
+Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und Liquid Glass –
+plus **Glimmer**, die Insel um die Frontkamera, als eigene App.
+
+## Zwei Apps
+
+- **Hearth** (`Hearth.apk`, `dev.hearth.launcher`): der Launcher mit Homescreen, Dock,
+  App-Mediathek, Suche, Widgets und seinem Kontrollzentrum auf dem Homescreen.
+- **Glimmer** (`Glimmer.apk`, `dev.hearth.glimmer`): die Insel (Dynamic Island), das
+  Glas-Kontrollzentrum über anderen Apps, Face-ID-Moment, Live-Aktivitäten, Mitteilungen auf
+  dem Sperrbildschirm. Läuft mit jedem Launcher; braucht ihre Bedienungshilfe und den
+  Benachrichtigungszugriff.
+- Zusammen: Apps, die über Hearth geöffnet wurden, fliegen beim Schließen selbst in Glimmer;
+  Doppeltippen zum Sperren und die System-Knöpfe laufen über Glimmer; das Aussehen des
+  Kontrollzentrums stellt Hearth ein und reicht es an Glimmer weiter. Die beiden reden über
+  eine Schnittstelle, die nur Apps mit derselben Signatur nutzen dürfen.
+
+Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/download/Hearth.apk) ·
+[Glimmer.apk](https://github.com/Vinted7777/launcher/releases/latest/download/Glimmer.apk)
 
 ## Funktionen
 
@@ -184,16 +201,18 @@ Effekt je nach Android-Version:
 
 1. Neues GitHub-Repository anlegen und den Projektordner hochladen
 2. GitHub baut die APK bei jedem Push automatisch (Tab "Actions")
-3. Jeder erfolgreiche Build erscheint als Release (`build-<Nummer>`) mit `Hearth.apk`
-4. Neueste APK direkt laden: `https://github.com/<Besitzer>/<Repo>/releases/latest/download/Hearth.apk`
+3. Jeder erfolgreiche Build erscheint als Release (`build-<Nummer>`) mit `Hearth.apk` und `Glimmer.apk`
+4. Neueste APKs direkt laden: `https://github.com/<Besitzer>/<Repo>/releases/latest/download/Hearth.apk`
+   und `.../Glimmer.apk`
 
 ### Variante B: Android Studio
 
 1. Ordner öffnen (File > Open), Gradle-Sync abwarten
-2. Run, oder Build > Build APK(s)
+2. Build-Variante wählen (`hearthDebug` oder `glimmerDebug`), dann Run oder Build > Build APK(s)
 
 Danach Home-Taste drücken und "Hearth" als Standard-Launcher wählen,
 oder: Einstellungen > Apps > Standard-Apps > Startbildschirm-App.
+Glimmer öffnen und dort die Bedienungshilfe „Glimmer“ und den Benachrichtigungszugriff einschalten.
 
 ## Struktur
 

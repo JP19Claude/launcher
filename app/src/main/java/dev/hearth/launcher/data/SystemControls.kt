@@ -29,6 +29,7 @@ import android.nfc.NfcAdapter
 import android.os.PowerManager
 import android.view.KeyEvent
 import dev.hearth.launcher.system.ControlCenterService
+import dev.hearth.launcher.system.GlimmerLink
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -241,15 +242,23 @@ class SystemControls(private val context: Context) {
 
     // One UI style extras
 
-    /** Needs the Hearth accessibility service; returns false (and opens its settings) without it. */
+    /**
+     * Lock, screenshot, power menu: only an accessibility service may do these. In Glimmer
+     * that's its own; from Hearth they're asked of Glimmer. Without Glimmer: false, and the
+     * accessibility settings open.
+     */
     private fun globalAction(action: Int, delayMs: Long = 0): Boolean {
         val service = ControlCenterService.instance
-        if (service == null) {
-            start(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            return false
+        if (service != null) {
+            Handler(Looper.getMainLooper()).postDelayed({ service.performGlobalAction(action) }, delayMs)
+            return true
         }
-        Handler(Looper.getMainLooper()).postDelayed({ service.performGlobalAction(action) }, delayMs)
-        return true
+        if (GlimmerLink.isInstalled(context)) {
+            writer.postDelayed({ GlimmerLink.globalAction(context, action) }, delayMs)
+            return true
+        }
+        start(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        return false
     }
 
     /** Waits a moment, so the control center itself is gone from the screenshot. */
@@ -405,6 +414,7 @@ class SystemControls(private val context: Context) {
     fun expandNotifications(): Boolean = runCatching {
         // The accessibility service can do this officially; use it when it's on.
         if (ControlCenterService.instance?.showNotifications() == true) return true
+        if (ControlCenterService.instance == null && GlimmerLink.showNotifications(context)) return true
         val service = context.getSystemService("statusbar") ?: return false
         Class.forName("android.app.StatusBarManager").getMethod("expandNotificationsPanel").invoke(service)
         true
@@ -413,6 +423,7 @@ class SystemControls(private val context: Context) {
     /** The system's own quick settings (One UI's control center). */
     fun expandQuickSettings(): Boolean = runCatching {
         if (ControlCenterService.instance?.showSystemQuickSettings() == true) return true
+        if (ControlCenterService.instance == null && GlimmerLink.showQuickSettings(context)) return true
         val service = context.getSystemService("statusbar") ?: return false
         Class.forName("android.app.StatusBarManager").getMethod("expandSettingsPanel").invoke(service)
         true

@@ -20,23 +20,26 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build debug APK
+      - name: Build debug APKs (Hearth launcher and Glimmer)
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
-          cp app/build/outputs/apk/debug/app-debug.apk Hearth.apk
+          ./gradlew assembleHearthDebug assembleGlimmerDebug
+          cp app/build/outputs/apk/hearth/debug/app-hearth-debug.apk Hearth.apk
+          cp app/build/outputs/apk/glimmer/debug/app-glimmer-debug.apk Glimmer.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hearth-debug-apk
-          path: Hearth.apk
+          name: hearth-glimmer-debug-apks
+          path: |
+            Hearth.apk
+            Glimmer.apk
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "build-${{ github.run_number }}" Hearth.apk \
+          gh release create "build-${{ github.run_number }}" Hearth.apk Glimmer.apk \
             --target "${{ github.sha }}" \
             --title "Hearth Build ${{ github.run_number }}" \
-            --notes "Debug-APK vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
+            --notes "Hearth.apk (Launcher) und Glimmer.apk (Insel, Kontrollzentrum über Apps). Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
             --latest

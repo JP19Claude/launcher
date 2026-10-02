@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.PixelFormat
+import android.hardware.HardwareBuffer
 import android.view.Display
 import android.graphics.Bitmap
 import android.graphics.Rect
@@ -41,7 +42,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import dev.hearth.launcher.MainActivity
+import dev.hearth.launcher.GlimmerActivity
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.MediaRepository
 import dev.hearth.launcher.data.SettingsRepository
@@ -382,7 +383,7 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
      * into Glimmer. Only the last two pictures are kept, in memory; nothing is saved.
      */
     private var snapshotting = false
-    private val snapshots = ArrayDeque<Pair<Long, Bitmap>>()
+    private val snapshots = ArrayDeque<Pair<Long, HardwareBuffer>>()
     private val snapshotTick = object : Runnable {
         override fun run() {
             if (!snapshotting || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
@@ -396,11 +397,12 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
                         object : TakeScreenshotCallback {
                             override fun onSuccess(result: ScreenshotResult) {
                                 val buffer = result.hardwareBuffer
-                                val bitmap = runCatching { Bitmap.wrapHardwareBuffer(buffer, result.colorSpace) }.getOrNull()
-                                buffer.close()
-                                if (bitmap == null || !snapshotting) return
-                                snapshots.addLast(SystemClock.uptimeMillis() to bitmap)
-                                while (snapshots.size > 2) snapshots.removeFirst()
+                                if (!snapshotting) {
+                                    buffer.close()
+                                    return
+                                }
+                                snapshots.addLast(SystemClock.uptimeMillis() to buffer)
+                                while (snapshots.size > 2) snapshots.removeFirst().second.close()
                             }
 
                             override fun onFailure(errorCode: Int) = Unit
@@ -426,15 +428,18 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
      * Back home: stop capturing and hand out the last picture taken before [beforeUptime]
      * (pictures from during the home gesture would show the window already shrinking).
      */
-    fun finishAppSnapshots(beforeUptime: Long): Bitmap? {
-        val shot = snapshots.lastOrNull { it.first <= beforeUptime && beforeUptime - it.first < 4000 }?.second
+    fun finishAppSnapshots(beforeUptime: Long): HardwareBuffer? {
+        val pick = snapshots.lastOrNull { it.first <= beforeUptime && beforeUptime - it.first < 4000 }
+        if (pick != null) snapshots.remove(pick)
         stopAppSnapshots()
-        return shot
+        // Handed on to Hearth (the parcel shares it); closed here once that's done.
+        return pick?.second?.also { buffer -> handler.postDelayed({ runCatching { buffer.close() } }, 5000) }
     }
 
     private fun stopAppSnapshots() {
         snapshotting = false
         handler.removeCallbacks(snapshotTick)
+        snapshots.forEach { runCatching { it.second.close() } }
         snapshots.clear()
     }
 
@@ -600,9 +605,9 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
                         onRevealChanged = this@ControlCenterService::setPanelBlur,
                         onOpenLauncherSettings = {
                             hidePanel(immediately = true)
-                            val intent = Intent(this@ControlCenterService, MainActivity::class.java)
+                            // Glimmer's own settings (control center look, Glimmer, lock screen).
+                            val intent = Intent(this@ControlCenterService, GlimmerActivity::class.java)
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                .putExtra(MainActivity.EXTRA_OPEN_SETTINGS, true)
                             runCatching { startActivity(intent) }
                         },
                         onShowNotifications = {

@@ -1133,9 +1133,10 @@ private fun UnlockGlyph(content: IslandContent.Unlock, modifier: Modifier) {
                 quadraticBezierTo(inset, inset, inset + r, inset)
                 lineTo(inset + len, inset)
             }
-            val frameAlpha = 1f - 0.5f * d
+            // Unlocked: the frame turns green with the tick.
+            val frameColor = androidx.compose.ui.graphics.lerp(Color.White, Green, d).copy(alpha = 1f - 0.35f * d)
             for ((sx, sy) in listOf(1f to 1f, -1f to 1f, 1f to -1f, -1f to -1f)) {
-                scale(sx, sy, center) { drawPath(corner, Color.White.copy(alpha = frameAlpha), style = lineStyle) }
+                scale(sx, sy, center) { drawPath(corner, frameColor, style = lineStyle) }
             }
         }
         val features = 1f - ((d - 0f) / 0.45f).coerceIn(0f, 1f)
@@ -1192,7 +1193,8 @@ private fun UnlockGlyph(content: IslandContent.Unlock, modifier: Modifier) {
             val measure = PathMeasure().apply { setPath(tick, false) }
             val part = Path()
             measure.getSegment(0f, measure.length * tickProgress, part, true)
-            drawPath(part, Color.White, style = Stroke(width = stroke * 1.2f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            // The green tick, like Face ID's.
+            drawPath(part, Green, style = Stroke(width = stroke * 1.25f, cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
     }
 }

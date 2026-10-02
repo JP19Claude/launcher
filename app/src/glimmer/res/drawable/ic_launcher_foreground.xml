@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- The island: a black pill with a warm glimmer around it -->
+    <path
+        android:fillColor="#55D97757"
+        android:pathData="M30,46 L78,46 A10,10 0 0 1 78,66 L30,66 A10,10 0 0 1 30,46 Z" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M33,48 L75,48 A8,8 0 0 1 75,64 L33,64 A8,8 0 0 1 33,48 Z" />
+    <path
+        android:fillColor="#1C1C22"
+        android:pathData="M66,56 m-4,0 a4,4 0 1 0 8,0 a4,4 0 1 0 -8,0" />
+    <path
+        android:fillColor="#D97757"
+        android:pathData="M41,52 L43,52 L43,60 L41,60 Z M45,50 L47,50 L47,62 L45,62 Z M49,53 L51,53 L51,59 L49,59 Z" />
+</vector>

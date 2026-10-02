@@ -1,5 +1,8 @@
 package dev.hearth.launcher.ui
 
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import dev.hearth.launcher.system.GlimmerLink
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -121,15 +124,6 @@ fun SettingsScreen(
     LaunchedEffect(Unit) { vm.refreshIconPacks() }
 
     var pickerOpen by remember { mutableStateOf(false) }
-
-    // Picks up the accessibility switch when coming back from the system settings.
-    var serviceOn by remember { mutableStateOf(ControlCenterService.isEnabled) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            serviceOn = ControlCenterService.isEnabled
-            delay(1000)
-        }
-    }
 
     Box(Modifier.fillMaxSize()) {
         GlassBackdropFill(blur = 36.dp, modifier = Modifier.matchParentSize())
@@ -406,74 +400,7 @@ fun SettingsScreen(
 
             item {
                 Section("Glimmer") {
-                    Note("Hearths Insel um die Frontkamera, in jeder App: Musik mit Cover und tanzenden Balken, Anrufe, Timer, Navigation, Downloads, neue Nachrichten, Laden, Lautlos, Kopfhörer, Nicht stören und voller Akku. Nach unten ziehen klappt sie auf, nach oben schließt sie, zur Seite wechselt zwischen zwei Aktivitäten; der kleine Kreis daneben holt die zweite nach vorn. In der Musik-Ansicht spult der Balken.")
-                    SwitchRow(label = "Glimmer anzeigen", checked = s.glimmerEnabled) { v -> update { it.copy(glimmerEnabled = v) } }
-                    ChoiceRow(
-                        label = "Aussehen",
-                        options = GlimmerStyle.entries,
-                        selected = s.glimmerStyle,
-                        optionLabel = { it.label },
-                        onSelect = { style -> update { it.copy(glimmerStyle = style) } },
-                    )
-                    ChoiceRow(
-                        label = "Beim Entsperren",
-                        options = GlimmerUnlock.entries,
-                        selected = s.glimmerUnlock,
-                        optionLabel = { it.label },
-                        onSelect = { u -> update { it.copy(glimmerUnlock = u) } },
-                    )
-                    SwitchRow(
-                        label = "Auf dem Always-On-Display",
-                        description = "Musik und Aktivitäten bleiben im AOD sichtbar, gedimmt und ohne Bewegung (wenn das Handy fremde Einblendungen dort zulässt)",
-                        checked = s.glimmerAod,
-                    ) { v -> update { it.copy(glimmerAod = v) } }
-                    ChoiceRow(
-                        label = "Musik",
-                        options = GlimmerMusicStyle.entries,
-                        selected = s.glimmerMusicStyle,
-                        optionLabel = { it.label },
-                        onSelect = { style -> update { it.copy(glimmerMusicStyle = style) } },
-                    )
-                    SwitchRow(
-                        label = "Kleine Pille, wenn nichts läuft",
-                        description = "Wie beim iPhone; im Querformat ausgeblendet",
-                        checked = s.glimmerIdlePill,
-                    ) { v -> update { it.copy(glimmerIdlePill = v) } }
-                    SwitchRow(label = "Neue Nachrichten kurz zeigen", checked = s.glimmerMessages) { v ->
-                        update { it.copy(glimmerMessages = v) }
-                    }
-                    SwitchRow(
-                        label = "Kopfhörer, Nicht stören, Akku voll",
-                        description = "Kurz anzeigen, wenn Kopfhörer sich verbinden, „Nicht stören“ umschaltet oder der Akku voll ist",
-                        checked = s.glimmerAlerts,
-                    ) { v -> update { it.copy(glimmerAlerts = v) } }
-                    SwitchRow(
-                        label = "Antippen öffnet die App",
-                        description = if (s.glimmerTapOpens) "Wie beim iPhone; gedrückt halten klappt auf" else "Aus: Antippen klappt auf, gedrückt halten öffnet die App",
-                        checked = s.glimmerTapOpens,
-                    ) { v -> update { it.copy(glimmerTapOpens = v) } }
-                    SwitchRow(label = "Leuchten bei Neuem", description = "Glimmer schimmert kurz in der Farbe der Aktivität", checked = s.glimmerGlow) { v ->
-                        update { it.copy(glimmerGlow = v) }
-                    }
-                    SwitchRow(
-                        label = "Apps fliegen in Glimmer",
-                        description = "Schließt du eine App, schrumpft sie und fliegt in die Insel, wie beim iPhone (für Apps, die du über Hearth öffnest)",
-                        checked = s.glimmerFlyIn,
-                    ) { v -> update { it.copy(glimmerFlyIn = v) } }
-                    RowDivider()
-                    ActionRow(
-                        label = "Bedienungshilfe einschalten",
-                        description = if (serviceOn) "An" else "Nötig: „Hearth Kontrollzentrum“ unter Bedienungshilfen",
-                    ) {
-                        val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        runCatching { context.startActivity(intent) }
-                    }
-                    ActionRow(
-                        label = "Benachrichtigungszugriff",
-                        description = "Für Musik, Anrufe, Timer und Nachrichten in Glimmer",
-                        onClick = vm.media::requestAccess,
-                    )
+                    GlimmerLinkRows(s, update)
                 }
             }
 
@@ -493,40 +420,16 @@ fun SettingsScreen(
                     SwitchRow(
                         label = "Hearth-Kontrollzentrum verwenden",
                         description = if (s.ccEnabled) {
-                            "An: Hearths Glas-Kontrollzentrum, in Hearth und (mit dem Dienst) über anderen Apps"
+                            "An: Hearths Glas-Kontrollzentrum beim Herunterwischen auf dem Homescreen (über anderen Apps: in der Glimmer-App)"
                         } else {
-                            "Aus: überall das normale Kontrollzentrum von One UI; Glimmer läuft weiter"
+                            "Aus: auf dem Homescreen das normale Kontrollzentrum von One UI"
                         },
                         checked = s.ccEnabled,
                     ) { v -> update { it.copy(ccEnabled = v) } }
                     ActionRow(
-                        label = "Hearth-Kontrollzentrum in allen Apps",
-                        description = if (serviceOn) {
-                            "An: in jeder App oben im gewählten Bereich nach unten wischen"
-                        } else {
-                            "Aus: tippen und unter Bedienungshilfen „Hearth Kontrollzentrum“ einschalten"
-                        },
-                    ) {
-                        val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        runCatching { context.startActivity(intent) }
-                    }
-                    SwitchRow(
-                        label = "System-Kontrollzentrum ersetzen",
-                        description = "Die ganze Statusleiste öffnet dann Hearths Kontrollzentrum, Mitteilungen gibt es darin per Knopf. Geht das von One UI & Co. trotzdem auf (andere Geste), schließt Hearth es sofort. Braucht den Dienst oben.",
-                        checked = s.interceptSystemShade,
-                    ) { v -> update { it.copy(interceptSystemShade = v) } }
-                    ActionRow(
                         label = "Medienanzeige erlauben",
                         description = "Benachrichtigungszugriff, damit das Kontrollzentrum zeigt, was gerade läuft",
                         onClick = vm.media::requestAccess,
-                    )
-                    if (!s.interceptSystemShade) ChoiceRow(
-                        label = "Bereich oben, der es öffnet",
-                        options = TriggerZone.entries,
-                        selected = s.triggerZone,
-                        optionLabel = { it.label },
-                        onSelect = { zone -> update { it.copy(triggerZone = zone) } },
                     )
                     RowDivider()
                     ActionRow(
@@ -542,116 +445,13 @@ fun SettingsScreen(
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         runCatching { context.startActivity(intent) }
                     }
-                    Note("Ganz entfernen lässt sich das System-Kontrollzentrum nur mit Root. Mit dem Dienst fängt Hearth aber das Wischen über der Statusleiste ab, und mit „ersetzen“ schließt es das System-Kontrollzentrum, sobald es doch aufgeht. Über den Kacheln-Knopf oben im Hearth-Kontrollzentrum kommst du jederzeit an die Original-Schalter.")
+                    Note("Das Kontrollzentrum über anderen Apps und das Ersetzen von One UIs Kontrollzentrum stellst du in der Glimmer-App ein; das Aussehen unten gilt auch dort.")
                 }
             }
 
             item {
                 Section("Kontrollzentrum: Aussehen") {
-                    ChoiceRow(
-                        label = "Stil",
-                        options = CcStyle.entries,
-                        selected = s.ccStyle,
-                        optionLabel = { it.label },
-                        // The matching colors and details come along; all can be changed below.
-                        onSelect = { style -> update { it.withCcStyle(style) } },
-                    )
-                    Note("iOS 27: klares Glas, iOS-Farben, Verbindungen neben der Medien-Karte, Mitteilungen gestapelt wie auf dem iPhone. ColorOS 17: große Kacheln, leuchtende Schalter.")
-                    RowDivider()
-                    SwitchRow(
-                        label = "Nach rechts wischen: Mitteilungen",
-                        description = "Eigene Glas-Seite mit deinen Mitteilungen links neben den Schaltern; antippen öffnet, nach rechts wischen löscht. Mit „System-Kontrollzentrum ersetzen“ öffnet die linke Hälfte der Statusleiste gleich die Mitteilungen.",
-                        checked = s.ccNotifications,
-                    ) { v -> update { it.copy(ccNotifications = v) } }
-                    RowDivider()
-                    ChoiceRow(
-                        label = "Farbe eingeschalteter Schalter",
-                        options = CcColorMode.entries,
-                        selected = s.ccColors,
-                        optionLabel = { it.label },
-                        onSelect = { mode -> update { it.copy(ccColors = mode) } },
-                    )
-                    ChoiceRow(
-                        label = "Form der Schalter",
-                        options = CcToggleShape.entries,
-                        selected = s.ccShape,
-                        optionLabel = { it.label },
-                        onSelect = { shape -> update { it.copy(ccShape = shape) } },
-                    )
-                    ChoiceRow(
-                        label = "Regler für Helligkeit und Lautstärke",
-                        options = CcSliderStyle.entries,
-                        selected = s.ccSliders,
-                        optionLabel = { it.label },
-                        onSelect = { style -> update { it.copy(ccSliders = style) } },
-                    )
-                    SwitchRow(label = "Leuchtende Kontur", description = "Eingeschaltete Schalter glühen wie bei ColorOS 17", checked = s.ccGlow) { v ->
-                        update { it.copy(ccGlow = v) }
-                    }
-                    SwitchRow(label = "Beschriftungen unter den Schaltern", checked = s.ccLabels) { v ->
-                        update { it.copy(ccLabels = v) }
-                    }
-                    RowDivider()
-                    SwitchRow(label = "Große WLAN- und Mobil-Kacheln (ColorOS)", checked = s.ccBigTiles) { v ->
-                        update { it.copy(ccBigTiles = v) }
-                    }
-                    SwitchRow(label = "Medien-Karte", checked = s.ccShowMedia) { v ->
-                        update { it.copy(ccShowMedia = v) }
-                    }
-                    SwitchRow(label = "Uhr und Datum oben", checked = s.ccShowClock) { v ->
-                        update { it.copy(ccShowClock = v) }
-                    }
-                    SwitchRow(label = "Schnellstart (Kamera, Wecker, Rechner, Claude)", checked = s.ccShowShortcuts) { v ->
-                        update { it.copy(ccShowShortcuts = v) }
-                    }
-                    IntSlider("Größe der Schalter", s.ccToggleSize.coerceIn(44, 66), 44..66, " dp") { v ->
-                        update { it.copy(ccToggleSize = v) }
-                    }
-                    IntSlider("Rundung der Flächen", s.ccCorner.coerceIn(12, 44), 12..44, " dp") { v ->
-                        update { it.copy(ccCorner = v) }
-                    }
-                    RowDivider()
-                    ChoiceRow(
-                        label = "Glas der Flächen",
-                        options = CcGlassTint.entries,
-                        selected = s.ccGlassTint,
-                        optionLabel = { it.label },
-                        onSelect = { tint -> update { it.copy(ccGlassTint = tint) } },
-                    )
-                    PercentSlider("Deckkraft des Glases", s.ccGlassOpacity, 0f..1f) { v ->
-                        update { it.copy(ccGlassOpacity = v) }
-                    }
-                    PercentSlider("Glanz an den Kanten", s.ccSpecular / 2f, 0f..1f) { v ->
-                        update { it.copy(ccSpecular = v * 2f) }
-                    }
-                    PercentSlider("Lichtbrechung", s.ccRefraction / 2.5f, 0f..1f) { v ->
-                        update { it.copy(ccRefraction = v * 2.5f) }
-                    }
-                    PercentSlider("Hintergrund weichzeichnen", s.ccBlur, 0f..1f) { v ->
-                        update { it.copy(ccBlur = v) }
-                    }
-                    PercentSlider("Hintergrund abdunkeln", s.ccDim, 0f..1f) { v ->
-                        update { it.copy(ccDim = v) }
-                    }
-                    Note("Änderungen gelten beim nächsten Öffnen des Kontrollzentrums, in Hearth und über anderen Apps. Das Weichzeichnen über anderen Apps braucht Android 12+ und ein Handy, das es unterstützt; sonst dunkelt Hearth stärker ab.")
-                }
-            }
-
-            item {
-                Section("Sperrbildschirm") {
-                    ChoiceRow(
-                        label = "Mitteilungen wie bei iOS",
-                        options = LockLayout.entries,
-                        selected = s.lockNotifications,
-                        optionLabel = { it.label },
-                        onSelect = { layout -> update { it.copy(lockNotifications = layout) } },
-                    )
-                    SwitchRow(
-                        label = "Inhalte anzeigen",
-                        description = "Aus: nur App und „Mitteilung“. Mitteilungen, die Apps als geheim markieren, erscheinen nie.",
-                        checked = s.lockShowContent,
-                    ) { v -> update { it.copy(lockShowContent = v) } }
-                    Note("Standard ist „Aus“: dann zeigt der Sperrbildschirm die normalen Mitteilungen des Systems. Stapel: die neueste unten, die anderen dahinter, antippen fächert sie auf. Anzahl: „3 Mitteilungen“, antippen zeigt sie. Liste: alle untereinander. Nach links wischen löscht, antippen öffnet nach dem Entsperren. Braucht den Dienst „Hearth Kontrollzentrum“ und den Benachrichtigungszugriff. Damit nichts doppelt erscheint, stell die Mitteilungen des Systems auf dem Sperrbildschirm auf „Nur Symbole“ oder aus.")
+                    CcLookRows(s, update)
                 }
             }
 
@@ -757,6 +557,209 @@ fun SettingsScreen(
 }
 
 /** All apps with a mark each: marked apps are hidden from home screen, library and search. */
+/** Glimmer's own options (the Glimmer app shows these). */
+@Composable
+internal fun GlimmerOptionRows(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
+        Note("Die Insel um die Frontkamera, in jeder App: Musik mit Cover und tanzenden Balken, Anrufe, Timer, Navigation, Downloads, neue Nachrichten, Laden, Lautlos, Kopfhörer, Nicht stören und voller Akku. Nach unten ziehen klappt sie auf, nach oben schließt sie, zur Seite wechselt zwischen zwei Aktivitäten; der kleine Kreis daneben holt die zweite nach vorn. In der Musik-Ansicht spult der Balken.")
+        SwitchRow(label = "Glimmer anzeigen", checked = s.glimmerEnabled) { v -> update { it.copy(glimmerEnabled = v) } }
+        ChoiceRow(
+            label = "Aussehen",
+            options = GlimmerStyle.entries,
+            selected = s.glimmerStyle,
+            optionLabel = { it.label },
+            onSelect = { style -> update { it.copy(glimmerStyle = style) } },
+        )
+        ChoiceRow(
+            label = "Beim Entsperren",
+            options = GlimmerUnlock.entries,
+            selected = s.glimmerUnlock,
+            optionLabel = { it.label },
+            onSelect = { u -> update { it.copy(glimmerUnlock = u) } },
+        )
+        SwitchRow(
+            label = "Auf dem Always-On-Display",
+            description = "Musik und Aktivitäten bleiben im AOD sichtbar, gedimmt und ohne Bewegung (wenn das Handy fremde Einblendungen dort zulässt)",
+            checked = s.glimmerAod,
+        ) { v -> update { it.copy(glimmerAod = v) } }
+        ChoiceRow(
+            label = "Musik",
+            options = GlimmerMusicStyle.entries,
+            selected = s.glimmerMusicStyle,
+            optionLabel = { it.label },
+            onSelect = { style -> update { it.copy(glimmerMusicStyle = style) } },
+        )
+        SwitchRow(
+            label = "Kleine Pille, wenn nichts läuft",
+            description = "Wie beim iPhone; im Querformat ausgeblendet",
+            checked = s.glimmerIdlePill,
+        ) { v -> update { it.copy(glimmerIdlePill = v) } }
+        SwitchRow(label = "Neue Nachrichten kurz zeigen", checked = s.glimmerMessages) { v ->
+            update { it.copy(glimmerMessages = v) }
+        }
+        SwitchRow(
+            label = "Kopfhörer, Nicht stören, Akku voll",
+            description = "Kurz anzeigen, wenn Kopfhörer sich verbinden, „Nicht stören“ umschaltet oder der Akku voll ist",
+            checked = s.glimmerAlerts,
+        ) { v -> update { it.copy(glimmerAlerts = v) } }
+        SwitchRow(
+            label = "Antippen öffnet die App",
+            description = if (s.glimmerTapOpens) "Wie beim iPhone; gedrückt halten klappt auf" else "Aus: Antippen klappt auf, gedrückt halten öffnet die App",
+            checked = s.glimmerTapOpens,
+        ) { v -> update { it.copy(glimmerTapOpens = v) } }
+        SwitchRow(label = "Leuchten bei Neuem", description = "Glimmer schimmert kurz in der Farbe der Aktivität", checked = s.glimmerGlow) { v ->
+            update { it.copy(glimmerGlow = v) }
+        }
+}
+
+/** How the control center looks; Hearth shows these and hands them to Glimmer. */
+@Composable
+internal fun CcLookRows(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
+        ChoiceRow(
+            label = "Stil",
+            options = CcStyle.entries,
+            selected = s.ccStyle,
+            optionLabel = { it.label },
+            // The matching colors and details come along; all can be changed below.
+            onSelect = { style -> update { it.withCcStyle(style) } },
+        )
+        Note("iOS 27: klares Glas, iOS-Farben, Verbindungen neben der Medien-Karte, Mitteilungen gestapelt wie auf dem iPhone. ColorOS 17: große Kacheln, leuchtende Schalter.")
+        RowDivider()
+        SwitchRow(
+            label = "Nach rechts wischen: Mitteilungen",
+            description = "Eigene Glas-Seite mit deinen Mitteilungen links neben den Schaltern; antippen öffnet, nach rechts wischen löscht. Mit „System-Kontrollzentrum ersetzen“ öffnet die linke Hälfte der Statusleiste gleich die Mitteilungen.",
+            checked = s.ccNotifications,
+        ) { v -> update { it.copy(ccNotifications = v) } }
+        RowDivider()
+        ChoiceRow(
+            label = "Farbe eingeschalteter Schalter",
+            options = CcColorMode.entries,
+            selected = s.ccColors,
+            optionLabel = { it.label },
+            onSelect = { mode -> update { it.copy(ccColors = mode) } },
+        )
+        ChoiceRow(
+            label = "Form der Schalter",
+            options = CcToggleShape.entries,
+            selected = s.ccShape,
+            optionLabel = { it.label },
+            onSelect = { shape -> update { it.copy(ccShape = shape) } },
+        )
+        ChoiceRow(
+            label = "Regler für Helligkeit und Lautstärke",
+            options = CcSliderStyle.entries,
+            selected = s.ccSliders,
+            optionLabel = { it.label },
+            onSelect = { style -> update { it.copy(ccSliders = style) } },
+        )
+        SwitchRow(label = "Leuchtende Kontur", description = "Eingeschaltete Schalter glühen wie bei ColorOS 17", checked = s.ccGlow) { v ->
+            update { it.copy(ccGlow = v) }
+        }
+        SwitchRow(label = "Beschriftungen unter den Schaltern", checked = s.ccLabels) { v ->
+            update { it.copy(ccLabels = v) }
+        }
+        RowDivider()
+        SwitchRow(label = "Große WLAN- und Mobil-Kacheln (ColorOS)", checked = s.ccBigTiles) { v ->
+            update { it.copy(ccBigTiles = v) }
+        }
+        SwitchRow(label = "Medien-Karte", checked = s.ccShowMedia) { v ->
+            update { it.copy(ccShowMedia = v) }
+        }
+        SwitchRow(label = "Uhr und Datum oben", checked = s.ccShowClock) { v ->
+            update { it.copy(ccShowClock = v) }
+        }
+        SwitchRow(label = "Schnellstart (Kamera, Wecker, Rechner, Claude)", checked = s.ccShowShortcuts) { v ->
+            update { it.copy(ccShowShortcuts = v) }
+        }
+        IntSlider("Größe der Schalter", s.ccToggleSize.coerceIn(44, 66), 44..66, " dp") { v ->
+            update { it.copy(ccToggleSize = v) }
+        }
+        IntSlider("Rundung der Flächen", s.ccCorner.coerceIn(12, 44), 12..44, " dp") { v ->
+            update { it.copy(ccCorner = v) }
+        }
+        RowDivider()
+        ChoiceRow(
+            label = "Glas der Flächen",
+            options = CcGlassTint.entries,
+            selected = s.ccGlassTint,
+            optionLabel = { it.label },
+            onSelect = { tint -> update { it.copy(ccGlassTint = tint) } },
+        )
+        PercentSlider("Deckkraft des Glases", s.ccGlassOpacity, 0f..1f) { v ->
+            update { it.copy(ccGlassOpacity = v) }
+        }
+        PercentSlider("Glanz an den Kanten", s.ccSpecular / 2f, 0f..1f) { v ->
+            update { it.copy(ccSpecular = v * 2f) }
+        }
+        PercentSlider("Lichtbrechung", s.ccRefraction / 2.5f, 0f..1f) { v ->
+            update { it.copy(ccRefraction = v * 2.5f) }
+        }
+        PercentSlider("Hintergrund weichzeichnen", s.ccBlur, 0f..1f) { v ->
+            update { it.copy(ccBlur = v) }
+        }
+        PercentSlider("Hintergrund abdunkeln", s.ccDim, 0f..1f) { v ->
+            update { it.copy(ccDim = v) }
+        }
+        Note("Änderungen gelten beim nächsten Öffnen des Kontrollzentrums, in Hearth und über anderen Apps. Das Weichzeichnen über anderen Apps braucht Android 12+ und ein Handy, das es unterstützt; sonst dunkelt Hearth stärker ab.")
+}
+
+/** iOS-style notifications on the lock screen (the Glimmer app shows these). */
+@Composable
+internal fun LockScreenRows(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
+        ChoiceRow(
+            label = "Mitteilungen wie bei iOS",
+            options = LockLayout.entries,
+            selected = s.lockNotifications,
+            optionLabel = { it.label },
+            onSelect = { layout -> update { it.copy(lockNotifications = layout) } },
+        )
+        SwitchRow(
+            label = "Inhalte anzeigen",
+            description = "Aus: nur App und „Mitteilung“. Mitteilungen, die Apps als geheim markieren, erscheinen nie.",
+            checked = s.lockShowContent,
+        ) { v -> update { it.copy(lockShowContent = v) } }
+        Note("Standard ist „Aus“: dann zeigt der Sperrbildschirm die normalen Mitteilungen des Systems. Stapel: die neueste unten, die anderen dahinter, antippen fächert sie auf. Anzahl: „3 Mitteilungen“, antippen zeigt sie. Liste: alle untereinander. Nach links wischen löscht, antippen öffnet nach dem Entsperren. Braucht die Bedienungshilfe „Glimmer“ und den Benachrichtigungszugriff. Damit nichts doppelt erscheint, stell die Mitteilungen des Systems auf dem Sperrbildschirm auf „Nur Symbole“ oder aus.")
+}
+
+/** In Hearth: where Glimmer lives now, and the fly-in. */
+@Composable
+private fun GlimmerLinkRows(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
+    val context = LocalContext.current
+    var installed by remember { mutableStateOf(GlimmerLink.isInstalled(context)) }
+    var running by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            installed = GlimmerLink.isInstalled(context)
+            running = if (installed) withContext(Dispatchers.IO) { GlimmerLink.status(context)?.running } else null
+            delay(1500)
+        }
+    }
+    Note("Glimmer, die Insel um die Kamera, ist jetzt eine eigene App: mit dem Kontrollzentrum über anderen Apps, dem Face-ID-Moment, Live-Aktivitäten und den Mitteilungen auf dem Sperrbildschirm. Sie läuft mit jedem Launcher; mit Hearth fliegen geschlossene Apps hinein.")
+    if (installed) {
+        ActionRow(
+            label = "Glimmer öffnen",
+            description = when (running) {
+                true -> "Läuft"
+                false -> "Installiert, aber die Bedienungshilfe „Glimmer“ ist aus"
+                null -> "Installiert"
+            },
+        ) { GlimmerLink.openApp(context) }
+    } else {
+        ActionRow(
+            label = "Glimmer installieren",
+            description = "Lädt Glimmer.apk aus dem neuesten Release",
+        ) {
+            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(GlimmerLink.DOWNLOAD_URL))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            runCatching { context.startActivity(intent) }
+        }
+    }
+    SwitchRow(
+        label = "Apps fliegen in Glimmer",
+        description = "Schließt du eine App, die du über Hearth geöffnet hast, fliegt sie selbst in die Insel (wie bei HarmonyOS). Braucht Glimmer.",
+        checked = s.glimmerFlyIn,
+    ) { v -> update { it.copy(glimmerFlyIn = v) } }
+}
+
 @Composable
 private fun HiddenAppsPicker(
     apps: List<AppInfo>,
@@ -821,7 +824,7 @@ private val SectionOrder = listOf(
 )
 
 @Composable
-private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
+internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(
         Modifier
             .staggeredEntrance(SectionOrder.indexOf(title).coerceAtLeast(0))
@@ -851,7 +854,7 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
 }
 
 @Composable
-private fun RowDivider() {
+internal fun RowDivider() {
     Box(
         Modifier
             .fillMaxWidth()
@@ -862,7 +865,7 @@ private fun RowDivider() {
 }
 
 @Composable
-private fun Note(text: String) {
+internal fun Note(text: String) {
     Text(
         text = text,
         color = TextSecondary,
@@ -872,7 +875,7 @@ private fun Note(text: String) {
 }
 
 @Composable
-private fun SliderRow(
+internal fun SliderRow(
     label: String,
     value: Float,
     range: ClosedFloatingPointRange<Float>,
@@ -902,7 +905,7 @@ private fun SliderRow(
 }
 
 @Composable
-private fun PercentSlider(
+internal fun PercentSlider(
     label: String,
     value: Float,
     range: ClosedFloatingPointRange<Float>,
@@ -910,7 +913,7 @@ private fun PercentSlider(
 ) = SliderRow(label, value, range, "${(value * 100).roundToInt()} %", onChange = onChange)
 
 @Composable
-private fun IntSlider(
+internal fun IntSlider(
     label: String,
     value: Int,
     range: IntRange,
@@ -929,7 +932,7 @@ private fun IntSlider(
 )
 
 @Composable
-private fun SwitchRow(
+internal fun SwitchRow(
     label: String,
     checked: Boolean,
     description: String? = null,
@@ -965,7 +968,7 @@ private fun SwitchRow(
 }
 
 @Composable
-private fun ActionRow(label: String, description: String? = null, onClick: () -> Unit) {
+internal fun ActionRow(label: String, description: String? = null, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -989,7 +992,7 @@ private fun ActionRow(label: String, description: String? = null, onClick: () ->
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun <T> ChoiceRow(
+internal fun <T> ChoiceRow(
     label: String,
     options: List<T>,
     selected: T?,
@@ -1016,7 +1019,7 @@ private fun <T> ChoiceRow(
 }
 
 @Composable
-private fun Chip(text: String, selected: Boolean, swatch: Color?, onClick: () -> Unit) {
+internal fun Chip(text: String, selected: Boolean, swatch: Color?, onClick: () -> Unit) {
     Row(
         Modifier
             .clip(CircleShape)

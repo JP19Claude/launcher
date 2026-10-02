@@ -1,6 +1,7 @@
 package dev.hearth.launcher.data
 
 import android.content.Context
+import android.os.Bundle
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -540,6 +541,40 @@ class SettingsRepository(context: Context) {
 
     companion object {
         const val PREFS_NAME = "hearth_settings"
+
+        /** Settings Hearth hands to Glimmer: the control center's look and the accent color. */
+        fun isShared(key: String) = key.startsWith("cc") || key == "accent"
+
+        /** The shared settings as they are stored, for [writeRaw] in the other app. */
+        fun readShared(context: Context): Bundle = Bundle().apply {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).all.forEach { (key, value) ->
+                if (!isShared(key)) return@forEach
+                when (value) {
+                    is String -> putString(key, value)
+                    is Boolean -> putBoolean(key, value)
+                    is Float -> putFloat(key, value)
+                    is Int -> putInt(key, value)
+                    is Long -> putLong(key, value)
+                }
+            }
+        }
+
+        /** Stores settings handed over from the other app (only the shared ones). */
+        fun writeRaw(context: Context, values: Bundle) {
+            val edit = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            for (key in values.keySet()) {
+                if (!isShared(key)) continue
+                @Suppress("DEPRECATION")
+                when (val value = values.get(key)) {
+                    is String -> edit.putString(key, value)
+                    is Boolean -> edit.putBoolean(key, value)
+                    is Float -> edit.putFloat(key, value)
+                    is Int -> edit.putInt(key, value)
+                    is Long -> edit.putLong(key, value)
+                }
+            }
+            edit.apply()
+        }
         const val KEY_INTERCEPT = "interceptSystemShade"
         const val KEY_GLIMMER = "glimmerEnabled"
         val GLIMMER_KEYS = setOf(
