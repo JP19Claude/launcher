@@ -333,7 +333,7 @@ class GlimmerController(private val service: GlimmerService) {
         val moved = newSettings.glimmerOffsetX != settings.glimmerOffsetX || newSettings.glimmerOffsetY != settings.glimmerOffsetY
         settings = newSettings
         settingsState.value = newSettings
-        if (!newSettings.glimmerCharging) charging.value = null
+        refreshCharging()
         if (moved) placeWindow()
     }
 
@@ -352,6 +352,24 @@ class GlimmerController(private val service: GlimmerService) {
 
     /** Battery level while charging, when it should stay in the island. */
     private val charging = MutableStateFlow<Int?>(null)
+
+    /** Reads the battery right away (switched on while already plugged in shows at once). */
+    private fun refreshCharging() {
+        if (!settings.glimmerCharging) {
+            charging.value = null
+            return
+        }
+        val sticky = runCatching {
+            ContextCompat.registerReceiver(service, null, IntentFilter(Intent.ACTION_BATTERY_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED)
+        }.getOrNull() ?: return
+        val plugged = sticky.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0
+        val level = sticky.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val scale = sticky.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
+        charging.value = if (plugged && level >= 0) level * 100 / scale else null
+    }
+
+    /** An app in front hides the status bar (video, game): Glimmer steps back. */
+    private val fullscreen = MutableStateFlow(false)
 
     private fun torchToggle() {
         val id = torchId ?: return
@@ -504,6 +522,7 @@ class GlimmerController(private val service: GlimmerService) {
             f != NotificationManager.INTERRUPTION_FILTER_ALL && f != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
         }
         batteryFull = true
+        refreshCharging()
         startHeadphoneWatch()
         runCatching { service.getSystemService(DisplayManager::class.java)?.registerDisplayListener(displayListener, handler) }
         runCatching { camera?.registerTorchCallback(torchCallback, handler) }
@@ -673,6 +692,13 @@ class GlimmerController(private val service: GlimmerService) {
             }
         }
         frame.setViewTreeLifecycleOwner(service)
+        // Whether the status bar is showing: hidden means a video or game in full screen.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            frame.setOnApplyWindowInsetsListener { v, insets ->
+                fullscreen.value = !insets.isVisible(android.view.WindowInsets.Type.statusBars())
+                v.onApplyWindowInsets(insets)
+            }
+        }
         frame.setViewTreeSavedStateRegistryOwner(service)
         val compose = ComposeView(service).apply {
             setViewTreeLifecycleOwner(service)
@@ -693,6 +719,7 @@ class GlimmerController(private val service: GlimmerService) {
                 val padlockOpen by lockOpening.collectAsStateWithLifecycle()
                 val landed by arrival.collectAsStateWithLifecycle()
                 val chargeLevel by charging.collectAsStateWithLifecycle()
+                val inFullscreen by fullscreen.collectAsStateWithLifecycle()
                 // Read here, so the island follows changed settings at once.
                 val settings by settingsState.collectAsStateWithLifecycle()
                 val torch by torchOn.collectAsStateWithLifecycle()
@@ -738,16 +765,24 @@ class GlimmerController(private val service: GlimmerService) {
                 // Unlocking (Face ID moment) goes before everything else.
                 // On the lock screen the pill wears a padlock, so Glimmer is always there; it opens
                 // when unlocking.
+                // A video or game in full screen: only a call or a ringing alarm (and unlocking)
+                // still come through.
+                val stepBack = inFullscreen && settings.glimmerHideFullscreen && !onLockScreen && !aod
+                val visible = if (stepBack) {
+                    shown.filter { it is IslandContent.Live && (it.notice.kind == NoticeKind.Call || it.notice.kind == NoticeKind.Alarm) }
+                } else {
+                    shown
+                }
                 val main = unlocking
                     ?: landed
-                    ?: shown.firstOrNull()
+                    ?: visible.firstOrNull()
                     ?: when {
-                        !settings.glimmerIdlePill || sideways || aod -> IslandContent.Hidden
+                        !settings.glimmerIdlePill || sideways || aod || stepBack -> IslandContent.Hidden
                         padlockOpen -> IslandContent.Lock(open = true)
                         onLockScreen -> IslandContent.Lock(open = false)
                         else -> IslandContent.Idle
                     }
-                val second = if (unlocking != null || landed != null) null else shown.drop(1).firstOrNull()
+                val second = if (unlocking != null || landed != null) null else visible.drop(1).firstOrNull()
 
                 HearthTheme(dark = true) {
                     CompositionLocalProvider(

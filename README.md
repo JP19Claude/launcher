@@ -143,6 +143,11 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     zurücksetzen“ (mit Bestätigung) bringen alles wieder auf Standard
   - Funktionen: Doppeltippen (Musik, Taschenlampe, Bildschirmfoto), Zuklappen nach 5–30 s oder
     nie, Wischen über Musik wechselt den Titel, Akku beim Laden dauerhaft zeigen, Vibration
+  - Live-Vorschau oben in der Glimmer-App: zeigt Aussehen, Breite, Rand, Leuchten, Bewegung und
+    Position sofort, wechselt durch ein paar Inhalte, antippen klappt auf; Einstellungen in
+    Abschnitten (Gestaltung, Größe & Position, Bedienung, Was Glimmer zeigt, Sperrbildschirm & AOD)
+  - Im Vollbild (Videos, Spiele ohne Statusleiste) tritt Glimmer zurück, nur Anruf, Wecker und
+    Entsperren kommen durch (abschaltbar)
   - Laden zeigt eine kleine Batterie, die sich füllt
   - Stoppuhr und Timer laufen in Glimmer weiter, auch bei der Samsung-Uhr und anderen Uhr-Apps
     (Zeit aus Chronometer oder Text, Stoppuhr mit Zehnteln, angehalten bleibt sie stehen)

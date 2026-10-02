@@ -11,6 +11,8 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.background
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -238,9 +240,8 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
                 }
 
                 if (app == FamilyApp.Glimmer) {
-                    item {
-                        Section("Glimmer") { GlimmerOptionRows(s, update) }
-                    }
+                    item { GlimmerPreview(s, media) }
+                    item { GlimmerSections(s, update) }
                 }
 
                 if (app == FamilyApp.Controls) item {
@@ -294,5 +295,75 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
                 }
             }
         }
+    }
+}
+
+/**
+ * Glimmer as it looks with the current settings (style, width, outline, glow, motion and the
+ * nudge), going through a few things it shows; tap it to unfold, like the real one.
+ */
+@Composable
+private fun GlimmerPreview(s: LauncherSettings, media: MediaRepository) {
+    val demos = remember {
+        listOf<IslandContent>(
+            IslandContent.Idle,
+            IslandContent.Charging(72),
+            IslandContent.Alert(Glyph.Bell, "Klingeln", "An", Color(0xFFFF9F0A)),
+            IslandContent.Torch,
+            IslandContent.Lock(open = false),
+        )
+    }
+    var index by remember { mutableStateOf(0) }
+    var expanded by remember { mutableStateOf(false) }
+    // Moves on by itself while folded; stays put while you look at it unfolded.
+    LaunchedEffect(expanded) {
+        if (!expanded) {
+            while (true) {
+                delay(2600)
+                index = (index + 1) % demos.size
+            }
+        }
+    }
+    val content = demos[index]
+    val unfoldable = content !is IslandContent.Idle && content !is IslandContent.Lock
+    val screenWidth = LocalConfiguration.current.screenWidthDp.toFloat()
+    Column(Modifier.padding(vertical = 8.dp)) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(150.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .background(Brush.verticalGradient(listOf(Color(0xFF3A2F4A), Color(0xFF15121B)))),
+        ) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .offset(x = s.glimmerOffsetX.dp, y = s.glimmerOffsetY.dp),
+            ) {
+                GlimmerIsland(
+                    content = if (s.glimmerEnabled) content else IslandContent.Hidden,
+                    secondary = null,
+                    expanded = expanded && unfoldable,
+                    style = s.glimmerStyle,
+                    screenWidthDp = screenWidth,
+                    topInset = 14.dp,
+                    media = media,
+                    glow = s.glimmerGlow,
+                    onToggle = { expanded = !expanded },
+                    onCollapse = { expanded = false },
+                    onOpen = { expanded = false },
+                    onTargetSize = {},
+                )
+            }
+        }
+        Text(
+            if (s.glimmerEnabled) "Vorschau · antippen zum Aufklappen" else "Glimmer ist aus",
+            color = Color.White.copy(alpha = 0.5f),
+            fontSize = 12.sp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
     }
 }

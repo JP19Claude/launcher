@@ -564,9 +564,12 @@ fun SettingsScreen(
 
 /** All apps with a mark each: marked apps are hidden from home screen, library and search. */
 /** Glimmer's own options (the Glimmer app shows these). */
+/** All of Glimmer's options, grouped into sections (shown in the Glimmer app). */
 @Composable
-internal fun GlimmerOptionRows(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
-        Note("Die Insel um die Frontkamera, in jeder App: Musik mit Cover und tanzenden Balken, Anrufe, Timer, Navigation, Downloads, neue Nachrichten, Laden, Lautlos, Kopfhörer, Nicht stören und voller Akku. Nach unten ziehen klappt sie auf, nach oben schließt sie, zur Seite wechselt zwischen zwei Aktivitäten; der kleine Kreis daneben holt die zweite nach vorn. In der Musik-Ansicht spult der Balken.")
+internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
+    Column {
+    Section("Glimmer") {
+        Note("Die Insel um die Frontkamera, in jeder App: Musik, Anrufe, Timer, Stoppuhr, Navigation, Downloads, Nachrichten, Laden und mehr. Nach unten ziehen klappt sie auf, nach oben schließt sie, zur Seite wechselt zwischen zwei Aktivitäten.")
         SwitchRow(label = "Glimmer anzeigen", checked = s.glimmerEnabled) { v -> update { it.copy(glimmerEnabled = v) } }
         ChoiceRow(
             label = "Aussehen",
@@ -575,18 +578,6 @@ internal fun GlimmerOptionRows(s: LauncherSettings, update: ((LauncherSettings) 
             optionLabel = { it.label },
             onSelect = { style -> update { it.copy(glimmerStyle = style) } },
         )
-        ChoiceRow(
-            label = "Beim Entsperren",
-            options = GlimmerUnlock.entries,
-            selected = s.glimmerUnlock,
-            optionLabel = { it.label },
-            onSelect = { u -> update { it.copy(glimmerUnlock = u) } },
-        )
-        SwitchRow(
-            label = "Auf dem Always-On-Display",
-            description = "Musik und Aktivitäten bleiben im AOD sichtbar, gedimmt und ohne Bewegung (wenn das Handy fremde Einblendungen dort zulässt)",
-            checked = s.glimmerAod,
-        ) { v -> update { it.copy(glimmerAod = v) } }
         ChoiceRow(
             label = "Musik",
             options = GlimmerMusicStyle.entries,
@@ -599,20 +590,10 @@ internal fun GlimmerOptionRows(s: LauncherSettings, update: ((LauncherSettings) 
             description = "Wie beim iPhone; im Querformat ausgeblendet",
             checked = s.glimmerIdlePill,
         ) { v -> update { it.copy(glimmerIdlePill = v) } }
-        SwitchRow(label = "Neue Nachrichten kurz zeigen", checked = s.glimmerMessages) { v ->
-            update { it.copy(glimmerMessages = v) }
-        }
-        SwitchRow(
-            label = "Kopfhörer, Nicht stören, Akku voll",
-            description = "Kurz anzeigen, wenn Kopfhörer sich verbinden, „Nicht stören“ umschaltet oder der Akku voll ist",
-            checked = s.glimmerAlerts,
-        ) { v -> update { it.copy(glimmerAlerts = v) } }
-        SwitchRow(
-            label = "Antippen öffnet die App",
-            description = if (s.glimmerTapOpens) "Wie beim iPhone; gedrückt halten klappt auf" else "Aus: Antippen klappt auf, gedrückt halten öffnet die App",
-            checked = s.glimmerTapOpens,
-        ) { v -> update { it.copy(glimmerTapOpens = v) } }
-        SwitchRow(label = "Leuchten bei Neuem", description = "Glimmer schimmert kurz in der Farbe der Aktivität", checked = s.glimmerGlow) { v ->
+    }
+
+    Section("Gestaltung") {
+        SwitchRow(label = "Leuchten bei Neuem", description = "Glimmer schimmert kurz, wenn etwas Neues kommt", checked = s.glimmerGlow) { v ->
             update { it.copy(glimmerGlow = v) }
         }
         if (s.glimmerGlow) ChoiceRow(
@@ -622,8 +603,6 @@ internal fun GlimmerOptionRows(s: LauncherSettings, update: ((LauncherSettings) 
             optionLabel = { it.label },
             onSelect = { c -> update { it.copy(glimmerGlowColor = c) } },
         )
-
-        // Design
         ChoiceRow(
             label = "Rand",
             options = GlimmerOutline.entries,
@@ -638,6 +617,9 @@ internal fun GlimmerOptionRows(s: LauncherSettings, update: ((LauncherSettings) 
             optionLabel = { it.label },
             onSelect = { m -> update { it.copy(glimmerMotion = m) } },
         )
+    }
+
+    Section("Größe & Position") {
         SliderRow(
             label = "Breite",
             value = s.glimmerWidth,
@@ -655,8 +637,14 @@ internal fun GlimmerOptionRows(s: LauncherSettings, update: ((LauncherSettings) 
                 "Breite 100 %, nicht verschoben – wieder genau über der Kamera"
             },
         ) { update { it.withGlimmerSizeReset() } }
+    }
 
-        // Functions
+    Section("Bedienung") {
+        SwitchRow(
+            label = "Antippen öffnet die App",
+            description = if (s.glimmerTapOpens) "Wie beim iPhone; gedrückt halten klappt auf" else "Aus: Antippen klappt auf, gedrückt halten öffnet die App",
+            checked = s.glimmerTapOpens,
+        ) { v -> update { it.copy(glimmerTapOpens = v) } }
         ChoiceRow(
             label = "Doppeltippen",
             options = GlimmerDoubleTap.entries,
@@ -676,15 +664,48 @@ internal fun GlimmerOptionRows(s: LauncherSettings, update: ((LauncherSettings) 
             description = "Läuft nur Musik: über Glimmer nach links für den nächsten, nach rechts für den vorherigen Titel",
             checked = s.glimmerSwipeTracks,
         ) { v -> update { it.copy(glimmerSwipeTracks = v) } }
+        SwitchRow(label = "Vibration", description = "Leichtes Feedback beim Antippen, Aufklappen und Wischen", checked = s.glimmerHaptics) { v ->
+            update { it.copy(glimmerHaptics = v) }
+        }
+    }
+
+    Section("Was Glimmer zeigt") {
+        SwitchRow(label = "Neue Nachrichten kurz zeigen", checked = s.glimmerMessages) { v ->
+            update { it.copy(glimmerMessages = v) }
+        }
+        SwitchRow(
+            label = "Kopfhörer, Nicht stören, Akku voll",
+            description = "Kurz anzeigen, wenn Kopfhörer sich verbinden, „Nicht stören“ umschaltet oder der Akku voll ist",
+            checked = s.glimmerAlerts,
+        ) { v -> update { it.copy(glimmerAlerts = v) } }
         SwitchRow(
             label = "Akku beim Laden zeigen",
             description = "Solange das Handy lädt, bleibt der Akkustand mit rollenden Zahlen in Glimmer",
             checked = s.glimmerCharging,
         ) { v -> update { it.copy(glimmerCharging = v) } }
-        SwitchRow(label = "Vibration", description = "Leichtes Feedback beim Antippen, Aufklappen und Wischen", checked = s.glimmerHaptics) { v ->
-            update { it.copy(glimmerHaptics = v) }
-        }
+        SwitchRow(
+            label = "Im Vollbild ausblenden",
+            description = "Bei Videos und Spielen ohne Statusleiste bleibt nur Wichtiges (Anruf, Wecker, Entsperren)",
+            checked = s.glimmerHideFullscreen,
+        ) { v -> update { it.copy(glimmerHideFullscreen = v) } }
+    }
 
+    Section("Sperrbildschirm & AOD") {
+        ChoiceRow(
+            label = "Beim Entsperren",
+            options = GlimmerUnlock.entries,
+            selected = s.glimmerUnlock,
+            optionLabel = { it.label },
+            onSelect = { u -> update { it.copy(glimmerUnlock = u) } },
+        )
+        SwitchRow(
+            label = "Auf dem Always-On-Display",
+            description = "Musik und Aktivitäten bleiben im AOD sichtbar, gedimmt und ohne Bewegung (wenn das Handy fremde Einblendungen dort zulässt)",
+            checked = s.glimmerAod,
+        ) { v -> update { it.copy(glimmerAod = v) } }
+    }
+
+    Section("Zurücksetzen") {
         // Everything back as it came; a second tap confirms, so it can't happen by accident.
         var confirmReset by remember { mutableStateOf(false) }
         LaunchedEffect(confirmReset) {
@@ -704,6 +725,8 @@ internal fun GlimmerOptionRows(s: LauncherSettings, update: ((LauncherSettings) 
                 confirmReset = true
             }
         }
+    }
+    }
 }
 
 /** How the control center looks; Hearth shows these and hands them to Glimmer. */

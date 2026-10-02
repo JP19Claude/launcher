@@ -305,6 +305,8 @@ data class LauncherSettings(
     /** Keep the battery in the island while charging. */
     val glimmerCharging: Boolean = false,
     val glimmerHaptics: Boolean = true,
+    /** Videos and games without a status bar: only what matters stays (a call, an alarm). */
+    val glimmerHideFullscreen: Boolean = true,
     val badgeStyle: BadgeStyle = BadgeStyle.Number,
     /** Double tap on empty home screen space locks the phone (needs the accessibility service). */
     val doubleTapLock: Boolean = true,
@@ -356,6 +358,7 @@ data class LauncherSettings(
             glimmerSwipeTracks = d.glimmerSwipeTracks,
             glimmerCharging = d.glimmerCharging,
             glimmerHaptics = d.glimmerHaptics,
+            glimmerHideFullscreen = d.glimmerHideFullscreen,
         )
     }
 
@@ -531,6 +534,7 @@ class SettingsRepository(context: Context) {
             glimmerSwipeTracks = prefs.getBoolean("glimmerSwipeTracks", d.glimmerSwipeTracks),
             glimmerCharging = prefs.getBoolean("glimmerCharging", d.glimmerCharging),
             glimmerHaptics = prefs.getBoolean("glimmerHaptics", d.glimmerHaptics),
+            glimmerHideFullscreen = prefs.getBoolean("glimmerHideFullscreen", d.glimmerHideFullscreen),
             badgeStyle = enumOf("badgeStyle", d.badgeStyle),
             doubleTapLock = prefs.getBoolean("doubleTapLock", d.doubleTapLock),
             dockSize = prefs.getInt("dockSize", d.dockSize),
@@ -626,6 +630,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("glimmerSwipeTracks", s.glimmerSwipeTracks)
             .putBoolean("glimmerCharging", s.glimmerCharging)
             .putBoolean("glimmerHaptics", s.glimmerHaptics)
+            .putBoolean("glimmerHideFullscreen", s.glimmerHideFullscreen)
             .putString("badgeStyle", s.badgeStyle.name)
             .putBoolean("doubleTapLock", s.doubleTapLock)
             .putInt("dockSize", s.dockSize)
@@ -691,7 +696,7 @@ class SettingsRepository(context: Context) {
             "glimmerIdlePill", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerAutoCollapse",
-            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "accent", "animations",
+            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "accent", "animations",
         )
         const val KEY_CC_ENABLED = "ccEnabled"
     }
