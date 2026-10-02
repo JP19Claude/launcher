@@ -28,8 +28,11 @@ wippt, trippelt beim Nachdenken, tanzt, schlägt Salto und schickt Herzen.
   Outfits – Anzug, Smoking, Superheld, Astronaut, Arzt, Koch, Pirat, Ninja, Pulli, Schal – und
   Hüte – Partyhut, Krone, Mütze, Cap, Schleife, Kopfhörer, Sonnenbrille, Zauberhut, Kochmütze,
   Heiligenschein, Hörner. Gilt überall, auch in der Clawd-App und in Glimmer.
-- Clawd in Glimmer: Er sitzt in der Insel neben der Kamera, schläft nachts und tanzt beim
-  Laden (Einstellungen → Clawd oder in der Glimmer-App).
+- Clawd in Glimmer (ein- und ausschaltbar, ganz oben in der Glimmer-App oder in Hearth unter
+  Einstellungen → Clawd): Er ist bei allem dabei, was die Insel zeigt – in der Pille (nachts
+  schläft er), bei Musik (er tanzt mit), Anrufen, Timern, Navigation, Nachrichten, Codes,
+  Bildschirmfotos, Laden, Taschenlampe, Sperren und Face ID; aufgeklappt sitzt er neben der
+  Kamera und sagt, was los ist.
 - Noch mehr Widgets: Clawd-Modenschau, Clawd-Wasser, Clawd-Würfel, Clawd-Motivation und
   Clawd-Wochenende – im Launcher und in der Clawd-App (dort 13 Widgets für jeden Launcher).
 - Außerdem: leere Suche („Tipp mich an, dann kümmere ich mich drum“), App-Sperre (Clawd

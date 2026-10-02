@@ -726,6 +726,25 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
     // In the Dynamic Island mode the iPhone decides the look and handling; those rows step aside.
     val di = s.glimmerIsDynamicIsland
     Column {
+    // Clawd first: one switch, and he's part of everything the island does.
+    Section("Clawd") {
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.Center) {
+            Clawd(
+                Modifier.size(width = 84.dp, height = 72.dp),
+                mood = if (s.glimmerClawd) dev.hearth.launcher.data.ClawdMood.Dance else dev.hearth.launcher.data.ClawdMood.Sleep,
+            )
+        }
+        SwitchRow(
+            label = "Clawd in Glimmer",
+            description = if (s.glimmerClawd) {
+                "An: Clawd ist bei allem dabei – Pille, Musik (er tanzt mit), Anrufe, Timer, Navigation, Nachrichten, Codes, Bildschirmfotos, Laden, Taschenlampe, Sperren und Face ID, auch aufgeklappt"
+            } else {
+                "Aus: Glimmer ohne Clawd"
+            },
+            checked = s.glimmerClawd,
+        ) { v -> update { it.copy(glimmerClawd = v) } }
+        Note("Er trägt Farbe, Hut und Outfit aus Hearth bzw. der Clawd-App. Nachts schläft er in der Pille.")
+    }
     Section("Glimmer") {
         Note("Die Insel um die Frontkamera, in jeder App: Musik, Anrufe, Timer, Stoppuhr, Navigation, Downloads, Nachrichten, Laden und mehr. Nach unten ziehen klappt sie auf, nach oben schließt sie, zur Seite wechselt zwischen zwei Aktivitäten.")
         SwitchRow(label = "Glimmer anzeigen", checked = s.glimmerEnabled) { v -> update { it.copy(glimmerEnabled = v) } }
@@ -758,11 +777,6 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             description = "Wie beim iPhone; im Querformat ausgeblendet",
             checked = s.glimmerIdlePill,
         ) { v -> update { it.copy(glimmerIdlePill = v) } }
-        SwitchRow(
-            label = "Clawd in Glimmer",
-            description = "Clawd sitzt in der Insel neben der Kamera – mit deiner Farbe, Hut und Outfit. Nachts schläft er, beim Laden tanzt er.",
-            checked = s.glimmerClawd,
-        ) { v -> update { it.copy(glimmerClawd = v) } }
     }
 
     if (!di) Section("Gestaltung") {

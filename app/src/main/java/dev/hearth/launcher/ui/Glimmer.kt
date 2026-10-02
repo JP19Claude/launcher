@@ -48,6 +48,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -260,6 +261,8 @@ fun islandSize(
     cameraClearance: Dp = 0.dp,
     /** The 85 % mode: every state narrower, the height as it is. */
     narrow: Float = 1f,
+    /** Clawd rides along: the small states get a little room on the left for him. */
+    clawd: Boolean = false,
 ): DpSize {
     // Unfolded it's always as wide as at 100 % (the 85 % mode only slims the small states).
     val full = if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, 420f).dp
@@ -273,10 +276,10 @@ fun islandSize(
         content is IslandContent.Hidden -> DpSize(0.dp, 0.dp)
         content is IslandContent.Idle -> DpSize(idle.dp, ISLAND_HEIGHT_DP.dp)
         // A little wider than the idle pill, for the padlock on its left.
-        content is IslandContent.Lock -> DpSize(idle.dp + 26.dp, ISLAND_HEIGHT_DP.dp)
+        content is IslandContent.Lock -> DpSize(idle.dp + 26.dp + if (clawd) ClawdExtra else 0.dp, ISLAND_HEIGHT_DP.dp)
         // Like Face ID on the iPhone: the island becomes a rounded square for the moment.
         content is IslandContent.Unlock -> DpSize(UNLOCK_SIZE_DP.dp, UNLOCK_SIZE_DP.dp)
-        !expanded -> DpSize(compact, ISLAND_HEIGHT_DP.dp)
+        !expanded -> DpSize(compact + if (clawd) ClawdExtra else 0.dp, ISLAND_HEIGHT_DP.dp)
         else -> DpSize(
             full,
             cameraClearance + when (content) {
@@ -367,6 +370,7 @@ fun GlimmerIsland(
         settings.glimmerIsDynamicIsland,
         cameraClearance = cameraClearance(camera),
         narrow = settings.glimmerNarrow,
+        clawd = settings.glimmerClawd,
     )
     LaunchedEffect(target) { onTargetSize(target) }
     val collapseAfter = settings.glimmerAutoCollapse
@@ -770,6 +774,8 @@ fun GlimmerIsland(
                                 onShare = { onShare(c) },
                                 topPadding = ExpandedTop + cameraClearance(camera),
                             )
+                            // Clawd rides along, in the band beside the camera.
+                            if (settings.glimmerClawd) ExpandedClawd(c, band = ExpandedTop + cameraClearance(camera))
                             // Several things running: little dots like Samsung's Now Bar; swipe for the next.
                             if (activityCount > 1) {
                                 Row(
@@ -790,7 +796,7 @@ fun GlimmerIsland(
                             }
                         }
                     } else {
-                        CompactContent(c)
+                        CompactWithClawd(c)
                     }
                 }
                 // Camera (green) or microphone (orange) in use, like the iPhone's dot.
@@ -1086,12 +1092,6 @@ private fun CompactContent(content: IslandContent) {
         GlimmerClawd(if (clawdAsleep(java.time.LocalTime.now().hour)) ClawdMood.Sleep else ClawdMood.Idle)
         return
     }
-    if (content is IslandContent.Charging && LocalSettings.current.glimmerClawd) {
-        GlimmerClawd(ClawdMood.Dance) {
-            RollingText("${content.level} %", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-        }
-        return
-    }
     if (content is IslandContent.Idle || content is IslandContent.Hidden) return
     if (content is IslandContent.Lock) {
         Row(
@@ -1114,6 +1114,16 @@ private fun CompactContent(content: IslandContent) {
             contentAlignment = Alignment.Center,
         ) {
             UnlockGlyph(content, Modifier.size(46.dp))
+            if (LocalSettings.current.glimmerClawd) {
+                Clawd(
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 6.dp, bottom = 6.dp)
+                        .size(width = 22.dp, height = 19.dp),
+                    mood = clawdMoodFor(content),
+                    animate = LocalSettings.current.animations && !LocalGlimmerStill.current,
+                )
+            }
         }
         return
     }
@@ -1304,6 +1314,121 @@ private fun AroundCamera(
             verticalAlignment = Alignment.CenterVertically,
             content = right,
         )
+    }
+}
+
+/** The room the small states get on the left for Clawd. */
+private val ClawdExtra = 28.dp
+
+/** How Clawd feels about what the island shows. */
+private fun clawdMoodFor(content: IslandContent): ClawdMood = when (content) {
+    is IslandContent.Media -> if (content.playing.playing) ClawdMood.Dance else ClawdMood.Idle
+    is IslandContent.Live -> when (content.notice.kind) {
+        NoticeKind.Call -> ClawdMood.Wave
+        NoticeKind.Alarm -> ClawdMood.Wave
+        NoticeKind.Recording -> ClawdMood.Thinking
+        else -> ClawdMood.Thinking
+    }
+    is IslandContent.Message -> ClawdMood.Love
+    is IslandContent.Charging -> ClawdMood.Dance
+    is IslandContent.Code -> if (content.copied) ClawdMood.Love else ClawdMood.Thinking
+    is IslandContent.Screenshot -> ClawdMood.Wave
+    is IslandContent.Arrival -> ClawdMood.Flip
+    is IslandContent.Unlock -> when {
+        content.failed -> ClawdMood.Flip
+        content.success -> ClawdMood.Dance
+        else -> ClawdMood.Thinking
+    }
+    is IslandContent.Lock -> if (content.open) ClawdMood.Wave else ClawdMood.Sleep
+    is IslandContent.Alert -> ClawdMood.Wave
+    IslandContent.Torch -> ClawdMood.Wave
+    else -> if (clawdAsleep(java.time.LocalTime.now().hour)) ClawdMood.Sleep else ClawdMood.Idle
+}
+
+/** What Clawd says beside the camera when the island is unfolded. */
+private fun clawdLine(content: IslandContent): String = when (content) {
+    is IslandContent.Media -> if (content.playing.playing) "Clawd tanzt mit ♪" else "Clawd wartet auf Musik"
+    is IslandContent.Live -> when (content.notice.kind) {
+        NoticeKind.Call -> "Clawd hält die Leitung"
+        NoticeKind.Timer -> "Clawd zählt mit"
+        NoticeKind.Alarm -> "Aufwachen!"
+        NoticeKind.Navigation -> "Clawd fährt mit"
+        NoticeKind.Recording -> "Clawd hört zu"
+        else -> "Clawd behält das im Blick"
+    }
+    is IslandContent.Message -> "Clawd hat Post für dich"
+    is IslandContent.Charging -> "Clawd tankt mit ⚡"
+    is IslandContent.Code -> if (content.copied) "Kopiert!" else "Clawd hält den Code bereit"
+    is IslandContent.Screenshot -> "Schönes Bild!"
+    is IslandContent.Alert -> "Clawd sagt Bescheid"
+    IslandContent.Torch -> "Licht an!"
+    else -> "Clawd ist da"
+}
+
+/**
+ * The small island with Clawd riding along: he sits on the far left, everything else as
+ * always beside him (still kept off the camera). Idle and Face ID have their own places for him.
+ */
+@Composable
+private fun CompactWithClawd(content: IslandContent) {
+    val on = LocalSettings.current.glimmerClawd
+    if (!on || content is IslandContent.Idle || content is IslandContent.Hidden || content is IslandContent.Unlock) {
+        CompactContent(content)
+        return
+    }
+    val hole = LocalCameraHole.current
+    Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.width(ClawdExtra).fillMaxHeight().padding(start = 9.dp), contentAlignment = Alignment.CenterStart) {
+            Clawd(
+                Modifier.size(width = 20.dp, height = 17.dp),
+                mood = clawdMoodFor(content),
+                animate = LocalSettings.current.animations && !LocalGlimmerStill.current,
+            )
+        }
+        // The rest is shifted right by Clawd's room: seen from here, the camera moves left.
+        Box(Modifier.weight(1f).fillMaxHeight()) {
+            CompositionLocalProvider(LocalCameraHole provides hole.copy(x = hole.x - ClawdExtra / 2)) {
+                CompactContent(content)
+            }
+        }
+    }
+}
+
+/** Clawd in the unfolded island: left of the camera, with a word about what's going on. */
+@Composable
+private fun BoxScope.ExpandedClawd(content: IslandContent, band: Dp) {
+    val hole = LocalCameraHole.current
+    BoxWithConstraints(
+        Modifier
+            .align(Alignment.TopStart)
+            .fillMaxWidth()
+            .height(band),
+    ) {
+        // Up to the camera, never under it.
+        val room = (maxWidth / 2 + hole.x - hole.radius - CameraMargin - 18.dp).coerceAtLeast(0.dp)
+        Row(
+            Modifier
+                .padding(start = 18.dp)
+                .width(room)
+                .fillMaxHeight()
+                .clipToBounds(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val h = (band - 6.dp).coerceIn(12.dp, 20.dp)
+            Clawd(
+                Modifier.size(width = h * 1.2f, height = h),
+                mood = clawdMoodFor(content),
+                animate = LocalSettings.current.animations && !LocalGlimmerStill.current,
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                clawdLine(content),
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

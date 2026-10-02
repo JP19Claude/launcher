@@ -795,7 +795,7 @@ class SettingsRepository(context: Context) {
             glimmerMode = enumOf("glimmerMode", d.glimmerMode),
             glimmerStyle = enumOf("glimmerStyle", d.glimmerStyle),
             glimmerIdlePill = prefs.getBoolean("glimmerIdlePill", d.glimmerIdlePill),
-            glimmerClawd = prefs.getBoolean("clawdInGlimmer", d.glimmerClawd),
+            glimmerClawd = prefs.getBoolean(KEY_CLAWD_GLIMMER, d.glimmerClawd),
             glimmerMessages = prefs.getBoolean("glimmerMessages", d.glimmerMessages),
             glimmerTapOpens = prefs.getBoolean("glimmerTapOpens", d.glimmerTapOpens),
             glimmerAlerts = prefs.getBoolean("glimmerAlerts", d.glimmerAlerts),
@@ -911,7 +911,7 @@ class SettingsRepository(context: Context) {
             .putString("glimmerMode", s.glimmerMode.name)
             .putString("glimmerStyle", s.glimmerStyle.name)
             .putBoolean("glimmerIdlePill", s.glimmerIdlePill)
-            .putBoolean("clawdInGlimmer", s.glimmerClawd)
+            .putBoolean(KEY_CLAWD_GLIMMER, s.glimmerClawd)
             .putBoolean("glimmerMessages", s.glimmerMessages)
             .putBoolean("glimmerTapOpens", s.glimmerTapOpens)
             .putBoolean("glimmerAlerts", s.glimmerAlerts)
@@ -956,7 +956,14 @@ class SettingsRepository(context: Context) {
         const val PREFS_NAME = "hearth_settings"
 
         /** Settings Hearth hands to Glimmer: the control center's look and the accent color. */
-        fun isShared(key: String) = key.startsWith("cc") || key.startsWith("clawd") || key == "accent" || key == AppLock.KEY
+        fun isShared(key: String) =
+            (key.startsWith("cc") || key.startsWith("clawd") || key == "accent" || key == AppLock.KEY) && key != KEY_CLAWD_GLIMMER
+
+        /**
+         * Clawd in Glimmer is switched in either app: Hearth hands it over only when it's
+         * switched there (see [writeRaw]), so it never undoes the switch in the Glimmer app.
+         */
+        const val KEY_CLAWD_GLIMMER = "clawdInGlimmer"
 
         /** The shared settings as they are stored, for [writeRaw] in the other app. */
         fun readShared(context: Context): Bundle = Bundle().apply {
@@ -976,7 +983,7 @@ class SettingsRepository(context: Context) {
         fun writeRaw(context: Context, values: Bundle) {
             val edit = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
             for (key in values.keySet()) {
-                if (!isShared(key)) continue
+                if (!isShared(key) && key != KEY_CLAWD_GLIMMER) continue
                 @Suppress("DEPRECATION")
                 when (val value = values.get(key)) {
                     is String -> edit.putString(key, value)

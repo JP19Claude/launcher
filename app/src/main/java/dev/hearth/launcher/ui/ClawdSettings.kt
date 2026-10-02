@@ -91,9 +91,19 @@ internal fun ClawdSettings(
             ) { v -> update { it.copy(clawdCompanion = v) } }
             SwitchRow(
                 label = "Clawd in Glimmer",
-                description = "Er sitzt in der Insel neben der Kamera, schläft nachts und tanzt beim Laden (braucht die Glimmer-App)",
+                description = "Clawd ist bei allem dabei, was die Insel zeigt: Musik, Anrufe, Timer, Nachrichten, Laden, Face ID … (braucht die Glimmer-App; dort lässt er sich auch ein- und ausschalten)",
                 checked = s.glimmerClawd,
-            ) { v -> update { it.copy(glimmerClawd = v) } }
+            ) { v ->
+                update { it.copy(glimmerClawd = v) }
+                // Straight to Glimmer: there it's its own switch, so it's only handed over now.
+                val app = context.applicationContext
+                Thread {
+                    dev.hearth.launcher.system.GlimmerLink.syncSettings(
+                        app,
+                        android.os.Bundle().apply { putBoolean(dev.hearth.launcher.data.SettingsRepository.KEY_CLAWD_GLIMMER, v) },
+                    )
+                }.start()
+            }
             Note("Clawd-Widgets: Startbildschirm gedrückt halten → Widget hinzufügen → Clawd. Farbe und Hut gelten überall: Suche, Chat, Widgets, Begleiter – und in der Clawd-App.")
             var installed by remember { mutableStateOf(ClawdLink.isInstalled(context)) }
             ActionRow(

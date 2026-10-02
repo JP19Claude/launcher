@@ -70,6 +70,7 @@ class GlimmerBridgeProvider : ContentProvider() {
                     widthScale = settings.glimmerWidth,
                     dynamicIsland = settings.glimmerIsDynamicIsland,
                     narrow = settings.glimmerNarrow,
+                    clawd = settings.glimmerClawd,
                 )
                 putFloat("lw", landing.width.value)
                 putInt("ox", settings.glimmerOffsetX)
