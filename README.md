@@ -108,6 +108,14 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   - Stoppuhr und Timer laufen in Glimmer weiter, auch bei der Samsung-Uhr und anderen Uhr-Apps
     (Zeit aus Chronometer oder Text, Stoppuhr mit Zehnteln, angehalten bleibt sie stehen)
   - Bildschirm- und Sprachaufnahmen mit rotem Punkt und laufender Zeit
+  - Anrufe wie beim iPhone: Zeit in Grün links, grüne Stimm-Welle rechts; ein eingehender
+    Anruf klappt Glimmer sofort auf, mit grünem „Annehmen“ und rotem „Ablehnen“
+  - Klingelnder Wecker oder abgelaufener Timer klappt auf (Schlummern / Stopp)
+  - Navigation zeigt die nächste Entfernung
+  - Taschenlampe an: gelbe Live-Aktivität, antippen und „Ausschalten“ oder gedrückt halten
+  - Energiesparmodus und Flugmodus an/aus
+  - Zweite Aktivität löst sich wie ein Tropfen von der Pille: die Blase gleitet heraus,
+    verbunden durch einen flüssigen Hals, der dünner wird und reißt
 - Foto-Widget: eigene Bilder als Diashow mit langsamem Zoom auf Glas, für Homescreen
   und Widget-Seite
 - Apps frei anordnen: Icon lange drücken und ziehen (Menü verschwindet beim Ziehen),

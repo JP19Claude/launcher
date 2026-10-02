@@ -1,5 +1,9 @@
 package dev.hearth.launcher.system
 
+import androidx.compose.runtime.LaunchedEffect
+import android.os.PowerManager
+import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraCharacteristics
 import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.content.BroadcastReceiver
@@ -112,6 +116,25 @@ class GlimmerController(private val service: ControlCenterService) {
         handler.postDelayed({ if (token == unlockToken) unlock.value = null }, hideAfter)
     }
 
+    /** The flashlight is on: a live activity, tap turns it off. */
+    private val torchOn = MutableStateFlow(false)
+    private val camera = service.getSystemService(CameraManager::class.java)
+    private val torchId: String? = runCatching {
+        camera?.cameraIdList?.firstOrNull { id ->
+            camera.getCameraCharacteristics(id).get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+        }
+    }.getOrNull()
+    private val torchCallback = object : CameraManager.TorchCallback() {
+        override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
+            if (cameraId == torchId) torchOn.value = enabled
+        }
+    }
+
+    private fun torchOff() {
+        val id = torchId ?: return
+        runCatching { camera?.setTorchMode(id, false) }
+    }
+
     /** The always-on display is showing (screen "off" but drawing). */
     private val dozing = MutableStateFlow(false)
     private val displayListener = object : DisplayManager.DisplayListener {
@@ -180,6 +203,14 @@ class GlimmerController(private val service: ControlCenterService) {
                     }
                     batteryFull = full
                 }
+                PowerManager.ACTION_POWER_SAVE_MODE_CHANGED -> if (settings.glimmerAlerts) {
+                    val on = service.getSystemService(PowerManager::class.java)?.isPowerSaveMode == true
+                    flash(IslandContent.Alert(Glyph.Battery, "Energiesparmodus", if (on) "An" else "Aus", YELLOW))
+                }
+                Intent.ACTION_AIRPLANE_MODE_CHANGED -> if (settings.glimmerAlerts) {
+                    val on = intent.getBooleanExtra("state", false)
+                    flash(IslandContent.Alert(Glyph.Airplane, "Flugmodus", if (on) "An" else "Aus", ORANGE))
+                }
                 NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED -> {
                     val filter = service.getSystemService(NotificationManager::class.java)?.currentInterruptionFilter
                     val on = filter != null && filter != NotificationManager.INTERRUPTION_FILTER_ALL &&
@@ -241,6 +272,8 @@ class GlimmerController(private val service: ControlCenterService) {
             addAction(Intent.ACTION_USER_PRESENT)
             addAction(Intent.ACTION_BATTERY_CHANGED)
             addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
+            addAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
+            addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED)
         }
         updateLocked()
         // Start from how things are, so only real changes flash.
@@ -250,6 +283,7 @@ class GlimmerController(private val service: ControlCenterService) {
         batteryFull = true
         startHeadphoneWatch()
         runCatching { service.getSystemService(DisplayManager::class.java)?.registerDisplayListener(displayListener, handler) }
+        runCatching { camera?.registerTorchCallback(torchCallback, handler) }
         updateDozing()
         ContextCompat.registerReceiver(service, systemReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         receiverRegistered = true
@@ -299,6 +333,8 @@ class GlimmerController(private val service: ControlCenterService) {
 
     fun stop() {
         runCatching { service.getSystemService(DisplayManager::class.java)?.unregisterDisplayListener(displayListener) }
+        runCatching { camera?.unregisterTorchCallback(torchCallback) }
+        torchOn.value = false
         unlock.value = null
         audioCallback?.let { cb ->
             runCatching { service.getSystemService(AudioManager::class.java)?.unregisterAudioDeviceCallback(cb) }
@@ -376,15 +412,17 @@ class GlimmerController(private val service: ControlCenterService) {
                 val onLockScreen by locked.collectAsStateWithLifecycle()
                 val unlocking by unlock.collectAsStateWithLifecycle()
                 val aod by dozing.collectAsStateWithLifecycle()
+                val torch by torchOn.collectAsStateWithLifecycle()
                 val onAod = aod && settings.glimmerAod
 
                 val ongoing = live.sortedBy { priority(it.kind) }
                 val ordered = buildList<IslandContent> {
                     currentAlert?.let { add(it) }
                     currentMessage?.let { add(IslandContent.Message(it)) }
-                    ongoing.firstOrNull { it.kind == NoticeKind.Call }?.let { add(IslandContent.Live(it)) }
+                    ongoing.filter { it.kind == NoticeKind.Call || it.kind == NoticeKind.Alarm }.forEach { add(IslandContent.Live(it)) }
+                    if (torch) add(IslandContent.Torch)
                     playing?.takeIf { it.playing }?.let { add(IslandContent.Media(it)) }
-                    ongoing.filter { it.kind != NoticeKind.Call }.forEach { add(IslandContent.Live(it)) }
+                    ongoing.filter { it.kind != NoticeKind.Call && it.kind != NoticeKind.Alarm }.forEach { add(IslandContent.Live(it)) }
                     // Paused, but still there to resume.
                     playing?.takeIf { !it.playing && keepPaused }?.let { add(IslandContent.Media(it)) }
                 }
@@ -396,6 +434,14 @@ class GlimmerController(private val service: ControlCenterService) {
                     ordered
                 }
                 lastOrder = activities.map { islandKey(it) }
+                // A call coming in or an alarm ringing opens up right away, like on the iPhone.
+                val urgent = ongoing.firstOrNull { it.kind == NoticeKind.Alarm || (it.kind == NoticeKind.Call && !it.hasTime) }
+                LaunchedEffect(urgent?.key) {
+                    if (urgent != null && !dozing.value) {
+                        focusKey.value = islandKey(IslandContent.Live(urgent))
+                        expanded.value = true
+                    }
+                }
                 // On the always-on display only music and live activities, still and dimmed.
                 val shown = when {
                     aod && !settings.glimmerAod -> emptyList()
@@ -537,12 +583,14 @@ class GlimmerController(private val service: ControlCenterService) {
                 sendIntent(service, content.notice.contentIntent)
                 message.value = null
             }
+            IslandContent.Torch -> torchOff()
             else -> Unit
         }
     }
 
     private fun priority(kind: NoticeKind) = when (kind) {
         NoticeKind.Call -> 0
+        NoticeKind.Alarm -> 0
         NoticeKind.Navigation -> 1
         NoticeKind.Timer -> 2
         NoticeKind.Recording -> 2
@@ -558,6 +606,7 @@ class GlimmerController(private val service: ControlCenterService) {
         val ORANGE = Color(0xFFFF9F0A)
         val RED = Color(0xFFFF453A)
         val PURPLE = Color(0xFF8E7CFF)
+        val YELLOW = Color(0xFFFFD60A)
         const val KEEP_PAUSED_MS = 10 * 60 * 1000L
         val HeadphoneTypes = buildSet {
             add(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)

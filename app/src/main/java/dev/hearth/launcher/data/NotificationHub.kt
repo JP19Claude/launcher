@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /** What a notification is about, as far as Glimmer cares. */
-enum class NoticeKind { Call, Navigation, Timer, Recording, Progress, Message }
+enum class NoticeKind { Call, Alarm, Navigation, Timer, Recording, Progress, Message }
 
 @Immutable
 class NoticeAction(val title: String, val intent: PendingIntent)
@@ -335,6 +335,9 @@ object NotificationHub {
         val indeterminate = extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false)
         val kind = when {
             n.category == Notification.CATEGORY_CALL -> NoticeKind.Call
+            // A ringing alarm (full screen when the phone is in use).
+            n.category == Notification.CATEGORY_ALARM && (n.fullScreenIntent != null || (clockApp && sbn.isOngoing && !timerLike)) ->
+                NoticeKind.Alarm
             n.category == Notification.CATEGORY_NAVIGATION -> NoticeKind.Navigation
             recording -> NoticeKind.Recording
             timerLike -> NoticeKind.Timer
@@ -371,7 +374,7 @@ object NotificationHub {
                     val seen = sbn.postTime.takeIf { it > 0 } ?: System.currentTimeMillis()
                     base = if (countDown) seen + textTime else seen - textTime
                 }
-                kind == NoticeKind.Call -> Unit
+                // A call without a running time is still ringing.
                 else -> hasTime = false
             }
         }

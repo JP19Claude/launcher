@@ -114,6 +114,9 @@ sealed interface IslandContent {
 
     data class Message(val notice: LiveNotice) : IslandContent
 
+    /** The flashlight is on; tap (or hold) turns it off. */
+    data object Torch : IslandContent
+
     /** Face ID moment: scanning while the phone checks, then a tick once it's unlocked. */
     data class Unlock(val success: Boolean, val face: Boolean) : IslandContent
 
@@ -130,6 +133,7 @@ sealed interface IslandContent {
 private val Green = Color(0xFF34C759)
 private val Orange = Color(0xFFFF9F0A)
 private val Red = Color(0xFFFF453A)
+private val Yellow = Color(0xFFFFD60A)
 
 /** Height of the pill when not expanded: as tall as the status bar row, like the camera ring. */
 const val ISLAND_HEIGHT_DP = 30f
@@ -138,6 +142,9 @@ private const val UNLOCK_SIZE_DP = 92f
 
 /** True on the always-on display: everything holds still (no frames while the phone dozes). */
 private val LocalGlimmerStill = compositionLocalOf { false }
+
+/** Space between the pill and the second activity's bubble. */
+private val SecondaryGap = 6.dp
 
 /** Size of the secondary bubble next to the pill, plus the gap. */
 private val SecondaryExtra = 36.dp
@@ -277,6 +284,21 @@ fun GlimmerIsland(
         }
     }
 
+    // A second activity splits off like a drop, as on the iPhone: the little bubble slides out
+    // from under the pill, joined to it by a liquid neck that thins and lets go.
+    val detach = remember { Animatable(0f) }
+    val secondaryKey = secondary?.let { islandKey(it) }
+    LaunchedEffect(hasSecondary, secondaryKey) {
+        if (hasSecondary) {
+            if (!animations || dimmed) {
+                detach.snapTo(1f)
+            } else {
+                detach.snapTo(0f)
+                detach.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 260f))
+            }
+        }
+    }
+
     CompositionLocalProvider(LocalGlimmerStill provides dimmed) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         if (content is IslandContent.Hidden) return@Box
@@ -361,11 +383,34 @@ fun GlimmerIsland(
                 }
             }
             if (hasSecondary && secondary != null) {
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(SecondaryGap))
                 IslandShape(
                     style = style,
                     corner = 15.dp,
                     modifier = Modifier
+                        .graphicsLayer {
+                            val d = detach.value
+                            translationX = -(1f - d) * (ISLAND_HEIGHT_DP.dp + SecondaryGap).toPx()
+                            val grow = 0.55f + 0.45f * d.coerceAtMost(1f)
+                            scaleX = grow
+                            scaleY = grow
+                        }
+                        .drawBehind {
+                            // The neck back to the pill, thinning as the bubble pulls away.
+                            if (style == GlimmerStyle.Black) {
+                                val d = detach.value
+                                val neck = size.height * 0.8f * (1f - ((d - 0.3f) / 0.6f).coerceIn(0f, 1f))
+                                if (neck > 0.5f) {
+                                    val reach = SecondaryGap.toPx() + size.height * 0.4f
+                                    drawRoundRect(
+                                        Color.Black,
+                                        topLeft = Offset(-reach, (size.height - neck) / 2f),
+                                        size = Size(reach + size.width / 2f, neck),
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(neck / 2f),
+                                    )
+                                }
+                            }
+                        }
                         .size(ISLAND_HEIGHT_DP.dp)
                         // Tap: bring it to the front and unfold it; hold: open its app.
                         .pointerInput(secondary) {
@@ -393,6 +438,7 @@ private fun glowColorOf(content: IslandContent, accent: Color): Color = when (co
     is IslandContent.Media -> content.playing.artPalette.firstOrNull() ?: content.playing.artColor ?: Color.White
     is IslandContent.Live -> noticeColor(content.notice.kind)
     is IslandContent.Unlock -> Color.White
+    IslandContent.Torch -> Yellow
     else -> Color.White
 }
 
@@ -405,6 +451,7 @@ internal fun islandKey(content: IslandContent): String = when (content) {
     IslandContent.Hidden -> "hidden"
     // One key for scanning and done, so the scan turns into the tick in place.
     is IslandContent.Unlock -> "unlock"
+    IslandContent.Torch -> "torch"
 }
 
 @Composable
@@ -449,8 +496,23 @@ private fun noticeColor(kind: NoticeKind): Color = when (kind) {
     NoticeKind.Call -> Green
     NoticeKind.Timer -> Orange
     NoticeKind.Recording -> Red
+    NoticeKind.Alarm -> Orange
     else -> Color.White
 }
+
+/** Answer in green, hang up / decline / stop in red, the rest in glass. */
+private fun actionColor(notice: LiveNotice, title: String): Color {
+    val t = title.lowercase()
+    return when {
+        AcceptWords.any { it in t } -> Green
+        notice.kind == NoticeKind.Call && EndWords.any { it in t } -> Red
+        notice.kind == NoticeKind.Alarm && EndWords.any { it in t } -> Orange
+        else -> Color.White.copy(alpha = 0.16f)
+    }
+}
+
+private val AcceptWords = listOf("annehmen", "accept", "answer", "abheben", "rangehen")
+private val EndWords = listOf("ablehnen", "auflegen", "beenden", "decline", "hang up", "end call", "stopp", "stop", "dismiss", "schließen")
 
 /** Stopwatch with tenths, like the iPhone's: "1:23,4". */
 private fun formatStopwatch(ms: Long): String {
@@ -497,12 +559,13 @@ private fun LeadingBadge(content: IslandContent, size: Dp) {
         }
         is IslandContent.Live -> when (content.notice.kind) {
             NoticeKind.Call -> Icon(Icons.Rounded.Call, null, tint = Green, modifier = Modifier.size(size))
-            NoticeKind.Timer -> GlyphIcon(Glyph.Alarm, Orange, Modifier.size(size))
+            NoticeKind.Timer, NoticeKind.Alarm -> GlyphIcon(Glyph.Alarm, Orange, Modifier.size(size))
             NoticeKind.Recording -> Box(Modifier.size(size), contentAlignment = Alignment.Center) { PulseDot(Red) }
             else -> AppBadge(content.notice, size)
         }
         is IslandContent.Message -> AppBadge(content.notice, size)
         is IslandContent.Alert -> GlyphIcon(content.glyph, content.color, Modifier.size(size))
+        IslandContent.Torch -> GlyphIcon(Glyph.Torch, Yellow, Modifier.size(size))
         else -> Unit
     }
 }
@@ -532,6 +595,24 @@ private fun CompactContent(content: IslandContent) {
     }
     if (content is IslandContent.Media && LocalSettings.current.glimmerMusicStyle == GlimmerMusicStyle.Hyper) {
         HyperCompact(content.playing)
+        return
+    }
+    // A call in progress, like on the iPhone: its time in green on the left, the voice as a
+    // green wave on the right.
+    if (content is IslandContent.Live && content.notice.kind == NoticeKind.Call && content.notice.hasTime) {
+        val now = rememberLiveNow(content.notice)
+        Row(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Rounded.Call, null, tint = Green, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(5.dp))
+            Text(liveTimeText(content.notice, now) ?: "", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Spacer(Modifier.weight(1f))
+            HyperWave(listOf(Green, Color(0xFF7CF29A)), playing = true, modifier = Modifier.size(26.dp, 14.dp))
+        }
         return
     }
     Row(
@@ -570,10 +651,31 @@ private fun CompactContent(content: IslandContent) {
                         }
                     }
                     NoticeKind.Progress -> ProgressRing(notice, Modifier.size(18.dp))
+                    // Ringing alarm: its name (the time) in orange.
+                    NoticeKind.Alarm -> Text(
+                        notice.title.ifBlank { "Wecker" },
+                        color = Orange,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 90.dp),
+                    )
+                    // Navigation: the next distance ("200 m").
+                    NoticeKind.Navigation -> Text(
+                        notice.title.ifBlank { notice.text },
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 90.dp),
+                    )
                     else -> PulseDot(Color.White)
                 }
             }
             is IslandContent.Message -> PulseDot(LocalSettings.current.accent.color)
+            IslandContent.Torch -> Text("An", color = Yellow, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             is IslandContent.Alert -> Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     content.value,
@@ -706,13 +808,7 @@ private fun ExpandedContent(
                                 Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(18.dp))
-                                    .background(
-                                        if (notice.kind == NoticeKind.Call && action.title.contains("leg", ignoreCase = true)) {
-                                            Color(0xFFFF453A)
-                                        } else {
-                                            Color.White.copy(alpha = 0.16f)
-                                        },
-                                    )
+                                    .background(actionColor(notice, action.title))
                                     .clickable { onAction(action.intent) }
                                     .padding(vertical = 10.dp),
                                 contentAlignment = Alignment.Center,
@@ -731,6 +827,20 @@ private fun ExpandedContent(
                     Text(content.value, color = content.color, fontSize = 15.sp)
                 }
                 content.level?.let { LevelBar(it, content.color, Modifier.size(52.dp, 24.dp)) }
+            }
+            IslandContent.Torch -> Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                GlyphIcon(Glyph.Torch, Yellow, Modifier.size(40.dp))
+                Spacer(Modifier.width(14.dp))
+                Text("Taschenlampe", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Yellow)
+                        .clickable(onClick = onOpen)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                ) {
+                    Text("Ausschalten", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
             else -> Unit
         }
