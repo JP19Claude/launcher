@@ -129,6 +129,7 @@ sealed interface IslandContent {
 
 private val Green = Color(0xFF34C759)
 private val Orange = Color(0xFFFF9F0A)
+private val Red = Color(0xFFFF453A)
 
 /** Height of the pill when not expanded: as tall as the status bar row, like the camera ring. */
 const val ISLAND_HEIGHT_DP = 30f
@@ -447,7 +448,39 @@ private fun formatDuration(ms: Long): String {
 private fun noticeColor(kind: NoticeKind): Color = when (kind) {
     NoticeKind.Call -> Green
     NoticeKind.Timer -> Orange
+    NoticeKind.Recording -> Red
     else -> Color.White
+}
+
+/** Stopwatch with tenths, like the iPhone's: "1:23,4". */
+private fun formatStopwatch(ms: Long): String {
+    val total = ms / 1000
+    val h = total / 3600
+    val m = (total % 3600) / 60
+    val sec = total % 60
+    return if (h > 0) "%d:%02d:%02d".format(h, m, sec) else "%d:%02d,%d".format(m, sec, (ms % 1000) / 100)
+}
+
+/** The time a live activity shows right now, or null if it has none. */
+private fun liveTimeText(notice: LiveNotice, now: Long): String? {
+    val ms = notice.timeMs(now) ?: return null
+    return if (notice.stopwatch) formatStopwatch(ms) else formatDuration(ms)
+}
+
+/** Ticks fast enough for a running stopwatch's tenths, otherwise twice a second. */
+@Composable
+private fun rememberLiveNow(notice: LiveNotice): Long {
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val fast = notice.stopwatch && !notice.paused
+    val still = LocalGlimmerStill.current
+    LaunchedEffect(fast, notice.paused, still) {
+        while (true) {
+            now = System.currentTimeMillis()
+            if (notice.paused) break
+            delay(if (still) 1000 else if (fast) 100 else 500)
+        }
+    }
+    return now
 }
 
 /** Small picture on the left: cover, call or timer symbol, or the app's icon. */
@@ -465,6 +498,7 @@ private fun LeadingBadge(content: IslandContent, size: Dp) {
         is IslandContent.Live -> when (content.notice.kind) {
             NoticeKind.Call -> Icon(Icons.Rounded.Call, null, tint = Green, modifier = Modifier.size(size))
             NoticeKind.Timer -> GlyphIcon(Glyph.Alarm, Orange, Modifier.size(size))
+            NoticeKind.Recording -> Box(Modifier.size(size), contentAlignment = Alignment.Center) { PulseDot(Red) }
             else -> AppBadge(content.notice, size)
         }
         is IslandContent.Message -> AppBadge(content.notice, size)
@@ -519,15 +553,21 @@ private fun CompactContent(content: IslandContent) {
             is IslandContent.Live -> {
                 val notice = content.notice
                 when (notice.kind) {
-                    NoticeKind.Call, NoticeKind.Timer -> {
-                        val now = rememberNowMillis()
-                        Text(
-                            formatDuration(if (notice.countDown) notice.chronometerBase - now else now - notice.chronometerBase),
-                            color = noticeColor(notice.kind),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                        )
+                    NoticeKind.Call, NoticeKind.Timer, NoticeKind.Recording -> {
+                        val now = rememberLiveNow(notice)
+                        val time = liveTimeText(notice, now)
+                        if (time != null) {
+                            Text(
+                                time,
+                                // On hold: the time stands, a little dimmer.
+                                color = noticeColor(notice.kind).copy(alpha = if (notice.paused) 0.55f else 1f),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                            )
+                        } else {
+                            PulseDot(noticeColor(notice.kind))
+                        }
                     }
                     NoticeKind.Progress -> ProgressRing(notice, Modifier.size(18.dp))
                     else -> PulseDot(Color.White)
@@ -644,14 +684,16 @@ private fun ExpandedContent(
                             Text(notice.text, color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
                     }
-                    if (notice.kind == NoticeKind.Call || notice.kind == NoticeKind.Timer) {
-                        val now = rememberNowMillis()
-                        Text(
-                            formatDuration(if (notice.countDown) notice.chronometerBase - now else now - notice.chronometerBase),
-                            color = noticeColor(notice.kind),
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Light,
-                        )
+                    if (notice.kind == NoticeKind.Call || notice.kind == NoticeKind.Timer || notice.kind == NoticeKind.Recording) {
+                        val now = rememberLiveNow(notice)
+                        liveTimeText(notice, now)?.let { time ->
+                            Text(
+                                time,
+                                color = noticeColor(notice.kind).copy(alpha = if (notice.paused) 0.6f else 1f),
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.Light,
+                            )
+                        }
                     } else if (notice.kind == NoticeKind.Progress) {
                         ProgressRing(notice, Modifier.size(34.dp))
                     }

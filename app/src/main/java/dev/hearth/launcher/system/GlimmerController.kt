@@ -545,6 +545,7 @@ class GlimmerController(private val service: ControlCenterService) {
         NoticeKind.Call -> 0
         NoticeKind.Navigation -> 1
         NoticeKind.Timer -> 2
+        NoticeKind.Recording -> 2
         NoticeKind.Progress -> 3
         NoticeKind.Message -> 4
     }

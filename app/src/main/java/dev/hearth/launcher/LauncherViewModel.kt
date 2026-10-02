@@ -1,5 +1,8 @@
 package dev.hearth.launcher
 
+import dev.hearth.launcher.system.ControlCenterService
+import android.os.SystemClock
+import android.graphics.Bitmap
 import android.app.Application
 import android.content.Intent
 import android.graphics.Rect
@@ -350,16 +353,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _homeEvents.tryEmit(alreadyInFront)
     }
 
+    /** An app flying into Glimmer, with the last picture of it (if one could be taken). */
+    class FlyIn(val app: AppInfo, val snapshot: Bitmap?)
+
     /** The app opened last from Hearth; it flies into Glimmer when we're back home. */
     private var pendingFlyIn: AppInfo? = null
-    private val _flyIns = MutableSharedFlow<AppInfo>(extraBufferCapacity = 1)
-    val flyIns: SharedFlow<AppInfo> = _flyIns.asSharedFlow()
+    private val _flyIns = MutableSharedFlow<FlyIn>(extraBufferCapacity = 1)
+    val flyIns: SharedFlow<FlyIn> = _flyIns.asSharedFlow()
 
     /** Back on the home screen after the launcher was in the background. */
     fun onReturnedHome() {
+        // A picture from just before the home gesture, not one of the window already shrinking.
+        val shot = ControlCenterService.instance?.finishAppSnapshots(SystemClock.uptimeMillis() - 300)
         val app = pendingFlyIn ?: return
         pendingFlyIn = null
-        _flyIns.tryEmit(app)
+        _flyIns.tryEmit(FlyIn(app, shot))
     }
 
     private fun buildLibrary(all: List<AppInfo>, used: Map<String, AppUsage>): AppLibraryData {
@@ -389,6 +397,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun launch(app: AppInfo, sourceBounds: Rect? = null, options: Bundle? = null) {
         usage.recordLaunch(app.key)
         pendingFlyIn = app
+        if (settingsRepo.settings.value.glimmerFlyIn) ControlCenterService.instance?.startAppSnapshots()
         repo.launch(app, sourceBounds, options)
     }
     fun openAppInfo(app: AppInfo) = repo.openAppInfo(app)

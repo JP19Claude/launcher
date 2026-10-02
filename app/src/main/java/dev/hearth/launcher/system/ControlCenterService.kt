@@ -10,6 +10,8 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.PixelFormat
+import android.view.Display
+import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
@@ -152,6 +154,7 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
                     hidePanel(immediately = true)
                     removeTrigger()
                     lockNotes?.update()
+                    stopAppSnapshots()
                 }
                 // Screen back on without the lock screen (it locks only after a while):
                 // there's no "user present" then, the strip used to stay missing.
@@ -371,6 +374,70 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
     }
 
     /** Glimmer hops and shimmers (an app just flew into it). */
+    // ---- App snapshots for the fly-in ----
+
+    /**
+     * While an app opened from Hearth is in front, its look is captured about once a second
+     * (Android 11+), so that when it's closed, the app itself (not just its color) can fly
+     * into Glimmer. Only the last two pictures are kept, in memory; nothing is saved.
+     */
+    private var snapshotting = false
+    private val snapshots = ArrayDeque<Pair<Long, Bitmap>>()
+    private val snapshotTick = object : Runnable {
+        override fun run() {
+            if (!snapshotting || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+            val usable = !isLocked() && !panelVisible &&
+                getSystemService(PowerManager::class.java)?.isInteractive != false
+            if (usable) {
+                runCatching {
+                    takeScreenshot(
+                        Display.DEFAULT_DISPLAY,
+                        mainExecutor,
+                        object : TakeScreenshotCallback {
+                            override fun onSuccess(result: ScreenshotResult) {
+                                val buffer = result.hardwareBuffer
+                                val bitmap = runCatching { Bitmap.wrapHardwareBuffer(buffer, result.colorSpace) }.getOrNull()
+                                buffer.close()
+                                if (bitmap == null || !snapshotting) return
+                                snapshots.addLast(SystemClock.uptimeMillis() to bitmap)
+                                while (snapshots.size > 2) snapshots.removeFirst()
+                            }
+
+                            override fun onFailure(errorCode: Int) = Unit
+                        },
+                    )
+                }
+            }
+            handler.postDelayed(this, SNAPSHOT_INTERVAL_MS)
+        }
+    }
+
+    /** An app opened from Hearth came to the front. */
+    fun startAppSnapshots() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        snapshots.clear()
+        snapshotting = true
+        handler.removeCallbacks(snapshotTick)
+        // Give the app a moment to draw its first screen.
+        handler.postDelayed(snapshotTick, 700)
+    }
+
+    /**
+     * Back home: stop capturing and hand out the last picture taken before [beforeUptime]
+     * (pictures from during the home gesture would show the window already shrinking).
+     */
+    fun finishAppSnapshots(beforeUptime: Long): Bitmap? {
+        val shot = snapshots.lastOrNull { it.first <= beforeUptime && beforeUptime - it.first < 4000 }?.second
+        stopAppSnapshots()
+        return shot
+    }
+
+    private fun stopAppSnapshots() {
+        snapshotting = false
+        handler.removeCallbacks(snapshotTick)
+        snapshots.clear()
+    }
+
     fun pulseGlimmer() {
         glimmer?.pulse()
     }
@@ -684,6 +751,7 @@ class ControlCenterService : AccessibilityService(), LifecycleOwner, SavedStateR
         val isEnabled: Boolean get() = instance != null
 
         private const val SYSTEM_UI = "com.android.systemui"
+        private const val SNAPSHOT_INTERVAL_MS = 900L
         private const val SYSTEM_UI_ID = "com.android.systemui:id/"
         private const val SYSTEM_SHADE_GRACE_MS = 20_000L
         private const val PULL_DISTANCE_DP = 260

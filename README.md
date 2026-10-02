@@ -92,8 +92,10 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
     Fortschritt in der Cover-Farbe und Steuerung
   - Musik: Fortschrittsbalken zum Spulen (ziehen oder tippen); pausierte Musik bleibt
     10 Minuten in Glimmer (mit Play-Zeichen), damit sie sich dort wieder starten lässt
-  - Schließt du eine App, fließt sie wie bei HarmonyOS in Glimmer: sie schrumpft zu einer
-    Karte in der Hintergrundfarbe der App (aus ihrem Theme), ihr Icon verschwimmt, sie steigt
+  - Schließt du eine App, fließt sie wie bei HarmonyOS in Glimmer: ab Android 11 die App
+    selbst (ihr letztes Bild, per Bedienungshilfe nur im Speicher gemerkt, solange eine über
+    Hearth geöffnete App vorne ist; geschützte Apps wie Banking ergeben die Farbkarte), sonst
+    eine Karte in der Hintergrundfarbe der App (aus ihrem Theme), ihr Icon verschwimmt, sie steigt
     zur Kamera, wird flach wie eine Kapsel und dunkel; die Insel streckt sich ihr entgegen,
     beide verschmelzen über eine flüssige Brücke (Android 12+), dann drückt sich die Insel
     kurz breit und federt zurück (für Apps, die über Hearth geöffnet wurden; abschaltbar)
@@ -103,6 +105,9 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
   - Always-On-Display: Musik und Aktivitäten bleiben sichtbar, gedimmt und ohne Bewegung
     (sofern das Handy Einblendungen im AOD zulässt)
   - Laden zeigt eine kleine Batterie, die sich füllt
+  - Stoppuhr und Timer laufen in Glimmer weiter, auch bei der Samsung-Uhr und anderen Uhr-Apps
+    (Zeit aus Chronometer oder Text, Stoppuhr mit Zehnteln, angehalten bleibt sie stehen)
+  - Bildschirm- und Sprachaufnahmen mit rotem Punkt und laufender Zeit
 - Foto-Widget: eigene Bilder als Diashow mit langsamem Zoom auf Glas, für Homescreen
   und Widget-Seite
 - Apps frei anordnen: Icon lange drücken und ziehen (Menü verschwindet beim Ziehen),

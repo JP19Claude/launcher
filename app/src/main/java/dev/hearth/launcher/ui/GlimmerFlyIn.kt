@@ -47,6 +47,10 @@ import android.util.TypedValue
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
 
 private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
 
@@ -98,7 +102,14 @@ private fun appWindowColor(context: Context, app: AppInfo): Color? = runCatching
  * Draws only, never takes touches.
  */
 @Composable
-fun GlimmerFlyIn(app: AppInfo, island: DpSize?, onPulse: () -> Unit, onDone: () -> Unit) {
+fun GlimmerFlyIn(
+    app: AppInfo,
+    island: DpSize?,
+    onPulse: () -> Unit,
+    onDone: () -> Unit,
+    /** The last picture of the app (Android 11+); with it, the app itself flies, 1:1 like HarmonyOS. */
+    snapshot: ImageBitmap? = null,
+) {
     val view = LocalView.current
     val density = LocalDensity.current
     val travel = remember(app) { Animatable(0f) }
@@ -174,8 +185,10 @@ fun GlimmerFlyIn(app: AppInfo, island: DpSize?, onPulse: () -> Unit, onDone: () 
 
         // One place for the card's shape, read while drawing (no recomposition per frame).
         fun card(t: Float): Pair<Offset, Size> {
-            val startW = w * 0.84f
-            val startH = h * 0.74f
+            // With the app's picture it starts as the whole screen (the app itself, under the
+            // system's closing animation); otherwise as a card the size of the closing window.
+            val startW = if (snapshot != null) w else w * 0.84f
+            val startH = if (snapshot != null) h else h * 0.74f
             // Height collapses faster than width: the card flattens into a capsule on the way.
             val fw = 1f - (1f - t).pow(1.9f)
             val fh = 1f - (1f - t).pow(2.9f)
@@ -183,7 +196,7 @@ fun GlimmerFlyIn(app: AppInfo, island: DpSize?, onPulse: () -> Unit, onDone: () 
             val ch = lerp(startH, targetH, fh)
             val cx = lerp(w / 2f, camX, t)
             // Rises a little ahead of its shrinking: a soft arc up into the island.
-            val cy = lerp(h * 0.52f, camY, 1f - (1f - t).pow(1.5f))
+            val cy = lerp(if (snapshot != null) h * 0.5f else h * 0.52f, camY, 1f - (1f - t).pow(1.5f))
             return Offset(cx - cw / 2f, cy - ch / 2f) to Size(cw, ch)
         }
 
@@ -224,7 +237,7 @@ fun GlimmerFlyIn(app: AppInfo, island: DpSize?, onPulse: () -> Unit, onDone: () 
             if (body <= 0.001f) return@Canvas
             val (pos, size) = card(t)
             val corner = CornerRadius(min(lerp(36.dp.toPx(), min(size.width, size.height) / 2f, t), min(size.width, size.height) / 2f))
-            drawRoundRect(
+            if (snapshot == null) drawRoundRect(
                 brush = Brush.verticalGradient(
                     0f to lerpColor(color, Color.White, 0.18f),
                     1f to lerpColor(color, Color.Black, 0.35f),
@@ -263,7 +276,7 @@ fun GlimmerFlyIn(app: AppInfo, island: DpSize?, onPulse: () -> Unit, onDone: () 
                 .fillMaxSize()
                 .graphicsLayer {
                     val t = travel.value.coerceIn(0f, 1f)
-                    val r = 22.dp.toPx() * smoothstep(0.08f, 0.5f, t)
+                    val r = if (snapshot != null) 16.dp.toPx() * smoothstep(0.25f, 0.65f, t) else 22.dp.toPx() * smoothstep(0.08f, 0.5f, t)
                     renderEffect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && r > 0.5f) {
                         BlurEffect(r, r, TileMode.Decal)
                     } else {
@@ -274,6 +287,32 @@ fun GlimmerFlyIn(app: AppInfo, island: DpSize?, onPulse: () -> Unit, onDone: () 
             val t = travel.value.coerceIn(0f, 1f)
             val appear = smoothstep(0f, 0.06f, t)
             val (pos, size) = card(t)
+            if (snapshot != null) {
+                // The app's own screen, shrinking with the card: cropped, never squeezed, as the
+                // card flattens into the capsule; it melts into the dark body underneath.
+                val body = 1f - smoothstep(0.42f, 0.76f, t)
+                if (body > 0.001f) {
+                    val r = min(lerp(36.dp.toPx(), min(size.width, size.height) / 2f, t), min(size.width, size.height) / 2f)
+                    val scale = max(size.width / snapshot.width, size.height / snapshot.height)
+                    val dw = snapshot.width * scale
+                    val dh = snapshot.height * scale
+                    val clip = Path().apply {
+                        addRoundRect(RoundRect(pos.x, pos.y, pos.x + size.width, pos.y + size.height, CornerRadius(r)))
+                    }
+                    clipPath(clip) {
+                        drawImage(
+                            image = snapshot,
+                            srcOffset = IntOffset.Zero,
+                            srcSize = IntSize(snapshot.width, snapshot.height),
+                            dstOffset = IntOffset((pos.x + (size.width - dw) / 2f).roundToInt(), (pos.y + (size.height - dh) / 2f).roundToInt()),
+                            dstSize = IntSize(dw.roundToInt().coerceAtLeast(1), dh.roundToInt().coerceAtLeast(1)),
+                            alpha = body,
+                            filterQuality = FilterQuality.Low,
+                        )
+                    }
+                }
+                return@Canvas
+            }
             val iconAlpha = (1f - smoothstep(0.3f, 0.58f, t)) * appear
             if (iconAlpha > 0.001f) {
                 val iconSize = max(lerp(84.dp.toPx(), 18.dp.toPx(), t), 1f)
@@ -289,6 +328,22 @@ fun GlimmerFlyIn(app: AppInfo, island: DpSize?, onPulse: () -> Unit, onDone: () 
         }
     }
 }
+
+/**
+ * Whether a captured picture shows anything: apps that protect their screen (banking,
+ * passwords) come out pure black, and then the colored card flies instead.
+ */
+fun snapshotLooksReal(bitmap: Bitmap): Boolean = runCatching {
+    val soft = if (bitmap.config == Bitmap.Config.HARDWARE) bitmap.copy(Bitmap.Config.ARGB_8888, false) else bitmap
+    val tiny = Bitmap.createScaledBitmap(soft, 12, 24, true)
+    var lit = 0
+    for (y in 0 until tiny.height) for (x in 0 until tiny.width) {
+        val p = tiny.getPixel(x, y)
+        val v = ((p shr 16) and 0xFF) + ((p shr 8) and 0xFF) + (p and 0xFF)
+        if (v > 30) lit++
+    }
+    lit > 6
+}.getOrDefault(false)
 
 private fun lerpColor(a: Color, b: Color, t: Float) = Color(
     red = lerp(a.red, b.red, t),

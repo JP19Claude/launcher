@@ -1,5 +1,9 @@
 package dev.hearth.launcher.ui
 
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.runtime.mutableIntStateOf
 import android.Manifest
 import android.accessibilityservice.AccessibilityService
@@ -163,7 +167,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     var controlOpen by rememberSaveable { mutableStateOf(false) }
     var controlPage by remember { mutableIntStateOf(0) }
     // The app that was just closed, flying into Glimmer.
-    var flyApp by remember { mutableStateOf<AppInfo?>(null) }
+    var flyApp by remember { mutableStateOf<Pair<AppInfo, ImageBitmap?>?>(null) }
     var menu by remember { mutableStateOf<GlassMenuRequest?>(null) }
     var widgetPickerOpen by remember { mutableStateOf(false) }
     var selecting by remember { mutableStateOf(false) }
@@ -391,9 +395,14 @@ fun LauncherScreen(vm: LauncherViewModel) {
 
     val currentSettings by rememberUpdatedState(settings)
     LaunchedEffect(Unit) {
-        vm.flyIns.collect { app ->
+        vm.flyIns.collect { fly ->
             val s = currentSettings
-            if (s.glimmerFlyIn && s.glimmerEnabled && s.animations && ControlCenterService.isEnabled) flyApp = app
+            if (s.glimmerFlyIn && s.glimmerEnabled && s.animations && ControlCenterService.isEnabled) {
+                // Apps that hide their screen (banking, passwords) give a black picture: then the
+                // card in the app's colors flies instead.
+                val shot = fly.snapshot?.takeIf { withContext(Dispatchers.Default) { snapshotLooksReal(it) } }
+                flyApp = fly.app to shot?.asImageBitmap()
+            }
         }
     }
 
@@ -855,9 +864,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 )
             }
 
-            flyApp?.let { app ->
+            flyApp?.let { (app, shot) ->
                 GlimmerFlyIn(
                     app = app,
+                    snapshot = shot,
                     island = remember(app) { ControlCenterService.instance?.glimmerIslandSize() },
                     onPulse = { ControlCenterService.instance?.pulseGlimmer() },
                     onDone = { flyApp = null },

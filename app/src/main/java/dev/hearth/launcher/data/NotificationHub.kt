@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /** What a notification is about, as far as Glimmer cares. */
-enum class NoticeKind { Call, Navigation, Timer, Progress, Message }
+enum class NoticeKind { Call, Navigation, Timer, Recording, Progress, Message }
 
 @Immutable
 class NoticeAction(val title: String, val intent: PendingIntent)
@@ -44,7 +44,22 @@ class LiveNotice(
     val icon: ImageBitmap?,
     val contentIntent: PendingIntent?,
     val actions: List<NoticeAction>,
-)
+    /** Stopwatch or timer on hold: [pausedMs] is the time to show, standing still. */
+    val paused: Boolean = false,
+    val pausedMs: Long = 0L,
+    /** False when the notification gives no time at all (then Glimmer shows a dot). */
+    val hasTime: Boolean = true,
+    /** A stopwatch counting up (rather than a timer counting down). */
+    val stopwatch: Boolean = false,
+) {
+    /** The time to show right now (ms), or null without one. */
+    fun timeMs(now: Long): Long? = when {
+        !hasTime -> null
+        paused -> pausedMs
+        countDown -> (chronometerBase - now).coerceAtLeast(0L)
+        else -> (now - chronometerBase).coerceAtLeast(0L)
+    }
+}
 
 /** A notification as listed on the control center's notification page. */
 @Immutable
@@ -141,7 +156,10 @@ object NotificationHub {
             }
             .mapNotNull { shadeNotice(service, it) }
             .sortedByDescending { it.time }
-        _active.value = all.mapNotNull { parse(service, it) }.filter { it.kind != NoticeKind.Message }
+        // One activity per app and kind (some apps post a summary next to the real one).
+        _active.value = all.mapNotNull { parse(service, it) }
+            .filter { it.kind != NoticeKind.Message }
+            .distinctBy { it.packageName + it.kind.name }
         _badges.value = all
             .filter { sbn ->
                 val n = sbn.notification
@@ -262,21 +280,64 @@ object NotificationHub {
         )
     }
 
+    /** "12:34", "1:02:03" or "12:34,56" in a text, as milliseconds. */
+    private fun parseClockTime(text: String): Long? {
+        val m = ClockTimeRegex.find(text) ?: return null
+        val a = m.groupValues[1].toLongOrNull() ?: return null
+        val b = m.groupValues[2].toLongOrNull() ?: return null
+        val c = m.groupValues[3].toLongOrNull()
+        val seconds = if (c != null) a * 3600 + b * 60 + c else a * 60 + b
+        val hundredths = m.groupValues[4].takeIf { it.isNotEmpty() }?.let { h -> h.padEnd(2, '0').toLong() * 10 } ?: 0L
+        return seconds * 1000 + hundredths
+    }
+
+    private val ClockTimeRegex = Regex("""(?<![\d:])(\d{1,2}):(\d{2})(?::(\d{2}))?(?:[.,](\d{1,2}))?(?![\d:])""")
+
+    /** Clock apps whose ongoing notifications are stopwatches and timers. */
+    private val ClockPackages = setOf(
+        "com.sec.android.app.clockpackage", "com.google.android.deskclock", "com.android.deskclock",
+        "com.oneplus.deskclock", "com.coloros.alarmclock", "com.oplus.alarmclock", "com.android.BBKClock",
+        "com.huawei.deskclock", "com.hihonor.deskclock", "com.miui.clock", "com.motorola.timeweatherwidget",
+    )
+    private val StopwatchWords = listOf("stoppuhr", "stopwatch", "chronometer", "chronomètre", "cronometro")
+    private val TimerWords = listOf("timer", "countdown", "kurzzeitwecker", "minuteur", "temporizador")
+    private val RecordingWords = listOf("bildschirmaufnahme", "screen recording", "screen recorder", "aufnahme läuft", "recording")
+    private val ResumeWords = listOf("fortsetzen", "resume", "weiter", "start", "continue", "reprendre")
+    private val PauseWords = listOf("pause", "anhalten", "stopp", "stop", "runde", "lap")
+
     private fun parse(service: NotificationListenerService, sbn: StatusBarNotification): LiveNotice? {
         if (sbn.packageName == service.packageName) return null
         val n = sbn.notification
         val extras = n.extras ?: return null
         // Media is shown from its media session instead.
         if (extras.containsKey(Notification.EXTRA_MEDIA_SESSION)) return null
-        if (n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return null
+
+        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
+        val body = (extras.getCharSequence(Notification.EXTRA_TEXT) ?: extras.getCharSequence(Notification.EXTRA_SUB_TEXT))
+            ?.toString().orEmpty()
+        val sub = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString().orEmpty()
+        val words = "$title $body $sub".lowercase()
+        val actionTitles = n.actions.orEmpty().mapNotNull { it.title?.toString()?.lowercase() }
+        val showChronometer = extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER, false)
+        val clockApp = sbn.packageName in ClockPackages || sbn.packageName.contains("clock", ignoreCase = true)
+        val summary = n.flags and Notification.FLAG_GROUP_SUMMARY != 0
+        val timerLike = sbn.isOngoing && (
+            clockApp || showChronometer || n.category == "stopwatch" ||
+                StopwatchWords.any { it in words } || TimerWords.any { it in words }
+            ) && n.category != Notification.CATEGORY_CALL
+        val recording = sbn.isOngoing && (
+            sbn.packageName.contains("screenrecorder", ignoreCase = true) || RecordingWords.any { it in words }
+            )
+        // Summaries only repeat their children, except a clock's lone stopwatch.
+        if (summary && !timerLike) return null
 
         val progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0)
         val indeterminate = extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false)
         val kind = when {
             n.category == Notification.CATEGORY_CALL -> NoticeKind.Call
             n.category == Notification.CATEGORY_NAVIGATION -> NoticeKind.Navigation
-            sbn.isOngoing && (extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER, false) || n.category == "stopwatch") ->
-                NoticeKind.Timer
+            recording -> NoticeKind.Recording
+            timerLike -> NoticeKind.Timer
             sbn.isOngoing && (progressMax > 0 || indeterminate) -> NoticeKind.Progress
             n.category == Notification.CATEGORY_MESSAGE || n.category == Notification.CATEGORY_EMAIL ||
                 n.category == Notification.CATEGORY_SOCIAL -> NoticeKind.Message
@@ -288,16 +349,45 @@ object NotificationHub {
             pm.getApplicationLabel(pm.getApplicationInfo(sbn.packageName, 0)).toString()
         }.getOrDefault(sbn.packageName)
         val icon = appIcon(service, sbn.packageName)
+
+        // Stopwatch and timer: a running chronometer gives its start (or end) time directly.
+        // Otherwise (Samsung's clock and others draw their own) the time is read from the text,
+        // and kept ticking from when the notification was posted.
+        val stopwatch = StopwatchWords.any { it in words } || n.category == "stopwatch"
+        var countDown = extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN, false) ||
+            (!stopwatch && TimerWords.any { it in words })
+        val paused = actionTitles.any { a -> ResumeWords.any { it in a } } &&
+            actionTitles.none { a -> PauseWords.any { it in a } }
+        var base = n.`when`
+        var pausedMs = 0L
+        var hasTime = true
+        if (kind == NoticeKind.Timer || kind == NoticeKind.Recording || kind == NoticeKind.Call) {
+            val textTime = parseClockTime(title) ?: parseClockTime(body) ?: parseClockTime(sub)
+            val chronometerUsable = showChronometer && base > 0 && !paused
+            when {
+                chronometerUsable -> if (extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN, false)) countDown = true
+                textTime != null && paused -> pausedMs = textTime
+                textTime != null -> {
+                    val seen = sbn.postTime.takeIf { it > 0 } ?: System.currentTimeMillis()
+                    base = if (countDown) seen + textTime else seen - textTime
+                }
+                kind == NoticeKind.Call -> Unit
+                else -> hasTime = false
+            }
+        }
         return LiveNotice(
             key = sbn.key,
             packageName = sbn.packageName,
             appLabel = appLabel,
-            title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty(),
-            text = (extras.getCharSequence(Notification.EXTRA_TEXT) ?: extras.getCharSequence(Notification.EXTRA_SUB_TEXT))
-                ?.toString().orEmpty(),
+            title = title,
+            text = body,
             kind = kind,
-            chronometerBase = n.`when`,
-            countDown = extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN, false),
+            chronometerBase = base,
+            countDown = countDown,
+            paused = paused,
+            pausedMs = pausedMs,
+            hasTime = hasTime,
+            stopwatch = stopwatch && !countDown,
             progress = extras.getInt(Notification.EXTRA_PROGRESS, 0),
             progressMax = progressMax,
             indeterminate = indeterminate,
