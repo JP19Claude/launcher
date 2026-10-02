@@ -758,6 +758,11 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             description = "Wie beim iPhone; im Querformat ausgeblendet",
             checked = s.glimmerIdlePill,
         ) { v -> update { it.copy(glimmerIdlePill = v) } }
+        SwitchRow(
+            label = "Clawd in Glimmer",
+            description = "Clawd sitzt in der Insel neben der Kamera – mit deiner Farbe, Hut und Outfit. Nachts schläft er, beim Laden tanzt er.",
+            checked = s.glimmerClawd,
+        ) { v -> update { it.copy(glimmerClawd = v) } }
     }
 
     if (!di) Section("Gestaltung") {

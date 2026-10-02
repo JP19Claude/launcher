@@ -20,8 +20,15 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.toArgb
 import dev.hearth.launcher.R
 import dev.hearth.launcher.data.ClawdHat
+import dev.hearth.launcher.data.ClawdOutfit
 import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.ClawdOracle
+import dev.hearth.launcher.data.ClawdDice
+import dev.hearth.launcher.data.ClawdMotivation
+import dev.hearth.launcher.data.ClawdWater
+import dev.hearth.launcher.data.clawdWeekend
+import dev.hearth.launcher.ui.drawDie
+import androidx.compose.ui.graphics.asAndroidBitmap
 import dev.hearth.launcher.data.ClawdPet
 import dev.hearth.launcher.data.ClawdSkin
 import dev.hearth.launcher.data.ClawdTalk
@@ -40,7 +47,7 @@ import java.time.LocalDateTime
  */
 
 /** Clawd's look as set in the app (or handed over by Hearth). */
-private class Look(val color: Color, val hat: ClawdHat, val accent: Color) {
+private class Look(val color: Color, val hat: ClawdHat, val outfit: ClawdOutfit, val accent: Color) {
     companion object {
         fun of(context: Context): Look {
             val s = SettingsRepository(context).settings.value
@@ -49,7 +56,7 @@ private class Look(val color: Color, val hat: ClawdHat, val accent: Color) {
             } else {
                 s.clawdSkin.color
             }
-            return Look(color, s.clawdHat, s.accent.color)
+            return Look(color, s.clawdHat, s.clawdOutfit, s.accent.color)
         }
     }
 }
@@ -62,7 +69,7 @@ private val Poses = listOf(ClawdMood.Idle, ClawdMood.Wave, ClawdMood.Dance, Claw
 /** Clawd alone on a transparent picture. */
 private fun clawdPicture(context: Context, mood: ClawdMood, width: Int = 280, height: Int = 230): Bitmap {
     val look = Look.of(context)
-    return renderClawd(width, height, mood, look.color, look.hat)
+    return renderClawd(width, height, mood, look.color, look.hat, look.outfit)
 }
 
 /** What all of Clawd's widgets share: updating, taps, refreshing when his look changes. */
@@ -145,6 +152,11 @@ abstract class ClawdWidgetProvider : AppWidgetProvider() {
             ClawdBatteryWidget::class.java,
             ClawdOracleWidget::class.java,
             ClawdStickerWidget::class.java,
+            ClawdFashionWidget::class.java,
+            ClawdWaterWidget::class.java,
+            ClawdDiceWidget::class.java,
+            ClawdMotivationWidget::class.java,
+            ClawdWeekendWidget::class.java,
         )
 
         /** Draws every placed widget again (his look changed, the pet was fed in the app …). */
@@ -167,7 +179,7 @@ class ClawdPictureWidget : ClawdWidgetProvider() {
         val look = Look.of(context)
         val ivory = Color(0xFFFAF9F5)
         val body = if (scene == Scene.Terracotta || scene == Scene.Accent) ivory else look.color
-        val picture = renderClawd(440, 440, mood, body, look.hat, clawdScale = 0.66f) {
+        val picture = renderClawd(440, 440, mood, body, look.hat, look.outfit, clawdScale = 0.66f) {
             drawScene(scene, look.accent)
         }
         return RemoteViews(context.packageName, R.layout.clawd_widget_picture).apply {
@@ -368,5 +380,122 @@ class ClawdOracleWidget : ClawdWidgetProvider() {
 
     override fun act(context: Context, id: Int, what: String) {
         widgetPrefs(context).edit().putString("oracle_$id", ClawdOracle.ask()).apply()
+    }
+}
+
+/** Any picture, drawn with Compose's drawing commands (for the die and such). */
+private fun renderPicture(width: Int, height: Int, block: DrawScope.() -> Unit): Bitmap {
+    val image = androidx.compose.ui.graphics.ImageBitmap(width, height)
+    androidx.compose.ui.graphics.drawscope.CanvasDrawScope().draw(
+        androidx.compose.ui.unit.Density(1f),
+        androidx.compose.ui.unit.LayoutDirection.Ltr,
+        androidx.compose.ui.graphics.Canvas(image),
+        Size(width.toFloat(), height.toFloat()),
+    ) { block() }
+    return image.asAndroidBitmap()
+}
+
+// Clawd-Modenschau
+
+class ClawdFashionWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews {
+        val look = widgetPrefs(context).getInt("fashion_$id", 1)
+        val outfit = ClawdOutfit.entries[Math.floorMod(look, ClawdOutfit.entries.size)]
+        val hat = ClawdHat.entries[Math.floorMod(look * 3, ClawdHat.entries.size)]
+        val color = Look.of(context).color
+        val picture = renderClawd(440, 440, ClawdMood.Wave, color, hat, outfit, clawdScale = 0.62f) {
+            drawRoundRect(
+                Brush.verticalGradient(listOf(Color(0xFF3A2B4F), Color(0xFF1E1A2B))),
+                cornerRadius = CornerRadius(size.minDimension * 0.11f),
+            )
+            drawOval(Color.White.copy(alpha = 0.10f), Offset(size.width * 0.18f, size.height * 0.7f), Size(size.width * 0.64f, size.height * 0.12f))
+        }
+        val name = listOfNotNull(
+            outfit.takeIf { it != ClawdOutfit.None }?.label,
+            hat.takeIf { it != ClawdHat.None }?.label,
+        ).joinToString(" + ").ifEmpty { "Ganz natürlich" }
+        return RemoteViews(context.packageName, R.layout.clawd_widget_fashion).apply {
+            setImageViewBitmap(R.id.image, picture)
+            setTextViewText(R.id.label, name)
+            setOnClickPendingIntent(R.id.root, tap(context, id, "next"))
+        }
+    }
+
+    override fun act(context: Context, id: Int, what: String) {
+        val prefs = widgetPrefs(context)
+        prefs.edit().putInt("fashion_$id", prefs.getInt("fashion_$id", 1) + 1).apply()
+    }
+}
+
+// Clawd-Wasser
+
+class ClawdWaterWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews {
+        val count = ClawdWater.glasses(context)
+        val goal = ClawdWater.GOAL
+        return RemoteViews(context.packageName, R.layout.clawd_widget_water).apply {
+            setImageViewBitmap(R.id.image, clawdPicture(context, if (count >= goal) ClawdMood.Dance else ClawdMood.Wave))
+            setTextViewText(R.id.count, "$count / $goal 💧")
+            setProgressBar(R.id.bar, goal, count.coerceAtMost(goal), false)
+            setTextViewText(R.id.line, ClawdWater.line(count))
+            setOnClickPendingIntent(R.id.root, tap(context, id, "drink"))
+        }
+    }
+
+    override fun act(context: Context, id: Int, what: String) {
+        ClawdWater.add(context)
+        // Every glass counts for all water widgets.
+        ClawdWidgetProvider.refreshAll(context)
+    }
+}
+
+// Clawd-Würfel
+
+class ClawdDiceWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews {
+        val value = widgetPrefs(context).getInt("dice_$id", 6)
+        return RemoteViews(context.packageName, R.layout.clawd_widget_dice).apply {
+            setImageViewBitmap(R.id.image, clawdPicture(context, if (value == 6) ClawdMood.Dance else ClawdMood.Wave))
+            setImageViewBitmap(R.id.die, renderPicture(240, 240) { drawDie(value) })
+            setOnClickPendingIntent(R.id.root, tap(context, id, "roll"))
+        }
+    }
+
+    override fun act(context: Context, id: Int, what: String) {
+        widgetPrefs(context).edit().putInt("dice_$id", ClawdDice.roll()).apply()
+    }
+}
+
+// Clawd-Motivation
+
+class ClawdMotivationWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews {
+        val extra = widgetPrefs(context).getInt("motivation_$id", 0)
+        return RemoteViews(context.packageName, R.layout.clawd_widget_motivation).apply {
+            setImageViewBitmap(R.id.image, clawdPicture(context, if (extra % 2 == 0) ClawdMood.Wave else ClawdMood.Love))
+            setTextViewText(R.id.text, ClawdMotivation.of(LocalDateTime.now().dayOfYear, extra))
+            setOnClickPendingIntent(R.id.root, tap(context, id, "next"))
+        }
+    }
+
+    override fun act(context: Context, id: Int, what: String) {
+        val prefs = widgetPrefs(context)
+        prefs.edit().putInt("motivation_$id", prefs.getInt("motivation_$id", 0) + 1).apply()
+    }
+}
+
+// Clawd-Wochenende
+
+class ClawdWeekendWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews {
+        val (big, line) = clawdWeekend()
+        val look = Look.of(context)
+        return RemoteViews(context.packageName, R.layout.clawd_widget_weekend).apply {
+            setImageViewBitmap(R.id.image, clawdPicture(context, if (big == "🎉") ClawdMood.Dance else ClawdMood.Thinking))
+            setTextViewText(R.id.big, big)
+            setTextViewText(R.id.line, line)
+            setTextColor(R.id.line, (if (look.accent == Color.White) Color(0xFFE8A07F) else look.accent).toArgb())
+            setOnClickPendingIntent(R.id.root, tap(context, id, "refresh"))
+        }
     }
 }

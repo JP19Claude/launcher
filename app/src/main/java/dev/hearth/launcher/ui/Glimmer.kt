@@ -70,6 +70,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import dev.hearth.launcher.data.ClawdMood
+import dev.hearth.launcher.data.clawdAsleep
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
@@ -1080,6 +1082,16 @@ private fun AppBadge(notice: LiveNotice, size: Dp) {
  */
 @Composable
 private fun CompactContent(content: IslandContent) {
+    if (content is IslandContent.Idle && LocalSettings.current.glimmerClawd) {
+        GlimmerClawd(if (clawdAsleep(java.time.LocalTime.now().hour)) ClawdMood.Sleep else ClawdMood.Idle)
+        return
+    }
+    if (content is IslandContent.Charging && LocalSettings.current.glimmerClawd) {
+        GlimmerClawd(ClawdMood.Dance) {
+            RollingText("${content.level} %", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        }
+        return
+    }
     if (content is IslandContent.Idle || content is IslandContent.Hidden) return
     if (content is IslandContent.Lock) {
         Row(
@@ -1293,6 +1305,22 @@ private fun AroundCamera(
             content = right,
         )
     }
+}
+
+/** Clawd in the island, left of the camera; [right] beside the camera on the other side. */
+@Composable
+private fun GlimmerClawd(mood: ClawdMood, right: @Composable RowScope.() -> Unit = {}) {
+    AroundCamera(
+        edge = 9.dp,
+        left = {
+            Clawd(
+                Modifier.size(width = 24.dp, height = 20.dp),
+                mood = mood,
+                animate = LocalSettings.current.animations && !LocalGlimmerStill.current,
+            )
+        },
+        right = right,
+    )
 }
 
 /** A small dot that breathes: something new is waiting. */

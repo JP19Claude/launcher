@@ -784,3 +784,238 @@ fun ClawdCompanion(onTalk: () -> Unit, modifier: Modifier = Modifier) {
         }
     }
 }
+
+// Clawd-Wasser: drinking water with Clawd
+
+/** Glasses of water today: tap for one more, Clawd cheers you on. */
+@Composable
+internal fun ClawdWaterWidget(modifier: Modifier) {
+    val context = LocalContext.current
+    val day = rememberTime(everySecond = false).dayOfYear
+    var count by remember(day) { mutableIntStateOf(dev.hearth.launcher.data.ClawdWater.glasses(context)) }
+    val player = rememberMoodPlayer()
+    val goal = dev.hearth.launcher.data.ClawdWater.GOAL
+    BoxWithConstraints(
+        modifier.tap {
+            count = dev.hearth.launcher.data.ClawdWater.add(context)
+            player.play(if (count == goal) ClawdMood.Dance else ClawdMood.Love, 1800)
+        },
+    ) {
+        val boxH = maxHeight
+        Column(
+            Modifier.fillMaxSize().padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Clawd(
+                Modifier.fillMaxWidth(0.5f).height(boxH * 0.32f),
+                mood = player.mood ?: if (count >= goal) ClawdMood.Wave else ClawdMood.Idle,
+            )
+            Text("$count / $goal 💧", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            // One drop per glass, filled up to today's count.
+            Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.padding(vertical = 4.dp)) {
+                repeat(goal) { i ->
+                    Box(
+                        Modifier
+                            .size(width = 8.dp, height = 11.dp)
+                            .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 5.dp, bottomEnd = 5.dp))
+                            .background(if (i < count) Color(0xFF5AC8FA) else Color.White.copy(alpha = 0.16f)),
+                    )
+                }
+            }
+            Text(
+                dev.hearth.launcher.data.ClawdWater.line(count),
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+// Clawd-Würfel: Clawd rolls a die
+
+/** Tap and Clawd rolls a pixel die: he flips while it tumbles. */
+@Composable
+internal fun ClawdDiceWidget(modifier: Modifier) {
+    var value by remember { mutableIntStateOf(6) }
+    var rolling by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    BoxWithConstraints(
+        modifier.tap {
+            if (rolling) return@tap
+            rolling = true
+            scope.launch {
+                // A few quick faces, then the real one.
+                repeat(7) {
+                    value = dev.hearth.launcher.data.ClawdDice.roll()
+                    delay(90L + it * 25L)
+                }
+                value = dev.hearth.launcher.data.ClawdDice.roll()
+                rolling = false
+            }
+        },
+    ) {
+        val boxH = maxHeight
+        Row(
+            Modifier.fillMaxSize().padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Clawd(Modifier.size(width = boxH * 0.42f, height = boxH * 0.36f), mood = if (rolling) ClawdMood.Flip else ClawdMood.Wave)
+            PixelDie(value, Modifier.size(boxH * 0.38f))
+        }
+    }
+}
+
+/** A die face in pixels. */
+@Composable
+private fun PixelDie(value: Int, modifier: Modifier) {
+    Canvas(modifier) { drawDie(value) }
+}
+
+/** A white die showing [value], filling the scope (also drawn into the Clawd app's widgets). */
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDie(value: Int) {
+    run {
+        val corner = androidx.compose.ui.geometry.CornerRadius(size.minDimension * 0.18f)
+        drawRoundRect(Color.White, cornerRadius = corner)
+        val pip = size.minDimension * 0.18f
+        fun dot(x: Float, y: Float) = drawRect(
+            Color(0xFF1B1A1F),
+            Offset(size.width * x - pip / 2, size.height * y - pip / 2),
+            Size(pip, pip),
+        )
+        val l = 0.27f
+        val m = 0.5f
+        val r = 0.73f
+        when (value) {
+            1 -> dot(m, m)
+            2 -> { dot(l, l); dot(r, r) }
+            3 -> { dot(l, l); dot(m, m); dot(r, r) }
+            4 -> { dot(l, l); dot(r, l); dot(l, r); dot(r, r) }
+            5 -> { dot(l, l); dot(r, l); dot(m, m); dot(l, r); dot(r, r) }
+            else -> { dot(l, l); dot(r, l); dot(l, m); dot(r, m); dot(l, r); dot(r, r) }
+        }
+    }
+}
+
+// Clawd-Motivation: a kind word each day
+
+/** A kind word for today in a speech bubble; tap for another. */
+@Composable
+internal fun ClawdMotivationWidget(id: Int, modifier: Modifier) {
+    val context = LocalContext.current
+    val prefs = remember { clawdPrefs(context) }
+    val day = rememberTime(everySecond = false).dayOfYear
+    var extra by remember(id) { mutableIntStateOf(prefs.getInt("motivation_$id", 0)) }
+    val player = rememberMoodPlayer()
+    Row(
+        modifier
+            .padding(12.dp)
+            .tap {
+                extra++
+                prefs.edit().putInt("motivation_$id", extra).apply()
+                player.play(ClawdMood.Love)
+            },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 6.dp, bottomEnd = 20.dp, bottomStart = 20.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFFFFE3D3), Color(0xFFFAF9F5))))
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            Text(
+                dev.hearth.launcher.data.ClawdMotivation.of(day, extra),
+                color = Color(0xFF2B2A27),
+                fontSize = 15.sp,
+                lineHeight = 19.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Clawd(Modifier.fillMaxHeight(0.6f).width(72.dp), mood = player.mood ?: ClawdMood.Wave)
+    }
+}
+
+// Clawd-Wochenende: how long until the weekend
+
+/** The days until the weekend, big, with Clawd dancing once it's there. */
+@Composable
+internal fun ClawdWeekendWidget(modifier: Modifier) {
+    val now = rememberTime(everySecond = false)
+    val (big, line) = dev.hearth.launcher.data.clawdWeekend(now)
+    val weekend = big == "🎉"
+    val accent = LocalSettings.current.accent.color
+    BoxWithConstraints(modifier) {
+        val boxH = maxHeight
+        Column(
+            Modifier.fillMaxSize().padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Clawd(Modifier.fillMaxWidth(0.5f).height(boxH * 0.34f), mood = if (weekend) ClawdMood.Dance else ClawdMood.Thinking)
+            Text(big, color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Light)
+            Text(line, color = accent.copy(alpha = 0.85f), fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        }
+    }
+}
+
+// Clawd-Modenschau: Clawd tries on his wardrobe
+
+/** Clawd on the catwalk: each tap, the next outfit and hat (only in this widget). */
+@Composable
+internal fun ClawdFashionWidget(id: Int, modifier: Modifier) {
+    val context = LocalContext.current
+    val prefs = remember { clawdPrefs(context) }
+    var look by remember(id) { mutableIntStateOf(prefs.getInt("fashion_$id", 1)) }
+    val outfits = dev.hearth.launcher.data.ClawdOutfit.entries
+    val hats = dev.hearth.launcher.data.ClawdHat.entries
+    val outfit = outfits[Math.floorMod(look, outfits.size)]
+    val hat = hats[Math.floorMod(look * 3, hats.size)]
+    val player = rememberMoodPlayer()
+    BoxWithConstraints(
+        modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(Brush.verticalGradient(listOf(Color(0xFF3A2B4F), Color(0xFF1E1A2B))))
+            .tap {
+                look++
+                prefs.edit().putInt("fashion_$id", look).apply()
+                player.play(ClawdMood.Flip, 900)
+            },
+    ) {
+        val boxH = maxHeight
+        // A spotlight on the catwalk.
+        Canvas(Modifier.fillMaxSize()) {
+            drawOval(Color.White.copy(alpha = 0.10f), Offset(size.width * 0.18f, size.height * 0.62f), Size(size.width * 0.64f, size.height * 0.14f))
+        }
+        Column(
+            Modifier.fillMaxSize().padding(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Clawd(
+                Modifier.fillMaxWidth(0.68f).height(boxH * 0.56f),
+                mood = player.mood ?: ClawdMood.Wave,
+                hat = hat,
+                outfit = outfit,
+            )
+            Text(
+                listOfNotNull(
+                    outfit.takeIf { it != dev.hearth.launcher.data.ClawdOutfit.None }?.label,
+                    hat.takeIf { it != dev.hearth.launcher.data.ClawdHat.None }?.label,
+                ).joinToString(" + ").ifEmpty { "Ganz natürlich" },
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text("Antippen: nächster Look", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp, maxLines = 1)
+        }
+    }
+}

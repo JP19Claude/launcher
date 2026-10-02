@@ -595,6 +595,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
         Unit
     }
 
+    // The touch handler below lives as long as the screen: it must always drop with the home
+    // screen as it is now (widgets moved or removed since), not as it was when it started.
+    val latestFinishDrag by rememberUpdatedState(finishDrag)
+
     // Holding a dragged app at the screen edge turns the page.
     val edgeZone = with(density) { 28.dp.toPx() }
     val edge = when {
@@ -639,7 +643,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             if (drag == null) continue
                             val change = event.changes.firstOrNull() ?: continue
                             event.changes.forEach { it.consume() }
-                            if (change.pressed) dragPos = change.position else finishDrag()
+                            if (change.pressed) dragPos = change.position else latestFinishDrag()
                         }
                     }
                 },

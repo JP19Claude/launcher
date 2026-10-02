@@ -56,6 +56,11 @@ enum class HearthWidget(val label: String, val description: String, val spanX: I
     ClawdPet("Clawd-Tamagotchi", "Füttern, spielen, streicheln: Clawd wird hungrig und will beschäftigt werden", 4, 2, 170),
     ClawdOracle("Clawd-Orakel", "Denk an eine Ja/Nein-Frage, tipp ihn an – Clawd weiß die Antwort", 2, 2, 190),
     ClawdFocus("Clawd-Fokus", "25 Minuten Fokus-Timer: Clawd arbeitet mit und tanzt am Ende", 2, 2, 190),
+    ClawdFashion("Clawd-Modenschau", "Clawd probiert seine Outfits und Hüte an – antippen für den nächsten Look", 2, 2, 210),
+    ClawdWater("Clawd-Wasser", "Gläser Wasser heute: antippen für eins mehr, Clawd feuert dich an", 2, 2, 190),
+    ClawdDice("Clawd-Würfel", "Antippen und Clawd würfelt für dich", 2, 2, 160),
+    ClawdMotivation("Clawd-Motivation", "Jeden Tag ein liebes Wort von Clawd", 4, 2, 160),
+    ClawdWeekend("Clawd-Wochenende", "Wie lange noch bis zum Wochenende – am Wochenende tanzt er", 2, 2, 180),
     ;
 
     /** One of Clawd's widgets (shown with him in the picker). */

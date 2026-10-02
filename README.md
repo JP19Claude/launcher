@@ -24,8 +24,14 @@ wippt, trippelt beim Nachdenken, tanzt, schlägt Salto und schickt Herzen.
 - Clawd-Begleiter: Er spaziert auf dem Startbildschirm über dem Dock, schläft nachts und bei
   leerem Akku, tanzt, wenn das Ladekabel reinkommt. Antippen: er sagt etwas (Gruß, Tipp,
   Witz) · zweimal: Salto · gedrückt halten: mit ihm reden.
-- Aussehen (Einstellungen → Clawd): neun Farben (auch Regenbogen) und Hüte – Partyhut,
-  Krone, Mütze, Cap, Schleife, Kopfhörer, Sonnenbrille. Gilt überall.
+- Aussehen (Einstellungen → Clawd, Kleiderschrank zum Antippen): neun Farben (auch Regenbogen),
+  Outfits – Anzug, Smoking, Superheld, Astronaut, Arzt, Koch, Pirat, Ninja, Pulli, Schal – und
+  Hüte – Partyhut, Krone, Mütze, Cap, Schleife, Kopfhörer, Sonnenbrille, Zauberhut, Kochmütze,
+  Heiligenschein, Hörner. Gilt überall, auch in der Clawd-App und in Glimmer.
+- Clawd in Glimmer: Er sitzt in der Insel neben der Kamera, schläft nachts und tanzt beim
+  Laden (Einstellungen → Clawd oder in der Glimmer-App).
+- Noch mehr Widgets: Clawd-Modenschau, Clawd-Wasser, Clawd-Würfel, Clawd-Motivation und
+  Clawd-Wochenende – im Launcher und in der Clawd-App (dort 13 Widgets für jeden Launcher).
 - Außerdem: leere Suche („Tipp mich an, dann kümmere ich mich drum“), App-Sperre (Clawd
   passt auf), Assistent über anderen Apps.
 

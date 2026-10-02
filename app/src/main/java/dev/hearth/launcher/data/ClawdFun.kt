@@ -160,3 +160,69 @@ object ClawdLines {
         }
     }
 }
+
+/** Drinking water with Clawd: glasses today, towards a goal; starts fresh each day. */
+object ClawdWater {
+    const val GOAL = 8
+
+    private fun prefs(context: Context) = context.getSharedPreferences("clawd_water", Context.MODE_PRIVATE)
+
+    private fun today(): String = java.time.LocalDate.now().toString()
+
+    fun glasses(context: Context): Int {
+        val p = prefs(context)
+        return if (p.getString("day", null) == today()) p.getInt("count", 0) else 0
+    }
+
+    /** One more glass (or one less with [delta] = -1); returns today's count. */
+    fun add(context: Context, delta: Int = 1): Int {
+        val count = (glasses(context) + delta).coerceIn(0, 30)
+        prefs(context).edit().putString("day", today()).putInt("count", count).apply()
+        return count
+    }
+
+    fun line(count: Int): String = when {
+        count == 0 -> "Noch kein Glas heute – los geht's! 💧"
+        count < GOAL / 2 -> "Guter Anfang, weiter so!"
+        count < GOAL -> "Fast geschafft, noch ${GOAL - count}!"
+        count == GOAL -> "Ziel erreicht! 🎉"
+        else -> "Wasser-Profi! 🌊"
+    }
+}
+
+/** Clawd rolls a die. */
+object ClawdDice {
+    fun roll(): Int = (1..6).random()
+}
+
+/** A kind word for each day. */
+object ClawdMotivation {
+    private val Lines = listOf(
+        "Kleine Schritte sind auch Schritte.",
+        "Du musst nicht perfekt sein – nur dabei bleiben.",
+        "Heute ist ein guter Tag für etwas Neues.",
+        "Pausen gehören zum Weg dazu.",
+        "Du hast schon so viel geschafft. Ich bin stolz auf dich!",
+        "Eins nach dem anderen. Pixel für Pixel.",
+        "Fehler sind nur Updates in Arbeit.",
+        "Atme tief durch – du kriegst das hin.",
+        "Sei heute nett zu dir selbst.",
+        "Mut ist, es trotzdem zu versuchen.",
+        "Lächeln steht dir! 🙂",
+        "Was heute schwer ist, ist morgen Erfahrung.",
+        "Glaub an dich – ich tu's auch.",
+        "Ein bisschen Fortschritt ist besser als gar keiner.",
+    )
+
+    fun of(day: Int, extra: Int = 0): String = Lines[Math.floorMod(day + extra, Lines.size)]
+}
+
+/** How long until the weekend, the way Clawd says it. */
+fun clawdWeekend(now: java.time.LocalDateTime = java.time.LocalDateTime.now()): Pair<String, String> {
+    val day = now.dayOfWeek.value // 1 = Monday … 7 = Sunday
+    return when (day) {
+        6, 7 -> "🎉" to "Wochenende! Genieß es."
+        5 -> if (now.hour >= 17) "🎉" to "Feierabend – Wochenende!" else "1" to "Morgen ist Wochenende!"
+        else -> "${6 - day}" to "Tage bis zum Wochenende"
+    }
+}

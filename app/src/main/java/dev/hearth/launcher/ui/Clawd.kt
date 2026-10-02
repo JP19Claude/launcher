@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
 import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.ClawdHat
+import dev.hearth.launcher.data.ClawdOutfit
 import dev.hearth.launcher.data.ClawdSkin
 import androidx.compose.ui.graphics.asAndroidBitmap
 import kotlin.math.abs
@@ -85,11 +86,12 @@ fun Clawd(
     color: Color? = null,
     animate: Boolean = LocalSettings.current.animations,
     hat: ClawdHat = LocalSettings.current.clawdHat,
+    outfit: ClawdOutfit = LocalSettings.current.clawdOutfit,
 ) {
     val skin = LocalSettings.current.clawdSkin
     if (!animate) {
         val body = color ?: skin.color
-        Canvas(modifier) { drawClawdPose(mood, body, hat) }
+        Canvas(modifier) { drawClawdPose(mood, body, hat, outfit) }
         return
     }
     val t = rememberInfiniteTransition(label = "clawd")
@@ -101,13 +103,13 @@ fun Clawd(
         // A blink now and then: the eyes close for a moment near the end of each loop.
         val blink = mood != ClawdMood.Love && clock in 0.92f..0.97f
         when (mood) {
-            ClawdMood.Idle -> drawClawd(body, blink, bob = sin(phase) * 0.25f, legPhase = 0f, armLift = 0f, spin = 0f, hearts = 0f, hat = hat)
-            ClawdMood.Thinking -> drawClawd(body, blink, bob = abs(sin(phase * 4f)) * -0.4f, legPhase = clock * 8f, armLift = 0f, spin = 0f, hearts = 0f, hat = hat)
-            ClawdMood.Dance -> drawClawd(body, blink = false, bob = abs(sin(phase * 3f)) * -1.4f, legPhase = clock * 12f, armLift = sin(phase * 3f), spin = 0f, hearts = 0f, hat = hat)
-            ClawdMood.Flip -> drawClawd(body, blink = true, bob = -abs(sin(phase)) * 1.2f, legPhase = 0f, armLift = 1f, spin = clock * 360f, hearts = 0f, hat = hat)
-            ClawdMood.Love -> drawClawd(body, blink = true, bob = sin(phase) * 0.3f, legPhase = 0f, armLift = 0.5f, spin = 0f, hearts = clock, hat = hat)
-            ClawdMood.Wave -> drawClawd(body, blink, bob = 0f, legPhase = 0f, armLift = sin(phase * 4f), spin = 0f, hearts = 0f, hat = hat)
-            ClawdMood.Sleep -> drawClawd(body, blink = true, bob = sin(phase) * 0.15f, legPhase = 0f, armLift = -0.4f, spin = 0f, hearts = 0f, zzz = clock, hat = hat)
+            ClawdMood.Idle -> drawClawd(body, blink, bob = sin(phase) * 0.25f, legPhase = 0f, armLift = 0f, spin = 0f, hearts = 0f, hat = hat, outfit = outfit)
+            ClawdMood.Thinking -> drawClawd(body, blink, bob = abs(sin(phase * 4f)) * -0.4f, legPhase = clock * 8f, armLift = 0f, spin = 0f, hearts = 0f, hat = hat, outfit = outfit)
+            ClawdMood.Dance -> drawClawd(body, blink = false, bob = abs(sin(phase * 3f)) * -1.4f, legPhase = clock * 12f, armLift = sin(phase * 3f), spin = 0f, hearts = 0f, hat = hat, outfit = outfit)
+            ClawdMood.Flip -> drawClawd(body, blink = true, bob = -abs(sin(phase)) * 1.2f, legPhase = 0f, armLift = 1f, spin = clock * 360f, hearts = 0f, hat = hat, outfit = outfit)
+            ClawdMood.Love -> drawClawd(body, blink = true, bob = sin(phase) * 0.3f, legPhase = 0f, armLift = 0.5f, spin = 0f, hearts = clock, hat = hat, outfit = outfit)
+            ClawdMood.Wave -> drawClawd(body, blink, bob = 0f, legPhase = 0f, armLift = sin(phase * 4f), spin = 0f, hearts = 0f, hat = hat, outfit = outfit)
+            ClawdMood.Sleep -> drawClawd(body, blink = true, bob = sin(phase) * 0.15f, legPhase = 0f, armLift = -0.4f, spin = 0f, hearts = 0f, zzz = clock, hat = hat, outfit = outfit)
         }
     }
 }
@@ -116,15 +118,15 @@ fun Clawd(
 fun rainbow(t: Float): Color = Color.hsv((t * 360f) % 360f, 0.55f, 0.95f)
 
 /** Clawd standing still in a pose that shows his [mood] (for still pictures and widgets). */
-internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawdPose(mood: ClawdMood, color: Color, hat: ClawdHat) {
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawdPose(mood: ClawdMood, color: Color, hat: ClawdHat, outfit: ClawdOutfit = ClawdOutfit.None) {
     when (mood) {
-        ClawdMood.Idle -> drawClawd(color, blink = false, bob = 0f, legPhase = 0f, armLift = 0f, spin = 0f, hearts = 0f, hat = hat)
-        ClawdMood.Thinking -> drawClawd(color, blink = false, bob = -0.2f, legPhase = 2f, armLift = 0.3f, spin = 0f, hearts = 0f, hat = hat)
-        ClawdMood.Dance -> drawClawd(color, blink = false, bob = -0.9f, legPhase = 1f, armLift = 1f, spin = 0f, hearts = 0f, hat = hat)
-        ClawdMood.Flip -> drawClawd(color, blink = true, bob = -0.6f, legPhase = 0f, armLift = 1f, spin = 18f, hearts = 0f, hat = hat)
-        ClawdMood.Love -> drawClawd(color, blink = true, bob = 0f, legPhase = 0f, armLift = 0.5f, spin = 0f, hearts = 0.35f, hat = hat)
-        ClawdMood.Wave -> drawClawd(color, blink = false, bob = 0f, legPhase = 0f, armLift = 1f, spin = 0f, hearts = 0f, hat = hat)
-        ClawdMood.Sleep -> drawClawd(color, blink = true, bob = 0f, legPhase = 0f, armLift = -0.4f, spin = 0f, hearts = 0f, zzz = 0.45f, hat = hat)
+        ClawdMood.Idle -> drawClawd(color, blink = false, bob = 0f, legPhase = 0f, armLift = 0f, spin = 0f, hearts = 0f, hat = hat, outfit = outfit)
+        ClawdMood.Thinking -> drawClawd(color, blink = false, bob = -0.2f, legPhase = 2f, armLift = 0.3f, spin = 0f, hearts = 0f, hat = hat, outfit = outfit)
+        ClawdMood.Dance -> drawClawd(color, blink = false, bob = -0.9f, legPhase = 1f, armLift = 1f, spin = 0f, hearts = 0f, hat = hat, outfit = outfit)
+        ClawdMood.Flip -> drawClawd(color, blink = true, bob = -0.6f, legPhase = 0f, armLift = 1f, spin = 18f, hearts = 0f, hat = hat, outfit = outfit)
+        ClawdMood.Love -> drawClawd(color, blink = true, bob = 0f, legPhase = 0f, armLift = 0.5f, spin = 0f, hearts = 0.35f, hat = hat, outfit = outfit)
+        ClawdMood.Wave -> drawClawd(color, blink = false, bob = 0f, legPhase = 0f, armLift = 1f, spin = 0f, hearts = 0f, hat = hat, outfit = outfit)
+        ClawdMood.Sleep -> drawClawd(color, blink = true, bob = 0f, legPhase = 0f, armLift = -0.4f, spin = 0f, hearts = 0f, zzz = 0.45f, hat = hat, outfit = outfit)
     }
 }
 
@@ -138,6 +140,7 @@ fun renderClawd(
     mood: ClawdMood,
     color: Color,
     hat: ClawdHat,
+    outfit: ClawdOutfit = ClawdOutfit.None,
     clawdScale: Float = 1f,
     background: (androidx.compose.ui.graphics.drawscope.DrawScope.() -> Unit)? = null,
 ): android.graphics.Bitmap {
@@ -155,7 +158,7 @@ fun renderClawd(
         translate(left = (full.width - w) / 2f, top = (full.height - h) / 2f) {
             // drawClawd fits him into the scope's size: shrink it to his part for a moment.
             drawContext.size = Size(w, h)
-            drawClawdPose(mood, color, hat)
+            drawClawdPose(mood, color, hat, outfit)
             drawContext.size = full
         }
     }
@@ -177,9 +180,10 @@ internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawd(
     hearts: Float,
     zzz: Float = 0f,
     hat: ClawdHat = ClawdHat.None,
+    outfit: ClawdOutfit = ClawdOutfit.None,
 ) {
     // Room above for a jump or a heart (and a hat), so he never leaves the canvas.
-    val headroom = if (hat.tall) 2f else 0f
+    val headroom = if (hat.tall || outfit.tall) 2f else 0f
     val px = minOf(size.width / COLS, size.height / (ROWS + 2 + headroom))
     val left = (size.width - px * COLS) / 2f
     val top = (size.height - px * (ROWS + headroom)) / 2f + px * (0.5f + headroom)
@@ -203,6 +207,7 @@ internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawd(
             cell(5, 7, 1, 2, dy = -liftB)
             cell(8, 7, 1, 2, dy = -liftA)
             cell(10, 7, 1, 2, dy = -liftB)
+            if (outfit != ClawdOutfit.None) drawOutfit(outfit, color, left, top, px, armDy = -armLift.coerceIn(-1f, 1f) * 1.2f, face = false)
         }
         // Eyes: two dark slits (when blinking, just a thin line).
         translate(top = bob * px) {
@@ -214,6 +219,7 @@ internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawd(
                 drawRect(eye, Offset(left + 3 * px, top + 1 * px), Size(px, px * 2))
                 drawRect(eye, Offset(left + 10 * px, top + 1 * px), Size(px, px * 2))
             }
+            if (outfit != ClawdOutfit.None) drawOutfit(outfit, color, left, top, px, armDy = 0f, face = true)
             if (hat != ClawdHat.None) drawHat(hat, left, top, px)
         }
     }
@@ -296,6 +302,37 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHat(hat: ClawdH
             r(1.5f, 1.2f, 0.5f, 0.8f, Color(0xFF6FD3FF))
             r(12f, 1.2f, 0.5f, 0.8f, Color(0xFF6FD3FF))
         }
+        ClawdHat.Wizard -> {
+            val purple = Color(0xFF6A4BC4)
+            r(3.5f, -1f, 7f, 1f, purple)
+            r(4.5f, -2f, 5f, 1f, purple)
+            r(5.5f, -3f, 3f, 1f, purple)
+            r(6.5f, -3.9f, 1.2f, 0.9f, purple)
+            r(5.6f, -1.9f, 0.7f, 0.7f, Color(0xFFFFD54A))
+            r(8f, -1f, 0.6f, 0.6f, Color(0xFFFFD54A))
+        }
+        ClawdHat.Chef -> {
+            val white = Color(0xFFF7F7F7)
+            r(4f, -1.4f, 6f, 1.5f, white)
+            r(3.4f, -2.7f, 2.6f, 1.5f, white)
+            r(5.7f, -3.2f, 2.6f, 1.8f, white)
+            r(8f, -2.7f, 2.6f, 1.5f, white)
+            r(4f, -0.4f, 6f, 0.3f, Color(0xFFDADADA))
+        }
+        ClawdHat.Halo -> {
+            val gold = Color(0xFFFFD86B)
+            r(4.5f, -2f, 5f, 0.45f, gold)
+            r(3.8f, -1.6f, 0.75f, 0.45f, gold)
+            r(9.45f, -1.6f, 0.75f, 0.45f, gold)
+            r(4.5f, -1.2f, 5f, 0.45f, gold)
+        }
+        ClawdHat.Horns -> {
+            val red = Color(0xFFD7263D)
+            r(2.4f, -1.1f, 1.1f, 1.1f, red)
+            r(2f, -2f, 0.8f, 0.9f, red)
+            r(10.5f, -1.1f, 1.1f, 1.1f, red)
+            r(11.2f, -2f, 0.8f, 0.9f, red)
+        }
         ClawdHat.Sunglasses -> {
             val black = Color(0xFF111114)
             r(2.6f, 0.8f, 2.2f, 1.8f, black)
@@ -303,6 +340,151 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHat(hat: ClawdH
             r(4.8f, 1.2f, 4.4f, 0.45f, black)
             r(2.9f, 1f, 0.5f, 0.5f, Color.White.copy(alpha = 0.7f))
             r(9.5f, 1f, 0.5f, 0.5f, Color.White.copy(alpha = 0.7f))
+        }
+    }
+}
+
+/**
+ * Clawd's outfits, in his grid's pixels: [face] = false for what goes on his body (drawn over
+ * it, the right sleeve following his arm by [armDy]), true for what goes over his eyes.
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOutfit(
+    outfit: ClawdOutfit,
+    body: Color,
+    left: Float,
+    top: Float,
+    px: Float,
+    armDy: Float,
+    face: Boolean,
+) {
+    fun r(x: Float, y: Float, w: Float, h: Float, c: Color) =
+        drawRect(c, Offset(left + x * px, top + y * px), Size(w * px + 0.5f, h * px + 0.5f))
+    fun sleeves(c: Color) {
+        r(0f, 3f, 2f, 2f, c)
+        r(12f, 3f + armDy, 2f, 2f, c)
+    }
+    val white = Color(0xFFF7F7F7)
+    if (face) {
+        when (outfit) {
+            ClawdOutfit.Pirate -> {
+                r(2f, 0.6f, 10f, 0.35f, Color(0xFF111114))
+                r(9.5f, 0.6f, 2f, 2.7f, Color(0xFF111114))
+            }
+            ClawdOutfit.Ninja -> {
+                val red = Color(0xFFE0443E)
+                r(2f, 0.1f, 10f, 0.6f, red)
+                r(12f, 0.1f, 1.5f, 0.45f, red)
+                r(12.6f, 0.55f, 1.1f, 0.45f, red)
+            }
+            ClawdOutfit.Astronaut -> {
+                // The helmet's glass over his head, with a glint.
+                r(1.3f, -1.2f, 11.4f, 4.6f, Color(0x4D8FD3FF))
+                r(1.3f, -1.2f, 11.4f, 0.35f, Color(0x99E6F6FF))
+                r(2.2f, -0.6f, 0.6f, 1.4f, Color(0x80FFFFFF))
+            }
+            else -> Unit
+        }
+        return
+    }
+    when (outfit) {
+        ClawdOutfit.None -> Unit
+        ClawdOutfit.Suit -> {
+            val navy = Color(0xFF2B3A55)
+            r(2f, 3.2f, 10f, 3.8f, navy)
+            sleeves(navy)
+            r(5.8f, 3.2f, 2.4f, 2.2f, white)
+            r(6.6f, 3.4f, 0.8f, 2.8f, Color(0xFFD0342C))
+            r(5.2f, 3.2f, 0.6f, 2.6f, Color(0xFF22304A))
+            r(8.2f, 3.2f, 0.6f, 2.6f, Color(0xFF22304A))
+            r(0f, 4.6f, 0.5f, 0.4f, white)
+        }
+        ClawdOutfit.Tuxedo -> {
+            val black = Color(0xFF1A1A1E)
+            r(2f, 3.2f, 10f, 3.8f, black)
+            sleeves(black)
+            r(5.6f, 3.2f, 2.8f, 3.8f, white)
+            r(5.9f, 3.3f, 1f, 0.8f, black)
+            r(7.1f, 3.3f, 1f, 0.8f, black)
+            r(6.8f, 3.5f, 0.4f, 0.4f, black)
+            r(6.85f, 4.8f, 0.3f, 0.3f, black)
+            r(6.85f, 5.6f, 0.3f, 0.3f, black)
+        }
+        ClawdOutfit.Hero -> {
+            val red = Color(0xFFD7263D)
+            val yellow = Color(0xFFFFD54A)
+            r(1.1f, 4.8f, 0.9f, 3.6f, red)
+            r(12f, 4.8f, 0.9f, 3.6f, red)
+            r(5.4f, 3.4f, 3.2f, 2.6f, yellow)
+            r(6.2f, 3.8f, 1.6f, 0.4f, red)
+            r(6.2f, 3.8f, 0.4f, 1f, red)
+            r(6.2f, 4.5f, 1.6f, 0.4f, red)
+            r(7.4f, 4.5f, 0.4f, 1f, red)
+            r(6.2f, 5.2f, 1.6f, 0.4f, red)
+            r(2f, 6.2f, 10f, 0.5f, yellow)
+        }
+        ClawdOutfit.Astronaut -> {
+            val suit = Color(0xFFECECF2)
+            r(2f, 3.4f, 10f, 3.6f, suit)
+            sleeves(suit)
+            r(4.8f, 4f, 4.4f, 1.8f, Color(0xFF3F6FD8))
+            r(5.3f, 4.5f, 0.7f, 0.7f, Color(0xFFE0443E))
+            r(6.6f, 4.5f, 0.7f, 0.7f, Color(0xFF4CD964))
+            r(7.9f, 4.5f, 0.7f, 0.7f, Color(0xFFFFD54A))
+        }
+        ClawdOutfit.Doctor -> {
+            r(2f, 3.3f, 10f, 3.7f, white)
+            sleeves(white)
+            r(6.3f, 3.3f, 1.4f, 3.7f, body)
+            val gray = Color(0xFF4A4D55)
+            r(4.4f, 3.3f, 0.35f, 1.7f, gray)
+            r(9.25f, 3.3f, 0.35f, 1.7f, gray)
+            r(4.4f, 5f, 2f, 0.35f, gray)
+            r(6.1f, 4.8f, 0.8f, 0.8f, Color(0xFFB8BCC6))
+            r(9.8f, 4.2f, 0.3f, 0.9f, Color(0xFF3A6FD8))
+        }
+        ClawdOutfit.Chef -> {
+            r(3f, 3.6f, 8f, 3.4f, white)
+            r(3f, 3.3f, 8f, 0.3f, Color(0xFFDADADA))
+            r(5.4f, 2.9f, 3.2f, 0.6f, Color(0xFFD7263D))
+            r(6.4f, 5f, 1.2f, 0.8f, Color(0xFFE5E5E5))
+        }
+        ClawdOutfit.Pirate -> {
+            val red = Color(0xFFC8342F)
+            r(2f, 3.3f, 10f, 3.7f, red)
+            r(2f, 4f, 10f, 0.5f, white)
+            r(2f, 5.1f, 10f, 0.5f, white)
+            r(2f, 6.2f, 10f, 0.5f, white)
+            r(2f, 3.3f, 10f, 0.35f, Color(0xFF3B2A20))
+        }
+        ClawdOutfit.Ninja -> {
+            val dark = Color(0xFF24252C)
+            r(2f, 3f, 10f, 4f, dark)
+            sleeves(dark)
+            r(2f, 5.4f, 10f, 0.45f, Color(0xFFE0443E))
+        }
+        ClawdOutfit.Sweater -> {
+            val green = Color(0xFF2E7D4F)
+            r(2f, 3.2f, 10f, 3.8f, green)
+            sleeves(green)
+            var x = 2f
+            var up = true
+            while (x < 12f) {
+                r(x, if (up) 4.1f else 4.5f, 0.5f, 0.4f, white)
+                x += 0.5f
+                up = !up
+            }
+            r(3.6f, 5.4f, 0.6f, 0.6f, Color(0xFFD7263D))
+            r(6.7f, 5.4f, 0.6f, 0.6f, Color(0xFFD7263D))
+            r(9.8f, 5.4f, 0.6f, 0.6f, Color(0xFFD7263D))
+        }
+        ClawdOutfit.Scarf -> {
+            val red = Color(0xFFD9433B)
+            r(2f, 2.9f, 10f, 0.9f, red)
+            r(9f, 3.8f, 1.3f, 2.6f, red)
+            r(9f, 4.8f, 1.3f, 0.35f, white)
+            r(9f, 5.6f, 1.3f, 0.35f, white)
+            r(4f, 2.9f, 0.5f, 0.9f, white)
+            r(7f, 2.9f, 0.5f, 0.9f, white)
         }
     }
 }

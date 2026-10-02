@@ -18,4 +18,14 @@
     <string name="clawd_w_pet_d">Füttern und spielen: Clawd wird hungrig und will beschäftigt werden</string>
     <string name="clawd_w_oracle">Clawd-Orakel</string>
     <string name="clawd_w_oracle_d">Denk an eine Ja/Nein-Frage, tipp ihn an – Clawd antwortet</string>
+    <string name="clawd_w_water">Clawd-Wasser</string>
+    <string name="clawd_w_water_d">Gläser Wasser heute: antippen für eins mehr</string>
+    <string name="clawd_w_dice">Clawd-Würfel</string>
+    <string name="clawd_w_dice_d">Antippen und Clawd würfelt für dich</string>
+    <string name="clawd_w_motivation">Clawd-Motivation</string>
+    <string name="clawd_w_motivation_d">Jeden Tag ein liebes Wort von Clawd</string>
+    <string name="clawd_w_weekend">Clawd-Wochenende</string>
+    <string name="clawd_w_weekend_d">Wie lange noch bis zum Wochenende</string>
+    <string name="clawd_w_fashion">Clawd-Modenschau</string>
+    <string name="clawd_w_fashion_d">Clawd probiert Outfits und Hüte an: antippen für den nächsten Look</string>
 </resources>

@@ -143,6 +143,86 @@
                 android:resource="@xml/clawd_sticker_info" />
         </receiver>
 
+        <receiver
+            android:name=".clawd.ClawdFashionWidget"
+            android:exported="true"
+            android:label="@string/clawd_w_fashion">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="dev.hearth.clawd.REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clawd_fashion_info" />
+        </receiver>
+
+        <receiver
+            android:name=".clawd.ClawdWaterWidget"
+            android:exported="true"
+            android:label="@string/clawd_w_water">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="dev.hearth.clawd.REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clawd_water_info" />
+        </receiver>
+
+        <receiver
+            android:name=".clawd.ClawdDiceWidget"
+            android:exported="true"
+            android:label="@string/clawd_w_dice">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="dev.hearth.clawd.REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clawd_dice_info" />
+        </receiver>
+
+        <receiver
+            android:name=".clawd.ClawdMotivationWidget"
+            android:exported="true"
+            android:label="@string/clawd_w_motivation">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="dev.hearth.clawd.REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clawd_motivation_info" />
+        </receiver>
+
+        <receiver
+            android:name=".clawd.ClawdWeekendWidget"
+            android:exported="true"
+            android:label="@string/clawd_w_weekend">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="dev.hearth.clawd.REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clawd_weekend_info" />
+        </receiver>
+
         <!-- Hearth hands over Clawd's look through this (signature-protected). -->
         <provider
             android:name=".system.GlimmerBridgeProvider"
