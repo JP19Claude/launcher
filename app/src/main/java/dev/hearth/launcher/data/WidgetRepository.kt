@@ -44,6 +44,8 @@ enum class HearthWidget(val label: String, val description: String, val spanX: I
     Clock("Glas-Uhr", "Analoge Uhr mit Sekundenzeiger, wie aus Glas", 2, 2, 200),
     Battery("Akku", "Akkustand als Ring, grün beim Laden", 2, 2, 170),
     Date("Datum", "Wochentag, Tag und nächster Wecker, groß wie bei One UI", 2, 2, 170),
+    Toggles("Schnellschalter", "Taschenlampe, Nicht stören, Vibration und Drehen als Glasknöpfe", 4, 1, 110),
+    Note("Notiz", "Ein Zettel aus Glas: antippen und schreiben, wird von selbst gespeichert", 2, 2, 180),
 }
 
 /** An installable widget, for the picker. */

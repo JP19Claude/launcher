@@ -70,6 +70,8 @@ mit Liquid Glass, und Claude dort, wo bei Samsung Galaxy AI sitzt.
 - Hearth-Widgets aus Liquid Glass (Widget hinzufügen): analoge Glas-Uhr mit Sekundenzeiger,
   Akku-Ring (grün beim Laden, rot wenn leer), Datum mit Wochentag und nächstem Wecker – auf dem
   Startbildschirm und auf der Widget-Seite
+- Weitere Glas-Widgets: Schnellschalter (Taschenlampe, Nicht stören, Vibration, Drehen) und
+  Notiz (antippen und schreiben, speichert sich selbst)
 - Dock-Aussehen: Glasleiste, schwebende Glas-Kapsel oder ohne Hintergrund
 - Suchleiste der App-Übersicht und Knöpfe des Bearbeitungsmodus aus Liquid Glass
 - App-Übersicht: „Vorgeschlagene Apps“ oben, ⋮-Menü mit Sortieren (A–Z, Neueste zuerst,
@@ -244,9 +246,12 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     aufgeklappt mit Punkten (Samsungs Now Bar); Aussehen „Farbig getönt“ in der Farbe der Aktivität
   - Gesperrt zeigt Glimmer keine Codes und Nachrichten (ein frischer Code erscheint nach dem
     Entsperren); Antippen und Wischen reagieren auch, während Timer oder Musik laufen
+  - Kamera und Mikrofon in Benutzung: grüner bzw. oranger Punkt in Glimmer, wie beim iPhone
+  - Beim Laden aufgeklappt: „Voll in … Min.“ (Schätzung von Android)
   - Neue Meldungen: Ladekabel getrennt (mit Akkustand), neuer Wecker gestellt (Tag und
     Uhrzeit, der Wecker klingelt kurz)
-  - „Kleiner (85 %)“: Glimmer in jedem Zustand 15 % schmaler; Höhe, Inhalt und Schrift bleiben
+  - „Kleiner (85 %)“: die kleine Insel 15 % schmaler, aufgeklappt volle Größe; Höhe, Inhalt und
+    Schrift bleiben
   - Nichts liegt unter der Frontkamera: Glimmer kennt Lage und Größe des Kameralochs, kompakt
     stehen Inhalte links und rechts davon, aufgeklappt beginnt der Inhalt darunter
   - Live-Vorschau oben in der Glimmer-App: zeigt Aussehen, Breite, Rand, Leuchten, Bewegung und

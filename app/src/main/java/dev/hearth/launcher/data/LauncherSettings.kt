@@ -357,6 +357,8 @@ data class LauncherSettings(
     val glimmerScreenshots: Boolean = true,
     /** A soft light breathes around the island while something runs (OPPO's Fluid Cloud). */
     val glimmerBreathe: Boolean = false,
+    /** A green or orange dot in Glimmer while an app uses the camera or the microphone. */
+    val glimmerPrivacy: Boolean = true,
     /** 85 % of the size, and unfolded content kept below the camera so it never covers any. */
     val glimmerSmall: Boolean = false,
     val badgeStyle: BadgeStyle = BadgeStyle.Number,
@@ -675,6 +677,7 @@ class SettingsRepository(context: Context) {
             glimmerCodes = prefs.getBoolean("glimmerCodes", d.glimmerCodes),
             glimmerScreenshots = prefs.getBoolean("glimmerScreenshots", d.glimmerScreenshots),
             glimmerBreathe = prefs.getBoolean("glimmerBreathe", d.glimmerBreathe),
+            glimmerPrivacy = prefs.getBoolean("glimmerPrivacy", d.glimmerPrivacy),
             glimmerSmall = prefs.getBoolean("glimmerSmall", d.glimmerSmall),
             badgeStyle = enumOf("badgeStyle", d.badgeStyle),
             doubleTapLock = prefs.getBoolean("doubleTapLock", d.doubleTapLock),
@@ -782,6 +785,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("glimmerCodes", s.glimmerCodes)
             .putBoolean("glimmerScreenshots", s.glimmerScreenshots)
             .putBoolean("glimmerBreathe", s.glimmerBreathe)
+            .putBoolean("glimmerPrivacy", s.glimmerPrivacy)
             .putBoolean("glimmerSmall", s.glimmerSmall)
             .putString("badgeStyle", s.badgeStyle.name)
             .putBoolean("doubleTapLock", s.doubleTapLock)
@@ -849,7 +853,7 @@ class SettingsRepository(context: Context) {
             "glimmerIdlePill", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerAutoCollapse",
-            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerSmall", "accent", "animations",
+            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerSmall", "glimmerPrivacy", "accent", "animations",
         )
         const val KEY_CC_ENABLED = "ccEnabled"
     }

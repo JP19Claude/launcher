@@ -377,6 +377,7 @@ fun WidgetPicker(
                                 glyph = when (kind) {
                                     HearthWidget.Battery -> Glyph.Battery
                                     HearthWidget.Clock -> Glyph.Alarm
+                                    HearthWidget.Toggles -> Glyph.Torch
                                     else -> Glyph.Tiles
                                 },
                                 onClick = { onPickHearth(kind) },

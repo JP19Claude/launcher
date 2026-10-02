@@ -53,6 +53,7 @@ import dev.hearth.launcher.data.NoticeKind
 import dev.hearth.launcher.data.NotificationHub
 import dev.hearth.launcher.ui.GlassStyle
 import dev.hearth.launcher.ui.CameraHole
+import dev.hearth.launcher.ui.PrivacyUse
 import dev.hearth.launcher.ui.GlimmerIsland
 import dev.hearth.launcher.ui.Glyph
 import dev.hearth.launcher.ui.ISLAND_HEIGHT_DP
@@ -271,6 +272,27 @@ class GlimmerController(private val service: GlimmerService) {
 
     /** The flashlight is on: a live activity, tap turns it off. */
     private val torchOn = MutableStateFlow(false)
+
+    /** Privacy dot: some app is recording sound, or has a camera open. */
+    private val micInUse = MutableStateFlow(false)
+    private val cameraInUse = MutableStateFlow(false)
+    private val busyCameras = mutableSetOf<String>()
+    private val cameraUse = object : CameraManager.AvailabilityCallback() {
+        override fun onCameraUnavailable(cameraId: String) {
+            busyCameras += cameraId
+            cameraInUse.value = busyCameras.isNotEmpty()
+        }
+
+        override fun onCameraAvailable(cameraId: String) {
+            busyCameras -= cameraId
+            cameraInUse.value = busyCameras.isNotEmpty()
+        }
+    }
+    private val micUse = object : AudioManager.AudioRecordingCallback() {
+        override fun onRecordingConfigChanged(configs: MutableList<android.media.AudioRecordingConfiguration>?) {
+            micInUse.value = !configs.isNullOrEmpty()
+        }
+    }
     private val camera = service.getSystemService(CameraManager::class.java)
     private val torchId: String? = runCatching {
         camera?.cameraIdList?.firstOrNull { id ->
@@ -573,6 +595,13 @@ class GlimmerController(private val service: GlimmerService) {
         startHeadphoneWatch()
         runCatching { service.getSystemService(DisplayManager::class.java)?.registerDisplayListener(displayListener, handler) }
         runCatching { camera?.registerTorchCallback(torchCallback, handler) }
+        // Camera and microphone use, for the privacy dot (the callbacks report the current state too).
+        runCatching { camera?.registerAvailabilityCallback(cameraUse, handler) }
+        runCatching {
+            val audio = service.getSystemService(AudioManager::class.java)
+            micInUse.value = audio?.activeRecordingConfigurations?.isNotEmpty() == true
+            audio?.registerAudioRecordingCallback(micUse, handler)
+        }
         // Sent by the Bluetooth stack only (a protected broadcast).
         batteryReceiverRegistered = runCatching {
             ContextCompat.registerReceiver(
@@ -633,6 +662,11 @@ class GlimmerController(private val service: GlimmerService) {
     fun stop() {
         runCatching { service.getSystemService(DisplayManager::class.java)?.unregisterDisplayListener(displayListener) }
         runCatching { camera?.unregisterTorchCallback(torchCallback) }
+        runCatching { camera?.unregisterAvailabilityCallback(cameraUse) }
+        runCatching { service.getSystemService(AudioManager::class.java)?.unregisterAudioRecordingCallback(micUse) }
+        busyCameras.clear()
+        cameraInUse.value = false
+        micInUse.value = false
         if (batteryReceiverRegistered) runCatching { service.unregisterReceiver(earbudsBattery) }
         batteryReceiverRegistered = false
         torchOn.value = false
@@ -812,6 +846,8 @@ class GlimmerController(private val service: GlimmerService) {
                 val torch by torchOn.collectAsStateWithLifecycle()
                 val top by insetTop.collectAsStateWithLifecycle()
                 val holePx by cameraHolePx.collectAsStateWithLifecycle()
+                val micOn by micInUse.collectAsStateWithLifecycle()
+                val cameraOn by cameraInUse.collectAsStateWithLifecycle()
                 val widthDp by screenWidth.collectAsStateWithLifecycle()
                 val onAod = aod && settings.glimmerAod
 
@@ -892,6 +928,12 @@ class GlimmerController(private val service: GlimmerService) {
                             style = settings.glimmerStyle,
                             screenWidthDp = widthDp,
                             topInset = (top / density).dp,
+                            privacy = when {
+                                !settings.glimmerPrivacy || aod -> PrivacyUse.None
+                                cameraOn -> PrivacyUse.Camera
+                                micOn -> PrivacyUse.Microphone
+                                else -> PrivacyUse.None
+                            },
                             camera = run {
                                 val unit = density
                                 val (hx, hy, hw, hh) = holePx

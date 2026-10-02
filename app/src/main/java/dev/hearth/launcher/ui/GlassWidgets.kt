@@ -7,6 +7,18 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.hearth.launcher.data.SystemControls
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -52,6 +64,8 @@ fun InternalWidget(repo: WidgetRepository, id: Int, modifier: Modifier = Modifie
         HearthWidget.Clock -> GlassAnalogClock(modifier)
         HearthWidget.Battery -> BatteryWidget(modifier)
         HearthWidget.Date -> DateWidget(modifier)
+        HearthWidget.Toggles -> TogglesWidget(modifier)
+        HearthWidget.Note -> NoteWidget(id, modifier)
     }
 }
 
@@ -220,5 +234,88 @@ private fun DateWidget(modifier: Modifier) {
                 )
             }
         }
+    }
+}
+
+/** Four switches on glass: flashlight, do not disturb, vibration, auto-rotate. */
+@Composable
+private fun TogglesWidget(modifier: Modifier) {
+    val context = LocalContext.current
+    val controls = remember { SystemControls(context.applicationContext) }
+    DisposableEffect(controls) { onDispose { controls.close() } }
+    val torch by controls.torchOn.collectAsStateWithLifecycle()
+    var state by remember { mutableStateOf(runCatching { controls.state() }.getOrNull()) }
+    fun refresh() {
+        state = runCatching { controls.state() }.getOrNull()
+    }
+    // The switches can change elsewhere too: read again every few seconds while shown.
+    LaunchedEffect(controls) {
+        while (true) {
+            delay(4000)
+            refresh()
+        }
+    }
+    val accent = LocalSettings.current.accent.color
+    Row(
+        modifier.padding(horizontal = 10.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ToggleButton(Glyph.Torch, "Licht", torch, accent, enabled = controls.hasTorch) { controls.setTorch(!torch) }
+        ToggleButton(Glyph.Moon, "Nicht stören", state?.doNotDisturb == true, accent) {
+            controls.toggleDoNotDisturb()
+            refresh()
+        }
+        ToggleButton(Glyph.Vibrate, "Vibration", state?.vibrate == true, accent) {
+            controls.toggleVibrate()
+            refresh()
+        }
+        ToggleButton(Glyph.Rotate, "Drehen", state?.autoRotate == true, accent) {
+            controls.setAutoRotate(state?.autoRotate != true)
+            refresh()
+        }
+    }
+}
+
+@Composable
+private fun ToggleButton(glyph: Glyph, label: String, on: Boolean, accent: Color, enabled: Boolean = true, onClick: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier
+                .size(46.dp)
+                .clip(CircleShape)
+                .background(if (on) accent.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.14f))
+                .clickable(enabled = enabled, onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            GlyphIcon(glyph, if (on) Color.White else Color.White.copy(alpha = if (enabled) 0.85f else 0.35f), Modifier.size(22.dp))
+        }
+        Text(label, color = Color.White.copy(alpha = 0.75f), fontSize = 10.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+    }
+}
+
+/** A glass note: tap and write; it keeps itself (on this phone only). */
+@Composable
+private fun NoteWidget(id: Int, modifier: Modifier) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("hearth_notes", Context.MODE_PRIVATE) }
+    var text by remember(id) { mutableStateOf(prefs.getString("note_$id", "").orEmpty()) }
+    // Saved shortly after typing stops.
+    LaunchedEffect(text) {
+        delay(400)
+        prefs.edit().putString("note_$id", text).apply()
+    }
+    Box(modifier.padding(14.dp)) {
+        BasicTextField(
+            value = text,
+            onValueChange = { text = it.take(2000) },
+            textStyle = TextStyle(color = Color.White, fontSize = 15.sp, lineHeight = 20.sp),
+            cursorBrush = SolidColor(LocalSettings.current.accent.color),
+            modifier = Modifier.fillMaxSize(),
+            decorationBox = { inner ->
+                if (text.isEmpty()) Text("Notiz …", color = Color.White.copy(alpha = 0.45f), fontSize = 15.sp)
+                inner()
+            },
+        )
     }
 }

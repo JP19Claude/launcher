@@ -214,6 +214,12 @@ data class CameraHole(
 
 private val LocalCameraHole = compositionLocalOf { CameraHole() }
 
+/** Something is using the camera or the microphone right now (the privacy dot). */
+enum class PrivacyUse { None, Microphone, Camera }
+
+/** The privacy dot sits at the pill's right end: compact content keeps clear of it. */
+private val LocalPrivacyDot = compositionLocalOf { false }
+
 /** Room kept free around the camera, so nothing even touches its edge. */
 private val CameraMargin = 5.dp
 
@@ -253,7 +259,8 @@ fun islandSize(
     /** The 85 % mode: every state narrower, the height as it is. */
     narrow: Float = 1f,
 ): DpSize {
-    val full = (if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, 420f).dp) * narrow
+    // Unfolded it's always as wide as at 100 % (the 85 % mode only slims the small states).
+    val full = if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, 420f).dp
     val compact = if (dynamicIsland) {
         (ISLAND_HEIGHT_DP * 6.2f).coerceAtMost(screenWidthDp - 60f).dp * narrow
     } else {
@@ -334,6 +341,8 @@ fun GlimmerIsland(
     onDoubleTap: (() -> Unit)? = null,
     /** Where the front camera is, so content stays out of it. */
     camera: CameraHole = CameraHole(),
+    /** An app is using the camera or microphone: a small dot at the pill's end. */
+    privacy: PrivacyUse = PrivacyUse.None,
 ) {
     val context = LocalContext.current
     val settings = LocalSettings.current
@@ -548,7 +557,12 @@ fun GlimmerIsland(
 
     // With a second bubble beside it, the pill sits left of the middle: the camera is further right in it.
     val cameraInPill = if (hasSecondary) camera.copy(x = camera.x + SecondaryExtra / 2) else camera
-    CompositionLocalProvider(LocalGlimmerStill provides dimmed, LocalCameraHole provides cameraInPill) {
+    val privacyDot = privacy != PrivacyUse.None && !expanded && content !is IslandContent.Unlock && content !is IslandContent.Hidden
+    CompositionLocalProvider(
+        LocalGlimmerStill provides dimmed,
+        LocalCameraHole provides cameraInPill,
+        LocalPrivacyDot provides privacyDot,
+    ) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         // Gone once it has shrunk away (it shrinks into the camera instead of vanishing).
         if (drawn is IslandContent.Hidden || (hidden && width < 1.dp)) return@Box
@@ -775,6 +789,13 @@ fun GlimmerIsland(
                         }
                     } else {
                         CompactContent(c)
+                    }
+                }
+                // Camera (green) or microphone (orange) in use, like the iPhone's dot.
+                if (privacyDot) {
+                    val dotColor = if (privacy == PrivacyUse.Camera) Green else Orange
+                    Box(Modifier.fillMaxSize().padding(end = 9.dp), contentAlignment = Alignment.CenterEnd) {
+                        Box(Modifier.size(6.dp).clip(CircleShape).background(dotColor))
                     }
                 }
             }
@@ -1241,6 +1262,8 @@ private fun AroundCamera(
     right: @Composable RowScope.() -> Unit,
 ) {
     val hole = LocalCameraHole.current
+    // Room for the privacy dot at the right end.
+    val endEdge = edge + if (LocalPrivacyDot.current) 10.dp else 0.dp
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val w = maxWidth
         // Only where the camera actually reaches into the pill; else split in the middle.
@@ -1264,7 +1287,7 @@ private fun AroundCamera(
                 .width(w - holeEnd)
                 .fillMaxHeight()
                 .clipToBounds()
-                .padding(end = edge.coerceAtMost(w - holeEnd)),
+                .padding(end = endEdge.coerceAtMost(w - holeEnd)),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
             content = right,
@@ -1461,6 +1484,20 @@ private fun ExpandedContent(
                 Column(Modifier.weight(1f)) {
                     Text("Lädt", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     RollingText("${content.level} %", color = Green, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    // How long until full, as Android estimates it.
+                    val context = LocalContext.current
+                    val untilFull = remember(content.level) {
+                        runCatching { context.getSystemService(android.os.BatteryManager::class.java)?.computeChargeTimeRemaining() }
+                            .getOrNull()?.takeIf { it > 0 }
+                    }
+                    if (untilFull != null && content.level < 100) {
+                        val minutes = (untilFull / 60_000).toInt().coerceAtLeast(1)
+                        Text(
+                            if (minutes >= 60) "Voll in ${minutes / 60} Std. ${minutes % 60} Min." else "Voll in $minutes Min.",
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontSize = 12.sp,
+                        )
+                    }
                 }
                 LevelBar(content.level / 100f, Green, Modifier.size(52.dp, 24.dp), charging = true)
             }

@@ -690,7 +690,7 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
     Section(if (di) "Position" else "Größe & Position") {
         SwitchRow(
             label = "Kleiner (85 %)",
-            description = "Glimmer ist 15 % schmaler – in jedem Zustand. Höhe, Inhalte und Schrift bleiben gleich groß",
+            description = "Die kleine Insel ist 15 % schmaler; aufgeklappt bleibt Glimmer so groß wie bei 100 %. Höhe, Inhalte und Schrift bleiben gleich",
             checked = s.glimmerSmall,
         ) { v -> update { it.copy(glimmerSmall = v) } }
         if (!di) SliderRow(
@@ -756,6 +756,11 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
         if (!di) SwitchRow(label = "Neue Nachrichten kurz zeigen", checked = s.glimmerMessages) { v ->
             update { it.copy(glimmerMessages = v) }
         }
+        SwitchRow(
+            label = "Kamera und Mikrofon in Benutzung",
+            description = "Ein grüner Punkt in Glimmer, solange eine App die Kamera benutzt, ein oranger beim Mikrofon – wie beim iPhone",
+            checked = s.glimmerPrivacy,
+        ) { v -> update { it.copy(glimmerPrivacy = v) } }
         SwitchRow(
             label = "Kopfhörer, Nicht stören, Akku voll",
             description = "Kurz anzeigen, wenn Kopfhörer sich verbinden, „Nicht stören“ umschaltet oder der Akku voll ist",
