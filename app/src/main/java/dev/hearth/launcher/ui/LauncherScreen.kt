@@ -168,6 +168,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val library by vm.library.collectAsStateWithLifecycle()
     var openFolder by remember { mutableStateOf<LibraryFolderContent?>(null) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
+    // Galaxy × Claude: One UI's app drawer (swipe up) instead of the App Library page.
+    var drawerOpen by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     var controlOpen by rememberSaveable { mutableStateOf(false) }
     var controlPage by remember { mutableIntStateOf(0) }
@@ -247,7 +249,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     // Size of the pager, to turn a widget's size in dp into grid cells.
     var pagerSize by remember { mutableStateOf(IntSize.Zero) }
     val density = LocalDensity.current
-    val libraryPages = if (settings.showAppLibrary) 1 else 0
+    val libraryPages = if (settings.showAppLibrary && !settings.galaxyClaude) 1 else 0
     val widgetPages = if (settings.showWidgetPage) 1 else 0
     // Page order: [widgets] home pages… [App Library]; the launcher opens on the first home page.
     val pagerState = rememberPagerState(initialPage = widgetPages) { widgetPages + pages.size + libraryPages }
@@ -396,6 +398,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
             renaming = null
             drag = null
             searchOpen = false
+            drawerOpen = false
             settingsOpen = false
             controlOpen = false
             widgetPickerOpen = false
@@ -440,7 +443,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
             openFolder != null -> openFolder = null
             controlOpen -> controlOpen = false
             settingsOpen -> settingsOpen = false
-            else -> searchOpen = false
+            searchOpen -> searchOpen = false
+            else -> drawerOpen = false
         }
     }
 
@@ -638,7 +642,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             ),
                         )
                         .homeSwipes(
-                            onSwipeUp = { if (settings.swipeOpensSearch) searchOpen = true },
+                            onSwipeUp = {
+                                when {
+                                    settings.galaxyClaude -> drawerOpen = true
+                                    settings.swipeOpensSearch -> searchOpen = true
+                                }
+                            },
                             onSwipeDown = onSwipeDown,
                         ),
                 ) {
@@ -808,6 +817,26 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                 .onGloballyPositioned { dockBounds = it.boundsInRoot() },
                         )
                     }
+                }
+
+                AnimatedVisibility(
+                    visible = drawerOpen,
+                    enter = fadeIn(tween(200)) + slideInVertically(tween(320)) { it / 6 },
+                    exit = fadeOut(tween(180)) + slideOutVertically(tween(240)) { it / 6 },
+                ) {
+                    OneUIDrawer(
+                        apps = apps,
+                        actions = actions,
+                        onLaunch = { app, bounds ->
+                            launchApp(app, bounds)
+                            drawerOpen = false
+                        },
+                        onOpenSearch = {
+                            drawerOpen = false
+                            searchOpen = true
+                        },
+                        onDismiss = { drawerOpen = false },
+                    )
                 }
 
                 AnimatedVisibility(

@@ -36,6 +36,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -331,7 +333,8 @@ class GlimmerController(private val service: GlimmerService) {
     /** Settings that apply while running (see [SettingsRepository.GLIMMER_LIVE_KEYS]). */
     fun update(newSettings: LauncherSettings) {
         val effective = newSettings.forGlimmer()
-        val moved = effective.glimmerOffsetX != settings.glimmerOffsetX || effective.glimmerOffsetY != settings.glimmerOffsetY
+        val moved = effective.glimmerOffsetX != settings.glimmerOffsetX || effective.glimmerOffsetY != settings.glimmerOffsetY ||
+            effective.glimmerSmall != settings.glimmerSmall
         settings = effective
         settingsState.value = effective
         refreshCharging()
@@ -648,7 +651,7 @@ class GlimmerController(private val service: GlimmerService) {
         insetTop.value = topInsetPx()
         p.x = x
         runCatching { windowManager.updateViewLayout(view, p) }
-        resizeTo(islandSize)
+        resizeTo(lastTarget)
     }
 
     /**
@@ -824,9 +827,12 @@ class GlimmerController(private val service: GlimmerService) {
                 val second = if (unlocking != null || landed != null) null else visible.drop(1).firstOrNull()
 
                 HearthTheme(dark = true) {
+                    val baseDensity = LocalDensity.current
                     CompositionLocalProvider(
                         LocalSettings provides settings,
                         LocalGlassStyle provides GlassStyle.from(settings),
+                        // The 85 % mode: the whole island, text included, drawn smaller alike.
+                        LocalDensity provides Density(baseDensity.density * settings.glimmerScale, baseDensity.fontScale),
                     ) {
                         GlimmerIsland(
                             content = main,
@@ -836,7 +842,7 @@ class GlimmerController(private val service: GlimmerService) {
                             dimmed = onAod,
                             style = settings.glimmerStyle,
                             screenWidthDp = widthDp,
-                            topInset = (top / density).dp,
+                            topInset = (top / (density * settings.glimmerScale)).dp,
                             media = media,
                             // Locked, apps can't come up anyway: a tap unfolds instead.
                             tapOpens = settings.glimmerTapOpens && !onLockScreen,
@@ -896,22 +902,28 @@ class GlimmerController(private val service: GlimmerService) {
 
     private var resizeToken = 0
 
-    /** The island's current size (zero while hidden), for the app fly-in to aim at. */
+    /** The island's current size on screen (zero while hidden), for the app fly-in to aim at. */
     var islandSize: DpSize = DpSize.Zero
         private set
+
+    /** The size the island asked for, in its own (possibly 85 %) units. */
+    private var lastTarget: DpSize = DpSize.Zero
 
     /**
      * Keeps the window just as big as the island: growing happens at once (so the animation
      * isn't cut off), shrinking after the animation, so touches around it reach the app below.
      */
     private fun resizeTo(size: DpSize) {
-        islandSize = size
+        lastTarget = size
+        // The 85 % mode draws everything smaller; the window follows the real size.
+        val scale = settings.glimmerScale
+        islandSize = DpSize(size.width * scale, size.height * scale)
         val p = params ?: return
         val view = root ?: return
         val topInset = insetTop.value
         val hidden = size.width.value <= 0f
-        val w = if (hidden) 1 else dp(size.width.value + 2 * PAD)
-        val h = if (hidden) 1 else topInset + dp(size.height.value + PAD)
+        val w = if (hidden) 1 else dp(size.width.value * scale + 2 * PAD)
+        val h = if (hidden) 1 else topInset + dp(size.height.value * scale + PAD)
         val token = ++resizeToken
         fun applySize(width: Int, height: Int) {
             p.width = width

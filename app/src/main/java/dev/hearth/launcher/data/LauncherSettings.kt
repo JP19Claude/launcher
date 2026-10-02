@@ -337,6 +337,8 @@ data class LauncherSettings(
     val glimmerScreenshots: Boolean = true,
     /** A soft light breathes around the island while something runs (OPPO's Fluid Cloud). */
     val glimmerBreathe: Boolean = false,
+    /** 85 % of the size, and unfolded content kept below the camera so it never covers any. */
+    val glimmerSmall: Boolean = false,
     val badgeStyle: BadgeStyle = BadgeStyle.Number,
     /** Double tap on empty home screen space locks the phone (needs the accessibility service). */
     val doubleTapLock: Boolean = true,
@@ -355,14 +357,23 @@ data class LauncherSettings(
     /** Glimmer's size and place as they come: normal width, right over the camera. */
     fun withGlimmerSizeReset(): LauncherSettings {
         val d = LauncherSettings()
-        return copy(glimmerWidth = d.glimmerWidth, glimmerOffsetX = d.glimmerOffsetX, glimmerOffsetY = d.glimmerOffsetY)
+        return copy(
+            glimmerWidth = d.glimmerWidth,
+            glimmerOffsetX = d.glimmerOffsetX,
+            glimmerOffsetY = d.glimmerOffsetY,
+            glimmerSmall = d.glimmerSmall,
+        )
     }
 
     /** Is Glimmer's size and place as they come? */
     val glimmerSizeIsDefault: Boolean
         get() = LauncherSettings().let { d ->
-            glimmerWidth == d.glimmerWidth && glimmerOffsetX == d.glimmerOffsetX && glimmerOffsetY == d.glimmerOffsetY
+            glimmerWidth == d.glimmerWidth && glimmerOffsetX == d.glimmerOffsetX && glimmerOffsetY == d.glimmerOffsetY &&
+                glimmerSmall == d.glimmerSmall
         }
+
+    /** How big Glimmer is drawn: the 85 % mode shrinks everything alike. */
+    val glimmerScale: Float get() = if (glimmerSmall) 0.85f else 1f
 
     /** True when Glimmer copies the iPhone's Dynamic Island. */
     val glimmerIsDynamicIsland: Boolean get() = glimmerMode == GlimmerMode.DynamicIsland
@@ -419,6 +430,7 @@ data class LauncherSettings(
             glimmerCodes = d.glimmerCodes,
             glimmerScreenshots = d.glimmerScreenshots,
             glimmerBreathe = d.glimmerBreathe,
+            glimmerSmall = d.glimmerSmall,
         )
     }
 
@@ -630,6 +642,7 @@ class SettingsRepository(context: Context) {
             glimmerCodes = prefs.getBoolean("glimmerCodes", d.glimmerCodes),
             glimmerScreenshots = prefs.getBoolean("glimmerScreenshots", d.glimmerScreenshots),
             glimmerBreathe = prefs.getBoolean("glimmerBreathe", d.glimmerBreathe),
+            glimmerSmall = prefs.getBoolean("glimmerSmall", d.glimmerSmall),
             badgeStyle = enumOf("badgeStyle", d.badgeStyle),
             doubleTapLock = prefs.getBoolean("doubleTapLock", d.doubleTapLock),
             dockSize = prefs.getInt("dockSize", d.dockSize),
@@ -731,6 +744,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("glimmerCodes", s.glimmerCodes)
             .putBoolean("glimmerScreenshots", s.glimmerScreenshots)
             .putBoolean("glimmerBreathe", s.glimmerBreathe)
+            .putBoolean("glimmerSmall", s.glimmerSmall)
             .putString("badgeStyle", s.badgeStyle.name)
             .putBoolean("doubleTapLock", s.doubleTapLock)
             .putInt("dockSize", s.dockSize)
@@ -796,7 +810,7 @@ class SettingsRepository(context: Context) {
             "glimmerIdlePill", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerAutoCollapse",
-            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "accent", "animations",
+            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerSmall", "accent", "animations",
         )
         const val KEY_CC_ENABLED = "ccEnabled"
     }

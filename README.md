@@ -18,6 +18,9 @@ mit Liquid Glass, und Claude dort, wo bei Samsung Galaxy AI sitzt.
 - Such-Pille „Frag Claude oder suche“: in der Suche steht Claude ganz oben, „Los“ ohne passende
   App fragt Claude, vor dem Tippen gibt es Claude-Vorschläge
 - „Claude fragen“ im Menü jeder App (lange drücken): Tipps und versteckte Funktionen der App
+- One-UI-App-Übersicht statt der App-Mediathek: auf dem Startbildschirm nach oben wischen, alle
+  Apps A–Z in Seiten mit Punkten über dem verschwommenen Hintergrund, oben die Suche (mit
+  Claude), nach unten wischen schließt
 - Einzeln ein- und ausschaltbar: „Claude im System (Galaxy × Claude)“
 
 ## Drei Apps
@@ -172,6 +175,8 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     aufgeklappt mit Punkten (Samsungs Now Bar); Aussehen „Farbig getönt“ in der Farbe der Aktivität
   - Gesperrt zeigt Glimmer keine Codes und Nachrichten (ein frischer Code erscheint nach dem
     Entsperren); Antippen und Wischen reagieren auch, während Timer oder Musik laufen
+  - „Kleiner (85 %)“: Glimmer samt Inhalt und Schrift 15 % kleiner, aufgeklappt beginnt der
+    Inhalt unterhalb der Frontkamera, damit sie nichts verdeckt
   - Live-Vorschau oben in der Glimmer-App: zeigt Aussehen, Breite, Rand, Leuchten, Bewegung und
     Position sofort, wechselt durch ein paar Inhalte, antippen klappt auf; Einstellungen in
     Abschnitten (Gestaltung, Größe & Position, Bedienung, Was Glimmer zeigt, Sperrbildschirm & AOD)

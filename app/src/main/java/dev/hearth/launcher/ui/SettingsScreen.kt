@@ -643,6 +643,11 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
     }
 
     Section(if (di) "Position" else "Größe & Position") {
+        SwitchRow(
+            label = "Kleiner (85 %)",
+            description = "Glimmer ist 15 % kleiner – Pille, Inhalte und Schrift gleichermaßen –, und aufgeklappt beginnt der Inhalt unterhalb der Frontkamera, damit sie nichts verdeckt",
+            checked = s.glimmerSmall,
+        ) { v -> update { it.copy(glimmerSmall = v) } }
         if (!di) SliderRow(
             label = "Breite",
             value = s.glimmerWidth,

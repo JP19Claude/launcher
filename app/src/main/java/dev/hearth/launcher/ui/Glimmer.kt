@@ -216,6 +216,8 @@ fun islandSize(
     widthScale: Float = 1f,
     /** The iPhone's proportions: its pill is 3.4 times, a compact activity about 6.2 times as wide as tall. */
     dynamicIsland: Boolean = false,
+    /** Unfolded content starts below the camera, so the card grows a little taller for it. */
+    clearCamera: Boolean = false,
 ): DpSize {
     val full = if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, 420f).dp
     val compact = if (dynamicIsland) {
@@ -234,7 +236,7 @@ fun islandSize(
         !expanded -> DpSize(compact, ISLAND_HEIGHT_DP.dp)
         else -> DpSize(
             full,
-            when (content) {
+            (if (clearCamera) 16.dp else 0.dp) + when (content) {
                 is IslandContent.Media -> 178.dp
                 is IslandContent.Live -> if (content.notice.actions.isNotEmpty()) 158.dp else 116.dp
                 is IslandContent.Message -> if (content.notice.actions.isNotEmpty()) 160.dp else 124.dp
@@ -309,7 +311,15 @@ fun GlimmerIsland(
         }
     }
     val hasSecondary = secondary != null && !expanded
-    val target = islandSize(content, expanded, screenWidthDp, hasSecondary, settings.glimmerWidth, settings.glimmerIsDynamicIsland)
+    val target = islandSize(
+        content,
+        expanded,
+        screenWidthDp,
+        hasSecondary,
+        settings.glimmerWidth,
+        settings.glimmerIsDynamicIsland,
+        clearCamera = settings.glimmerSmall,
+    )
     LaunchedEffect(target) { onTargetSize(target) }
     val collapseAfter = settings.glimmerAutoCollapse
     // Keyed on which activity it is, not on its every update (a timer changes each second).
@@ -703,6 +713,7 @@ fun GlimmerIsland(
                                 onOpen = { onOpen(c) },
                                 onAction = { sendIntent(context, it); onCollapse() },
                                 onShare = { onShare(c) },
+                                clearCamera = settings.glimmerSmall,
                             )
                             // Several things running: little dots like Samsung's Now Bar; swipe for the next.
                             if (activityCount > 1) {
@@ -1197,11 +1208,13 @@ private fun ExpandedContent(
     onOpen: () -> Unit,
     onAction: (PendingIntent) -> Unit,
     onShare: () -> Unit = {},
+    /** Start below the camera, so nothing sits behind it. */
+    clearCamera: Boolean = false,
 ) {
     Column(
         Modifier
             .fillMaxSize()
-            .padding(horizontal = 18.dp, vertical = 14.dp),
+            .padding(start = 18.dp, end = 18.dp, top = if (clearCamera) 30.dp else 14.dp, bottom = 14.dp),
     ) {
         when (content) {
             is IslandContent.Media -> if (LocalSettings.current.glimmerMusicStyle == GlimmerMusicStyle.Hyper) {
