@@ -320,6 +320,45 @@ data class LauncherSettings(
     /** Bumped when a new default look should be applied once to existing installs. */
     val designVersion: Int = 0,
 ) {
+    /** Glimmer's size and place as they come: normal width, right over the camera. */
+    fun withGlimmerSizeReset(): LauncherSettings {
+        val d = LauncherSettings()
+        return copy(glimmerWidth = d.glimmerWidth, glimmerOffsetX = d.glimmerOffsetX, glimmerOffsetY = d.glimmerOffsetY)
+    }
+
+    /** Is Glimmer's size and place as they come? */
+    val glimmerSizeIsDefault: Boolean
+        get() = LauncherSettings().let { d ->
+            glimmerWidth == d.glimmerWidth && glimmerOffsetX == d.glimmerOffsetX && glimmerOffsetY == d.glimmerOffsetY
+        }
+
+    /** Every Glimmer setting as it comes (it stays switched on). */
+    fun withGlimmerDefaults(): LauncherSettings {
+        val d = LauncherSettings()
+        return copy(
+            glimmerStyle = d.glimmerStyle,
+            glimmerIdlePill = d.glimmerIdlePill,
+            glimmerMessages = d.glimmerMessages,
+            glimmerTapOpens = d.glimmerTapOpens,
+            glimmerAlerts = d.glimmerAlerts,
+            glimmerGlow = d.glimmerGlow,
+            glimmerMusicStyle = d.glimmerMusicStyle,
+            glimmerUnlock = d.glimmerUnlock,
+            glimmerAod = d.glimmerAod,
+            glimmerGlowColor = d.glimmerGlowColor,
+            glimmerOutline = d.glimmerOutline,
+            glimmerOffsetX = d.glimmerOffsetX,
+            glimmerOffsetY = d.glimmerOffsetY,
+            glimmerWidth = d.glimmerWidth,
+            glimmerMotion = d.glimmerMotion,
+            glimmerAutoCollapse = d.glimmerAutoCollapse,
+            glimmerDoubleTap = d.glimmerDoubleTap,
+            glimmerSwipeTracks = d.glimmerSwipeTracks,
+            glimmerCharging = d.glimmerCharging,
+            glimmerHaptics = d.glimmerHaptics,
+        )
+    }
+
     fun withPreset(preset: DesignPreset): LauncherSettings = when (preset) {
         DesignPreset.ColorOSClaude -> copy(
             iconStyle = IconStyle.Original,

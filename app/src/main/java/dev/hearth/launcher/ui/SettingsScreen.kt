@@ -647,6 +647,14 @@ internal fun GlimmerOptionRows(s: LauncherSettings, update: ((LauncherSettings) 
         IntSlider("Nach links / rechts", s.glimmerOffsetX, -40..40, " dp") { v -> update { it.copy(glimmerOffsetX = v) } }
         IntSlider("Nach oben / unten", s.glimmerOffsetY, -10..24, " dp") { v -> update { it.copy(glimmerOffsetY = v) } }
         Note("Sitzt Glimmer nicht genau um deine Kamera, schieb es hier zurecht. Die Änderung siehst du sofort.")
+        ActionRow(
+            label = "Größe & Position zurücksetzen",
+            description = if (s.glimmerSizeIsDefault) {
+                "Ist schon Standard: normale Breite, genau über der Kamera"
+            } else {
+                "Breite 100 %, nicht verschoben – wieder genau über der Kamera"
+            },
+        ) { update { it.withGlimmerSizeReset() } }
 
         // Functions
         ChoiceRow(
@@ -675,6 +683,26 @@ internal fun GlimmerOptionRows(s: LauncherSettings, update: ((LauncherSettings) 
         ) { v -> update { it.copy(glimmerCharging = v) } }
         SwitchRow(label = "Vibration", description = "Leichtes Feedback beim Antippen, Aufklappen und Wischen", checked = s.glimmerHaptics) { v ->
             update { it.copy(glimmerHaptics = v) }
+        }
+
+        // Everything back as it came; a second tap confirms, so it can't happen by accident.
+        var confirmReset by remember { mutableStateOf(false) }
+        LaunchedEffect(confirmReset) {
+            if (confirmReset) {
+                delay(4000)
+                confirmReset = false
+            }
+        }
+        ActionRow(
+            label = if (confirmReset) "Wirklich alles zurücksetzen? Nochmal tippen" else "Alle Glimmer-Einstellungen zurücksetzen",
+            description = "Aussehen, Größe, Position, Farben, Bewegung und Funktionen wie am Anfang; Glimmer bleibt an",
+        ) {
+            if (confirmReset) {
+                update { it.withGlimmerDefaults() }
+                confirmReset = false
+            } else {
+                confirmReset = true
+            }
         }
 }
 

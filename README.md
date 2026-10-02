@@ -139,7 +139,8 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     Finger nach
   - Gestaltung: Leuchtfarbe (Aktivität, Akzent, Weiß, Regenbogen), Rand (dezent oder in Farbe),
     Bewegung (ruhig, normal, verspielt), Breite, Position (links/rechts, oben/unten) – alles
-    wirkt sofort, ohne Neustart
+    wirkt sofort, ohne Neustart; „Größe & Position zurücksetzen“ und „Alle Glimmer-Einstellungen
+    zurücksetzen“ (mit Bestätigung) bringen alles wieder auf Standard
   - Funktionen: Doppeltippen (Musik, Taschenlampe, Bildschirmfoto), Zuklappen nach 5–30 s oder
     nie, Wischen über Musik wechselt den Titel, Akku beim Laden dauerhaft zeigen, Vibration
   - Laden zeigt eine kleine Batterie, die sich füllt
