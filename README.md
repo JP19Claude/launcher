@@ -147,7 +147,7 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     Position sofort, wechselt durch ein paar Inhalte, antippen klappt auf; Einstellungen in
     Abschnitten (Gestaltung, Größe & Position, Bedienung, Was Glimmer zeigt, Sperrbildschirm & AOD)
   - Im Vollbild (Videos, Spiele ohne Statusleiste) tritt Glimmer zurück, nur Anruf, Wecker und
-    Entsperren kommen durch (abschaltbar)
+    Entsperren kommen durch (als Test, standardmäßig aus, da nicht jedes Handy das zuverlässig meldet)
   - Laden zeigt eine kleine Batterie, die sich füllt
   - Stoppuhr und Timer laufen in Glimmer weiter, auch bei der Samsung-Uhr und anderen Uhr-Apps
     (Zeit aus Chronometer oder Text, Stoppuhr mit Zehnteln, angehalten bleibt sie stehen)

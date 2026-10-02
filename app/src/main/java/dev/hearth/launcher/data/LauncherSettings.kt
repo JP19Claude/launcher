@@ -306,7 +306,7 @@ data class LauncherSettings(
     val glimmerCharging: Boolean = false,
     val glimmerHaptics: Boolean = true,
     /** Videos and games without a status bar: only what matters stays (a call, an alarm). */
-    val glimmerHideFullscreen: Boolean = true,
+    val glimmerHideFullscreen: Boolean = false,
     val badgeStyle: BadgeStyle = BadgeStyle.Number,
     /** Double tap on empty home screen space locks the phone (needs the accessibility service). */
     val doubleTapLock: Boolean = true,

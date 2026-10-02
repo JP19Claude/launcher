@@ -693,9 +693,16 @@ class GlimmerController(private val service: GlimmerService) {
         }
         frame.setViewTreeLifecycleOwner(service)
         // Whether the status bar is showing: hidden means a video or game in full screen.
+        // Glimmer sits above the status bar, and some phones never tell such a window about it
+        // (it then looks hidden all the time, even on the home screen). So "hidden" only counts
+        // once this window has seen the status bar showing and is told its size.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            var seenStatusBar = false
             frame.setOnApplyWindowInsetsListener { v, insets ->
-                fullscreen.value = !insets.isVisible(android.view.WindowInsets.Type.statusBars())
+                val bar = android.view.WindowInsets.Type.statusBars()
+                val showing = insets.isVisible(bar)
+                if (showing) seenStatusBar = true
+                fullscreen.value = seenStatusBar && !showing && insets.getInsetsIgnoringVisibility(bar).top > 0
                 v.onApplyWindowInsets(insets)
             }
         }
