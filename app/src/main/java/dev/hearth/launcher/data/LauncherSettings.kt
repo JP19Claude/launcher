@@ -585,6 +585,47 @@ class SettingsRepository(context: Context) {
         write(_settings.value)
     }
 
+    /** All launcher settings as JSON, for "Einstellungen sichern" (the Claude key lives elsewhere). */
+    fun exportJson(): String {
+        val values = org.json.JSONObject()
+        prefs.all.forEach { (key, value) ->
+            val entry = org.json.JSONObject()
+            when (value) {
+                is String -> entry.put("t", "s").put("v", value)
+                is Boolean -> entry.put("t", "b").put("v", value)
+                is Int -> entry.put("t", "i").put("v", value)
+                is Long -> entry.put("t", "l").put("v", value)
+                is Float -> entry.put("t", "f").put("v", value.toDouble())
+                is Set<*> -> entry.put("t", "set").put("v", org.json.JSONArray(value.filterIsInstance<String>()))
+                else -> return@forEach
+            }
+            values.put(key, entry)
+        }
+        return org.json.JSONObject().put("hearth", 1).put("settings", values).toString(2)
+    }
+
+    /** Brings settings back from [exportJson]; anything else is refused (false). */
+    fun importJson(text: String): Boolean {
+        val root = runCatching { org.json.JSONObject(text) }.getOrNull() ?: return false
+        if (root.optInt("hearth") != 1) return false
+        val values = root.optJSONObject("settings") ?: return false
+        val edit = prefs.edit()
+        values.keys().forEach { key ->
+            val entry = values.optJSONObject(key) ?: return@forEach
+            when (entry.optString("t")) {
+                "s" -> edit.putString(key, entry.optString("v"))
+                "b" -> edit.putBoolean(key, entry.optBoolean("v"))
+                "i" -> edit.putInt(key, entry.optInt("v"))
+                "l" -> edit.putLong(key, entry.optLong("v"))
+                "f" -> edit.putFloat(key, entry.optDouble("v").toFloat())
+                "set" -> entry.optJSONArray("v")?.let { a -> edit.putStringSet(key, (0 until a.length()).map { a.optString(it) }.toSet()) }
+            }
+        }
+        if (!edit.commit()) return false
+        _settings.value = read()
+        return true
+    }
+
     private inline fun <reified T : Enum<T>> enumOf(key: String, default: T): T =
         prefs.getString(key, null)?.let { name -> enumValues<T>().firstOrNull { it.name == name } } ?: default
 

@@ -64,6 +64,12 @@ Claude ist in Hearth eingebaut und erledigt Dinge direkt auf dem Handy, statt nu
 Design-Vorlage „Galaxy × Claude“ (Einstellungen → Design-Vorlage): der Launcher im Stil von One UI
 mit Liquid Glass, und Claude dort, wo bei Samsung Galaxy AI sitzt.
 
+- Einstellungen wie bei Samsung (nur im Galaxy-Modus): Startseite mit Suche, Hearth-Karte und
+  Kategorien auf Glas-Karten (Design & Liquid Glass, Startbildschirm, Claude & KI, Glimmer &
+  Kontrollzentrum, Datenschutz & Sicherheit, Allgemein); jede Kategorie öffnet ihre eigene
+  Seite, Zurück führt zur Startseite. In den anderen Looks bleibt die lange Liste.
+- Einstellungen sichern und wiederherstellen (Allgemein): alle Launcher-Einstellungen als
+  JSON-Datei, ohne API-Schlüssel – auch für ein neues Handy
 - One UI 9 in Liquid Glass: Samsungs Quick Panel als Kontrollzentrum (WLAN und Bluetooth als
   große Knöpfe, runde Schalter mit Namen, breite Regler, Smart View und Medienausgabe,
   Player), das App-Popup wie auf dem Galaxy (Shortcuts als Liste, Aktionen als Reihe runder

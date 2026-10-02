@@ -1,5 +1,20 @@
 package dev.hearth.launcher.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Face
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.vector.ImageVector
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import dev.hearth.launcher.system.ControlsLink
@@ -135,6 +150,14 @@ fun SettingsScreen(
     var pickerOpen by remember { mutableStateOf(false) }
     var lockPickerOpen by remember { mutableStateOf(false) }
 
+    // Galaxy × Claude: Samsung's settings – a start page of categories, each opening its own page.
+    val oneUi = s.galaxyClaude
+    var page by rememberSaveable { mutableStateOf<String?>(null) }
+    val oneUiPage = if (oneUi) page else null
+    var query by rememberSaveable { mutableStateOf("") }
+    fun shows(category: String) = !oneUi || page == category
+    BackHandler(enabled = oneUiPage != null) { page = null }
+
     Box(Modifier.fillMaxSize()) {
         GlassBackdropFill(blur = 36.dp, modifier = Modifier.matchParentSize())
         Box(
@@ -156,8 +179,28 @@ fun SettingsScreen(
                         .padding(start = 6.dp, top = 8.dp, bottom = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    if (oneUiPage != null) {
+                        // One UI's back arrow on a category page.
+                        LiquidGlass(
+                            cornerRadius = 22.dp,
+                            refraction = 12.dp,
+                            interactive = true,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable { page = null },
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Rounded.ArrowBack,
+                                contentDescription = "Zurück",
+                                tint = TextPrimary,
+                                modifier = Modifier.align(Alignment.Center),
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                    }
                     Text(
-                        text = "Einstellungen",
+                        text = SettingsCategories.firstOrNull { it.id == oneUiPage }?.title ?: "Einstellungen",
                         color = TextPrimary,
                         // One UI: Samsung's plain big title instead of the serif one.
                         fontFamily = if (s.galaxyClaude) FontFamily.Default else FontFamily.Serif,
@@ -185,7 +228,28 @@ fun SettingsScreen(
                 }
             }
 
-            item {
+            // One UI's start page: search, the Hearth card, and the categories on glass.
+            if (oneUi && page == null) {
+                item { OneUISearchField(query) { query = it } }
+                if (query.isBlank()) item { HearthCard(s) }
+                val found = SettingsCategories.filter { it.matches(query) }
+                if (found.isEmpty()) {
+                    item { Note("Nichts gefunden für „$query“.") }
+                }
+                SettingsGroups.forEachIndexed { index, group ->
+                    val shown = group.filter { it in found }
+                    if (shown.isNotEmpty()) {
+                        item(key = "group-$index") {
+                            OneUICategoryCard(shown) { category ->
+                                query = ""
+                                page = category.id
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (shows("design")) item {
                 Section("Design-Vorlage") {
                     ChoiceRow(
                         label = "Look",
@@ -203,9 +267,9 @@ fun SettingsScreen(
                 }
             }
 
-            item { ClaudeAssistantSettings() }
+            if (shows("claude")) item { ClaudeAssistantSettings() }
 
-            item {
+            if (shows("design")) item {
                 Section("Liquid Glass") {
                     ChoiceRow(
                         label = "Voreinstellung",
@@ -267,7 +331,7 @@ fun SettingsScreen(
                 }
             }
 
-            item {
+            if (shows("design")) item {
                 Section("Animationen") {
                     SwitchRow(
                         label = "Animationen",
@@ -284,7 +348,7 @@ fun SettingsScreen(
                 }
             }
 
-            item {
+            if (shows("design")) item {
                 Section("Icons") {
                     ChoiceRow(
                         label = "Stil",
@@ -327,7 +391,7 @@ fun SettingsScreen(
                 }
             }
 
-            item {
+            if (shows("design")) item {
                 Section("Icon-Pack") {
                     PackRow(label = "Keins (System-Icons)", icon = null, selected = s.iconPack == null) {
                         update { it.copy(iconPack = null) }
@@ -361,7 +425,7 @@ fun SettingsScreen(
                 }
             }
 
-            item {
+            if (shows("home")) item {
                 Section("Homescreen") {
                     IntSlider("Spalten", s.columns, 3..6) { v -> update { it.copy(columns = v) } }
                     IntSlider("Reihen", s.rows, 4..8) { v -> update { it.copy(rows = v) } }
@@ -417,13 +481,13 @@ fun SettingsScreen(
                 }
             }
 
-            item {
+            if (shows("glimmer")) item {
                 Section("Glimmer & Kontrollzentrum") {
                     GlimmerLinkRows(s, update)
                 }
             }
 
-            item {
+            if (shows("home")) item {
                 Section("Gesten & Kontrollzentrum") {
                     ChoiceRow(
                         label = "Nach unten wischen",
@@ -468,13 +532,13 @@ fun SettingsScreen(
                 }
             }
 
-            item {
+            if (shows("glimmer")) item {
                 Section("Kontrollzentrum: Aussehen") {
                     CcLookRows(s, update)
                 }
             }
 
-            item {
+            if (shows("home")) item {
                 Section("Dock") {
                     ChoiceRow(
                         label = "Aussehen",
@@ -493,7 +557,7 @@ fun SettingsScreen(
                 }
             }
 
-            item {
+            if (shows("general")) item {
                 Section("Suche") {
                     ChoiceRow(
                         label = "Suchmaschine",
@@ -505,7 +569,7 @@ fun SettingsScreen(
                 }
             }
 
-            item {
+            if (shows("general")) item {
                 Section("Allgemein") {
                     ChoiceRow(
                         label = "Design der Suche",
@@ -520,7 +584,9 @@ fun SettingsScreen(
                 }
             }
 
-            item {
+            if (shows("general")) item { BackupSection(vm) }
+
+            if (shows("privacy")) item {
                 Section("App-Sperre") {
                     ActionRow(
                         label = "Apps sperren …",
@@ -537,7 +603,7 @@ fun SettingsScreen(
                 }
             }
 
-            item {
+            if (shows("privacy")) item {
                 val hidden = allApps.filter { it.key in s.hiddenApps }
                 Section("Ausgeblendete Apps") {
                     ActionRow(
@@ -568,7 +634,7 @@ fun SettingsScreen(
                 }
             }
 
-            item {
+            if (oneUiPage == null) item {
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -1290,5 +1356,174 @@ private fun PackRow(
         if (selected) {
             Icon(Icons.Rounded.Check, contentDescription = "Ausgewählt", tint = SwitchOn)
         }
+    }
+}
+
+
+/** A category of the One UI style settings: what it holds and how its row looks. */
+@Immutable
+internal class SettingsCategory(
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val icon: ImageVector,
+    val color: Color,
+    /** Words the search also finds it by. */
+    val keywords: String,
+) {
+    fun matches(query: String): Boolean {
+        val q = query.trim().lowercase()
+        return q.isEmpty() || title.lowercase().contains(q) || subtitle.lowercase().contains(q) || keywords.contains(q)
+    }
+}
+
+internal val SettingsCategories = listOf(
+    SettingsCategory("design", "Design & Liquid Glass", "Vorlagen, Glas, Icons, Icon-Packs, Animationen", Icons.Rounded.Star, Color(0xFF8E6BFF),
+        "look vorlage galaxy ios coloros glas farbe tönung unschärfe icon form größe pack animation bewegung"),
+    SettingsCategory("home", "Startbildschirm", "Raster, Uhr, Dock, Gesten, App-Übersicht", Icons.Rounded.Home, Color(0xFF3E91FF),
+        "home raster spalten reihen uhr widgets dock wischen gesten doppeltippen sperren seiten"),
+    SettingsCategory("claude", "Claude & KI", "Assistent, Anbieter, Schlüssel, Sparmodus", Icons.Rounded.Face, Color(0xFFD97757),
+        "claude ki assistent api schlüssel nvidia groq gemini modell sprache vorlesen sparmodus"),
+    SettingsCategory("glimmer", "Glimmer & Kontrollzentrum", "Insel um die Kamera, Kontrollzentrum über Apps", Icons.Rounded.Notifications, Color(0xFFFF9F0A),
+        "glimmer insel dynamic island kontrollzentrum quick panel schalter regler"),
+    SettingsCategory("privacy", "Datenschutz & Sicherheit", "App-Sperre, ausgeblendete Apps", Icons.Rounded.Lock, Color(0xFF34C759),
+        "sperre pin fingerabdruck biometrie ausblenden versteckt privat"),
+    SettingsCategory("general", "Allgemein", "Suche, Vibration, Sichern & Wiederherstellen", Icons.Rounded.Settings, Color(0xFF8E8E93),
+        "suche suchmaschine vibration standard launcher sichern backup wiederherstellen export import"),
+)
+
+/** The start page's cards, grouped like Samsung's. */
+private val SettingsGroups: List<List<SettingsCategory>> = listOf(
+    SettingsCategories.filter { it.id == "design" || it.id == "home" },
+    SettingsCategories.filter { it.id == "claude" || it.id == "glimmer" },
+    SettingsCategories.filter { it.id == "privacy" || it.id == "general" },
+)
+
+/** One UI's settings search, as a glass capsule. */
+@Composable
+private fun OneUISearchField(query: String, onChange: (String) -> Unit) {
+    LiquidGlass(
+        cornerRadius = 26.dp,
+        refraction = 14.dp,
+        modifier = Modifier
+            .padding(vertical = 6.dp)
+            .fillMaxWidth()
+            .clip(CircleShape),
+    ) {
+        Row(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
+            Box(Modifier.weight(1f)) {
+                if (query.isEmpty()) Text("Einstellungen durchsuchen", color = TextSecondary, fontSize = 16.sp)
+                BasicTextField(
+                    value = query,
+                    onValueChange = onChange,
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 16.sp),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(LocalSettings.current.accent.color),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+/** Like the account card on top of Samsung's settings: Hearth, its version and look. */
+@Composable
+private fun HearthCard(s: LauncherSettings) {
+    val context = LocalContext.current
+    val version = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
+    }
+    LiquidGlass(
+        cornerRadius = 26.dp,
+        refraction = 16.dp,
+        blur = 20.dp,
+        modifier = Modifier
+            .padding(vertical = 8.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(26.dp)),
+    ) {
+        Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(s.accent.color.copy(alpha = 0.9f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                ClaudeSpark(Color.White, Modifier.size(26.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Hearth", color = TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
+                Text("Version $version · Galaxy × Claude", color = TextSecondary, fontSize = 13.sp)
+            }
+        }
+    }
+}
+
+/** A glass card of category rows: colored round icon, name and what's inside, as on One UI. */
+@Composable
+private fun OneUICategoryCard(categories: List<SettingsCategory>, onOpen: (SettingsCategory) -> Unit) {
+    LiquidGlass(
+        cornerRadius = 26.dp,
+        refraction = 16.dp,
+        blur = 20.dp,
+        modifier = Modifier
+            .padding(vertical = 8.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(26.dp)),
+    ) {
+        Column(Modifier.padding(vertical = 4.dp)) {
+            categories.forEachIndexed { index, category ->
+                if (index > 0) RowDivider()
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpen(category) }
+                        .padding(horizontal = 18.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(category.color),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(category.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(category.title, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        Text(category.subtitle, color = TextSecondary, fontSize = 13.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Saving all launcher settings to a file and bringing them back (also onto a new phone). */
+@Composable
+private fun BackupSection(vm: LauncherViewModel) {
+    var status by remember { mutableStateOf<String?>(null) }
+    val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) status = if (vm.exportSettings(uri)) "Gesichert." else "Sichern ging nicht."
+    }
+    val restore = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) status = if (vm.importSettings(uri)) "Wiederhergestellt." else "Diese Datei ist keine Hearth-Sicherung."
+    }
+    Section("Sichern & Wiederherstellen") {
+        ActionRow(
+            label = "Einstellungen sichern",
+            description = "Alle Launcher-Einstellungen als Datei (ohne API-Schlüssel)",
+        ) { runCatching { save.launch("Hearth-Einstellungen.json") } }
+        ActionRow(
+            label = "Einstellungen wiederherstellen",
+            description = "Aus einer gesicherten Datei, auch auf einem neuen Handy",
+        ) { runCatching { restore.launch(arrayOf("application/json", "text/plain", "*/*")) } }
+        status?.let { Note(it) }
     }
 }

@@ -506,6 +506,20 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun applyPreset(preset: DesignPreset) = settingsRepo.update { it.withPreset(preset) }
 
+    /** Saves all launcher settings into the chosen file. */
+    fun exportSettings(uri: android.net.Uri): Boolean = runCatching {
+        val json = settingsRepo.exportJson()
+        val out = getApplication<Application>().contentResolver.openOutputStream(uri, "wt") ?: error("no stream")
+        out.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+    }.isSuccess
+
+    /** Restores settings from a file made by [exportSettings]. */
+    fun importSettings(uri: android.net.Uri): Boolean = runCatching {
+        val text = getApplication<Application>().contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+            ?: error("no stream")
+        settingsRepo.importJson(text)
+    }.getOrDefault(false)
+
     fun openWallpaperPicker() {
         val pick = Intent(Intent.ACTION_SET_WALLPAPER)
         val chooser = Intent.createChooser(pick, "Hintergrundbild wählen").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
