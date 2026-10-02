@@ -19,6 +19,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.scale
 import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.ClawdHat
 import dev.hearth.launcher.data.ClawdOutfit
@@ -143,7 +144,7 @@ internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawdAt(
 ) {
     val full = size
     translate(left = topLeft.x, top = topLeft.y) {
-        androidx.compose.ui.graphics.drawscope.scale(
+        scale(
             scaleX = if (mirrored) -1f else 1f,
             scaleY = 1f,
             pivot = Offset(w / 2f, h / 2f),
