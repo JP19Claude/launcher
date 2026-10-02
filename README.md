@@ -21,6 +21,9 @@ mit Liquid Glass, und Claude dort, wo bei Samsung Galaxy AI sitzt.
 - One-UI-App-Übersicht statt der App-Mediathek: auf dem Startbildschirm nach oben wischen, alle
   Apps A–Z in Seiten mit Punkten über dem verschwommenen Hintergrund, oben die Suche (mit
   Claude), nach unten wischen schließt
+- Bearbeitungsmodus wie bei One UI: lange auf eine freie Stelle drücken, die Seiten treten zurück,
+  unten erscheinen „Hintergrund und Stil“, „Widgets“, „Apps auswählen“ und „Einstellungen“;
+  ⋮ in der App-Übersicht öffnet die Einstellungen; keine Such-Pille auf dem Startbildschirm
 - Einzeln ein- und ausschaltbar: „Claude im System (Galaxy × Claude)“
 
 ## Drei Apps

@@ -452,7 +452,8 @@ data class LauncherSettings(
             showGreeting = true,
             showClaudeCard = false,
             galaxyClaude = true,
-            showSearchPill = true,
+            // One UI has no search on the home screen: it sits on top of the app drawer.
+            showSearchPill = false,
             swipeDownAction = SwipeDownAction.Split,
             pageTransition = PageTransition.Flat,
         ).withCcStyle(CcStyle.ColorOS).copy(

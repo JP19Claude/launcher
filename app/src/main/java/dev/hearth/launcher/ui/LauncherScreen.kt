@@ -170,6 +170,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     // Galaxy × Claude: One UI's app drawer (swipe up) instead of the App Library page.
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
+    // Galaxy × Claude: One UI's edit mode (long press on the home screen).
+    var editMode by remember { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     var controlOpen by rememberSaveable { mutableStateOf(false) }
     var controlPage by remember { mutableIntStateOf(0) }
@@ -254,6 +256,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     // Page order: [widgets] home pages… [App Library]; the launcher opens on the first home page.
     val pagerState = rememberPagerState(initialPage = widgetPages) { widgetPages + pages.size + libraryPages }
     val onLibraryPage = libraryPages > 0 && pagerState.currentPage >= widgetPages + pages.size
+    val editScale by animateFloatAsState(if (editMode) 0.84f else 1f, spring(dampingRatio = 0.85f, stiffness = 380f), label = "editScale")
 
     // Adding a widget: permission dialog (once per app) and the widget's own setup screen.
     val activity = context as? Activity
@@ -360,7 +363,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
         )
     }
     val homeMenu: (Offset) -> Unit = { position ->
-        menu = GlassMenuRequest(
+        if (settings.galaxyClaude) {
+            editMode = true
+        } else {
+            menu = GlassMenuRequest(
             anchor = Rect(position, Size(1f, 1f)),
             title = "Hearth",
             items = listOf(
@@ -385,6 +391,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 GlassMenuItem("Suche öffnen", Icons.Rounded.Search) { searchOpen = true },
             ),
         )
+        }
     }
 
     // Home button: close everything. Only a press on the home screen itself jumps back
@@ -399,6 +406,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
             drag = null
             searchOpen = false
             drawerOpen = false
+            editMode = false
             settingsOpen = false
             controlOpen = false
             widgetPickerOpen = false
@@ -435,6 +443,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     // Always enabled: on the home screen, back does nothing (like every launcher).
     BackHandler {
         when {
+            editMode -> editMode = false
             menu != null -> menu = null
             renaming != null -> renaming = null
             openHomeFolder != null -> openHomeFolder = null
@@ -658,7 +667,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxWidth()
-                                .onSizeChanged { pagerSize = it },
+                                .onSizeChanged { pagerSize = it }
+                                // One UI's edit mode: the pages step back a little.
+                                .graphicsLayer {
+                                    scaleX = editScale
+                                    scaleY = editScale
+                                },
                         ) { pagerPage ->
                             val pageMotion = Modifier.pageTransition(settings.pageTransition) {
                                 (pagerState.currentPage - pagerPage) + pagerState.currentPageOffsetFraction
@@ -836,6 +850,38 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             searchOpen = true
                         },
                         onDismiss = { drawerOpen = false },
+                        onOpenSettings = {
+                            drawerOpen = false
+                            settingsOpen = true
+                        },
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = editMode,
+                    enter = fadeIn(tween(200)) + slideInVertically(tween(280)) { it / 8 },
+                    exit = fadeOut(tween(160)) + slideOutVertically(tween(220)) { it / 8 },
+                ) {
+                    OneUIEditBar(
+                        onWallpaper = {
+                            editMode = false
+                            vm.openWallpaperPicker()
+                        },
+                        onWidgets = {
+                            editMode = false
+                            widgetTarget = (pagerState.currentPage - widgetPages).coerceAtLeast(0)
+                            widgetPickerOpen = true
+                        },
+                        onSettings = {
+                            editMode = false
+                            settingsOpen = true
+                        },
+                        onSelectApps = {
+                            editMode = false
+                            selecting = true
+                            selected = emptySet()
+                        },
+                        onDismiss = { editMode = false },
                     )
                 }
 
@@ -1372,7 +1418,6 @@ private fun NowBriefCard(onAsk: (String?) -> Unit, modifier: Modifier = Modifier
             Text(
                 text = briefLine(now.hour),
                 color = Color.White.copy(alpha = 0.92f),
-                fontFamily = FontFamily.Serif,
                 fontSize = 15.sp,
                 modifier = Modifier.padding(top = 6.dp),
                 style = OnWallpaperText,

@@ -19,6 +19,13 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,6 +56,8 @@ fun OneUIDrawer(
     onLaunch: (AppInfo, Rect?) -> Unit,
     onOpenSearch: () -> Unit,
     onDismiss: () -> Unit,
+    /** The drawer's ⋮ button: the launcher's settings, as on One UI. */
+    onOpenSettings: () -> Unit = {},
 ) {
     val settings = LocalSettings.current
     val sorted = remember(apps) { apps.sortedBy { it.label.lowercase() } }
@@ -91,11 +100,14 @@ fun OneUIDrawer(
                 .fillMaxSize()
                 .systemBarsPadding(),
         ) {
-            // One UI's search bar; with Claude in the system it asks Claude as well.
+            // One UI's search bar; with Claude in the system it asks Claude as well. ⋮ next to it.
+            Row(
+                Modifier.padding(start = 20.dp, end = 8.dp, top = 14.dp, bottom = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
             Row(
                 Modifier
-                    .padding(horizontal = 20.dp, vertical = 14.dp)
-                    .fillMaxWidth()
+                    .weight(1f)
                     .clip(CircleShape)
                     .background(Color.White.copy(alpha = 0.16f))
                     .clickable(onClick = onOpenSearch)
@@ -113,6 +125,16 @@ fun OneUIDrawer(
                     color = Color.White.copy(alpha = 0.8f),
                     fontSize = 16.sp,
                 )
+            }
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onOpenSettings),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.MoreVert, contentDescription = "Einstellungen", tint = Color.White.copy(alpha = 0.85f))
+            }
             }
             HorizontalPager(
                 state = pagerState,
@@ -165,5 +187,68 @@ fun OneUIDrawer(
                 Spacer(Modifier.size(18.dp))
             }
         }
+    }
+}
+
+/**
+ * One UI's edit mode: a long press on the home screen zooms the pages out and shows the bar at
+ * the bottom – wallpaper & style, widgets, settings, choosing apps. Tap anywhere else to leave.
+ */
+@Composable
+fun OneUIEditBar(
+    onWallpaper: () -> Unit,
+    onWidgets: () -> Unit,
+    onSettings: () -> Unit,
+    onSelectApps: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.22f))
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
+    ) {
+        Row(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .systemBarsPadding()
+                .padding(bottom = 28.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            EditAction(Icons.Rounded.Edit, "Hintergrund\nund Stil", onWallpaper)
+            EditAction(Icons.Rounded.Add, "Widgets", onWidgets)
+            EditAction(Icons.Rounded.CheckCircle, "Apps\nauswählen", onSelectApps)
+            EditAction(Icons.Rounded.Settings, "Einstellungen", onSettings)
+        }
+    }
+}
+
+@Composable
+private fun EditAction(icon: ImageVector, label: String, onClick: () -> Unit) {
+    Column(
+        Modifier
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier
+                .size(54.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+        }
+        Spacer(Modifier.size(6.dp))
+        Text(
+            label,
+            color = Color.White,
+            fontSize = 12.sp,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            lineHeight = 14.sp,
+        )
     }
 }
