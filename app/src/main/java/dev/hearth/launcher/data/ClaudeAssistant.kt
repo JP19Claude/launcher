@@ -241,7 +241,13 @@ object ClaudeAssistant {
                 val key = settings.value.hasKey
                 // Without a key or in saving mode, everything Hearth understands itself is free.
                 val quick = LocalCommands.parse(q, tools, onlySafe = key && !settings.value.saver, canAskClaude = key)
+                // Easter egg: the meaning of life.
+                val meaning = ClaudeTools.fold(q).contains("sinn des lebens")
                 when {
+                    meaning -> {
+                        add(ChatItem.Reply(id(), "42. Die Frage dazu sucht Deep Thought noch."))
+                        EasterEggs.find(app, "42")
+                    }
                     quick != null -> runLocal(quick, spoken)
                     key -> runClaude(q, spoken)
                     // Without a key the question goes to the Claude app (your plan, no API costs).

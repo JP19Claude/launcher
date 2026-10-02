@@ -73,6 +73,13 @@ fun SearchOverlay(
     var query by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
     val trimmed = query.trim()
+    // Easter egg: a rainbow, when you look for one.
+    val eggContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(trimmed) {
+        if (trimmed.equals("regenbogen", ignoreCase = true) || trimmed.equals("rainbow", ignoreCase = true)) {
+            dev.hearth.launcher.data.EasterEggs.find(eggContext, "rainbow")
+        }
+    }
     val results = remember(trimmed, apps) {
         if (trimmed.isEmpty()) {
             apps

@@ -4,6 +4,11 @@ Ein schlanker Android-Launcher in Kotlin und Jetpack Compose, mit iOS-Ideen und 
 plus **Glimmer**, die Insel um die Frontkamera, und dem **Kontrollzentrum** als eigene Apps.
 
 
+## Easter Eggs
+
+In Hearth sind 5 Easter Eggs versteckt. Jeder Fund feiert mit Konfetti und zählt mit; der
+Stand steht ganz unten in den Einstellungen. Wo sie sind? Selbst suchen. 🥚
+
 ## App-Sperre
 
 Einstellungen → App-Sperre (oder lange auf eine App drücken → „Sperren“): gesperrte Apps öffnen

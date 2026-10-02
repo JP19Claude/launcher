@@ -148,6 +148,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import dev.hearth.launcher.LauncherViewModel
 import dev.hearth.launcher.data.AppInfo
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import dev.hearth.launcher.data.EasterEggs
 import dev.hearth.launcher.data.ClockFont
 import dev.hearth.launcher.data.HomeGesture
 import androidx.compose.material.icons.rounded.Share
@@ -1080,6 +1082,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 )
             }
 
+            // Easter eggs: confetti and a glass message when one is found.
+            CelebrationOverlay()
+
             drag?.let { d ->
                 DragOverlay(
                     drag = d,
@@ -1251,6 +1256,23 @@ private fun greetingFor(hour: Int) = when (hour) {
 
 @Composable
 private fun HomeHeader(settings: LauncherSettings, modifier: Modifier = Modifier) {
+    // Easter egg: five quick taps on the clock.
+    val context = LocalContext.current
+    val taps = remember { longArrayOf(0L, 0L) }
+    val tapped = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+        val now = System.currentTimeMillis()
+        taps[0] = if (now - taps[1] < 600) taps[0] + 1 else 1
+        taps[1] = now
+        if (taps[0] >= 5) {
+            taps[0] = 0
+            EasterEggs.find(context, "clock")
+        }
+    }
+    HomeHeaderContent(settings, modifier.then(tapped))
+}
+
+@Composable
+private fun HomeHeaderContent(settings: LauncherSettings, modifier: Modifier = Modifier) {
     when (settings.clockStyle) {
         ClockStyle.Hidden -> Spacer(modifier)
         ClockStyle.ColorOS -> ColorOSClock(settings, modifier.padding(start = 8.dp))

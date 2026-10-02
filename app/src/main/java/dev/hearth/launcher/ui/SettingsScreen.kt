@@ -95,6 +95,8 @@ import dev.hearth.launcher.data.GlimmerOutline
 import dev.hearth.launcher.data.GlimmerMotion
 import dev.hearth.launcher.data.GlimmerDoubleTap
 import dev.hearth.launcher.data.DockStyle
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import dev.hearth.launcher.data.EasterEggs
 import dev.hearth.launcher.data.LabelSize
 import dev.hearth.launcher.data.ClockFont
 import dev.hearth.launcher.data.HomeGesture
@@ -657,9 +659,21 @@ fun SettingsScreen(
             }
 
             if (oneUiPage == null) item {
+                // Easter egg: seven taps on this line.
+                val eggs by EasterEggs.found.collectAsStateWithLifecycle()
+                val footerTaps = remember { longArrayOf(0L, 0L) }
                 Row(
                     Modifier
                         .fillMaxWidth()
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                            val now = System.currentTimeMillis()
+                            footerTaps[0] = if (now - footerTaps[1] < 800) footerTaps[0] + 1 else 1
+                            footerTaps[1] = now
+                            if (footerTaps[0] >= 7) {
+                                footerTaps[0] = 0
+                                EasterEggs.find(context, "footer")
+                            }
+                        }
                         .padding(vertical = 24.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
@@ -667,7 +681,7 @@ fun SettingsScreen(
                     ClaudeSpark(s.accent.color, Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "Hearth · gebaut mit Claude",
+                        text = "Hearth · gebaut mit Claude" + if (eggs.isNotEmpty()) "  ·  🥚 ${eggs.size}/${EasterEggs.TOTAL}" else "",
                         color = TextSecondary,
                         fontFamily = FontFamily.Serif,
                         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,

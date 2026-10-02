@@ -197,6 +197,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     init {
         ClaudeAssistant.init(application)
         ClaudeAssistant.host = assistantHost
+        dev.hearth.launcher.data.EasterEggs.init(application)
         AppLock.removeHandler = { pkg -> setLocked(pkg, false) }
 
         // New default looks, each applied once to existing installs:

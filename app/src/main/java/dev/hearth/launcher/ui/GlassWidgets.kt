@@ -17,6 +17,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hearth.launcher.data.SystemControls
 import androidx.compose.foundation.layout.Arrangement
@@ -87,7 +90,32 @@ private fun GlassAnalogClock(modifier: Modifier) {
     val settings = LocalSettings.current
     val now = rememberTime(everySecond = settings.animations)
     val accent = settings.accent.color
-    Box(modifier.padding(10.dp), contentAlignment = Alignment.Center) {
+    // Easter egg: three taps send the hands spinning round.
+    val context = LocalContext.current
+    val spin = remember { androidx.compose.animation.core.Animatable(0f) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val taps = remember { longArrayOf(0L, 0L) }
+    Box(
+        modifier
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    val t = System.currentTimeMillis()
+                    taps[0] = if (t - taps[1] < 700) taps[0] + 1 else 1
+                    taps[1] = t
+                    if (taps[0] >= 3) {
+                        taps[0] = 0
+                        scope.launch {
+                            spin.snapTo(0f)
+                            spin.animateTo(720f, androidx.compose.animation.core.tween(1600, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                            spin.snapTo(0f)
+                        }
+                        dev.hearth.launcher.data.EasterEggs.find(context, "spin")
+                    }
+                }
+            }
+            .padding(10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
         Canvas(Modifier.fillMaxSize()) {
             val r = min(size.width, size.height) / 2f
             val c = center
@@ -109,10 +137,11 @@ private fun GlassAnalogClock(modifier: Modifier) {
             }
             val minutes = now.minute + now.second / 60f
             val hours = (now.hour % 12) + minutes / 60f
-            rotate(hours * 30f, c) {
+            val extra = spin.value
+            rotate(hours * 30f + extra, c) {
                 drawLine(Color.White, c, Offset(c.x, c.y - r * 0.5f), strokeWidth = r * 0.07f, cap = StrokeCap.Round)
             }
-            rotate(minutes * 6f, c) {
+            rotate(minutes * 6f + extra * 2f, c) {
                 drawLine(Color.White, c, Offset(c.x, c.y - r * 0.76f), strokeWidth = r * 0.045f, cap = StrokeCap.Round)
             }
             if (settings.animations) {
