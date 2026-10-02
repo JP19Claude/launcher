@@ -27,12 +27,10 @@ import androidx.savedstate.SavedStateRegistryOwner
 import dev.hearth.launcher.data.SettingsRepository
 
 /**
- * The Glimmer app's accessibility service: the island around the camera in every app
- * (with the Face ID moment and the always-on display), Hearth's iOS-style lock screen
- * notifications, and the last picture of the app in front for Hearth's fly-in.
+ * The Glimmer app's accessibility service: the island around the camera in every app (not on
+ * the lock screen), and the last picture of the app in front for Hearth's fly-in.
  *
- * Accessibility, because only such services may draw over the status bar and lock screen
- * and take that picture. The control center over other apps is its own app now.
+ * Accessibility, because only such services may draw over the status bar and take that picture. The control center over other apps is its own app now.
  */
 class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistryOwner {
 
@@ -44,10 +42,6 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
     private val handler = Handler(Looper.getMainLooper())
     private var glimmer: GlimmerController? = null
 
-    /** iOS-style notifications on the lock screen. */
-    private var lockNotes: LockNotificationsController? = null
-    @Volatile private var lockOn = false
-    private var lockCheckPending = false
 
     private fun restartGlimmer() {
         val current = SettingsRepository(this).settings.value
@@ -55,28 +49,16 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         if (current.glimmerEnabled) glimmer?.start(current)
     }
 
-    private fun readLockOn(prefs: SharedPreferences): Boolean =
-        prefs.getString(SettingsRepository.KEY_LOCK_LAYOUT, null).let { it != null && it != "Off" }
-
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
         when (key) {
             in SettingsRepository.GLIMMER_KEYS -> restartGlimmer()
-            SettingsRepository.KEY_LOCK_LAYOUT, SettingsRepository.KEY_LOCK_CONTENT -> {
-                lockOn = readLockOn(prefs)
-                lockNotes?.update()
-            }
         }
     }
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
-                Intent.ACTION_SCREEN_OFF -> {
-                    lockNotes?.update()
-                    stopAppSnapshots()
-                }
-                Intent.ACTION_SCREEN_ON -> lockNotes?.updateSoon()
-                Intent.ACTION_USER_PRESENT -> lockNotes?.update()
+                Intent.ACTION_SCREEN_OFF -> stopAppSnapshots()
             }
         }
     }
@@ -94,28 +76,15 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         lifecycleRegistry.currentState = Lifecycle.State.RESUMED
         val prefs = getSharedPreferences(SettingsRepository.PREFS_NAME, MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
-        lockOn = readLockOn(prefs)
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
-            addAction(Intent.ACTION_SCREEN_ON)
-            addAction(Intent.ACTION_USER_PRESENT)
         }
         ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         glimmer = GlimmerController(this)
         restartGlimmer()
-        lockNotes = LockNotificationsController(this).also { it.update() }
     }
 
-    /** Only the system UI's events arrive: the lock screen may have changed (camera over it, unlocked). */
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null || lockNotes == null || !lockOn || lockCheckPending) return
-        if (!isLocked()) return
-        lockCheckPending = true
-        handler.postDelayed({
-            lockCheckPending = false
-            lockNotes?.update()
-        }, 400)
-    }
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
 
     private fun isLocked(): Boolean = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
 
@@ -141,14 +110,11 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         if (instance === this) instance = null
         glimmer?.stop()
         glimmer = null
-        lockNotes?.stop()
-        lockNotes = null
         stopAppSnapshots()
         runCatching { unregisterReceiver(screenReceiver) }
         getSharedPreferences(SettingsRepository.PREFS_NAME, MODE_PRIVATE)
             .unregisterOnSharedPreferenceChangeListener(prefsListener)
         handler.removeCallbacksAndMessages(null)
-        lockCheckPending = false
     }
 
     // ---- App snapshots for the fly-in ----

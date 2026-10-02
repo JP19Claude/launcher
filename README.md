@@ -8,8 +8,8 @@ plus **Glimmer**, die Insel um die Frontkamera, und dem **Kontrollzentrum** als 
 - **Hearth** (`Hearth.apk`, `dev.hearth.launcher`): der Launcher mit Homescreen, Dock,
   App-Mediathek, Suche, Widgets und seinem Kontrollzentrum auf dem Homescreen.
 - **Glimmer** (`Glimmer.apk`, `dev.hearth.glimmer`): die Insel (Dynamic Island) mit
-  Live-Aktivitäten, Face-ID-Moment, Always-On-Display und den Mitteilungen auf dem
-  Sperrbildschirm. Braucht ihre Bedienungshilfe und den Benachrichtigungszugriff.
+  Live-Aktivitäten, nach dem Entsperren in jeder App (der Sperrbildschirm bleibt beim
+  System). Braucht ihre Bedienungshilfe und den Benachrichtigungszugriff.
 - **Kontrollzentrum** (`Kontrollzentrum.apk`, `dev.hearth.controls`): das Glas-Kontrollzentrum
   über jeder App, auf Wunsch anstelle von One UIs. Braucht seine Bedienungshilfe.
 - Glimmer und Kontrollzentrum laufen mit jedem Launcher. Zusammen mit Hearth: geschlossene
@@ -66,11 +66,6 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
   blau für WLAN/Bluetooth, grün für Mobilfunk, orange für Flugmodus –, Verbindungs-Block
   neben der Medien-Karte, „Nicht stören“ und „Smart View“ als breite Knöpfe neben den
   hohen Reglern, darunter runde Glas-Knöpfe ohne Beschriftung) oder ColorOS 17
-- Mitteilungen auf dem Sperrbildschirm wie bei iOS (Standard: aus, dann zeigt das System
-  seine normalen Mitteilungen; einschaltbar unter „Sperrbildschirm“, über den Dienst):
-  als Stapel unten (antippen fächert auf), als Anzahl oder als Liste; nach links wischen
-  löscht, antippen öffnet nach dem Entsperren, ✕ → „Alle löschen“. Inhalte lassen sich
-  ausblenden, als geheim markierte Mitteilungen erscheinen nie
 - Glas und Design des Kontrollzentrums einstellbar: Glas (klar, milchig, dunkel,
   Akzentfarbe, wie der Launcher), Deckkraft, Glanz an den Kanten, Lichtbrechung,
   Weichzeichnen und Abdunkeln des Hintergrunds, Größe der Schalter, Rundung der Flächen.
@@ -118,11 +113,8 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     zur Kamera, wird flach wie eine Kapsel und dunkel; die Insel streckt sich ihr entgegen,
     beide verschmelzen über eine flüssige Brücke (Android 12+), dann drückt sich die Insel
     kurz breit und federt zurück (für Apps, die über Hearth geöffnet wurden; abschaltbar)
-  - Entsperren wie Face ID: wacht das Handy gesperrt auf, wird Glimmer zum abgerundeten
-    Quadrat mit Face-ID-Symbol (oder Fingerabdruck), das atmet und sich umsieht; beim
-    Entsperren faltet es sich zu einem Haken
-  - Always-On-Display: Musik und Aktivitäten bleiben sichtbar, gedimmt und ohne Bewegung
-    (sofern das Handy Einblendungen im AOD zulässt)
+  - Auf dem Sperrbildschirm und dem Always-On-Display bleibt alles beim System: Glimmer
+    zeigt sich erst nach dem Entsperren
   - Laden zeigt eine kleine Batterie, die sich füllt
   - Stoppuhr und Timer laufen in Glimmer weiter, auch bei der Samsung-Uhr und anderen Uhr-Apps
     (Zeit aus Chronometer oder Text, Stoppuhr mit Zehnteln, angehalten bleibt sie stehen)
@@ -136,6 +128,9 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
   - Live-Updates von Apps (Android 16, wie Live-Aktivitäten: Lieferung, Fahrt…) mit ihrem
     kurzen Text; aktiver Hotspot mit Zahl der Geräte; Kopfhörer-Akku nach dem Verbinden
     („Galaxy Buds 85 %“); laufende Zeiten mit gleich breiten Ziffern
+  - Wie die Dynamic Island: Neues taucht weich aus einer Unschärfe auf, die Insel zieht sich
+    beim Wechsel kurz zusammen und federt auf, aufgeklappt mit runden 44-dp-Ecken; bei
+    „Lautlos“ und „Vibration“ wackelt die Glocke
   - Zweite Aktivität löst sich wie ein Tropfen von der Pille: die Blase gleitet heraus,
     verbunden durch einen flüssigen Hals, der dünner wird und reißt
 - Foto-Widget: eigene Bilder als Diashow mit langsamem Zoom auf Glas, für Homescreen
@@ -166,7 +161,7 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
   - „Glas-Qualität“: Flüssig (auch Knöpfe und Schalter) oder Ausgewogen
   - Während Glas sich bewegt (Blättern, Animationen), pausiert die Linse und kommt im
     Stillstand zurück: kein Ruckeln beim Wischen
-  - Ohne Hintergrundbild (über anderen Apps, Sperrbildschirm, Glimmer): gezeichnete dicke
+  - Ohne Hintergrundbild (über anderen Apps, Glimmer): gezeichnete dicke
     Kante mit Glanzpunkt und Schatten
   - Glanzlichter auf der Kante, die beim Kippen des Handys mitwandern
   - Glas wölbt sich unter dem Finger, zieht sich wie ein Tropfen mit und federt zurück

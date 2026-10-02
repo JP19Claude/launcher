@@ -72,14 +72,12 @@ import dev.hearth.launcher.data.CcToggleShape
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.GlimmerMusicStyle
-import dev.hearth.launcher.data.GlimmerUnlock
 import dev.hearth.launcher.data.GlimmerStyle
 import dev.hearth.launcher.data.GlassQuality
 import dev.hearth.launcher.data.GlassTint
 import dev.hearth.launcher.data.IconShape
 import dev.hearth.launcher.data.IconStyle
 import dev.hearth.launcher.data.LauncherSettings
-import dev.hearth.launcher.data.LockLayout
 import dev.hearth.launcher.data.PageTransition
 import dev.hearth.launcher.data.SearchEngine
 import dev.hearth.launcher.data.SwipeDownAction
@@ -572,18 +570,6 @@ internal fun GlimmerOptionRows(s: LauncherSettings, update: ((LauncherSettings) 
             onSelect = { style -> update { it.copy(glimmerStyle = style) } },
         )
         ChoiceRow(
-            label = "Beim Entsperren",
-            options = GlimmerUnlock.entries,
-            selected = s.glimmerUnlock,
-            optionLabel = { it.label },
-            onSelect = { u -> update { it.copy(glimmerUnlock = u) } },
-        )
-        SwitchRow(
-            label = "Auf dem Always-On-Display",
-            description = "Musik und Aktivitäten bleiben im AOD sichtbar, gedimmt und ohne Bewegung (wenn das Handy fremde Einblendungen dort zulässt)",
-            checked = s.glimmerAod,
-        ) { v -> update { it.copy(glimmerAod = v) } }
-        ChoiceRow(
             label = "Musik",
             options = GlimmerMusicStyle.entries,
             selected = s.glimmerMusicStyle,
@@ -704,28 +690,10 @@ internal fun CcLookRows(s: LauncherSettings, update: ((LauncherSettings) -> Laun
         Note("Änderungen gelten beim nächsten Öffnen des Kontrollzentrums, in Hearth und über anderen Apps. Das Weichzeichnen über anderen Apps braucht Android 12+ und ein Handy, das es unterstützt; sonst dunkelt Hearth stärker ab.")
 }
 
-/** iOS-style notifications on the lock screen (the Glimmer app shows these). */
-@Composable
-internal fun LockScreenRows(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
-        ChoiceRow(
-            label = "Mitteilungen wie bei iOS",
-            options = LockLayout.entries,
-            selected = s.lockNotifications,
-            optionLabel = { it.label },
-            onSelect = { layout -> update { it.copy(lockNotifications = layout) } },
-        )
-        SwitchRow(
-            label = "Inhalte anzeigen",
-            description = "Aus: nur App und „Mitteilung“. Mitteilungen, die Apps als geheim markieren, erscheinen nie.",
-            checked = s.lockShowContent,
-        ) { v -> update { it.copy(lockShowContent = v) } }
-        Note("Standard ist „Aus“: dann zeigt der Sperrbildschirm die normalen Mitteilungen des Systems. Stapel: die neueste unten, die anderen dahinter, antippen fächert sie auf. Anzahl: „3 Mitteilungen“, antippen zeigt sie. Liste: alle untereinander. Nach links wischen löscht, antippen öffnet nach dem Entsperren. Braucht die Bedienungshilfe „Glimmer“ und den Benachrichtigungszugriff. Damit nichts doppelt erscheint, stell die Mitteilungen des Systems auf dem Sperrbildschirm auf „Nur Symbole“ oder aus.")
-}
-
 /** In Hearth: the family's other apps (Glimmer, control center), and the fly-in. */
 @Composable
 private fun GlimmerLinkRows(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
-    Note("Die Insel um die Kamera und das Kontrollzentrum über anderen Apps sind eigene Apps: „Glimmer“ (Insel, Face-ID-Moment, Live-Aktivitäten, Sperrbildschirm) und „Kontrollzentrum“ (Glas-Kontrollzentrum in jeder App, ersetzt One UIs). Beide laufen mit jedem Launcher; mit Hearth fliegen geschlossene Apps in Glimmer.")
+    Note("Die Insel um die Kamera und das Kontrollzentrum über anderen Apps sind eigene Apps: „Glimmer“ (Insel mit Live-Aktivitäten) und „Kontrollzentrum“ (Glas-Kontrollzentrum in jeder App, ersetzt One UIs). Beide laufen mit jedem Launcher; mit Hearth fliegen geschlossene Apps in Glimmer.")
     FamilyAppRow("Glimmer", GlimmerLink, GlimmerLink.DOWNLOAD_URL)
     FamilyAppRow("Kontrollzentrum", ControlsLink, ControlsLink.DOWNLOAD_URL)
     SwitchRow(

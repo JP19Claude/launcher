@@ -219,9 +219,6 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
                     item {
                         Section("Glimmer") { GlimmerOptionRows(s, update) }
                     }
-                    item {
-                        Section("Sperrbildschirm") { LockScreenRows(s, update) }
-                    }
                 }
 
                 if (app == FamilyApp.Controls) item {

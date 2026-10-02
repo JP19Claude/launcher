@@ -42,7 +42,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import dev.hearth.launcher.data.GlimmerStyle
-import dev.hearth.launcher.data.GlimmerUnlock
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.LiveNotice
 import dev.hearth.launcher.data.MediaRepository
@@ -106,17 +105,6 @@ class GlimmerController(private val service: GlimmerService) {
     private var audioCallbackPrimed = false
     private fun headphones(devices: Array<out AudioDeviceInfo>): List<AudioDeviceInfo> = devices.filter { d ->
         d.isSink && d.type in HeadphoneTypes
-    }
-
-    /** Face ID-style moment while unlocking: scanning when the screen wakes locked, a tick when unlocked. */
-    private val unlock = MutableStateFlow<IslandContent.Unlock?>(null)
-    private var unlockToken = 0
-    private fun showUnlock(success: Boolean, hideAfter: Long) {
-        val symbol = settings.glimmerUnlock
-        if (symbol == GlimmerUnlock.Off) return
-        unlock.value = IslandContent.Unlock(success = success, face = symbol == GlimmerUnlock.FaceId)
-        val token = ++unlockToken
-        handler.postDelayed({ if (token == unlockToken) unlock.value = null }, hideAfter)
     }
 
     /**
@@ -208,16 +196,6 @@ class GlimmerController(private val service: GlimmerService) {
                         updateLocked()
                         updateDozing()
                     }, 600)
-                    when (intent.action) {
-                        // Woken up while locked: the face (or finger) is being checked.
-                        Intent.ACTION_SCREEN_ON -> if (locked.value) showUnlock(success = false, hideAfter = 2600)
-                        // Unlocked: the scan turns into a tick, then the island goes back.
-                        Intent.ACTION_USER_PRESENT -> showUnlock(success = true, hideAfter = 1250)
-                        else -> {
-                            unlockToken++
-                            unlock.value = null
-                        }
-                    }
                 }
                 Intent.ACTION_POWER_CONNECTED -> {
                     val level = batteryLevel()
@@ -376,7 +354,6 @@ class GlimmerController(private val service: GlimmerService) {
         if (batteryReceiverRegistered) runCatching { service.unregisterReceiver(earbudsBattery) }
         batteryReceiverRegistered = false
         torchOn.value = false
-        unlock.value = null
         audioCallback?.let { cb ->
             runCatching { service.getSystemService(AudioManager::class.java)?.unregisterAudioDeviceCallback(cb) }
         }
@@ -451,10 +428,8 @@ class GlimmerController(private val service: GlimmerService) {
                 val pulseCount by pulse.collectAsStateWithLifecycle()
                 val sideways by landscape.collectAsStateWithLifecycle()
                 val onLockScreen by locked.collectAsStateWithLifecycle()
-                val unlocking by unlock.collectAsStateWithLifecycle()
                 val aod by dozing.collectAsStateWithLifecycle()
                 val torch by torchOn.collectAsStateWithLifecycle()
-                val onAod = aod && settings.glimmerAod
 
                 val ongoing = live.sortedBy { priority(it.kind) }
                 val ordered = buildList<IslandContent> {
@@ -478,23 +453,17 @@ class GlimmerController(private val service: GlimmerService) {
                 // A call coming in or an alarm ringing opens up right away, like on the iPhone.
                 val urgent = ongoing.firstOrNull { it.kind == NoticeKind.Alarm || (it.kind == NoticeKind.Call && !it.hasTime) }
                 LaunchedEffect(urgent?.key) {
-                    if (urgent != null && !dozing.value) {
+                    if (urgent != null && !dozing.value && !locked.value) {
                         focusKey.value = islandKey(IslandContent.Live(urgent))
                         expanded.value = true
                     }
                 }
-                // On the always-on display only music and live activities, still and dimmed.
-                val shown = when {
-                    aod && !settings.glimmerAod -> emptyList()
-                    onAod -> activities.filter { it is IslandContent.Media || it is IslandContent.Live }
-                    else -> activities
-                }
-                // On the lock screen too, but without the empty idle pill there.
-                // Unlocking (Face ID moment) goes before everything else.
-                val main = unlocking
-                    ?: shown.firstOrNull()
-                    ?: if (settings.glimmerIdlePill && !sideways && !onLockScreen && !aod) IslandContent.Idle else IslandContent.Hidden
-                val second = if (unlocking != null) null else shown.drop(1).firstOrNull()
+                // Nothing on the lock screen or the always-on display: Glimmer only shows once unlocked.
+                val offLockScreen = !onLockScreen && !aod
+                val shown = if (offLockScreen) activities else emptyList()
+                val main = shown.firstOrNull()
+                    ?: if (settings.glimmerIdlePill && !sideways && offLockScreen) IslandContent.Idle else IslandContent.Hidden
+                val second = shown.drop(1).firstOrNull()
 
                 HearthTheme(dark = true) {
                     CompositionLocalProvider(
@@ -504,9 +473,7 @@ class GlimmerController(private val service: GlimmerService) {
                         GlimmerIsland(
                             content = main,
                             secondary = second,
-                            expanded = isExpanded && !aod && main !is IslandContent.Idle && main !is IslandContent.Hidden &&
-                                main !is IslandContent.Unlock,
-                            dimmed = onAod,
+                            expanded = isExpanded && offLockScreen && main !is IslandContent.Idle && main !is IslandContent.Hidden,
                             style = settings.glimmerStyle,
                             screenWidthDp = service.resources.configuration.screenWidthDp.toFloat(),
                             topInset = (topInset / density).dp,

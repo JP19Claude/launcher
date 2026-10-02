@@ -81,31 +81,7 @@ class ShadeNotice(
     val visibility: Int = Notification.VISIBILITY_PRIVATE,
     /** The app's own lock screen version of the text, if it gave one. */
     val publicText: String? = null,
-) {
-    /**
-     * The lock screen version: secret ones aren't shown at all (null); with [showContent] off
-     * the others only say which app it is (or the app's own lock screen text).
-     */
-    fun forLockScreen(showContent: Boolean): ShadeNotice? {
-        if (visibility == Notification.VISIBILITY_SECRET) return null
-        if (showContent) return this
-        return ShadeNotice(
-            key = key,
-            packageName = packageName,
-            appLabel = appLabel,
-            title = appLabel,
-            text = publicText ?: "Mitteilung",
-            time = time,
-            icon = icon,
-            contentIntent = contentIntent,
-            actions = emptyList(),
-            clearable = clearable,
-            autoCancel = autoCancel,
-            visibility = visibility,
-            publicText = publicText,
-        )
-    }
-}
+)
 
 /**
  * Collects live notifications (calls, timers, navigation, downloads) and new messages for
