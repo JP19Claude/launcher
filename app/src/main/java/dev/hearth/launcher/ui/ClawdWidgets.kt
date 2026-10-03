@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -766,7 +767,7 @@ fun ClawdCompanion(onTalk: () -> Unit, modifier: Modifier = Modifier) {
                 .pointerInput(maxWidth) {
                     val travel = (maxWidth - w).toPx().coerceAtLeast(1f)
                     var from = 0f
-                    androidx.compose.foundation.gestures.detectHorizontalDragGestures(
+                    detectHorizontalDragGestures(
                         onDragStart = {
                             dragging = true
                             from = pos.value
