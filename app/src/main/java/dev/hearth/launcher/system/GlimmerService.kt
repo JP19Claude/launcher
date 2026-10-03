@@ -30,6 +30,8 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 /**
  * The Glimmer app's accessibility service: the island around the camera in every app (with
@@ -282,49 +284,28 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
             pkg == h -> {
                 val app = frontApp ?: return
                 frontApp = null
-                // The launcher has just shrunk the app into its icon: give it a moment to
-                // settle, then the icon lifts off from there.
-                handler.postDelayed({ showFlyIn(app) }, 60)
+                // A picture from just before the home gesture, not one of the window shrinking.
+                val shot = finishAppSnapshots(SystemClock.uptimeMillis() - 450)
+                showFlyIn(app, shot)
             }
             pkg == packageName || isLocked() -> Unit
             launchable.getOrPut(pkg) { packageManager.getLaunchIntentForPackage(pkg) != null && !isKeyboard(pkg) } -> {
-                frontApp = pkg
+                if (pkg != frontApp) {
+                    frontApp = pkg
+                    startAppSnapshots()
+                }
             }
         }
     }
 
     /**
-     * Where the app's icon sits on the home screen right now (px on screen), found by its name
-     * in the launcher's window; null if it isn't on the page (in a folder, the drawer …).
+     * The closing app flies into the island – the same fly-in as in Hearth (the app itself,
+     * from its last picture), drawn by Glimmer over whatever launcher is home and aimed at the
+     * island's real place on screen.
      */
-    private fun iconOnHome(label: String): android.graphics.RectF? = runCatching {
-        val root = rootInActiveWindow ?: return null
-        val screenW = resources.displayMetrics.widthPixels
-        val hits = root.findAccessibilityNodeInfosByText(label).orEmpty()
-        val cell = hits.firstNotNullOfOrNull { node ->
-            val named = node.text?.toString() == label || node.contentDescription?.toString()?.startsWith(label) == true
-            val r = android.graphics.Rect()
-            node.getBoundsInScreen(r)
-            r.takeIf { named && node.isVisibleToUser && r.width() in 1 until screenW / 2 && r.height() > 0 }
-        } ?: return null
-        // A cell holds the icon with its name below; a bare name has the icon above it.
-        val side: Float
-        val cx = cell.exactCenterX()
-        val cy: Float
-        if (cell.height() > cell.width() * 0.6f) {
-            side = minOf(cell.width() * 0.62f, cell.height() * 0.6f)
-            cy = cell.top + cell.height() * 0.4f
-        } else {
-            side = cell.width() * 0.62f
-            cy = cell.top - side / 2f - side * 0.12f
-        }
-        android.graphics.RectF(cx - side / 2f, cy - side / 2f, cx + side / 2f, cy + side / 2f)
-    }.getOrNull()
-
-    /** The closed app's icon flies from the home screen into the island, drawn by Glimmer. */
-    private fun showFlyIn(pkg: String) {
+    private fun showFlyIn(pkg: String, shot: HardwareBuffer?) {
         val settings = SettingsRepository(this).settings.value
-        val controller = glimmer ?: return
+        val controller = glimmer
         val app = runCatching {
             val pm = packageManager
             val info = pm.getApplicationInfo(pkg, 0)
@@ -335,27 +316,51 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
                 user = android.os.Process.myUserHandle(),
                 icon = icon.toBitmap(192, 192).asImageBitmap(),
             )
-        }.getOrNull() ?: return
-        val from = iconOnHome(app.label)
+        }.getOrNull()
+        if (app == null || controller == null) {
+            shot?.let { runCatching { it.close() } }
+            return
+        }
+        val picture = shot?.let { hb ->
+            runCatching {
+                android.graphics.Bitmap.wrapHardwareBuffer(hb, android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB))
+            }.getOrNull()
+        }
+        val status = GlimmerBridgeProvider.handle(this, GlimmerLink.STATUS, null, null)
+        val landing = GlimmerLink.Landing(
+            status?.getFloat("lw") ?: 0f,
+            status?.getInt("ox") ?: 0,
+            status?.getInt("oy") ?: 0,
+        )
+        val island = controller.islandSize.takeIf { it.width.value > 0f }
         val center = controller.islandCenterOnScreen()
-        val islandW = controller.islandSize.width.value.takeIf { it > 0f }?.let { it * resources.displayMetrics.density }
-            ?: (110f * resources.displayMetrics.density)
         removeFlyWindow()
         val compose = androidx.compose.ui.platform.ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@GlimmerService)
             setViewTreeSavedStateRegistryOwner(this@GlimmerService)
             setContent {
-                androidx.compose.runtime.CompositionLocalProvider(dev.hearth.launcher.ui.LocalSettings provides settings) {
-                    dev.hearth.launcher.ui.IconFlyIn(
-                        app = app,
-                        from = from,
-                        to = androidx.compose.ui.geometry.Offset(center.x, center.y),
-                        islandWidth = islandW,
-                        style = settings.glimmerFlyInStyle,
-                        onPulse = { pulseGlimmer() },
-                        onArrive = { icon, color -> arriveGlimmer(icon, color) },
-                        onDone = { removeFlyWindow() },
-                    )
+                // Starts once the window is laid out (so it knows its size and place).
+                var ready by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    androidx.compose.runtime.withFrameNanos { }
+                    ready = true
+                }
+                if (ready) {
+                    val view = androidx.compose.ui.platform.LocalView.current
+                    val loc = IntArray(2).also { view.getLocationOnScreen(it) }
+                    androidx.compose.runtime.CompositionLocalProvider(dev.hearth.launcher.ui.LocalSettings provides settings) {
+                        dev.hearth.launcher.ui.GlimmerFlyIn(
+                            app = app,
+                            island = island,
+                            onPulse = { pulseGlimmer() },
+                            onDone = { removeFlyWindow() },
+                            snapshot = picture?.asImageBitmap(),
+                            style = settings.glimmerFlyInStyle,
+                            landing = landing,
+                            onArrive = { icon, color -> arriveGlimmer(icon, color) },
+                            target = androidx.compose.ui.geometry.Offset(center.x - loc[0], center.y - loc[1]),
+                        )
+                    }
                 }
             }
         }
@@ -380,8 +385,10 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         if (wm != null && runCatching { wm.addView(compose, params) }.isSuccess) {
             flyWindow = compose
             // Never left on screen, whatever happens.
-            handler.postDelayed({ removeFlyWindow() }, 3000)
+            handler.postDelayed({ removeFlyWindow() }, 4000)
         }
+        // The picture is shared with the window; let it go once the flight is surely over.
+        shot?.let { hb -> handler.postDelayed({ runCatching { hb.close() } }, 5000) }
     }
 
     private fun removeFlyWindow() {

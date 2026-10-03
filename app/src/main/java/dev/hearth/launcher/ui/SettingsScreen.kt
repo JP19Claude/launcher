@@ -830,7 +830,7 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
         if (s.glimmerFlyIn) {
             SwitchRow(
                 label = "Auch mit anderen Launchern",
-                description = "Auch mit One UI, ColorOS, dem Pixel-Launcher und jedem anderen: Der Launcher lässt die App in ihr Icon schrumpfen, dann hebt das Icon ab und fliegt in Glimmer. Mit Hearth als Launcher macht es Hearth (dort fliegt die App selbst).",
+                description = "Auch mit One UI, ColorOS, dem Pixel-Launcher und jedem anderen: Glimmer spielt dieselbe Animation wie Hearth selbst – die App fliegt in die Insel (ab Android 11 die App selbst, sonst ihre Karte). Mit Hearth als Launcher macht es Hearth.",
                 checked = s.glimmerFlyInEverywhere,
             ) { v -> update { it.copy(glimmerFlyInEverywhere = v) } }
             ChoiceRow(
