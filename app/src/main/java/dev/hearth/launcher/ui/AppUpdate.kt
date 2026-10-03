@@ -17,6 +17,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -241,6 +242,10 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     var state by remember { mutableStateOf<UpdateState>(UpdateState.Checking) }
     var lastCheck by remember { mutableLongStateOf(AppUpdater.lastChecked(context)) }
     var egg by remember { mutableStateOf(false) }
+    // ClaudeOS has its own easter egg, like Android's under One UI.
+    var osEgg by remember { mutableStateOf(false) }
+    var osTaps by remember { mutableIntStateOf(0) }
+    var osLastTap by remember { mutableLongStateOf(0L) }
     var taps by remember { mutableIntStateOf(0) }
     var lastTap by remember { mutableLongStateOf(0L) }
     var tip by remember { mutableIntStateOf((0 until look.tips.size).random()) }
@@ -288,7 +293,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     }
 
     LaunchedEffect(Unit) { check() }
-    BackHandler(enabled = !egg, onBack = onClose)
+    BackHandler(enabled = !egg && !osEgg, onBack = onClose)
 
     val s = state
     val release = when (s) {
@@ -390,8 +395,16 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
             Spacer(Modifier.height(24.dp))
 
             // About this version; "Version" hides the easter egg.
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(look.card).padding(vertical = 6.dp)) {
-                // Tapping either version quickly, like Android's in Samsung's settings, opens the egg.
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(look.card)
+                    .glassSheen(26.dp)
+                    .aiFluidEdge(26.dp, strength = 0.35f, enabled = LocalSettings.current.fluidDesign)
+                    .padding(vertical = 6.dp),
+            ) {
+                // Tapping the version quickly, like Android's in Samsung's settings, opens the egg.
                 val tapVersion = {
                     val now = System.currentTimeMillis()
                     taps = if (now - lastTap < 1500) taps + 1 else 1
@@ -404,8 +417,16 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                 InfoRow("$name-Version", current, Modifier.clickable(remember { MutableInteractionSource() }, indication = null, onClick = tapVersion))
                 InfoRow(
                     "${dev.hearth.launcher.data.ClaudeOs.NAME}-Version",
-                    dev.hearth.launcher.data.ClaudeOs.VERSION,
-                    Modifier.clickable(remember { MutableInteractionSource() }, indication = null, onClick = tapVersion),
+                    "${dev.hearth.launcher.data.ClaudeOs.VERSION} („${dev.hearth.launcher.data.ClaudeOs.CODENAME}“)",
+                    Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
+                        val now = System.currentTimeMillis()
+                        osTaps = if (now - osLastTap < 1500) osTaps + 1 else 1
+                        osLastTap = now
+                        if (osTaps >= 5) {
+                            osTaps = 0
+                            osEgg = true
+                        }
+                    },
                 )
                 InfoRow("Build-Nummer", buildNumber)
                 if (release != null) InfoRow("Neue Version", "${release.version} · ${megabytes(release.size)}")
@@ -418,7 +439,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
 
             if (release != null && release.notes.isNotBlank()) {
                 Spacer(Modifier.height(14.dp))
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(look.card).padding(20.dp)) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(look.card).glassSheen(26.dp).padding(20.dp)) {
                     Text("Was ist neu", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(8.dp))
                     Text(release.notes, color = Color.White.copy(alpha = 0.75f), fontSize = 14.sp, lineHeight = 20.sp)
@@ -432,6 +453,8 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(26.dp))
                     .background(look.card)
+                    .glassSheen(26.dp)
+                    .aiFluidEdge(26.dp, strength = 0.5f, enabled = LocalSettings.current.fluidDesign)
                     .fluidTouch(look.accent)
                     .clickable { tip++ }
                     .padding(16.dp),
@@ -496,6 +519,8 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                         .height(52.dp)
                         .clip(RoundedCornerShape(26.dp))
                         .background(if (strong) look.accent else Color.White.copy(alpha = 0.14f))
+                        .glassSheen(26.dp)
+                        .aiFluidEdge(26.dp, strength = if (strong) 1f else 0.45f, width = 2.dp, enabled = LocalSettings.current.fluidDesign)
                         .fluidTouch()
                         .clickable(enabled = s !is UpdateState.Checking, onClick = action),
                     contentAlignment = Alignment.Center,
@@ -507,6 +532,9 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
 
         AnimatedVisibility(egg, enter = fadeIn(tween(400)), exit = fadeOut(tween(300))) {
             VersionEgg(current, name, look) { egg = false }
+        }
+        AnimatedVisibility(osEgg, enter = fadeIn(tween(500)), exit = fadeOut(tween(300))) {
+            ClaudeOsEgg { osEgg = false }
         }
     }
 }
@@ -691,6 +719,160 @@ private fun VersionEgg(version: String, name: String, look: UpdateLook, onClose:
         ) {
             Text("$name $version", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             Text("Antippen · gedrückt halten", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+        }
+        Box(
+            Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(12.dp)
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.1f))
+                .clickable(onClick = onClose),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Rounded.Close, contentDescription = "Schließen", tint = Color.White)
+        }
+    }
+}
+
+/** A little spark flung off the spinning Claude star. */
+private class Ember(val angle: Float, val speed: Float, val born: Long, val size: Float)
+
+/**
+ * ClaudeOS's own easter egg, like Android's under One UI: the Claude star, big and glowing,
+ * with its version and codename. Drag it round and it spins; spinning fast it throws off
+ * embers, and after ten whole turns Clawds tumble out and dance round it.
+ */
+@Composable
+private fun ClaudeOsEgg(onClose: () -> Unit) {
+    val context = LocalContext.current
+    BackHandler(onBack = onClose)
+    var rotation by remember { mutableStateOf(0f) }
+    var velocity by remember { mutableStateOf(0f) }
+    var turned by remember { mutableStateOf(0f) }
+    var now by remember { mutableLongStateOf(0L) }
+    var clawds by remember { mutableStateOf(false) }
+    val embers = remember { mutableStateListOf<Ember>() }
+    val center = remember { mutableStateOf(Offset.Zero) }
+    LaunchedEffect(Unit) {
+        var last = 0L
+        while (true) {
+            withFrameMillis { t ->
+                val dt = if (last == 0L) 0f else (t - last) / 1000f
+                last = t
+                now = t
+                // It keeps spinning after you let go, slowing down little by little.
+                rotation += velocity * dt
+                turned += kotlin.math.abs(velocity * dt)
+                velocity *= 0.985f
+                if (kotlin.math.abs(velocity) > 540f && (0..2).random() == 0) {
+                    embers.add(Ember((Math.random() * 2 * Math.PI).toFloat(), 240f + Math.random().toFloat() * 320f, t, 4f + Math.random().toFloat() * 8f))
+                }
+                embers.removeAll { t - it.born > 1800 }
+                if (!clawds && turned > 3600f) {
+                    clawds = true
+                    EasterEggs.find(context, "claudeos")
+                }
+            }
+        }
+    }
+    val dance by rememberInfiniteTransition(label = "osDance").animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(tween(6000, easing = LinearEasing)),
+        label = "dance",
+    )
+    val glow = (kotlin.math.abs(velocity) / 900f).coerceIn(0f, 1f)
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF1A0F0B), Color(0xFF0B0707), Color(0xFF000000))))
+            .pointerInput(Unit) {
+                // Dragging round the middle spins the star; the speed stays when you let go.
+                detectDragGestures(
+                    onDrag = { change, drag ->
+                        val c = center.value
+                        val p = change.position
+                        val before = p - drag
+                        val a0 = kotlin.math.atan2(before.y - c.y, before.x - c.x)
+                        val a1 = kotlin.math.atan2(p.y - c.y, p.x - c.x)
+                        var d = Math.toDegrees((a1 - a0).toDouble()).toFloat()
+                        if (d > 180f) d -= 360f
+                        if (d < -180f) d += 360f
+                        rotation += d
+                        val dtMs = (change.uptimeMillis - change.previousUptimeMillis).coerceAtLeast(1L)
+                        velocity = (velocity * 0.5f + d / dtMs * 1000f * 0.5f).coerceIn(-2400f, 2400f)
+                    },
+                )
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            center.value = Offset(size.width / 2f, size.height / 2f)
+            val c = center.value
+            // The glow grows with the speed.
+            drawCircle(
+                Brush.radialGradient(
+                    listOf(Color(0xFFD97757).copy(alpha = 0.25f + 0.45f * glow), Color(0xFF8E6BFF).copy(alpha = 0.12f * glow), Color.Transparent),
+                    center = c,
+                    radius = size.minDimension * (0.45f + 0.2f * glow),
+                ),
+                radius = size.minDimension * (0.45f + 0.2f * glow),
+                center = c,
+            )
+            embers.forEach { e ->
+                val age = (now - e.born) / 1000f
+                val r = 110.dp.toPx() + e.speed * age
+                val alpha = (1f - age / 1.8f).coerceIn(0f, 1f)
+                drawCircle(
+                    AiFluidColors[(e.size.toInt()) % AiFluidColors.size].copy(alpha = alpha),
+                    radius = e.size * (1f - age / 2f).coerceAtLeast(0.2f),
+                    center = Offset(c.x + kotlin.math.cos(e.angle) * r, c.y + kotlin.math.sin(e.angle) * r),
+                )
+            }
+        }
+        ClaudeSpark(
+            Color(0xFFD97757),
+            Modifier.size(200.dp).graphicsLayer {
+                rotationZ = rotation
+                val s = 1f + 0.08f * glow
+                scaleX = s
+                scaleY = s
+            },
+        )
+        // Ten whole turns: Clawds tumble out and dance round the star.
+        if (clawds) {
+            listOf(ClawdMood.Dance, ClawdMood.Flip, ClawdMood.Love, ClawdMood.Jump, ClawdMood.Wave).forEachIndexed { i, mood ->
+                Clawd(
+                    Modifier
+                        .size(width = 56.dp, height = 48.dp)
+                        .graphicsLayer {
+                            val a = dance + i * (2 * Math.PI / 5).toFloat()
+                            val r = 150.dp.toPx()
+                            translationX = kotlin.math.cos(a) * r
+                            translationY = kotlin.math.sin(a) * r
+                        },
+                    mood = mood,
+                )
+            }
+        }
+        Column(
+            Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                dev.hearth.launcher.data.ClaudeOs.full,
+                style = TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 34.sp, fontWeight = FontWeight.Bold),
+            )
+            Text("Codename „${dev.hearth.launcher.data.ClaudeOs.CODENAME}“", color = Color.White.copy(alpha = 0.75f), fontSize = 15.sp)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                if (clawds) "Die Clawds sind los! 🎉" else "Dreh den Stern im Kreis",
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 13.sp,
+            )
         }
         Box(
             Modifier

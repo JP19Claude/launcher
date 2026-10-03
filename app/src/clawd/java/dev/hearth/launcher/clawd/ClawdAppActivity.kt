@@ -33,6 +33,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import dev.hearth.launcher.ui.aiFluidEdge
+import dev.hearth.launcher.ui.glassSheen
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
@@ -422,7 +424,10 @@ private fun Card(title: String?, content: @Composable ColumnScope.() -> Unit) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(26.dp))
-            .background(Color.White.copy(alpha = 0.07f))
+            .background(Color.White.copy(alpha = 0.04f))
+            // Liquid glass and AI Fluid, like everywhere in ClaudeOS.
+            .glassSheen(26.dp)
+            .aiFluidEdge(26.dp, strength = 0.35f, width = 1.dp)
             .padding(if (title != null) 18.dp else 4.dp),
     ) {
         if (title != null) {

@@ -688,6 +688,14 @@ fun GlimmerIsland(
                             )
                         },
                     )
+                    // AI Fluid: Claude's colors flowing round the edge while something runs,
+                    // brighter for a moment when something new comes.
+                    .aiFluidEdge(
+                        corner = corner,
+                        strength = 0.75f + 0.8f * shimmer.value,
+                        enabled = settings.glimmerAiFluid && !dimmed && !hidden &&
+                            (!isPassive(drawn) || drawn is IslandContent.Arrival),
+                    )
                     .drawWithContent {
                         drawContent()
                         val p = chargeSweep.value
@@ -971,6 +979,34 @@ private fun IslandShape(
                 .clip(RoundedCornerShape(corner))
                 .background(Color.Black),
         ) { content() }
+        // AI Fluid: black, with Claude's colors drifting slowly inside like an AI thinking.
+        GlimmerStyle.Fluid -> {
+            val drift = rememberInfiniteTransition(label = "islandFluid").animateFloat(
+                initialValue = 0f,
+                targetValue = (2 * Math.PI).toFloat(),
+                animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing)),
+                label = "drift",
+            )
+            Box(
+                modifier
+                    .clip(RoundedCornerShape(corner))
+                    .background(Color.Black)
+                    .drawBehind {
+                        val t = drift.value
+                        AiFluidColors.take(3).forEachIndexed { i, c ->
+                            val phase = i * 2.1f
+                            val cx = size.width * (0.5f + 0.42f * kotlin.math.cos(t + phase))
+                            val cy = size.height * (0.5f + 0.5f * kotlin.math.sin(t * 1.3f + phase))
+                            val r = size.maxDimension * 0.45f
+                            drawCircle(
+                                Brush.radialGradient(listOf(c.copy(alpha = 0.34f), Color.Transparent), center = Offset(cx, cy), radius = r),
+                                radius = r,
+                                center = Offset(cx, cy),
+                            )
+                        }
+                    },
+            ) { content() }
+        }
         GlimmerStyle.Glass -> LiquidGlass(
             cornerRadius = corner,
             refraction = 14.dp,

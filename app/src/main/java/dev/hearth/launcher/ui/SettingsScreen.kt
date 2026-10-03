@@ -854,6 +854,11 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             onSelect = { c -> update { it.copy(glimmerGlowColor = c) } },
         )
         SwitchRow(
+            label = "AI-Fluid-Rand",
+            description = "Solange etwas läuft, fließen Claudes Farben um den Rand der Insel – und leuchten kurz auf, wenn etwas Neues kommt. Als Aussehen gibt es auch „AI Fluid“: Farben, die im Schwarz der Insel treiben",
+            checked = s.glimmerAiFluid,
+        ) { v -> update { it.copy(glimmerAiFluid = v) } }
+        SwitchRow(
             label = "Atmendes Leuchten",
             description = "Solange etwas läuft, atmet ein weiches Licht in seiner Farbe um die Insel – wie OPPOs Fluid Cloud",
             checked = s.glimmerBreathe,
@@ -1177,7 +1182,9 @@ internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit)
             // Clipped, so touch ripples of the rows stay inside the rounded card.
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(26.dp)),
+                .clip(RoundedCornerShape(26.dp))
+                // AI Fluid, quietly: Claude's colors flowing round every card.
+                .aiFluidEdge(26.dp, strength = 0.28f, width = 1.dp, enabled = LocalSettings.current.fluidDesign),
         ) {
             Column(Modifier.padding(vertical = 6.dp), content = content)
         }
@@ -1501,7 +1508,8 @@ private fun HearthCard(s: LauncherSettings) {
         modifier = Modifier
             .padding(vertical = 8.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp)),
+            .clip(RoundedCornerShape(26.dp))
+            .aiFluidEdge(26.dp, strength = 0.8f, enabled = s.fluidDesign),
     ) {
         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(

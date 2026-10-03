@@ -579,7 +579,9 @@ private fun InputRow(value: String, onValueChange: (String) -> Unit, onSend: () 
                     Modifier
                         .clip(RoundedCornerShape(24.dp))
                         .background(Color.White.copy(alpha = 0.09f))
-                        .border(0.8.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp))
+                        .glassSheen(24.dp)
+                        // AI Fluid: Claude's colors flow round the field you talk to him in.
+                        .aiFluidEdge(24.dp, strength = 0.9f, enabled = LocalSettings.current.fluidDesign)
                         .padding(horizontal = 16.dp, vertical = 13.dp),
                 ) {
                     if (value.isEmpty()) {

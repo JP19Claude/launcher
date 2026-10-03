@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -114,4 +115,85 @@ fun FluidBackdrop(colors: List<Color>, modifier: Modifier = Modifier, strength: 
             )
         }
     }
+}
+
+/** The AI Fluid colors: Claude's terracotta flowing through violet, blue and pink. */
+val AiFluidColors = listOf(
+    Color(0xFFD97757),
+    Color(0xFFFF6FB5),
+    Color(0xFF8E6BFF),
+    Color(0xFF3E91FF),
+    Color(0xFFFFB494),
+)
+
+/**
+ * AI Fluid: a gradient in Claude's colors flows round the edge of an element, with a soft
+ * glow on its inner side – like the light around an AI at work. [strength] dims or brightens
+ * it (above 1 for a moment when something new comes).
+ */
+fun Modifier.aiFluidEdge(
+    corner: androidx.compose.ui.unit.Dp,
+    strength: Float = 1f,
+    width: androidx.compose.ui.unit.Dp = androidx.compose.ui.unit.Dp(1.5f),
+    enabled: Boolean = true,
+): Modifier = composed {
+    if (!enabled || strength <= 0.01f) return@composed this
+    val moving = LocalSettings.current.animations
+    val turn = if (moving) {
+        rememberInfiniteTransition(label = "aiFluid").animateFloat(
+            initialValue = 0f,
+            targetValue = (2 * Math.PI).toFloat(),
+            animationSpec = infiniteRepeatable(tween(4200, easing = LinearEasing)),
+            label = "aiTurn",
+        )
+    } else {
+        null
+    }
+    this.drawWithContent {
+        drawContent()
+        val w = width.toPx()
+        val a = turn?.value ?: 0.8f
+        val half = maxOf(size.width, size.height) / 2f
+        val c = center
+        val start = Offset(c.x + cos(a) * half, c.y + sin(a) * half)
+        val end = Offset(2 * c.x - start.x, 2 * c.y - start.y)
+        val brush = Brush.linearGradient(AiFluidColors, start, end, androidx.compose.ui.graphics.TileMode.Mirror)
+        val r = corner.toPx().coerceAtMost(size.minDimension / 2f)
+        // A soft glow inside the edge, then the line itself.
+        drawRoundRect(
+            brush,
+            topLeft = Offset(w * 1.5f, w * 1.5f),
+            size = androidx.compose.ui.geometry.Size(size.width - w * 3f, size.height - w * 3f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius((r - w * 1.5f).coerceAtLeast(0f)),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(w * 3f),
+            alpha = (0.16f * strength).coerceIn(0f, 0.5f),
+        )
+        drawRoundRect(
+            brush,
+            topLeft = Offset(w / 2f, w / 2f),
+            size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius((r - w / 2f).coerceAtLeast(0f)),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(w),
+            alpha = (0.85f * strength).coerceIn(0f, 1f),
+        )
+    }
+}
+
+/**
+ * Liquid glass without a wallpaper behind: a frosted fill, light caught along the top and a
+ * rim that's bright above and fades below – so cards look like glass on any background.
+ */
+fun Modifier.glassSheen(corner: androidx.compose.ui.unit.Dp, tint: Color = Color.White): Modifier = this.drawWithContent {
+    val r = androidx.compose.ui.geometry.CornerRadius(corner.toPx().coerceAtMost(size.minDimension / 2f))
+    drawRoundRect(tint.copy(alpha = 0.055f), cornerRadius = r)
+    drawRoundRect(
+        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.13f), Color.Transparent), endY = size.height * 0.45f),
+        cornerRadius = r,
+    )
+    drawContent()
+    drawRoundRect(
+        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.38f), Color.White.copy(alpha = 0.05f), Color.White.copy(alpha = 0.12f))),
+        cornerRadius = r,
+        style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()),
+    )
 }

@@ -177,6 +177,8 @@ enum class GlimmerStyle(val label: String) {
     Glass("Liquid Glass"),
     /** Dark, tinted in the activity's color (like vivo's and OPPO's colored capsules). */
     Tinted("Farbig getönt"),
+    /** Black with Claude's colors slowly flowing inside, like an AI thinking (AI Fluid). */
+    Fluid("AI Fluid"),
 }
 
 /** Overall look of control center and notifications. */
@@ -486,6 +488,8 @@ data class LauncherSettings(
     val glimmerScreenshots: Boolean = true,
     /** A soft light breathes around the island while something runs (OPPO's Fluid Cloud). */
     val glimmerBreathe: Boolean = false,
+    /** AI Fluid: Claude's colors flow round the island's edge while something runs. */
+    val glimmerAiFluid: Boolean = true,
     /** A green or orange dot in Glimmer while an app uses the camera or the microphone. */
     val glimmerPrivacy: Boolean = true,
     /** 85 % of the size, and unfolded content kept below the camera so it never covers any. */
@@ -552,6 +556,7 @@ data class LauncherSettings(
         glimmerCodes = false,
         glimmerScreenshots = false,
         glimmerBreathe = false,
+        glimmerAiFluid = false,
     )
 
     /** Every Glimmer setting as it comes (it stays switched on). */
@@ -869,6 +874,7 @@ class SettingsRepository(context: Context) {
             glimmerCodes = prefs.getBoolean("glimmerCodes", d.glimmerCodes),
             glimmerScreenshots = prefs.getBoolean("glimmerScreenshots", d.glimmerScreenshots),
             glimmerBreathe = prefs.getBoolean("glimmerBreathe", d.glimmerBreathe),
+            glimmerAiFluid = prefs.getBoolean("glimmerAiFluid", d.glimmerAiFluid),
             glimmerPrivacy = prefs.getBoolean("glimmerPrivacy", d.glimmerPrivacy),
             glimmerSmall = prefs.getBoolean("glimmerSmall", d.glimmerSmall),
             badgeStyle = enumOf("badgeStyle", d.badgeStyle),
@@ -995,6 +1001,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("glimmerCodes", s.glimmerCodes)
             .putBoolean("glimmerScreenshots", s.glimmerScreenshots)
             .putBoolean("glimmerBreathe", s.glimmerBreathe)
+            .putBoolean("glimmerAiFluid", s.glimmerAiFluid)
             .putBoolean("glimmerPrivacy", s.glimmerPrivacy)
             .putBoolean("glimmerSmall", s.glimmerSmall)
             .putString("badgeStyle", s.badgeStyle.name)
@@ -1073,7 +1080,7 @@ class SettingsRepository(context: Context) {
             "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
-            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerSmall", "glimmerPrivacy", "accent", "animations",
+            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerPrivacy", "accent", "animations",
         )
         const val KEY_CC_ENABLED = "ccEnabled"
     }

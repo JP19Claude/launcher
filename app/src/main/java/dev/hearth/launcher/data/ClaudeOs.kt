@@ -12,6 +12,9 @@ object ClaudeOs {
     const val NAME = "ClaudeOS"
     const val VERSION = "1.0"
 
+    /** Like Android's desserts: each ClaudeOS has a codename. 1.0 is the ember Hearth starts from. */
+    const val CODENAME = "Ember"
+
     /** "ClaudeOS 1.0" */
     val full: String get() = "$NAME $VERSION"
 }
