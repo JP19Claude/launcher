@@ -212,8 +212,17 @@ data class CameraHole(
     val radius: Dp = 7.dp,
     /** Half its height (a wide double camera is flatter than it is wide). */
     val halfHeight: Dp = radius,
+    /**
+     * Held sideways, the island sits at the screen's edge where the camera is: then the camera
+     * is this far from the island's start (left) or end (right) instead of [x] from its middle.
+     */
+    val fromStart: Dp? = null,
+    val fromEnd: Dp? = null,
 ) {
     val bottom: Dp get() = y + halfHeight
+
+    /** The camera's center from the island's left edge, for an island [width] wide. */
+    fun centerIn(width: Dp): Dp = fromStart ?: fromEnd?.let { width - it } ?: (width / 2 + x)
 }
 
 private val LocalCameraHole = compositionLocalOf { CameraHole() }
@@ -347,6 +356,8 @@ fun GlimmerIsland(
     camera: CameraHole = CameraHole(),
     /** An app is using the camera or microphone: a small dot at the pill's end. */
     privacy: PrivacyUse = PrivacyUse.None,
+    /** Held sideways: the island sits at the left or right edge (where the camera is). */
+    anchor: Alignment.Horizontal = Alignment.CenterHorizontally,
 ) {
     val context = LocalContext.current
     val settings = LocalSettings.current
@@ -560,19 +571,33 @@ fun GlimmerIsland(
     }
 
     // With a second bubble beside it, the pill sits left of the middle: the camera is further right in it.
-    val cameraInPill = if (hasSecondary) camera.copy(x = camera.x + SecondaryExtra / 2) else camera
+    val cameraInPill = if (hasSecondary) {
+        camera.copy(x = camera.x + SecondaryExtra / 2, fromEnd = camera.fromEnd?.let { it - SecondaryExtra })
+    } else {
+        camera
+    }
     val privacyDot = privacy != PrivacyUse.None && !expanded && content !is IslandContent.Unlock && content !is IslandContent.Hidden
     CompositionLocalProvider(
         LocalGlimmerStill provides dimmed,
         LocalCameraHole provides cameraInPill,
         LocalPrivacyDot provides privacyDot,
     ) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    val anchored = anchor != Alignment.CenterHorizontally
+    Box(
+        Modifier.fillMaxSize(),
+        contentAlignment = when (anchor) {
+            Alignment.Start -> Alignment.TopStart
+            Alignment.End -> Alignment.TopEnd
+            else -> Alignment.TopCenter
+        },
+    ) {
         // Gone once it has shrunk away (it shrinks into the camera instead of vanishing).
         if (drawn is IslandContent.Hidden || (hidden && width < 1.dp)) return@Box
         Row(
             Modifier
                 .padding(top = topInset)
+                // At an edge it keeps the same little gap to it as to the window elsewhere.
+                .padding(horizontal = if (anchored) 8.dp else 0.dp)
                 .graphicsLayer {
                     // Always-on display: softer, so it doesn't glare or burn in.
                     val fade = if (hidden) (width.value / 40f).coerceIn(0f, 1f) else 1f
@@ -1287,8 +1312,8 @@ private fun AroundCamera(
         // Only where the camera actually reaches into the pill; else split in the middle.
         val inside = hole.y - hole.halfHeight < maxHeight && hole.y + hole.halfHeight > 0.dp
         val half = if (inside) hole.radius + CameraMargin else 0.dp
-        val holeStart = (w / 2 + hole.x - half).coerceIn(0.dp, w)
-        val holeEnd = (w / 2 + hole.x + half).coerceIn(holeStart, w)
+        val holeStart = (hole.centerIn(w) - half).coerceIn(0.dp, w)
+        val holeEnd = (hole.centerIn(w) + half).coerceIn(holeStart, w)
         Row(
             Modifier
                 .align(Alignment.CenterStart)
@@ -1419,9 +1444,9 @@ private fun BoxScope.ExpandedClawd(content: IslandContent, band: Dp) {
     ) {
         // Up to the camera, never under it, on his side.
         val room = if (right) {
-            (maxWidth / 2 - hole.x - hole.radius - CameraMargin - 18.dp).coerceAtLeast(0.dp)
+            (maxWidth - hole.centerIn(maxWidth) - hole.radius - CameraMargin - 18.dp).coerceAtLeast(0.dp)
         } else {
-            (maxWidth / 2 + hole.x - hole.radius - CameraMargin - 18.dp).coerceAtLeast(0.dp)
+            (hole.centerIn(maxWidth) - hole.radius - CameraMargin - 18.dp).coerceAtLeast(0.dp)
         }
         val k = LocalSettings.current.glimmerClawdSize.coerceIn(0.7f, 1.4f)
         val h = ((band - 6.dp).coerceIn(12.dp, 20.dp) * k).coerceAtMost(band)

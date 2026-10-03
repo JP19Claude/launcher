@@ -290,6 +290,8 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     Hearth selbst über dem Launcher, genau auf die Insel gezielt (auch wenn die Kamera nicht
     in der Mitte sitzt, etwa beim Falthandy) (Glimmer-App → „Schließ-Animation“ → „Auch mit anderen Launchern“, an
     Standard; Stil dort wählbar). Mit Hearth als Launcher macht es Hearth wie bisher.
+  - Quer gehalten bleibt Glimmer an der Frontkamera: die Insel sitzt dann am linken oder
+    rechten Rand auf Höhe der Kamera, der Inhalt neben ihr (das Aufgeklappte darunter)
   - Auf dem Sperrbildschirm ist Glimmer immer da: die Pille trägt ein Schloss, das beim
     Entsperren aufspringt; Aktivitäten erscheinen dort wie sonst, Antippen klappt auf statt eine
     App zu öffnen; die Mitteilungen dort bleiben beim System
