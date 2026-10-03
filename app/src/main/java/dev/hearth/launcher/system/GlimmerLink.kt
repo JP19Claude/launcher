@@ -36,9 +36,10 @@ open class HearthApp internal constructor(
 
     /** Opens the app (its settings screen). */
     fun openApp(context: Context) {
-        if (builtInScreen != null && context.packageName == packageName) {
+        val screen = builtInScreen
+        if (screen != null && context.packageName == packageName) {
             runCatching {
-                context.startActivity(Intent().setClassName(context.packageName, builtInScreen).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                context.startActivity(Intent().setClassName(context.packageName, screen).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
             return
         }
