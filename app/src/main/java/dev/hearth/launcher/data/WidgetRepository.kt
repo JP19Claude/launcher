@@ -276,11 +276,17 @@ class WidgetRepository(private val context: Context) {
         update(list)
     }
 
+    private var listening = false
+
+    /** Only once: coming back from an app doesn't make every widget redraw at once. */
     fun startListening() {
-        runCatching { host.startListening() }
+        if (listening) return
+        listening = runCatching { host.startListening() }.isSuccess
     }
 
     fun stopListening() {
+        if (!listening) return
+        listening = false
         runCatching { host.stopListening() }
     }
 

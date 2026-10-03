@@ -44,15 +44,31 @@ class MainActivity : ComponentActivity() {
     /** True between leaving the launcher (onStop) and showing it again (onResume). */
     private var wasInBackground = false
 
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /**
+     * Widgets stop updating only once the launcher has been away for a while: a quick trip into
+     * an app and back must not make every widget redraw just as the next app is tapped.
+     */
+    private val stopWidgets = Runnable { viewModel.widgets.stopListening() }
+
     override fun onStart() {
         super.onStart()
+        handler.removeCallbacks(stopWidgets)
         viewModel.widgets.startListening()
     }
 
     override fun onStop() {
         super.onStop()
         wasInBackground = true
+        handler.removeCallbacks(stopWidgets)
+        handler.postDelayed(stopWidgets, 15_000)
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacks(stopWidgets)
         viewModel.widgets.stopListening()
+        super.onDestroy()
     }
 
     /** Result of a widget's own setup screen (started through AppWidgetHost, so no result API). */
