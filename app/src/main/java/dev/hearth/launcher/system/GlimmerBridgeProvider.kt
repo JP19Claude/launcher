@@ -50,12 +50,11 @@ class GlimmerBridgeProvider : ContentProvider() {
         }
 
         fun handle(context: Context, method: String, arg: String?, extras: Bundle?): Bundle? = onMain {
-            // Glimmer's service in the Glimmer app, the control center's in its app.
+            // Glimmer's service in the Glimmer app.
             val service = GlimmerService.instance
-            val controlCenter = ControlCenterService.instance
             val settings = SettingsRepository(context).settings.value.forGlimmer()
             fun status(into: Bundle) = into.apply {
-                putBoolean("running", if (context.packageName == ControlsLink.packageName) controlCenter != null else service != null)
+                putBoolean("running", service != null)
                 putBoolean("glimmer", settings.glimmerEnabled)
                 val size = service?.glimmerIslandSize()
                 putFloat("w", size?.width?.value ?: 0f)

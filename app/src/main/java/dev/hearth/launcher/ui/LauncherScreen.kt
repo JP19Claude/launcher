@@ -157,7 +157,6 @@ import dev.hearth.launcher.data.HearthWidget
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.SwipeDownAction
-import dev.hearth.launcher.system.ControlCenterService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -391,13 +390,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
             title = "Hearth",
             items = listOf(
                 GlassMenuItem("Launcher-Einstellungen", Icons.Rounded.Settings) { settingsOpen = true },
-                GlassMenuItem("Kontrollzentrum", Icons.Rounded.Home) {
-                    if (settings.ccEnabled) {
-                        controlPage = 0
-                        controlOpen = true
-                    } else {
-                        vm.controls.expandQuickSettings()
-                    }
+                GlassMenuItem("Schnelleinstellungen", Icons.Rounded.Home) {
+                    vm.controls.expandQuickSettings()
                 },
                 GlassMenuItem("Widget hierher", Icons.Rounded.Add) {
                     widgetTarget = (pagerState.currentPage - widgetPages).coerceAtLeast(0)
@@ -493,26 +487,14 @@ fun LauncherScreen(vm: LauncherViewModel) {
         animationSpec = tween(260),
         label = "menuBlur",
     )
-    // Hearth's own notification page (one swipe left in the control center), when it can show them.
-    val ownNotifications = settings.ccEnabled && settings.ccNotifications &&
-        NotificationHub.connected.collectAsStateWithLifecycle().value
-    // With Hearth's control center switched off, One UI's own panel opens instead.
+    // Swiping down opens the phone's own panels (there's no separate control center anymore).
     val openControlCenter: () -> Unit = {
-        if (settings.ccEnabled) {
-            controlPage = 0
-            controlOpen = true
-        } else {
-            vm.controls.expandQuickSettings()
-        }
+        vm.controls.expandQuickSettings()
+        Unit
     }
     val openNotifications: () -> Unit = {
-        if (ownNotifications) {
-            controlPage = 1
-            controlOpen = true
-        } else if (!vm.controls.expandNotifications() && settings.ccEnabled) {
-            controlPage = 0
-            controlOpen = true
-        }
+        vm.controls.expandNotifications()
+        Unit
     }
     val onSwipeDown: (Boolean) -> Unit = { leftHalf ->
         when (settings.swipeDownAction) {
@@ -972,33 +954,6 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         onClose = { settingsOpen = false },
                     )
                 }
-            }
-
-            AnimatedVisibility(
-                visible = controlOpen,
-                enter = fadeIn(tween(200)) + slideInVertically(tween(320)) { -it / 6 },
-                exit = fadeOut(tween(180)) + slideOutVertically(tween(220)) { -it / 6 },
-            ) {
-                ControlCenter(
-                    controls = vm.controls,
-                    media = vm.media,
-                    initialPage = controlPage,
-                    onClose = { controlOpen = false },
-                    onOpenLauncherSettings = {
-                        controlOpen = false
-                        settingsOpen = true
-                    },
-                    onShowNotifications = {
-                        controlOpen = false
-                        vm.controls.expandNotifications()
-                        Unit
-                    },
-                    onShowSystemQuickSettings = {
-                        controlOpen = false
-                        vm.controls.expandQuickSettings()
-                        Unit
-                    },
-                )
             }
 
             flyApp?.let { (app, shot, island) ->

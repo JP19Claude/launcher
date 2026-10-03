@@ -73,8 +73,8 @@ enum class SearchEngine(val label: String, val url: String?) {
 
 /** What swiping down on the home screen does. */
 enum class SwipeDownAction(val label: String) {
-    Split("Links Mitteilungen, rechts Kontrollzentrum"),
-    ControlCenter("Kontrollzentrum"),
+    Split("Links Mitteilungen, rechts Schnelleinstellungen"),
+    ControlCenter("Schnelleinstellungen"),
     Notifications("Mitteilungen"),
     Search("Suche"),
 }

@@ -112,7 +112,6 @@ import dev.hearth.launcher.data.PageTransition
 import dev.hearth.launcher.data.SearchEngine
 import dev.hearth.launcher.data.SwipeDownAction
 import dev.hearth.launcher.data.TriggerZone
-import dev.hearth.launcher.system.ControlCenterService
 import kotlinx.coroutines.delay
 import dev.hearth.launcher.data.ThemeMode
 import kotlin.math.roundToInt
@@ -523,7 +522,7 @@ fun SettingsScreen(
             }
 
             if (shows("home")) item {
-                Section("Gesten & Kontrollzentrum") {
+                Section("Gesten") {
                     ChoiceRow(
                         label = "Nach unten wischen",
                         options = SwipeDownAction.entries,
@@ -535,24 +534,15 @@ fun SettingsScreen(
                         update { it.copy(swipeOpensSearch = v) }
                     }
                     RowDivider()
-                    SwitchRow(
-                        label = "Hearth-Kontrollzentrum verwenden",
-                        description = if (s.ccEnabled) {
-                            "An: Hearths Glas-Kontrollzentrum beim Herunterwischen auf dem Homescreen"
-                        } else {
-                            "Aus: auf dem Homescreen das normale Kontrollzentrum von One UI"
-                        },
-                        checked = s.ccEnabled,
-                    ) { v -> update { it.copy(ccEnabled = v) } }
                     ActionRow(
                         label = "Medienanzeige erlauben",
-                        description = "Benachrichtigungszugriff, damit das Kontrollzentrum zeigt, was gerade läuft",
+                        description = "Benachrichtigungszugriff, damit Hearth zeigt, was gerade läuft",
                         onClick = vm.media::requestAccess,
                     )
                     RowDivider()
                     ActionRow(
-                        label = "Helligkeit & Drehung erlauben",
-                        description = "„Systemeinstellungen ändern“ für das Kontrollzentrum",
+                        label = "Drehung erlauben",
+                        description = "„Systemeinstellungen ändern“ für das Schnellschalter-Widget",
                         onClick = vm.controls::requestWriteSettings,
                     )
                     ActionRow(
@@ -563,12 +553,6 @@ fun SettingsScreen(
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         runCatching { context.startActivity(intent) }
                     }
-                }
-            }
-
-            if (shows("glimmer")) item {
-                Section("Kontrollzentrum: Aussehen") {
-                    CcLookRows(s, update)
                 }
             }
 
@@ -1034,102 +1018,12 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
     }
 }
 
-/** How the control center looks; Hearth shows these and hands them to Glimmer. */
-@Composable
-internal fun CcLookRows(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
-        ChoiceRow(
-            label = "Stil",
-            options = CcStyle.entries,
-            selected = s.ccStyle,
-            optionLabel = { it.label },
-            // The matching colors and details come along; all can be changed below.
-            onSelect = { style -> update { it.withCcStyle(style) } },
-        )
-        Note("iOS 27: klares Glas, iOS-Farben, Verbindungen neben der Medien-Karte, Mitteilungen gestapelt wie auf dem iPhone. ColorOS 17: große Kacheln, leuchtende Schalter.")
-        RowDivider()
-        SwitchRow(
-            label = "Nach rechts wischen: Mitteilungen",
-            description = "Eigene Glas-Seite mit deinen Mitteilungen links neben den Schaltern; antippen öffnet, nach rechts wischen löscht. Mit „System-Kontrollzentrum ersetzen“ öffnet die linke Hälfte der Statusleiste gleich die Mitteilungen.",
-            checked = s.ccNotifications,
-        ) { v -> update { it.copy(ccNotifications = v) } }
-        RowDivider()
-        ChoiceRow(
-            label = "Farbe eingeschalteter Schalter",
-            options = CcColorMode.entries,
-            selected = s.ccColors,
-            optionLabel = { it.label },
-            onSelect = { mode -> update { it.copy(ccColors = mode) } },
-        )
-        ChoiceRow(
-            label = "Form der Schalter",
-            options = CcToggleShape.entries,
-            selected = s.ccShape,
-            optionLabel = { it.label },
-            onSelect = { shape -> update { it.copy(ccShape = shape) } },
-        )
-        ChoiceRow(
-            label = "Regler für Helligkeit und Lautstärke",
-            options = CcSliderStyle.entries,
-            selected = s.ccSliders,
-            optionLabel = { it.label },
-            onSelect = { style -> update { it.copy(ccSliders = style) } },
-        )
-        SwitchRow(label = "Leuchtende Kontur", description = "Eingeschaltete Schalter glühen wie bei ColorOS 17", checked = s.ccGlow) { v ->
-            update { it.copy(ccGlow = v) }
-        }
-        SwitchRow(label = "Beschriftungen unter den Schaltern", checked = s.ccLabels) { v ->
-            update { it.copy(ccLabels = v) }
-        }
-        RowDivider()
-        SwitchRow(label = "Große WLAN- und Mobil-Kacheln (ColorOS)", checked = s.ccBigTiles) { v ->
-            update { it.copy(ccBigTiles = v) }
-        }
-        SwitchRow(label = "Medien-Karte", checked = s.ccShowMedia) { v ->
-            update { it.copy(ccShowMedia = v) }
-        }
-        SwitchRow(label = "Uhr und Datum oben", checked = s.ccShowClock) { v ->
-            update { it.copy(ccShowClock = v) }
-        }
-        SwitchRow(label = "Schnellstart (Kamera, Wecker, Rechner, Claude)", checked = s.ccShowShortcuts) { v ->
-            update { it.copy(ccShowShortcuts = v) }
-        }
-        IntSlider("Größe der Schalter", s.ccToggleSize.coerceIn(44, 66), 44..66, " dp") { v ->
-            update { it.copy(ccToggleSize = v) }
-        }
-        IntSlider("Rundung der Flächen", s.ccCorner.coerceIn(12, 44), 12..44, " dp") { v ->
-            update { it.copy(ccCorner = v) }
-        }
-        RowDivider()
-        ChoiceRow(
-            label = "Glas der Flächen",
-            options = CcGlassTint.entries,
-            selected = s.ccGlassTint,
-            optionLabel = { it.label },
-            onSelect = { tint -> update { it.copy(ccGlassTint = tint) } },
-        )
-        PercentSlider("Deckkraft des Glases", s.ccGlassOpacity, 0f..1f) { v ->
-            update { it.copy(ccGlassOpacity = v) }
-        }
-        PercentSlider("Glanz an den Kanten", s.ccSpecular / 2f, 0f..1f) { v ->
-            update { it.copy(ccSpecular = v * 2f) }
-        }
-        PercentSlider("Lichtbrechung", s.ccRefraction / 2.5f, 0f..1f) { v ->
-            update { it.copy(ccRefraction = v * 2.5f) }
-        }
-        PercentSlider("Hintergrund weichzeichnen", s.ccBlur, 0f..1f) { v ->
-            update { it.copy(ccBlur = v) }
-        }
-        PercentSlider("Hintergrund abdunkeln", s.ccDim, 0f..1f) { v ->
-            update { it.copy(ccDim = v) }
-        }
-        Note("Änderungen gelten beim nächsten Öffnen des Kontrollzentrums, in Hearth und über anderen Apps. Das Weichzeichnen über anderen Apps braucht Android 12+ und ein Handy, das es unterstützt; sonst dunkelt Hearth stärker ab.")
-}
 
 /** In Hearth: the family's other apps (Glimmer, control center), and the fly-in. */
 @Composable
 private fun GlimmerLinkRows(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
     val context = LocalContext.current
-    Note("Die Insel um die Kamera ist eine eigene App: „Glimmer“ (Insel mit Live-Aktivitäten). Sie läuft mit jedem Launcher; mit Hearth fliegen geschlossene Apps in Glimmer. Das Kontrollzentrum steckt in Hearth selbst (vom oberen Rand nach unten wischen).")
+    Note("Die Insel um die Kamera ist eine eigene App: „Glimmer“ (Insel mit Live-Aktivitäten). Sie läuft mit jedem Launcher; mit Hearth fliegen geschlossene Apps in Glimmer.")
     FamilyAppRow("Glimmer", GlimmerLink, GlimmerLink.DOWNLOAD_URL)
     SwitchRow(
         label = "Apps fliegen in Glimmer",
@@ -1255,7 +1149,7 @@ private fun HiddenAppsPicker(
 
 private val SectionOrder = listOf(
     "Design-Vorlage", "Claude-Assistent", "Liquid Glass", "Animationen", "Icons", "Icon-Pack", "Homescreen",
-    "Glimmer", "Gesten & Kontrollzentrum", "Dock", "Suche", "Allgemein", "App-Sperre", "Ausgeblendete Apps",
+    "Glimmer", "Gesten", "Dock", "Suche", "Allgemein", "App-Sperre", "Ausgeblendete Apps",
 )
 
 @Composable
@@ -1622,7 +1516,7 @@ private fun HearthCard(s: LauncherSettings) {
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text("Hearth", color = TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-                Text("Version $version · Galaxy × Claude", color = TextSecondary, fontSize = 13.sp)
+                Text("Version $version · ${dev.hearth.launcher.data.ClaudeOs.full}", color = TextSecondary, fontSize = 13.sp)
             }
         }
     }

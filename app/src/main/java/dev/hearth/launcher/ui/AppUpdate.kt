@@ -244,6 +244,13 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     var taps by remember { mutableIntStateOf(0) }
     var lastTap by remember { mutableLongStateOf(0L) }
     var tip by remember { mutableIntStateOf((0 until look.tips.size).random()) }
+    val buildNumber = remember {
+        runCatching {
+            val info = context.packageManager.getPackageInfo(context.packageName, 0)
+            val date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(info.lastUpdateTime))
+            "${androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(info)} · installiert am $date"
+        }.getOrDefault("–")
+    }
 
     fun check() {
         state = UpdateState.Checking
@@ -357,6 +364,8 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                     ),
                 )
                 Text(name, color = Color.White.copy(alpha = 0.9f), fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                // Like "One UI 8 · Android 16": the app on its ground.
+                Text("auf ${dev.hearth.launcher.data.ClaudeOs.full}", color = look.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text(look.tagline, color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
                 Spacer(Modifier.height(16.dp))
                 Text(
@@ -382,7 +391,8 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
 
             // About this version; "Version" hides the easter egg.
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(look.card).padding(vertical = 6.dp)) {
-                InfoRow("Version", "$name $current", Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
+                // Tapping either version quickly, like Android's in Samsung's settings, opens the egg.
+                val tapVersion = {
                     val now = System.currentTimeMillis()
                     taps = if (now - lastTap < 1500) taps + 1 else 1
                     lastTap = now
@@ -390,7 +400,14 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                         taps = 0
                         egg = true
                     }
-                })
+                }
+                InfoRow("$name-Version", current, Modifier.clickable(remember { MutableInteractionSource() }, indication = null, onClick = tapVersion))
+                InfoRow(
+                    "${dev.hearth.launcher.data.ClaudeOs.NAME}-Version",
+                    dev.hearth.launcher.data.ClaudeOs.VERSION,
+                    Modifier.clickable(remember { MutableInteractionSource() }, indication = null, onClick = tapVersion),
+                )
+                InfoRow("Build-Nummer", buildNumber)
                 if (release != null) InfoRow("Neue Version", "${release.version} · ${megabytes(release.size)}")
                 InfoRow(
                     "Letzte Prüfung",

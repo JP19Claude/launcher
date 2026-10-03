@@ -1,7 +1,4 @@
-• One UI 10 Fluid: Berührungen breiten sich wie flüssiges Licht aus, Zeilen geben unter dem Finger nach, hinter Einstellungen und Software-Update fließen Farben (Design → Animationen)
-• Jede App hat ihren eigenen Software-Update-Bildschirm: Hearth in Blau und Violett, Glimmer mit lebendiger Insel, Clawd tanzend – und Clawd läuft beim Download über den Balken
-• Tipps von Clawd im Software-Update, eigenes Easter Egg je App (Glimmer: die Insel als Planet)
-• Glimmer: Doppeltippen auf die Insel kann jetzt Clawd-Orakel, Münze oder Würfel – die Antwort erscheint direkt in der Insel
-• Glimmer-Einstellungen mit atmender Insel und Clawd darin
-• Clawd-App: neue Schnellantworten (Rätsel, Lösung, Münze, Countdown, Motivation …)
-• Die App „Kontrollzentrum“ wird eingestellt – das Kontrollzentrum in Hearth bleibt
+• Großes Update: Hearth 10.5 auf ClaudeOS 1.0 – ClaudeOS ist jetzt die Grundlage unter Hearth, Glimmer und Clawd (wie Android unter One UI) und steht im Software-Update
+• Das Kontrollzentrum ist komplett weg: Herunterwischen öffnet die Mitteilungen bzw. Schnelleinstellungen deines Handys
+• Software-Update zeigt App-Version, ClaudeOS-Version, Build-Nummer und Installationsdatum; auch ein schnelles Tippen auf die ClaudeOS-Version öffnet das Easter Egg
+• Neue Versionsnummern: kleine Updates +0.1 (z. B. 10.6), große Updates +0.5 (z. B. 11.0)

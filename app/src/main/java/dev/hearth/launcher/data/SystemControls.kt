@@ -28,8 +28,6 @@ import android.media.AudioDeviceInfo
 import android.nfc.NfcAdapter
 import android.os.PowerManager
 import android.view.KeyEvent
-import dev.hearth.launcher.system.ControlCenterService
-import dev.hearth.launcher.system.ControlsLink
 import dev.hearth.launcher.system.GlimmerLink
 import dev.hearth.launcher.system.GlimmerService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -250,13 +248,13 @@ class SystemControls(private val context: Context) {
      * accessibility settings open.
      */
     private fun globalAction(action: Int, delayMs: Long = 0): Boolean {
-        val service = ControlCenterService.instance ?: GlimmerService.instance
+        val service = GlimmerService.instance
         if (service != null) {
             Handler(Looper.getMainLooper()).postDelayed({ service.performGlobalAction(action) }, delayMs)
             return true
         }
-        // Another app of the family does it: Glimmer, or else the control center app.
-        val other = listOf(GlimmerLink, ControlsLink).firstOrNull { it.isInstalled(context) }
+        // Another app of the family does it: Glimmer.
+        val other = listOf(GlimmerLink).firstOrNull { it.isInstalled(context) }
         if (other != null) {
             writer.postDelayed({ other.globalAction(context, action) }, delayMs)
             return true
@@ -436,13 +434,8 @@ class SystemControls(private val context: Context) {
     @SuppressLint("WrongConstant", "PrivateApi")
     fun expandNotifications(): Boolean = runCatching {
         // The accessibility service can do this officially; use it when it's on.
-        // The control center app first: it lets a shade it opened itself stay open.
-        if (ControlCenterService.instance?.showNotifications() == true) return true
-        if (ControlCenterService.instance == null) {
-            if (ControlsLink.showNotifications(context)) return true
-            if (GlimmerService.instance?.showNotifications() == true) return true
-            if (GlimmerLink.showNotifications(context)) return true
-        }
+        if (GlimmerService.instance?.showNotifications() == true) return true
+        if (GlimmerLink.showNotifications(context)) return true
         val service = context.getSystemService("statusbar") ?: return false
         Class.forName("android.app.StatusBarManager").getMethod("expandNotificationsPanel").invoke(service)
         true
@@ -450,12 +443,8 @@ class SystemControls(private val context: Context) {
 
     /** The system's own quick settings (One UI's control center). */
     fun expandQuickSettings(): Boolean = runCatching {
-        if (ControlCenterService.instance?.showSystemQuickSettings() == true) return true
-        if (ControlCenterService.instance == null) {
-            if (ControlsLink.showQuickSettings(context)) return true
-            if (GlimmerService.instance?.showSystemQuickSettings() == true) return true
-            if (GlimmerLink.showQuickSettings(context)) return true
-        }
+        if (GlimmerService.instance?.showSystemQuickSettings() == true) return true
+        if (GlimmerLink.showQuickSettings(context)) return true
         val service = context.getSystemService("statusbar") ?: return false
         Class.forName("android.app.StatusBarManager").getMethod("expandSettingsPanel").invoke(service)
         true

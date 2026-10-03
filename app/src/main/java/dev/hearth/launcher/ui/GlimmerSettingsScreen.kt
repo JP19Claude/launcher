@@ -50,7 +50,6 @@ import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.MediaRepository
 import dev.hearth.launcher.data.SettingsRepository
 import dev.hearth.launcher.data.TriggerZone
-import dev.hearth.launcher.system.ControlCenterService
 import dev.hearth.launcher.system.GlimmerLink
 import dev.hearth.launcher.system.GlimmerService
 import kotlinx.coroutines.delay
@@ -62,10 +61,6 @@ enum class FamilyApp { Glimmer, Controls }
 @Composable
 fun GlimmerSettingsScreen(repo: SettingsRepository, media: MediaRepository) = FamilySettingsScreen(FamilyApp.Glimmer, repo, media)
 
-/** The control center app: setting it up, then the control center over other apps and its look. */
-@Composable
-fun ControlsSettingsScreen(repo: SettingsRepository, media: MediaRepository) = FamilySettingsScreen(FamilyApp.Controls, repo, media)
-
 @Composable
 private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media: MediaRepository) {
     val s by repo.settings.collectAsStateWithLifecycle()
@@ -74,7 +69,7 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
     val light = rememberGlassLight(false)
 
     // Picks up switches flipped in the system settings when coming back.
-    val serviceEnabled = { if (app == FamilyApp.Glimmer) GlimmerService.isEnabled else ControlCenterService.isEnabled }
+    val serviceEnabled = { GlimmerService.isEnabled }
     var serviceOn by remember { mutableStateOf(serviceEnabled()) }
     var notificationAccess by remember { mutableStateOf(media.hasAccess()) }
     var canWrite by remember { mutableStateOf(Settings.System.canWrite(context)) }
@@ -276,44 +271,6 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
                 if (app == FamilyApp.Glimmer) {
                     item { GlimmerPreview(s, media) }
                     item { GlimmerSections(s, update) }
-                }
-
-                if (app == FamilyApp.Controls) item {
-                    Section("Kontrollzentrum über anderen Apps") {
-                        SwitchRow(
-                            label = "Glas-Kontrollzentrum verwenden",
-                            description = if (s.ccEnabled) {
-                                "An: oben über die Statusleiste nach unten wischen, in jeder App"
-                            } else {
-                                "Aus: überall das normale Kontrollzentrum von One UI; die Insel läuft weiter"
-                            },
-                            checked = s.ccEnabled,
-                        ) { v -> update { it.copy(ccEnabled = v) } }
-                        SwitchRow(
-                            label = "System-Kontrollzentrum ersetzen",
-                            description = "Die ganze Statusleiste öffnet dann das Glas-Kontrollzentrum (links die Mitteilungen). Geht das von One UI trotzdem auf, schließt Glimmer es sofort.",
-                            checked = s.interceptSystemShade,
-                        ) { v -> update { it.copy(interceptSystemShade = v) } }
-                        if (!s.interceptSystemShade) {
-                            ChoiceRow(
-                                label = "Bereich oben, der es öffnet",
-                                options = TriggerZone.entries,
-                                selected = s.triggerZone,
-                                optionLabel = { it.label },
-                                onSelect = { zone -> update { it.copy(triggerZone = zone) } },
-                            )
-                        }
-                        Note("Ganz entfernen lässt sich One UIs Kontrollzentrum nur mit Root. Über den Kacheln-Knopf oben im Glas-Kontrollzentrum kommst du jederzeit an die Original-Schalter.")
-                    }
-                }
-
-                if (app == FamilyApp.Controls) item {
-                    Section("Kontrollzentrum: Aussehen") {
-                        if (hearthInstalled) {
-                            Note("Änderst du das Aussehen in Hearth, übernimmt das Kontrollzentrum es.")
-                        }
-                        CcLookRows(s, update)
-                    }
                 }
 
                 item {
