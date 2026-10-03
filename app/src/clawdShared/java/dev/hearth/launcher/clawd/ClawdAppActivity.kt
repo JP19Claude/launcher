@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import dev.hearth.launcher.ui.aiFluidEdge
 import dev.hearth.launcher.ui.glassSheen
+import dev.hearth.launcher.ui.fluidTouch
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
@@ -281,6 +282,8 @@ private fun ClawdAppScreen(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(18.dp))
                                 .background(Terracotta.copy(alpha = 0.28f))
+                                .aiFluidEdge(18.dp, strength = 0.5f, width = 1.dp, flowing = false)
+                                .fluidTouch(Terracotta)
                                 .clickable { say(chip) }
                                 .padding(horizontal = 14.dp, vertical = 8.dp),
                         )
@@ -465,6 +468,7 @@ private fun Button(label: String, modifier: Modifier = Modifier, onClick: () -> 
         modifier
             .clip(RoundedCornerShape(16.dp))
             .background(Terracotta.copy(alpha = 0.85f))
+            .fluidTouch()
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center,

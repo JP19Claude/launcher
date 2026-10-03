@@ -10,10 +10,13 @@ package dev.hearth.launcher.data
  */
 object ClaudeOs {
     const val NAME = "ClaudeOS"
-    const val VERSION = "1.0"
+    const val VERSION = "2.0"
 
-    /** Like Android's desserts: each ClaudeOS has a codename. 1.0 is the ember Hearth starts from. */
-    const val CODENAME = "Ember"
+    /**
+     * Like Android's desserts: each ClaudeOS has a codename. 1.0 was "Ember", the glow Hearth
+     * started from; 2.0 is "Blaze": One UI 10 Fluid and liquid glass everywhere.
+     */
+    const val CODENAME = "Blaze"
 
     /** "ClaudeOS 1.0" */
     val full: String get() = "$NAME $VERSION"

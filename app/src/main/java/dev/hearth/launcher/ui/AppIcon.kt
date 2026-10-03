@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.offset
@@ -375,6 +376,12 @@ fun AppIcon(
         animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow),
         label = "iconPress",
     )
+    // One UI 10 Fluid: a halo of Claude's colors swells behind the icon under the finger.
+    val halo by animateFloatAsState(
+        targetValue = if ((pressed || pressedByHand) && settings.fluidDesign) 1f else 0f,
+        animationSpec = tween(if (pressed || pressedByHand) 160 else 420),
+        label = "fluidHalo",
+    )
     var bounds by remember { mutableStateOf(Rect.Zero) }
     var cellOrigin by remember { mutableStateOf(Offset.Zero) }
     val selection = LocalSelection.current
@@ -415,7 +422,25 @@ fun AppIcon(
                 .then(gestures)
                 .padding(vertical = 6.dp),
         ) {
-            Box {
+            Box(
+                Modifier.drawBehind {
+                    if (halo > 0.01f) {
+                        val r = size.minDimension * (0.62f + 0.18f * halo)
+                        drawCircle(
+                            androidx.compose.ui.graphics.Brush.radialGradient(
+                                listOf(
+                                    AiFluidColors[0].copy(alpha = 0.5f * halo),
+                                    AiFluidColors[2].copy(alpha = 0.28f * halo),
+                                    Color.Transparent,
+                                ),
+                                center = center,
+                                radius = r,
+                            ),
+                            radius = r,
+                        )
+                    }
+                },
+            ) {
                 AppIconImage(
                     app = app,
                     size = iconSize,

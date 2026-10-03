@@ -634,7 +634,8 @@ fun GlimmerIsland(
             verticalAlignment = Alignment.Top,
         ) {
             IslandShape(
-                style = style,
+                // AI Fluid: unfolded, Claude's colors drift inside the black island too.
+                style = if (settings.glimmerAiFluid && expanded && style == GlimmerStyle.Black && !dimmed) GlimmerStyle.Fluid else style,
                 corner = corner,
                 tint = islandTint,
                 modifier = Modifier
@@ -692,10 +693,12 @@ fun GlimmerIsland(
                     // brighter for a moment when something new comes.
                     .aiFluidEdge(
                         corner = corner,
-                        strength = 0.75f + 0.8f * shimmer.value,
-                        enabled = settings.glimmerAiFluid && !dimmed && !hidden &&
-                            (!isPassive(drawn) || drawn is IslandContent.Arrival),
+                        // Quiet round the empty pill, bright while something runs or arrives.
+                        strength = (if (isPassive(drawn) && drawn !is IslandContent.Arrival) 0.3f else 0.75f) + 0.8f * shimmer.value,
+                        enabled = settings.glimmerAiFluid && !dimmed && !hidden && drawn !is IslandContent.Unlock,
                     )
+                    // A touch spreads like liquid light through the island.
+                    .then(if (settings.glimmerAiFluid && !dimmed) Modifier.fluidTouch(glowColor, yields = false) else Modifier)
                     .drawWithContent {
                         drawContent()
                         val p = chargeSweep.value

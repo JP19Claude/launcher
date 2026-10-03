@@ -1183,8 +1183,9 @@ internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit)
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(26.dp))
-                // AI Fluid, quietly: Claude's colors flowing round every card.
-                .aiFluidEdge(26.dp, strength = 0.28f, width = 1.dp, enabled = LocalSettings.current.fluidDesign),
+                // AI Fluid: Claude's colors flowing round every card.
+                .aiFluidEdge(26.dp, strength = 0.4f, width = 1.dp, enabled = LocalSettings.current.fluidDesign),
+            fluidEdge = false,
         ) {
             Column(Modifier.padding(vertical = 6.dp), content = content)
         }
@@ -1509,7 +1510,18 @@ private fun HearthCard(s: LauncherSettings) {
             .padding(vertical = 8.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(26.dp))
-            .aiFluidEdge(26.dp, strength = 0.8f, enabled = s.fluidDesign),
+            .aiFluidEdge(26.dp, strength = 0.8f, enabled = s.fluidDesign)
+            .fluidTouch(s.accent.color)
+            // Like Samsung's account card: a tap shows the phone, its specs and the versions.
+            .clickable {
+                runCatching {
+                    context.startActivity(
+                        android.content.Intent().setClassName(context.packageName, "dev.hearth.launcher.AboutPhoneActivity")
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
+                }
+            },
+        fluidEdge = false,
     ) {
         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(

@@ -494,6 +494,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun refreshWallpaper() = wallpaper.refresh()
 
     fun launch(app: AppInfo, sourceBounds: Rect? = null, options: Bundle? = null) {
+        // "Hearth-Einstellungen": opened right here, no detour through another screen.
+        if (app.packageName == getApplication<Application>().packageName && app.component.className.endsWith(".SettingsShortcutActivity")) {
+            requestSettings()
+            return
+        }
         // App lock: a locked app opens only after the phone's PIN or biometrics.
         if (AppLock.guardLaunch(getApplication(), app.component, app.user)) {
             usage.recordLaunch(app.key)

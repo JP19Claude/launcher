@@ -385,8 +385,11 @@ fun LiquidGlass(
     blur: Dp = 14.dp,
     tint: Color? = null,
     interactive: Boolean = false,
+    /** One UI 10 Fluid: Claude's colors along the rim (off where the caller draws its own). */
+    fluidEdge: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    val fluid = LocalSettings.current.fluidDesign
     val style = LocalGlassStyle.current
     val light = LocalGlassLight.current
     val backdrop = LocalBackdrop.current
@@ -459,6 +462,10 @@ fun LiquidGlass(
                 }
             }
             .then(modifier)
+            // One UI 10 Fluid on every glass surface: Claude's colors along the rim, and a
+            // touch spreading like liquid light where it can be pressed.
+            .aiFluidEdge(cornerRadius, strength = 0.3f, width = 1.dp, enabled = fluid && fluidEdge, flowing = false)
+            .then(if (fluid && interactive) Modifier.fluidTouch(yields = false) else Modifier)
             .then(
                 if (isInteractive) {
                     Modifier.pointerInput(Unit) {

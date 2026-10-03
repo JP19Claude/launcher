@@ -132,7 +132,8 @@ class AppRepository(
     private fun loadApps(config: IconConfig, pack: IconPack?): List<AppInfo> =
         launcherApps.profiles
             .flatMap { user -> launcherApps.getActivityList(null, user) }
-            .filter { it.componentName.packageName != context.packageName }
+            // Hearth itself isn't an app in its drawer – but its settings are (as One UI has them).
+            .filter { it.componentName.packageName != context.packageName || it.componentName.className.endsWith(".SettingsShortcutActivity") }
             .mapNotNull { info ->
                 runCatching {
                     val (bitmap, kind) = renderIcon(info, config, pack)

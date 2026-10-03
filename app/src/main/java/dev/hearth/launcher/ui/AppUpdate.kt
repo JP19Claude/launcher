@@ -750,7 +750,7 @@ private class Ember(val angle: Float, val speed: Float, val born: Long, val size
  * embers, and after ten whole turns Clawds tumble out and dance round it.
  */
 @Composable
-private fun ClaudeOsEgg(onClose: () -> Unit) {
+internal fun ClaudeOsEgg(onClose: () -> Unit) {
     val context = LocalContext.current
     BackHandler(onBack = onClose)
     var rotation by remember { mutableStateOf(0f) }

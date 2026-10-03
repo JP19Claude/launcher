@@ -82,6 +82,24 @@
             </intent-filter>
         </activity>
 
+        <!-- "Hearth-Einstellungen" as an app of its own: on the home screen and in the app
+             drawer (of any launcher), it opens Hearth's settings. -->
+        <activity
+            android:name=".SettingsShortcutActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_settings_app"
+            android:label="Hearth-Einstellungen"
+            android:noHistory="true"
+            android:roundIcon="@mipmap/ic_settings_app"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <!-- Claude over any app. ASSIST: Hearth can be the phone's digital assistant (long
              press on home). Questions only come in through the alias below. -->
         <activity

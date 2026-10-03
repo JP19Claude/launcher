@@ -43,7 +43,7 @@ import kotlin.math.sin
  * A touch makes a soft wave of [color] spread from the finger, and the element yields a
  * little and springs back. Never takes the touch: clicks and swipes still work as before.
  */
-fun Modifier.fluidTouch(color: Color = Color.White): Modifier = composed {
+fun Modifier.fluidTouch(color: Color = Color.White, yields: Boolean = true): Modifier = composed {
     if (!LocalSettings.current.fluidDesign || !LocalSettings.current.animations) return@composed this
     val scope = rememberCoroutineScope()
     val wave = remember { Animatable(0f) }
@@ -64,7 +64,7 @@ fun Modifier.fluidTouch(color: Color = Color.White): Modifier = composed {
                     wave.snapTo(0f)
                     wave.animateTo(1f, tween(520))
                 }
-                scope.launch { give.animateTo(0.975f, spring(stiffness = 900f)) }
+                if (yields) scope.launch { give.animateTo(0.975f, spring(stiffness = 900f)) }
                 waitForUpOrCancellation()
                 scope.launch { give.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = 420f)) }
                 scope.launch { fade.animateTo(0f, tween(420)) }
@@ -136,9 +136,11 @@ fun Modifier.aiFluidEdge(
     strength: Float = 1f,
     width: androidx.compose.ui.unit.Dp = androidx.compose.ui.unit.Dp(1.5f),
     enabled: Boolean = true,
+    /** False: the colors stand still (for the many small glass surfaces of the home screen). */
+    flowing: Boolean = true,
 ): Modifier = composed {
     if (!enabled || strength <= 0.01f) return@composed this
-    val moving = LocalSettings.current.animations
+    val moving = LocalSettings.current.animations && flowing
     val turn = if (moving) {
         rememberInfiniteTransition(label = "aiFluid").animateFloat(
             initialValue = 0f,

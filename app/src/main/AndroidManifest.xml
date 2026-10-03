@@ -133,6 +133,12 @@
             android:exported="false"
             android:label="Software-Update" />
 
+        <!-- "Telefoninfo": the phone, its specs, Hearth and ClaudeOS. -->
+        <activity
+            android:name=".AboutPhoneActivity"
+            android:exported="false"
+            android:label="Telefoninfo" />
+
         <!-- Hearth One's welcome after the upgrade (old apps to remove, Glimmer to switch on). -->
         <activity
             android:name=".OneWelcomeActivity"
