@@ -324,12 +324,15 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         val landing: GlimmerLink.Landing,
         val target: androidx.compose.ui.geometry.Offset,
         val settings: dev.hearth.launcher.data.LauncherSettings,
+        val look: dev.hearth.launcher.ui.FlyInLook?,
     )
 
     private val flight = androidx.compose.runtime.mutableStateOf<Flight?>(null)
     private var flyWindow: android.view.View? = null
     private var flyParams: android.view.WindowManager.LayoutParams? = null
     private var preparedApp: Pair<String, dev.hearth.launcher.data.AppInfo>? = null
+    @Volatile
+    private var preparedLook: Pair<String, dev.hearth.launcher.ui.FlyInLook>? = null
 
     private fun appInfo(pkg: String): dev.hearth.launcher.data.AppInfo? {
         preparedApp?.let { (p, info) -> if (p == pkg) return info }
@@ -350,7 +353,14 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
      * empty, so closing the app doesn't have to build anything first.
      */
     private fun prepareFlight(pkg: String) {
-        appInfo(pkg)?.let { preparedApp = pkg to it }
+        appInfo(pkg)?.let { info ->
+            preparedApp = pkg to info
+            // Its colors and small icon, worked out in the background.
+            if (preparedLook?.first != pkg) {
+                val app = applicationContext
+                Thread { runCatching { preparedLook = pkg to dev.hearth.launcher.ui.flyInLook(app, info) } }.start()
+            }
+        }
         if (flyWindow != null) return
         val compose = androidx.compose.ui.platform.ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@GlimmerService)
@@ -369,6 +379,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
                             landing = f.landing,
                             onArrive = { icon, color -> arriveGlimmer(icon, color) },
                             target = f.target,
+                            look = f.look,
                         )
                     }
                 }
@@ -438,6 +449,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
             landing = landing,
             target = androidx.compose.ui.geometry.Offset(center.x, center.y),
             settings = settings,
+            look = preparedLook?.takeIf { it.first == pkg }?.second,
         )
         // The waiting window covers the screen; the flight starts as soon as it's laid out.
         params.width = android.view.WindowManager.LayoutParams.MATCH_PARENT

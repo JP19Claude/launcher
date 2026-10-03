@@ -102,6 +102,23 @@ private fun appWindowColor(context: Context, app: AppInfo): Color? = runCatching
 }.getOrNull()
 
 /**
+ * What a fly-in needs from the app that takes a moment to work out (its colors, a small copy
+ * of its icon): worked out before, off the main thread, so closing an app never waits on it.
+ */
+class FlyInLook(val color: Color, val smallIcon: Bitmap?)
+
+fun flyInLook(context: Context, app: AppInfo): FlyInLook {
+    val icon = iconColor(app)
+    val color = appWindowColor(context, app)?.let { lerpColor(it, icon, 0.25f) } ?: icon
+    val small = runCatching {
+        val bitmap = app.icon.asAndroidBitmap()
+        val soft = if (bitmap.config == Bitmap.Config.HARDWARE) bitmap.copy(Bitmap.Config.ARGB_8888, false) else bitmap
+        Bitmap.createScaledBitmap(soft, 96, 96, true)
+    }.getOrNull()
+    return FlyInLook(color, small)
+}
+
+/**
  * Closing an app, the way HarmonyOS does it: the app shrinks to a card in its own colors,
  * rises towards the camera while it flattens into a capsule, turns dark, and flows into
  * Glimmer through a liquid neck (Android 12+); the island takes it in with a springy squash.
@@ -125,9 +142,11 @@ fun GlimmerFlyIn(
      * another launcher); otherwise it's found from the camera cutout.
      */
     target: Offset? = null,
+    /** Colors and small icon worked out ahead (see [flyInLook]); else worked out here. */
+    look: FlyInLook? = null,
 ) {
     if (style == FlyInStyle.HyperOS) {
-        HyperFlyIn(app, landing, onArrive, onDone, snapshot, target)
+        HyperFlyIn(app, landing, onArrive, onDone, snapshot, target, look)
         return
     }
     val view = LocalView.current
@@ -138,9 +157,11 @@ fun GlimmerFlyIn(
     val done by rememberUpdatedState(onDone)
     val context = LocalContext.current
     // The app's own background, softly mixed with its icon color so it never looks flat.
-    val color = remember(app) {
-        val icon = iconColor(app)
-        appWindowColor(context, app)?.let { lerpColor(it, icon, 0.25f) } ?: icon
+    val color = remember(app, look) {
+        look?.color ?: run {
+            val icon = iconColor(app)
+            appWindowColor(context, app)?.let { lerpColor(it, icon, 0.25f) } ?: icon
+        }
     }
     val icon = app.icon
 
@@ -367,25 +388,18 @@ private fun HyperFlyIn(
     onDone: () -> Unit,
     snapshot: ImageBitmap?,
     target: Offset? = null,
+    look: FlyInLook? = null,
 ) {
     val view = LocalView.current
     val context = LocalContext.current
     val travel = remember(app) { Animatable(0f) }
     val arrive by rememberUpdatedState(onArrive)
     val done by rememberUpdatedState(onDone)
-    val color = remember(app) {
-        val icon = iconColor(app)
-        appWindowColor(context, app)?.let { lerpColor(it, icon, 0.25f) } ?: icon
-    }
+    val worked = remember(app, look) { look ?: flyInLook(context, app) }
+    val color = worked.color
     val icon = app.icon
     // A small copy of the icon for Glimmer (it can't look up other apps' icons itself).
-    val smallIcon = remember(app) {
-        runCatching {
-            val bitmap = icon.asAndroidBitmap()
-            val soft = if (bitmap.config == Bitmap.Config.HARDWARE) bitmap.copy(Bitmap.Config.ARGB_8888, false) else bitmap
-            Bitmap.createScaledBitmap(soft, 96, 96, true)
-        }.getOrNull()
-    }
+    val smallIcon = worked.smallIcon
     val camera = remember(view) {
         val rects: List<Rect> = view.rootWindowInsets?.displayCutout?.boundingRects.orEmpty()
         rects.minByOrNull { it.top }?.takeIf { it.top < view.height / 4 }
@@ -393,11 +407,13 @@ private fun HyperFlyIn(
     val shadowPaint = remember { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG) }
 
     LaunchedEffect(app) {
+        // The island opens right away, so the app flies into its black, not into the empty
+        // space where it will open (no icon yet: it shows when the app lands).
+        arrive(null, 0)
         launch {
             var sent = false
             snapshotFlow { travel.value }.collect { t ->
-                // Late enough that the app is small, early enough that the island has opened
-                // by the time it gets there.
+                // Lands: its icon appears in the already open island.
                 if (!sent && t > 0.9f) {
                     sent = true
                     arrive(smallIcon, color.toArgb())

@@ -372,7 +372,17 @@ class GlimmerController(private val service: GlimmerService) {
     private val arrival = MutableStateFlow<IslandContent.Arrival?>(null)
     private var arrivalId = 0
     fun arrive(icon: android.graphics.Bitmap?, color: Int) {
-        val id = ++arrivalId
+        // No icon and no color: an app is on its way – open now (empty, black) to catch it.
+        if (icon == null && color == 0) {
+            val id = ++arrivalId
+            arrival.value = IslandContent.Arrival(icon = null, color = Color.Transparent, id = id)
+            handler.postDelayed({ if (id == arrivalId) arrival.value = null }, 1800)
+            return
+        }
+        // It landed: in the island that's already open (same one, so nothing jumps).
+        val waiting = arrival.value?.takeIf { it.icon == null && it.color == Color.Transparent }
+        val id = waiting?.id ?: ++arrivalId
+        arrivalId = id
         arrival.value = IslandContent.Arrival(
             icon = icon?.asImageBitmap(),
             color = if (color != 0) Color(color) else Color.White,
