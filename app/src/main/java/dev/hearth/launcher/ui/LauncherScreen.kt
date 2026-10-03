@@ -349,6 +349,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     ActivityOptions.makeScaleUpAnimation(view, it.left, it.top, it.width(), it.height()).toBundle()
                 }.getOrNull()
             }
+            // An app still flying into Glimmer makes way at once for the next one.
+            flyApp = null
             vm.launch(app, source, options)
         }
     }

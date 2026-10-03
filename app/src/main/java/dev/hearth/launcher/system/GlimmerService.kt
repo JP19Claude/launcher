@@ -304,6 +304,8 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
             }
             pkg == packageName || isLocked() -> Unit
             launchable.getOrPut(pkg) { packageManager.getLaunchIntentForPackage(pkg) != null && !isKeyboard(pkg) } -> {
+                // The next app is opening: a fly-in still going makes way at once.
+                if (flight.value != null) endFlight()
                 if (pkg != frontApp) {
                     frontApp = pkg
                     startAppSnapshots()
