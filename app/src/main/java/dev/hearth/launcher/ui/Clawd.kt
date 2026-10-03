@@ -111,6 +111,10 @@ fun Clawd(
             ClawdMood.Love -> drawClawd(body, blink = true, bob = sin(phase) * 0.3f, legPhase = 0f, armLift = 0.5f, spin = 0f, hearts = clock, hat = hat, outfit = outfit)
             ClawdMood.Wave -> drawClawd(body, blink, bob = 0f, legPhase = 0f, armLift = sin(phase * 4f), spin = 0f, hearts = 0f, hat = hat, outfit = outfit)
             ClawdMood.Sleep -> drawClawd(body, blink = true, bob = sin(phase) * 0.15f, legPhase = 0f, armLift = -0.4f, spin = 0f, hearts = 0f, zzz = clock, hat = hat, outfit = outfit)
+            ClawdMood.Jump -> drawClawd(body, blink = false, bob = -abs(sin(phase * 2f)) * 2.4f, legPhase = if (abs(sin(phase * 2f)) > 0.3f) 1f else 0f, armLift = abs(sin(phase * 2f)), spin = 0f, hearts = 0f, hat = hat, outfit = outfit)
+            ClawdMood.Blush -> drawClawd(body, blink = clock in 0.5f..0.56f, bob = sin(phase) * 0.2f, legPhase = 0f, armLift = -0.2f, spin = sin(phase) * 4f, hearts = 0f, hat = hat, outfit = outfit, blush = 1f)
+            ClawdMood.Dizzy -> drawClawd(body, blink = false, bob = sin(phase * 2f) * 0.3f, legPhase = 0f, armLift = sin(phase * 3f) * 0.6f, spin = sin(phase * 3f) * 14f, hearts = 0f, hat = hat, outfit = outfit, dizzy = true)
+            ClawdMood.Surprised -> drawClawd(body, blink = false, bob = -abs(sin(phase * 4f)) * 0.6f, legPhase = 0f, armLift = 1f, spin = 0f, hearts = 0f, hat = hat, outfit = outfit, wide = true)
         }
     }
 }
@@ -128,6 +132,10 @@ internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawdPose(mood
         ClawdMood.Love -> drawClawd(color, blink = true, bob = 0f, legPhase = 0f, armLift = 0.5f, spin = 0f, hearts = 0.35f, hat = hat, outfit = outfit)
         ClawdMood.Wave -> drawClawd(color, blink = false, bob = 0f, legPhase = 0f, armLift = 1f, spin = 0f, hearts = 0f, hat = hat, outfit = outfit)
         ClawdMood.Sleep -> drawClawd(color, blink = true, bob = 0f, legPhase = 0f, armLift = -0.4f, spin = 0f, hearts = 0f, zzz = 0.45f, hat = hat, outfit = outfit)
+        ClawdMood.Jump -> drawClawd(color, blink = false, bob = -1.8f, legPhase = 1f, armLift = 1f, spin = 0f, hearts = 0f, hat = hat, outfit = outfit)
+        ClawdMood.Blush -> drawClawd(color, blink = false, bob = 0f, legPhase = 0f, armLift = -0.2f, spin = 3f, hearts = 0f, hat = hat, outfit = outfit, blush = 1f)
+        ClawdMood.Dizzy -> drawClawd(color, blink = false, bob = 0f, legPhase = 0f, armLift = 0.4f, spin = -10f, hearts = 0f, hat = hat, outfit = outfit, dizzy = true)
+        ClawdMood.Surprised -> drawClawd(color, blink = false, bob = -0.4f, legPhase = 0f, armLift = 1f, spin = 0f, hearts = 0f, hat = hat, outfit = outfit, wide = true)
     }
 }
 
@@ -208,6 +216,12 @@ internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawd(
     zzz: Float = 0f,
     hat: ClawdHat = ClawdHat.None,
     outfit: ClawdOutfit = ClawdOutfit.None,
+    /** Pink cheeks (0..1). */
+    blush: Float = 0f,
+    /** Swirly "+" eyes. */
+    dizzy: Boolean = false,
+    /** Big round eyes. */
+    wide: Boolean = false,
 ) {
     // Room above for a jump or a heart (and a hat), so he never leaves the canvas.
     val headroom = if (hat.tall || outfit.tall) 2f else 0f
@@ -239,12 +253,32 @@ internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawd(
         // Eyes: two dark slits (when blinking, just a thin line).
         translate(top = bob * px) {
             val eye = Color(0xFF1B1A1F)
-            if (blink) {
-                drawRect(eye, Offset(left + 3 * px, top + 2.1f * px), Size(px, px * 0.35f))
-                drawRect(eye, Offset(left + 10 * px, top + 2.1f * px), Size(px, px * 0.35f))
-            } else {
-                drawRect(eye, Offset(left + 3 * px, top + 1 * px), Size(px, px * 2))
-                drawRect(eye, Offset(left + 10 * px, top + 1 * px), Size(px, px * 2))
+            when {
+                dizzy -> for (c in listOf(3f, 10f)) {
+                    // A little "+" for each eye.
+                    drawRect(eye, Offset(left + (c - 0.3f) * px, top + 1.6f * px), Size(px * 1.6f, px * 0.45f))
+                    drawRect(eye, Offset(left + (c + 0.28f) * px, top + 1.0f * px), Size(px * 0.45f, px * 1.6f))
+                }
+                blink -> {
+                    drawRect(eye, Offset(left + 3 * px, top + 2.1f * px), Size(px, px * 0.35f))
+                    drawRect(eye, Offset(left + 10 * px, top + 2.1f * px), Size(px, px * 0.35f))
+                }
+                wide -> {
+                    drawRect(eye, Offset(left + 2.85f * px, top + 0.6f * px), Size(px * 1.3f, px * 2.6f))
+                    drawRect(eye, Offset(left + 9.85f * px, top + 0.6f * px), Size(px * 1.3f, px * 2.6f))
+                    // A glint, so they look round and surprised.
+                    drawRect(Color.White.copy(alpha = 0.8f), Offset(left + 3.15f * px, top + 0.9f * px), Size(px * 0.4f, px * 0.4f))
+                    drawRect(Color.White.copy(alpha = 0.8f), Offset(left + 10.15f * px, top + 0.9f * px), Size(px * 0.4f, px * 0.4f))
+                }
+                else -> {
+                    drawRect(eye, Offset(left + 3 * px, top + 1 * px), Size(px, px * 2))
+                    drawRect(eye, Offset(left + 10 * px, top + 1 * px), Size(px, px * 2))
+                }
+            }
+            if (blush > 0f) {
+                val cheek = Color(0xFFFF7A9A).copy(alpha = 0.75f * blush.coerceIn(0f, 1f))
+                drawRect(cheek, Offset(left + 2.3f * px, top + 3.3f * px), Size(px * 1.5f, px * 0.7f))
+                drawRect(cheek, Offset(left + 10.2f * px, top + 3.3f * px), Size(px * 1.5f, px * 0.7f))
             }
             if (outfit != ClawdOutfit.None) drawOutfit(outfit, color, left, top, px, armDy = 0f, face = true)
             if (hat != ClawdHat.None) drawHat(hat, left, top, px)

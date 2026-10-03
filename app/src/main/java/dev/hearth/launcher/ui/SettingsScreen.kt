@@ -764,12 +764,17 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
                 onChange = { v -> update { it.copy(glimmerClawdSpot = v) } },
             )
             PercentSlider("Größe", s.glimmerClawdSize, 0.7f..1.4f) { v -> update { it.copy(glimmerClawdSize = v) } }
-            SwitchRow(
-                label = "Clawd begrüßt dich",
-                description = "Beim ersten Entsperren des Tages sagt er in der Insel Hallo",
-                checked = s.glimmerClawdGreeting,
-            ) { v -> update { it.copy(glimmerClawdGreeting = v) } }
         }
+        SwitchRow(
+            label = "Clawd sagt Hallo beim Entsperren",
+            description = "Jedes Mal, wenn du das Handy entsperrst, grüßt er dich in der Insel – morgens mit „Guten Morgen“, sonst immer ein bisschen anders",
+            checked = s.glimmerClawdGreeting,
+        ) { v -> update { it.copy(glimmerClawdGreeting = v) } }
+        if (s.glimmerClawdGreeting) SwitchRow(
+            label = "Nur einmal am Tag",
+            description = "Statt bei jedem Entsperren nur beim ersten des Tages",
+            checked = s.glimmerClawdGreetDaily,
+        ) { v -> update { it.copy(glimmerClawdGreetDaily = v) } }
         Note("Er trägt Farbe, Hut und Outfit aus Hearth bzw. der Clawd-App. Nachts schläft er in der Pille. Seite, Position und Größe siehst du oben in der Vorschau.")
     }
     Section("Glimmer") {

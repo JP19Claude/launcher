@@ -266,6 +266,8 @@ object ClaudeAssistant {
                 val quick = LocalCommands.parse(q, tools, onlySafe = key && !settings.value.saver, canAskClaude = key)
                 // Clawd's own small talk (and some easter eggs): answered here, free.
                 val talk = ClawdTalk.reply(q)
+                // Easter egg: talking to Clawd after midnight.
+                if (java.time.LocalTime.now().hour < 4) EasterEggs.find(app, "midnight")
                 when {
                     talk != null -> {
                         add(ChatItem.Reply(id(), talk.text))

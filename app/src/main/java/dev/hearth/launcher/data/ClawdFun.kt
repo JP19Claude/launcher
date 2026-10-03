@@ -192,9 +192,10 @@ object ClawdWater {
     fun add(context: Context, delta: Int = 1): Int {
         val count = (glasses(context) + delta).coerceIn(0, 30)
         val edit = prefs(context).edit().putString("day", today()).putInt("count", count)
-        // Remembered for Clawd's badges.
+        // Remembered for Clawd's badges (and an easter egg).
         if (count >= GOAL) edit.putBoolean("goalReached", true)
         edit.apply()
+        if (count == GOAL) EasterEggs.find(context, "water")
         return count
     }
 
@@ -254,6 +255,7 @@ object ClawdGameScore {
 
     /** Saves [score] if it beats the record; true when it did. */
     fun submit(context: Context, score: Int): Boolean {
+        if (score >= 100) EasterEggs.find(context, "jump100")
         if (score <= best(context)) return false
         prefs(context).edit().putInt("best", score).apply()
         // The Clawd app's game widget shows the new record right away.
@@ -301,5 +303,80 @@ object ClawdBadges {
             Badge("🥚", "Eiersucher", "5 Easter Eggs gefunden", eggs >= 5),
             Badge("🌟", "Alle Eier!", "Alle ${EasterEggs.TOTAL} Easter Eggs gefunden", eggs >= EasterEggs.TOTAL),
         )
+    }
+}
+
+/**
+ * How Clawd reacts when you tap him: something different each time, dizzy when you tap too
+ * fast, grumpy when you wake him up.
+ */
+object ClawdReactions {
+    class Reaction(val mood: ClawdMood, val line: String)
+
+    private val Taps = listOf(
+        Reaction(ClawdMood.Wave, "Hey! 👋"),
+        Reaction(ClawdMood.Jump, "Boing!"),
+        Reaction(ClawdMood.Blush, "Oh, hallo du 🙈"),
+        Reaction(ClawdMood.Love, "Hab dich lieb! 🧡"),
+        Reaction(ClawdMood.Dance, "Party! ♪"),
+        Reaction(ClawdMood.Surprised, "Huch!"),
+        Reaction(ClawdMood.Flip, "Salto! 🤸"),
+        Reaction(ClawdMood.Blush, "Hihi, das kitzelt!"),
+        Reaction(ClawdMood.Wave, "Boop! 👉"),
+        Reaction(ClawdMood.Jump, "Hopp hopp!"),
+        Reaction(ClawdMood.Surprised, "Oh! Du schon wieder? 😄"),
+        Reaction(ClawdMood.Dance, "Lass uns tanzen!"),
+        Reaction(ClawdMood.Love, "Du bist toll!"),
+        Reaction(ClawdMood.Thinking, "Hmm … ich überlege, was ich sagen wollte."),
+    )
+
+    private var last = -1
+
+    /** A tap: never the same reaction twice in a row. */
+    fun tap(): Reaction {
+        var i = Taps.indices.random()
+        if (i == last) i = (i + 1) % Taps.size
+        last = i
+        return Taps[i]
+    }
+
+    /** Tapped many times in a row, quickly. */
+    val dizzy = Reaction(ClawdMood.Dizzy, "Mir wird ganz schwindelig … 😵")
+
+    /** Woken up. */
+    val wokenUp = Reaction(ClawdMood.Surprised, "Hmpf! Ich hab grad so schön geschlafen … 😴")
+}
+
+/** Counts quick taps in a row (within [windowMs] of each other). */
+class ClawdTapCounter(private val windowMs: Long = 700) {
+    private var lastAt = 0L
+    var count = 0
+        private set
+
+    fun tap(): Int {
+        val now = System.currentTimeMillis()
+        count = if (now - lastAt <= windowMs) count + 1 else 1
+        lastAt = now
+        return count
+    }
+}
+
+/** What Clawd says when you unlock the phone. */
+object ClawdHello {
+    private val Lines = listOf(
+        "Hallo! 👋", "Da bist du ja!", "Willkommen zurück!", "Schön, dich zu sehen!",
+        "Hey du!", "Na, was machen wir?", "Ich hab auf dich gewartet!", "Hallöchen!",
+    )
+    private val Late = listOf("Psst … ist schon spät 🌙", "Noch wach? Ich auch!", "Hallo, Nachteule! 🦉")
+    private var last = -1
+
+    /** The first unlock of the day gets the time-of-day greeting, the others a varied hello. */
+    fun line(hour: Int, firstToday: Boolean): String {
+        if (firstToday) return clawdGreeting(hour)
+        val pool = if (hour >= 23 || hour < 5) Late else Lines
+        var i = pool.indices.random()
+        if (i == last && pool.size > 1) i = (i + 1) % pool.size
+        last = i
+        return pool[i]
     }
 }

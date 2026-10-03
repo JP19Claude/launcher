@@ -107,7 +107,7 @@ private fun rememberMoodPlayer(): MoodPlayer {
 }
 
 /** What a tap makes him do, in turn. */
-private val TapMoods = listOf(ClawdMood.Wave, ClawdMood.Dance, ClawdMood.Love, ClawdMood.Flip)
+private val TapMoods = listOf(ClawdMood.Wave, ClawdMood.Jump, ClawdMood.Dance, ClawdMood.Blush, ClawdMood.Love, ClawdMood.Surprised, ClawdMood.Flip)
 
 // Clawd-Bild: a picture of Clawd
 
@@ -492,6 +492,7 @@ internal fun ClawdPetWidget(modifier: Modifier) {
     // Hunger grows by itself: read again every minute.
     androidx.compose.runtime.LaunchedEffect(minute.minute) { state = ClawdPet.state(context) }
     val player = rememberMoodPlayer()
+    val petCounter = remember { dev.hearth.launcher.data.ClawdTapCounter(windowMs = 2500) }
     val accent = LocalSettings.current.accent.color
     Row(modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
         Clawd(
@@ -500,7 +501,9 @@ internal fun ClawdPetWidget(modifier: Modifier) {
                 .width(86.dp)
                 .tap {
                     state = ClawdPet.pet(context)
-                    player.play(ClawdMood.Love)
+                    val n = petCounter.tap()
+                    player.play(if (n >= 3) ClawdMood.Blush else ClawdMood.Love)
+                    if (n >= 5) dev.hearth.launcher.data.EasterEggs.find(context, "petlove")
                 },
             mood = player.mood ?: state.mood,
         )
@@ -700,6 +703,10 @@ fun ClawdCompanion(onTalk: () -> Unit, modifier: Modifier = Modifier) {
     var bubble by remember { mutableStateOf<String?>(null) }
     val player = rememberMoodPlayer()
     var taps by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    val counter = remember { dev.hearth.launcher.data.ClawdTapCounter() }
+    var dragging by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     // The charger goes in: a little dance.
     var wasCharging by remember { mutableStateOf(charging) }
@@ -719,7 +726,12 @@ fun ClawdCompanion(onTalk: () -> Unit, modifier: Modifier = Modifier) {
 
     val asleep = clawdAsleep(hour) || (battery in 0..10 && !charging)
     val busy = player.mood != null || globalMood != ClawdMood.Idle
-    val walking = settings.animations && !asleep && !busy
+    val walking = settings.animations && !asleep && !busy && !dragging
+    // The touch handlers live on; they read these fresh.
+    val asleepNow by androidx.compose.runtime.rememberUpdatedState(asleep && player.mood == null)
+    val chargingNow by androidx.compose.runtime.rememberUpdatedState(charging)
+    val batteryNow by androidx.compose.runtime.rememberUpdatedState(battery)
+    val hourNow by androidx.compose.runtime.rememberUpdatedState(hour)
     val pos = remember { androidx.compose.animation.core.Animatable(0.5f) }
     var facingRight by remember { mutableStateOf(true) }
     androidx.compose.runtime.LaunchedEffect(walking) {
@@ -734,6 +746,7 @@ fun ClawdCompanion(onTalk: () -> Unit, modifier: Modifier = Modifier) {
     }
     val mood = player.mood ?: when {
         globalMood != ClawdMood.Idle -> globalMood
+        dragging -> ClawdMood.Thinking
         asleep -> ClawdMood.Sleep
         pos.isRunning -> ClawdMood.Thinking
         else -> ClawdMood.Idle
@@ -749,16 +762,53 @@ fun ClawdCompanion(onTalk: () -> Unit, modifier: Modifier = Modifier) {
                 .offset(x = x)
                 .size(width = w, height = h)
                 .graphicsLayer { scaleX = if (facingRight) 1f else -1f }
-                .pointerInput(hour, battery, charging) {
+                // Drag him along: he trots after your finger.
+                .pointerInput(maxWidth) {
+                    val travel = (maxWidth - w).toPx().coerceAtLeast(1f)
+                    var from = 0f
+                    androidx.compose.foundation.gestures.detectHorizontalDragGestures(
+                        onDragStart = {
+                            dragging = true
+                            from = pos.value
+                        },
+                        onDragEnd = {
+                            dragging = false
+                            if (abs(pos.value - from) > 0.85f) {
+                                bubble = "Wiiiee! 🎢"
+                                dev.hearth.launcher.data.EasterEggs.find(context, "drag")
+                            }
+                            player.play(ClawdMood.Jump, 1200)
+                        },
+                        onDragCancel = { dragging = false },
+                    ) { change, dx ->
+                        change.consume()
+                        if (dx != 0f) facingRight = dx > 0f
+                        scope.launch { pos.snapTo((pos.value + dx / travel).coerceIn(0f, 1f)) }
+                    }
+                }
+                .pointerInput(Unit) {
                     detectTapGestures(
                         onTap = {
                             taps++
-                            player.play(TapMoods[taps % TapMoods.size].takeIf { it != ClawdMood.Flip } ?: ClawdMood.Wave)
-                            bubble = dev.hearth.launcher.data.ClawdLines.next(hour, battery, charging)
-                        },
-                        onDoubleTap = {
-                            player.play(ClawdMood.Flip, 1600)
-                            bubble = "Hui! 🤸"
+                            val n = counter.tap()
+                            val reaction = when {
+                                asleepNow -> {
+                                    dev.hearth.launcher.data.EasterEggs.find(context, "wakeup")
+                                    dev.hearth.launcher.data.ClawdReactions.wokenUp
+                                }
+                                n >= 6 -> {
+                                    dev.hearth.launcher.data.EasterEggs.find(context, "dizzy")
+                                    dev.hearth.launcher.data.ClawdReactions.dizzy
+                                }
+                                else -> dev.hearth.launcher.data.ClawdReactions.tap()
+                            }
+                            player.play(reaction.mood, if (reaction.mood == ClawdMood.Dizzy) 2600 else 1800)
+                            // Now and then a tip or a joke instead of a reaction.
+                            bubble = if (n < 6 && !asleepNow && taps % 4 == 0) {
+                                dev.hearth.launcher.data.ClawdLines.next(hourNow, batteryNow, chargingNow)
+                            } else {
+                                reaction.line
+                            }
                         },
                         onLongPress = { onTalk() },
                     )

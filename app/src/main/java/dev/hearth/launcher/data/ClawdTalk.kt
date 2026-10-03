@@ -1,7 +1,7 @@
 package dev.hearth.launcher.data
 
 /** How Clawd, Claude's little pixel creature, is feeling right now (drives his animation). */
-enum class ClawdMood { Idle, Thinking, Dance, Flip, Love, Wave, Sleep }
+enum class ClawdMood { Idle, Thinking, Dance, Flip, Love, Wave, Sleep, Jump, Blush, Dizzy, Surprised }
 
 /**
  * Clawd's own small talk: greetings, who he is, jokes – and a few easter eggs. Answered
@@ -85,13 +85,19 @@ object ClawdTalk {
             )
             m("(gute nacht|nacht|ich geh schlafen|schlaf gut)") -> Answer("Schlaf gut! 🌙 Ich pass auf dein Handy auf.", mood = ClawdMood.Sleep)
             m("(schlaf|schlaf mal|geh schlafen)") -> Answer("Zzz …", mood = ClawdMood.Sleep)
-            m("(mir ist langweilig|langweilig|lass uns spielen|spielen|spiel|spiel was|clawd jump)") ->
+            m("(mir ist langweilig|langweilig|lass uns spielen|spielen|spiel|spiel was|clawd jump|jump)") ->
                 Answer("Los geht's: Clawd Jump! Tippen zum Springen. 🐞", mood = ClawdMood.Dance, game = true)
             m("(erzahl (mir )?was|erzahl (mir )?etwas|fakt|fun fact|wusstest du|noch ein fakt)") -> {
                 val text = Facts[fact % Facts.size]
                 fact++
                 Answer("Wusstest du? $text", mood = ClawdMood.Thinking)
             }
+            m("(wer ist der beste|wer ist die beste|wer ist am besten|wer ist der allerbeste)") ->
+                Answer("Du natürlich! 🏆", egg = "best", mood = ClawdMood.Love)
+            m("(boop|stups|anstupsen)") -> Answer("Boop zurück! 👉", mood = ClawdMood.Surprised)
+            m("(spring|hupf|spring mal|hupf mal)") -> Answer("Boing! Boing!", mood = ClawdMood.Jump)
+            m("(bist du schuchtern|wirst du rot)") -> Answer("Vielleicht ein bisschen … 🙈", mood = ClawdMood.Blush)
+            m("(dreh dich|dreh dich im kreis|mir ist schwindelig)") -> Answer("Uiuiui … alles dreht sich! 😵", mood = ClawdMood.Dizzy)
             m("(wie alt bist du)") -> Answer("In Pixel-Jahren? Etwa 104. In echt: noch ganz frisch.", mood = ClawdMood.Wave)
             m("(magst du mich|hast du mich lieb)") -> Answer("Na klar! Du bist mein Lieblingsmensch. 🧡", egg = "love", mood = ClawdMood.Love)
             m("(mach einen salto|salto|flip|mach nen salto)") -> Answer("Hui! 🤸", mood = ClawdMood.Flip)

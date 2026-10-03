@@ -13,7 +13,7 @@ wippt, trippelt beim Nachdenken, tanzt, schlägt Salto und schickt Herzen.
 
 - Mit ihm sprechen: antippen öffnet den Chat; Begrüßung, „Wer bist du?“, „Wie geht's?“,
   Witze, „Danke“ beantwortet er selbst (kostenlos, offline), alles andere die KI.
-- Er hat 10 Easter Eggs, verteilt in Hearth.
+- Er hat 20 Easter Eggs, verteilt in Hearth.
 - Clawd-Widgets (Widget hinzufügen → Clawd): **Clawd-Bild** (sechs Hintergründe über den
   ✦-Knopf, antippen und er winkt, tanzt, schickt Herzen, schlägt Salto), **Clawd-Welt**
   (er spaziert durch eine Pixel-Landschaft mit Tag, Abend und Nacht), **Clawd-Uhr** (Uhrzeit
@@ -22,8 +22,10 @@ wippt, trippelt beim Nachdenken, tanzt, schlägt Salto und schickt Herzen.
   **Clawd-Sticker** (1×1, nur er), dazu **Clawd-Tamagotchi** (füttern, spielen, streicheln –
   er wird hungrig), **Clawd-Orakel** (Ja/Nein-Fragen) und **Clawd-Fokus** (25-Minuten-Timer).
 - Clawd-Begleiter: Er spaziert auf dem Startbildschirm über dem Dock, schläft nachts und bei
-  leerem Akku, tanzt, wenn das Ladekabel reinkommt. Antippen: er sagt etwas (Gruß, Tipp,
-  Witz) · zweimal: Salto · gedrückt halten: mit ihm reden.
+  leerem Akku, tanzt, wenn das Ladekabel reinkommt. Antippen: er reagiert, jedes Mal anders
+  (hüpft, wird rot, staunt, tanzt, schickt Herzen, ab und zu ein Tipp oder Witz) · ganz schnell
+  tippen: ihm wird schwindelig · zur Seite ziehen: er läuft mit · schlafend antippen: er wacht
+  grummelnd auf · gedrückt halten: mit ihm reden.
 - Aussehen (Einstellungen → Clawd, Kleiderschrank zum Antippen): neun Farben (auch Regenbogen),
   Outfits – Anzug, Smoking, Superheld, Astronaut, Arzt, Koch, Pirat, Ninja, Pulli, Schal – und
   Hüte – Partyhut, Krone, Mütze, Cap, Schleife, Kopfhörer, Sonnenbrille, Zauberhut, Kochmütze,
@@ -34,8 +36,9 @@ wippt, trippelt beim Nachdenken, tanzt, schlägt Salto und schickt Herzen.
   Bildschirmfotos, Laden und Taschenlampe – vorne im Inhalt, mit dessen Farben unter ihm;
   aufgeklappt sitzt er neben der Kamera und sagt, was los ist. Beim Sperren und Entsperren
   hält er sich raus. In der Glimmer-App frei platzierbar: Seite (links/rechts), Position
-  (vom Inhalt bis an die Kamera) und Größe, mit Vorschau; beim ersten Entsperren des Tages
-  sagt er in der Insel Hallo.
+  (vom Inhalt bis an die Kamera) und Größe, mit Vorschau. Nach dem Entsperren
+  sagt er bei jedem Mal in der Insel Hallo (morgens „Guten Morgen“, sonst immer
+  etwas anders; auf Wunsch nur einmal am Tag).
 - Abzeichen: 12 Ziele über alles mit Clawd (Tamagotchi-Level, Clawd Jump, Wasser, Fokus,
   Outfit, Easter Eggs) – in Einstellungen → Clawd, der Clawd-App und als Widget.
 - Noch mehr Widgets: Clawd-Modenschau, Clawd-Wasser, Clawd-Würfel, Clawd-Motivation,
@@ -61,8 +64,9 @@ In Hearth bleiben alle Clawd-Widgets eingebaut.
 
 ## Easter Eggs
 
-In Hearth sind 10 Easter Eggs versteckt, alle mit Clawd. Jeder Fund feiert mit Konfetti und zählt mit; der
-Stand steht ganz unten in den Einstellungen. Wo sie sind? Selbst suchen. 🥚
+In Hearth sind 20 Easter Eggs versteckt, alle mit Clawd. Ein neuer Fund zeigt nur einen kleinen
+Hinweis (🥚 x/20), schon gefundene gar nichts; Konfetti gibt es erst für das letzte. Der Stand
+steht ganz unten in den Einstellungen. Wo sie sind? Selbst suchen. 🥚
 
 ## App-Sperre
 

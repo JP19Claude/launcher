@@ -337,6 +337,9 @@ private fun Header(
                     if (taps[0] >= 5) {
                         taps[0] = 0
                         ClaudeAssistant.tickled()
+                    } else {
+                        // Every tap gets a little reaction.
+                        ClaudeAssistant.react(dev.hearth.launcher.data.ClawdReactions.tap().mood, 1600)
                     }
                 },
             mood = mood,

@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -42,27 +43,53 @@ private val Confetti = listOf(
 private class Piece(val x: Float, val delay: Float, val speed: Float, val sway: Float, val spin: Float, val color: Color, val w: Float, val h: Float)
 
 /**
- * The party when an easter egg is found: confetti raining down over everything and a glass
- * message on top. Draws nothing (and costs nothing) in between.
+ * An easter egg found: a small glass hint with Clawd for a moment; only the very last egg gets
+ * the real party (confetti raining down and a glass message). Draws nothing in between.
  */
 @Composable
 fun CelebrationOverlay() {
     var message by remember { mutableStateOf<String?>(null) }
+    var big by remember { mutableStateOf(false) }
     var round by remember { mutableStateOf(0) }
     val fall = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
-        EasterEggs.party.collect { text ->
-            message = text
+        EasterEggs.party.collect { party ->
+            message = party.text
+            big = party.big
             round++
-            launch {
-                fall.snapTo(0f)
-                fall.animateTo(1f, tween(2600, easing = LinearEasing))
+            if (party.big) {
+                launch {
+                    fall.snapTo(0f)
+                    fall.animateTo(1f, tween(2600, easing = LinearEasing))
+                }
+                delay(3200)
+            } else {
+                delay(1800)
             }
-            delay(3200)
             message = null
         }
     }
     val text = message ?: return
+    if (!big) {
+        // Just a small hint at the top: Clawd and the count.
+        Box(Modifier.fillMaxSize()) {
+            androidx.compose.foundation.layout.Row(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .systemBarsPadding()
+                    .padding(top = 44.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Clawd(Modifier.size(width = 22.dp, height = 19.dp), mood = dev.hearth.launcher.data.ClawdMood.Jump)
+                androidx.compose.foundation.layout.Spacer(Modifier.size(6.dp))
+                Text(text, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            }
+        }
+        return
+    }
     val pieces = remember(round) {
         val r = Random(round)
         List(90) {

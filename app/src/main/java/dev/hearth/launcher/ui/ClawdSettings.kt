@@ -63,7 +63,10 @@ internal fun ClawdSettings(
             selected = s.clawdSkin,
             optionLabel = { it.label },
             swatch = { if (it == ClawdSkin.Rainbow) rainbow(0.75f) else it.color },
-            onSelect = { v -> update { it.copy(clawdSkin = v) } },
+            onSelect = { v ->
+                update { it.copy(clawdSkin = v) }
+                if (v == ClawdSkin.Rainbow) dev.hearth.launcher.data.EasterEggs.find(context, "rainbowskin")
+            },
         )
         // His wardrobe: every outfit and hat on a little Clawd, tap to put it on.
         Wardrobe(
@@ -72,7 +75,10 @@ internal fun ClawdSettings(
             selected = s.clawdOutfit,
             optionLabel = { it.label },
             preview = { o -> o to s.clawdHat },
-            onSelect = { v -> update { it.copy(clawdOutfit = v) } },
+            onSelect = { v ->
+                update { it.copy(clawdOutfit = v) }
+                if (v != ClawdOutfit.None && s.clawdHat != ClawdHat.None) dev.hearth.launcher.data.EasterEggs.find(context, "fashion")
+            },
         )
         Wardrobe(
             label = "Hut & Accessoire",
@@ -80,7 +86,10 @@ internal fun ClawdSettings(
             selected = s.clawdHat,
             optionLabel = { it.label },
             preview = { h -> s.clawdOutfit to h },
-            onSelect = { v -> update { it.copy(clawdHat = v) } },
+            onSelect = { v ->
+                update { it.copy(clawdHat = v) }
+                if (v != ClawdHat.None && s.clawdOutfit != ClawdOutfit.None) dev.hearth.launcher.data.EasterEggs.find(context, "fashion")
+            },
         )
         RowDivider()
         ClawdBadgeGrid(s)
@@ -93,7 +102,7 @@ internal fun ClawdSettings(
             RowDivider()
             SwitchRow(
                 label = "Clawd auf dem Startbildschirm",
-                description = "Er spaziert über dem Dock, schläft nachts und tanzt beim Laden. Antippen: er sagt was · zweimal: Salto · gedrückt halten: mit ihm reden",
+                description = "Er spaziert über dem Dock, schläft nachts und tanzt beim Laden. Antippen: er reagiert, jedes Mal anders · ganz schnell tippen: ihm wird schwindelig · zur Seite ziehen: er läuft mit · gedrückt halten: mit ihm reden",
                 checked = s.clawdCompanion,
             ) { v -> update { it.copy(clawdCompanion = v) } }
             SwitchRow(

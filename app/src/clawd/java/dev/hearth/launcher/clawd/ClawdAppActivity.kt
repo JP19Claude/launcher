@@ -155,6 +155,7 @@ private fun ClawdAppScreen(
     var mood by remember { mutableStateOf(if (clawdAsleep(hour)) ClawdMood.Sleep else ClawdMood.Wave) }
     var input by remember { mutableStateOf("") }
     var taps by remember { mutableIntStateOf(0) }
+    val tapCounter = remember { dev.hearth.launcher.data.ClawdTapCounter() }
     var pet by remember { mutableStateOf(ClawdPet.state(context)) }
     val focus = remember { FocusRequester() }
     LaunchedEffect(askFocus) { if (askFocus > 0) runCatching { focus.requestFocus() } }
@@ -200,8 +201,13 @@ private fun ClawdAppScreen(
                             .size(width = 220.dp, height = 190.dp)
                             .clickable {
                                 taps++
-                                mood = listOf(ClawdMood.Wave, ClawdMood.Dance, ClawdMood.Love, ClawdMood.Flip)[taps % 4]
-                                if (taps % 5 == 0) said = "Hihi, das kitzelt! 🤸"
+                                val reaction = if (tapCounter.tap() >= 6) {
+                                    dev.hearth.launcher.data.ClawdReactions.dizzy
+                                } else {
+                                    dev.hearth.launcher.data.ClawdReactions.tap()
+                                }
+                                mood = reaction.mood
+                                said = reaction.line
                             },
                         mood = mood,
                     )

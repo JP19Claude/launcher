@@ -448,7 +448,7 @@ class GlimmerController(private val service: GlimmerService) {
                         // Unlocked (PIN, pattern, or a biometric that wasn't caught): the tick,
                         // unless it was already shown for this wake-up.
                         Intent.ACTION_USER_PRESENT -> {
-                            greetOncePerDay()
+                            greetOnUnlock()
                             if (settings.glimmerUnlock == GlimmerUnlock.Off || keyguard()?.isDeviceSecure != true) {
                                 if (settings.glimmerIdlePill) openPadlock()
                             }
@@ -552,19 +552,28 @@ class GlimmerController(private val service: GlimmerService) {
     }
 
     private var alertToken = 0
-    /** Clawd says hello in the island at the first unlock of the day (after the unlock tick). */
-    private fun greetOncePerDay() {
-        if (!settings.glimmerClawd || !settings.glimmerClawdGreeting) return
+    private var lastHello = 0L
+
+    /**
+     * Clawd says hello in the island at every unlock (after the unlock tick): the first one of
+     * the day with the time of day, the others varied. Only once a day if so chosen; never
+     * twice within half a minute.
+     */
+    private fun greetOnUnlock() {
+        if (!settings.glimmerClawdGreeting) return
+        val nowMs = System.currentTimeMillis()
+        if (nowMs - lastHello < 30_000) return
         val now = java.time.LocalDateTime.now()
-        if (now.hour < 5) return
         val prefs = service.getSharedPreferences("clawd_glimmer", Context.MODE_PRIVATE)
         val today = now.toLocalDate().toString()
-        if (prefs.getString("greeted", null) == today) return
-        prefs.edit().putString("greeted", today).apply()
-        val hello = dev.hearth.launcher.data.clawdGreeting(now.hour)
+        val firstToday = prefs.getString("greeted", null) != today && now.hour >= 5
+        if (settings.glimmerClawdGreetDaily && !firstToday) return
+        if (firstToday) prefs.edit().putString("greeted", today).apply()
+        lastHello = nowMs
+        val hello = dev.hearth.launcher.data.ClawdHello.line(now.hour, firstToday)
         handler.postDelayed({
             flash(IslandContent.Alert(Glyph.Spark, hello, "Clawd", Color(0xFFD97757)))
-        }, 1800)
+        }, 1600)
     }
 
     private fun flash(content: IslandContent.Alert) {
