@@ -195,6 +195,8 @@ private fun ClawdAppScreen(
             .fillMaxSize()
             .background(Brush.verticalGradient(listOf(Color(0xFF2A1F1A), Color(0xFF141216), Color(0xFF0E0D10)))),
     ) {
+        // One UI 10 Fluid: Clawd's warm colors drifting behind.
+        dev.hearth.launcher.ui.FluidBackdrop(listOf(Color(0xFFD97757), Color(0xFFFFB494), Color(0xFF8E6BFF)), strength = 0.6f)
         LazyColumn(
             Modifier.fillMaxSize().systemBarsPadding().imePadding(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
@@ -269,7 +271,7 @@ private fun ClawdAppScreen(
             }
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(listOf("Hallo!", "Erzähl einen Witz", "Lass uns spielen", "Erzähl mir was", "Tanz mal", "Wie spät ist es?", "Was kannst du?", "Orakel: Wird heute gut?", "Ich hab dich lieb")) { chip ->
+                    items(listOf("Hallo!", "Erzähl einen Witz", "Rätsel", "Lösung", "Lass uns spielen", "Schere", "Wirf eine Münze", "Wie lange noch bis Weihnachten?", "Motivier mich", "Ich bin gestresst", "Erzähl mir was", "Tanz mal", "Wie spät ist es?", "Was kannst du?", "Orakel: Wird heute gut?", "Ich hab dich lieb")) { chip ->
                         Text(
                             chip,
                             color = Color.White,

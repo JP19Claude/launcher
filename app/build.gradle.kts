@@ -12,8 +12,8 @@ android {
         applicationId = "dev.hearth.launcher"
         minSdk = 28
         targetSdk = 35
-        versionCode = 90
-        versionName = "9.7"
+        versionCode = 91
+        versionName = "10.0"
     }
 
     // Fixed debug key in the repo, so every CI build installs as an update over the last one.
@@ -26,8 +26,9 @@ android {
         }
     }
 
-    // Four apps from one code base: Hearth (the launcher), Glimmer (the island, lock screen),
-    // the control center over other apps and Clawd (his widgets for any launcher). They talk through a signature-protected bridge.
+    // Three apps from one code base: Hearth (the launcher), Glimmer (the island, lock screen) and
+    // Clawd (his widgets for any launcher). They talk through a signature-protected bridge.
+    // (The separate control center app is discontinued; Hearth keeps its own.)
     flavorDimensions += "app"
     productFlavors {
         create("hearth") {
@@ -37,10 +38,6 @@ android {
         create("glimmer") {
             dimension = "app"
             applicationId = "dev.hearth.glimmer"
-        }
-        create("controls") {
-            dimension = "app"
-            applicationId = "dev.hearth.controls"
         }
         // Clawd on his own: his widgets for any launcher (Samsung's too), his pet, his chat.
         create("clawd") {

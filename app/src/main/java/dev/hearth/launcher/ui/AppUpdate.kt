@@ -21,6 +21,8 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -152,15 +154,88 @@ fun AppUpdateContent() {
     }
 }
 
+/** What the update screen's top shows: the version big, Glimmer's island, or Clawd himself. */
+private enum class UpdateHero { Number, Island, Clawd }
+
+/** Each app's own software update screen: its colors, its hero, its tips. */
+private class UpdateLook(
+    val background: List<Color>,
+    val fluid: List<Color>,
+    val number: List<Color>,
+    val accent: Color,
+    val card: Color,
+    val hero: UpdateHero,
+    val tagline: String,
+    val planet: List<Color>,
+    val tips: List<String>,
+)
+
+private fun lookFor(packageName: String): UpdateLook = when (packageName) {
+    "dev.hearth.glimmer" -> UpdateLook(
+        background = listOf(Color(0xFF000000), Color(0xFF0B0910)),
+        fluid = listOf(Color(0xFFFF9F0A), Color(0xFF8E6BFF), Color(0xFF30D158)),
+        number = listOf(Color.White, Color(0xFFFFD27A), Color(0xFFFF9F0A)),
+        accent = Color(0xFFFF9F0A),
+        card = Color(0xFF141416),
+        hero = UpdateHero.Island,
+        tagline = "Die Insel um deine Kamera",
+        planet = listOf(Color(0xFF2A2A30), Color(0xFF000000), Color(0xFF000000)),
+        tips = listOf(
+            "Doppeltippe auf die Insel: Clawd-Orakel, Münze oder Würfel – einstellbar unter „Gestaltung“.",
+            "Im Querformat steht Glimmer senkrecht um die Kamera, wie im Hochformat.",
+            "Wisch über Musik in der Insel zum nächsten oder vorigen Titel.",
+            "Mit „Launcher-Animation verdecken“ fliegen Apps auch bei One UI Home in die Insel.",
+            "Clawd sagt dir in der Insel Hallo, wenn du dein Handy entsperrst.",
+        ),
+    )
+    "dev.hearth.clawd" -> UpdateLook(
+        background = listOf(Color(0xFF2A1F1A), Color(0xFF141216), Color(0xFF0E0D10)),
+        fluid = listOf(Color(0xFFD97757), Color(0xFFFFB494), Color(0xFFE5845F)),
+        number = listOf(Color(0xFFFFE3D3), Color(0xFFFFB494), Color(0xFFD97757)),
+        accent = Color(0xFFD97757),
+        card = Color(0xFF231A17),
+        hero = UpdateHero.Clawd,
+        tagline = "Dein kleiner Pixel-Freund",
+        planet = listOf(Color(0xFFFFB494), Color(0xFFD97757), Color(0xFF7A3B26)),
+        tips = listOf(
+            "Neu: Countdown, Rätsel und Schnick-Schnack-Schnuck als Widgets.",
+            "Sag im Chat „Rätsel“ und danach „Lösung“.",
+            "Sieben Tage am Stück im Clawd-Tagebuch bringen ein Abzeichen.",
+            "Fünfmal in Folge gegen Clawd gewinnen ist ein Easter Egg.",
+            "Clawd-Atmen: eine ruhige Minute, er atmet mit dir.",
+        ),
+    )
+    else -> UpdateLook(
+        background = listOf(Color(0xFF050506), Color(0xFF08090F)),
+        fluid = listOf(Color(0xFF3E91FF), Color(0xFF8E6BFF), Color(0xFFD97757)),
+        number = listOf(Color(0xFFBFDDFF), Color(0xFF3E91FF), Color(0xFF8E6BFF)),
+        accent = Color(0xFF3E91FF),
+        card = Color(0xFF1C1C1E),
+        hero = UpdateHero.Number,
+        tagline = "One UI 10 Fluid · Galaxy × Claude",
+        planet = listOf(Color(0xFFBFDDFF), Color(0xFF3E91FF), Color(0xFF5B3BC8)),
+        tips = listOf(
+            "One UI 10 Fluid: Berührungen breiten sich wie Licht aus – unter Design → Animationen.",
+            "Wisch auf dem Startbildschirm nach unten für das Kontrollzentrum.",
+            "Frag Clawd in der Suche: „Wie lange noch bis Weihnachten?“",
+            "Tipp Clawd auf dem Startbildschirm sechsmal schnell an …",
+            "Hearth, Glimmer und Clawd aktualisieren sich jetzt selbst.",
+        ),
+    )
+}
+
 /**
- * The software update screen, like One UI 8.5's: the version big and glowing, what's new,
- * and one button at the bottom that looks, downloads and installs. Tapping "Version" often
- * enough opens an easter egg, like Android's own in Samsung's settings.
+ * The software update screen, each app with its own (One UI 10 Fluid): Hearth's version big
+ * in blue and violet, Glimmer's living island, Clawd himself. What's new, a tip from Clawd,
+ * and one button at the bottom that looks, downloads and installs – while Clawd runs along
+ * the download. Tapping "Version" often enough opens an easter egg, like Android's in
+ * Samsung's settings.
  */
 @Composable
 fun SoftwareUpdateScreen(onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val look = remember { lookFor(context.packageName) }
     val name = remember { AppUpdater.appName(context) }
     val current = remember { AppUpdater.currentVersion(context) }
     var state by remember { mutableStateOf<UpdateState>(UpdateState.Checking) }
@@ -168,6 +243,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     var egg by remember { mutableStateOf(false) }
     var taps by remember { mutableIntStateOf(0) }
     var lastTap by remember { mutableLongStateOf(0L) }
+    var tip by remember { mutableIntStateOf((0 until look.tips.size).random()) }
 
     fun check() {
         state = UpdateState.Checking
@@ -221,17 +297,18 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
         label = "glow",
     )
 
-    Box(Modifier.fillMaxSize().background(Color(0xFF050506))) {
-        // A soft glow in Claude's color behind the version, breathing slowly.
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(look.background))) {
+        // One UI 10 Fluid: the app's colors drifting, and a glow behind the hero.
+        FluidBackdrop(look.fluid, strength = 0.7f)
         Canvas(Modifier.fillMaxSize()) {
             drawCircle(
                 Brush.radialGradient(
-                    listOf(UpdateAccent.copy(alpha = 0.34f * glow), Color(0xFF6A4BFF).copy(alpha = 0.12f * glow), Color.Transparent),
-                    center = Offset(size.width / 2f, size.height * 0.3f),
-                    radius = size.width * 0.75f,
+                    listOf(look.accent.copy(alpha = 0.30f * glow), Color.Transparent),
+                    center = Offset(size.width / 2f, size.height * 0.28f),
+                    radius = size.width * 0.7f,
                 ),
-                radius = size.width * 0.75f,
-                center = Offset(size.width / 2f, size.height * 0.3f),
+                radius = size.width * 0.7f,
+                center = Offset(size.width / 2f, size.height * 0.28f),
             )
         }
         Column(
@@ -253,20 +330,35 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                 color = Color.White,
                 fontSize = 34.sp,
                 fontWeight = FontWeight.Normal,
-                modifier = Modifier.padding(start = 6.dp, top = 28.dp, bottom = 26.dp),
+                modifier = Modifier.padding(start = 6.dp, top = 24.dp, bottom = 22.dp),
             )
-            // The version, big, the way One UI 8.5 shows its own.
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                val shown = release?.version ?: current
+                when (look.hero) {
+                    UpdateHero.Number -> Unit
+                    UpdateHero.Island -> IslandHero(shown, look.accent, newer = release != null)
+                    UpdateHero.Clawd -> Clawd(
+                        Modifier.size(width = 150.dp, height = 128.dp),
+                        mood = when (s) {
+                            is UpdateState.Newer, is UpdateState.Ready -> ClawdMood.Jump
+                            is UpdateState.Downloading -> ClawdMood.Dance
+                            is UpdateState.Failed -> ClawdMood.Dizzy
+                            UpdateState.Checking -> ClawdMood.Thinking
+                            UpdateState.UpToDate -> ClawdMood.Love
+                        },
+                    )
+                }
                 Text(
-                    release?.version ?: current,
+                    shown,
                     style = TextStyle(
-                        brush = Brush.linearGradient(listOf(Color(0xFFFFD2BF), UpdateAccent, Color(0xFF9C7BFF))),
-                        fontSize = 96.sp,
-                        fontWeight = FontWeight.Light,
+                        brush = Brush.linearGradient(look.number),
+                        fontSize = if (look.hero == UpdateHero.Number) 96.sp else 64.sp,
+                        fontWeight = if (look.hero == UpdateHero.Clawd) FontWeight.Bold else FontWeight.Light,
                     ),
                 )
-                Text(name, color = Color.White.copy(alpha = 0.85f), fontSize = 18.sp, fontWeight = FontWeight.Medium)
-                Spacer(Modifier.height(18.dp))
+                Text(name, color = Color.White.copy(alpha = 0.9f), fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                Text(look.tagline, color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+                Spacer(Modifier.height(16.dp))
                 Text(
                     when (s) {
                         UpdateState.Checking -> "Nach Updates suchen …"
@@ -286,10 +378,10 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                     lineHeight = 20.sp,
                 )
             }
-            Spacer(Modifier.height(26.dp))
+            Spacer(Modifier.height(24.dp))
 
             // About this version; "Version" hides the easter egg.
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(UpdateCard).padding(vertical = 6.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(look.card).padding(vertical = 6.dp)) {
                 InfoRow("Version", "$name $current", Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
                     val now = System.currentTimeMillis()
                     taps = if (now - lastTap < 1500) taps + 1 else 1
@@ -309,13 +401,33 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
 
             if (release != null && release.notes.isNotBlank()) {
                 Spacer(Modifier.height(14.dp))
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(UpdateCard).padding(20.dp)) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(look.card).padding(20.dp)) {
                     Text("Was ist neu", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(8.dp))
                     Text(release.notes, color = Color.White.copy(alpha = 0.75f), fontSize = 14.sp, lineHeight = 20.sp)
                 }
             }
-            Spacer(Modifier.height(150.dp))
+
+            // A tip from Clawd; a tap shows the next one.
+            Spacer(Modifier.height(14.dp))
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(look.card)
+                    .fluidTouch(look.accent)
+                    .clickable { tip++ }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Clawd(Modifier.size(width = 52.dp, height = 44.dp), mood = ClawdMood.Wave)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Tipp von Clawd", color = look.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(look.tips[Math.floorMod(tip, look.tips.size)], color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp, lineHeight = 19.sp)
+                }
+            }
+            Spacer(Modifier.height(160.dp))
         }
 
         // The one button at the bottom, like One UI's "Herunterladen und installieren".
@@ -323,7 +435,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
             Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xFF050506), Color(0xFF050506))))
+                .background(Brush.verticalGradient(listOf(Color.Transparent, look.background.last(), look.background.last())))
                 .navigationBarsPadding()
                 .padding(horizontal = 24.dp, vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -337,14 +449,19 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                         fontSize = 13.sp,
                     )
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
+                // Clawd runs along the download.
+                BoxWithConstraints(Modifier.fillMaxWidth().height(40.dp)) {
+                    val run = (maxWidth - 40.dp) * s.progress.coerceIn(0f, 1f)
+                    Clawd(Modifier.offset(x = run).size(width = 40.dp, height = 34.dp).align(Alignment.BottomStart), mood = ClawdMood.Dance)
+                }
                 Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(alpha = 0.15f))) {
                     Box(
                         Modifier
                             .fillMaxWidth(s.progress.coerceIn(0.02f, 1f))
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp))
-                            .background(Brush.horizontalGradient(listOf(UpdateAccent, Color(0xFF9C7BFF)))),
+                            .background(Brush.horizontalGradient(look.number.drop(1))),
                     )
                 }
             } else {
@@ -361,17 +478,59 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                         .fillMaxWidth()
                         .height(52.dp)
                         .clip(RoundedCornerShape(26.dp))
-                        .background(if (strong) UpdateAccent else Color.White.copy(alpha = 0.14f))
+                        .background(if (strong) look.accent else Color.White.copy(alpha = 0.14f))
+                        .fluidTouch()
                         .clickable(enabled = s !is UpdateState.Checking, onClick = action),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text(label, color = if (strong && look.hero == UpdateHero.Island) Color.Black else Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
 
         AnimatedVisibility(egg, enter = fadeIn(tween(400)), exit = fadeOut(tween(300))) {
-            VersionEgg(current, name) { egg = false }
+            VersionEgg(current, name, look) { egg = false }
+        }
+    }
+}
+
+/** Glimmer's hero: a living island (it breathes and glows), Clawd riding in it with the version. */
+@Composable
+private fun IslandHero(version: String, accent: Color, newer: Boolean) {
+    val pulse by rememberInfiniteTransition(label = "island").animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(2000), RepeatMode.Reverse),
+        label = "breathe",
+    )
+    val width = 210.dp + 40.dp * pulse
+    Box(Modifier.padding(bottom = 18.dp), contentAlignment = Alignment.Center) {
+        // The glow around it, like Glimmer's when something new comes.
+        Canvas(Modifier.size(width = width + 40.dp, height = 96.dp)) {
+            for (i in 1..4) {
+                val spread = i * 5.dp.toPx() * (0.6f + 0.4f * pulse)
+                drawRoundRect(
+                    accent.copy(alpha = (if (newer) 0.22f else 0.12f) / i),
+                    topLeft = Offset(20.dp.toPx() - spread, 16.dp.toPx() - spread),
+                    size = androidx.compose.ui.geometry.Size(size.width - 40.dp.toPx() + spread * 2, 64.dp.toPx() + spread * 2),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(32.dp.toPx() + spread),
+                )
+            }
+        }
+        Row(
+            Modifier
+                .size(width = width, height = 64.dp)
+                .clip(RoundedCornerShape(32.dp))
+                .background(Color.Black)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Clawd(Modifier.size(width = 42.dp, height = 36.dp), mood = if (newer) ClawdMood.Jump else ClawdMood.Wave)
+            Spacer(Modifier.weight(1f))
+            Text("Glimmer $version", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.width(10.dp))
+            // The camera, as the island has it.
+            Box(Modifier.size(14.dp).clip(CircleShape).background(Color(0xFF1C1C22)))
         }
     }
 }
@@ -394,11 +553,11 @@ private val SparkEmojis = listOf("🧡", "✨", "🐞", "🎉", "⭐", "🦀", "
 
 /**
  * The easter egg behind "Version", like Android's own in Samsung's settings: the version as a
- * glowing planet with Clawd circling it under twinkling pixel stars. A tap makes him flip and
- * the planet bounce; holding sends a spiral of emojis flying out.
+ * glowing planet (Glimmer: as a big island) with Clawd circling it under twinkling stars. A
+ * tap bounces it and makes him flip; holding sends a spiral of emojis flying out.
  */
 @Composable
-private fun VersionEgg(version: String, name: String, onClose: () -> Unit) {
+private fun VersionEgg(version: String, name: String, look: UpdateLook, onClose: () -> Unit) {
     val context = LocalContext.current
     LaunchedEffect(Unit) { EasterEggs.find(context, "version") }
     BackHandler(onBack = onClose)
@@ -425,6 +584,7 @@ private fun VersionEgg(version: String, name: String, onClose: () -> Unit) {
     }
     val stars = remember { List(70) { Triple(Math.random().toFloat(), Math.random().toFloat(), Math.random().toFloat() * 6f) } }
     val paint = remember { Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER } }
+    val island = look.hero == UpdateHero.Island
 
     fun burst(count: Int) {
         val t = now
@@ -467,16 +627,16 @@ private fun VersionEgg(version: String, name: String, onClose: () -> Unit) {
             }
         }
 
-        // The version as a glowing planet.
+        // The version as a glowing planet – or, for Glimmer, as a big island.
         Box(
             Modifier
-                .size(230.dp)
+                .size(width = if (island) 300.dp else 230.dp, height = if (island) 110.dp else 230.dp)
                 .graphicsLayer {
                     scaleX = bounce.value
                     scaleY = bounce.value
                 }
-                .clip(CircleShape)
-                .background(Brush.radialGradient(listOf(Color(0xFFFFB494), UpdateAccent, Color(0xFF6A3BC8))))
+                .clip(if (island) RoundedCornerShape(55.dp) else CircleShape)
+                .background(Brush.radialGradient(look.planet))
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onTap = {
@@ -493,7 +653,7 @@ private fun VersionEgg(version: String, name: String, onClose: () -> Unit) {
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Text(version, color = Color.White, fontSize = 72.sp, fontWeight = FontWeight.Bold)
+            Text(version, color = Color.White, fontSize = if (island) 52.sp else 72.sp, fontWeight = FontWeight.Bold)
         }
 
         // Clawd circling it.
@@ -503,7 +663,7 @@ private fun VersionEgg(version: String, name: String, onClose: () -> Unit) {
                 .graphicsLayer {
                     val r = 165.dp.toPx()
                     translationX = cos(orbit) * r
-                    translationY = sin(orbit) * r * 0.85f
+                    translationY = sin(orbit) * r * (if (island) 0.6f else 0.85f)
                 },
             mood = mood,
         )

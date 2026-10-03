@@ -18,7 +18,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.vector.ImageVector
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
-import dev.hearth.launcher.system.ControlsLink
 import dev.hearth.launcher.system.GlimmerLink
 import dev.hearth.launcher.system.HearthApp
 import android.content.Intent
@@ -172,6 +171,8 @@ fun SettingsScreen(
                 .matchParentSize()
                 .background(Color.Black.copy(alpha = if (hasGlass) 0.30f else 0.88f)),
         )
+        // One UI 10 Fluid: Hearth's colors drifting softly behind the settings.
+        FluidBackdrop(listOf(Color(0xFF3E91FF), Color(0xFF8E6BFF), s.accent.color), strength = 0.6f)
 
         LazyColumn(
             modifier = Modifier
@@ -348,6 +349,11 @@ fun SettingsScreen(
                         description = "Zoom beim Zurückkehren, rollende Uhr, Karten erscheinen nacheinander",
                         checked = s.animations,
                     ) { v -> update { it.copy(animations = v) } }
+                    SwitchRow(
+                        label = "One UI 10 Fluid",
+                        description = "Berührungen breiten sich wie flüssiges Licht aus, Zeilen geben unter dem Finger nach, hinter Einstellungen und Software-Update fließen Farben",
+                        checked = s.fluidDesign,
+                    ) { v -> update { it.copy(fluidDesign = v) } }
                     ChoiceRow(
                         label = "Seitenwechsel",
                         options = PageTransition.entries,
@@ -511,7 +517,7 @@ fun SettingsScreen(
             }
 
             if (shows("glimmer")) item {
-                Section("Glimmer & Kontrollzentrum") {
+                Section("Glimmer") {
                     GlimmerLinkRows(s, update)
                 }
             }
@@ -532,7 +538,7 @@ fun SettingsScreen(
                     SwitchRow(
                         label = "Hearth-Kontrollzentrum verwenden",
                         description = if (s.ccEnabled) {
-                            "An: Hearths Glas-Kontrollzentrum beim Herunterwischen auf dem Homescreen (über anderen Apps: App „Kontrollzentrum“)"
+                            "An: Hearths Glas-Kontrollzentrum beim Herunterwischen auf dem Homescreen"
                         } else {
                             "Aus: auf dem Homescreen das normale Kontrollzentrum von One UI"
                         },
@@ -557,7 +563,6 @@ fun SettingsScreen(
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         runCatching { context.startActivity(intent) }
                     }
-                    Note("Das Kontrollzentrum über anderen Apps und das Ersetzen von One UIs Kontrollzentrum sind die App „Kontrollzentrum“; das Aussehen unten gilt auch dort.")
                 }
             }
 
@@ -1124,9 +1129,8 @@ internal fun CcLookRows(s: LauncherSettings, update: ((LauncherSettings) -> Laun
 @Composable
 private fun GlimmerLinkRows(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
     val context = LocalContext.current
-    Note("Die Insel um die Kamera und das Kontrollzentrum über anderen Apps sind eigene Apps: „Glimmer“ (Insel mit Live-Aktivitäten) und „Kontrollzentrum“ (Glas-Kontrollzentrum in jeder App, ersetzt One UIs). Beide laufen mit jedem Launcher; mit Hearth fliegen geschlossene Apps in Glimmer.")
+    Note("Die Insel um die Kamera ist eine eigene App: „Glimmer“ (Insel mit Live-Aktivitäten). Sie läuft mit jedem Launcher; mit Hearth fliegen geschlossene Apps in Glimmer. Das Kontrollzentrum steckt in Hearth selbst (vom oberen Rand nach unten wischen).")
     FamilyAppRow("Glimmer", GlimmerLink, GlimmerLink.DOWNLOAD_URL)
-    FamilyAppRow("Kontrollzentrum", ControlsLink, ControlsLink.DOWNLOAD_URL)
     SwitchRow(
         label = "Apps fliegen in Glimmer",
         description = "Schließt du eine App, die du über Hearth geöffnet hast, fliegt sie selbst in die Insel (wie bei HarmonyOS). Braucht Glimmer.",
@@ -1374,6 +1378,7 @@ internal fun SwitchRow(
     Row(
         Modifier
             .fillMaxWidth()
+            .fluidTouch(LocalSettings.current.accent.color)
             .clickable { onChange(!checked) }
             .padding(horizontal = 18.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1405,6 +1410,7 @@ internal fun ActionRow(label: String, description: String? = null, onClick: () -
     Row(
         Modifier
             .fillMaxWidth()
+            .fluidTouch(LocalSettings.current.accent.color)
             .clickable(onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1540,7 +1546,7 @@ internal val SettingsCategories = listOf(
         "claude ki assistent api schlüssel nvidia groq gemini modell sprache vorlesen sparmodus"),
     SettingsCategory("clawd", "Clawd", "Farbe, Hüte, Begleiter, Widgets, Clawd-App", Icons.Rounded.Favorite, Color(0xFFE5845F),
         "clawd maskottchen pixel hut krone farbe begleiter widget tamagotchi orakel fokus app"),
-    SettingsCategory("glimmer", "Glimmer & Kontrollzentrum", "Insel um die Kamera, Kontrollzentrum über Apps", Icons.Rounded.Notifications, Color(0xFFFF9F0A),
+    SettingsCategory("glimmer", "Glimmer", "Insel um die Kamera, Schließ-Animation", Icons.Rounded.Notifications, Color(0xFFFF9F0A),
         "glimmer insel dynamic island kontrollzentrum quick panel schalter regler"),
     SettingsCategory("privacy", "Datenschutz & Sicherheit", "App-Sperre, ausgeblendete Apps", Icons.Rounded.Lock, Color(0xFF34C759),
         "sperre pin fingerabdruck biometrie ausblenden versteckt privat"),
@@ -1640,6 +1646,7 @@ private fun OneUICategoryCard(categories: List<SettingsCategory>, onOpen: (Setti
                 Row(
                     Modifier
                         .fillMaxWidth()
+                        .fluidTouch(category.color)
                         .clickable { onOpen(category) }
                         .padding(horizontal = 18.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,

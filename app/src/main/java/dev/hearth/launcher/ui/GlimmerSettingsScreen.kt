@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -129,6 +130,8 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
                 .fillMaxSize()
                 .background(Brush.verticalGradient(listOf(Color(0xFF1B1720), Color(0xFF09090B)))),
         ) {
+            // One UI 10 Fluid: Glimmer's own colors drifting behind its settings.
+            FluidBackdrop(listOf(Color(0xFFFF9F0A), Color(0xFF8E6BFF), Color(0xFFD97757)), strength = 0.8f)
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -143,14 +146,27 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         if (app == FamilyApp.Glimmer) {
-                            // A little island, as a logo.
+                            // A little island as a logo, alive: it breathes, with Clawd riding in it.
+                            val breathe by androidx.compose.animation.core.rememberInfiniteTransition(label = "logo").animateFloat(
+                                initialValue = 120f,
+                                targetValue = 168f,
+                                animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                                    androidx.compose.animation.core.tween(2200, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                                    androidx.compose.animation.core.RepeatMode.Reverse,
+                                ),
+                                label = "logoWidth",
+                            )
                             Box(
                                 Modifier
-                                    .size(width = 120.dp, height = 34.dp)
+                                    .size(width = breathe.dp, height = 34.dp)
                                     .clip(RoundedCornerShape(17.dp))
                                     .background(Color.Black),
                                 contentAlignment = Alignment.CenterEnd,
                             ) {
+                                Clawd(
+                                    Modifier.align(Alignment.CenterStart).padding(start = 10.dp).size(width = 26.dp, height = 22.dp),
+                                    mood = dev.hearth.launcher.data.ClawdMood.Wave,
+                                )
                                 Box(
                                     Modifier
                                         .padding(end = 12.dp)

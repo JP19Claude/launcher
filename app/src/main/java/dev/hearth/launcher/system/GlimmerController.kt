@@ -504,6 +504,21 @@ class GlimmerController(private val service: GlimmerService) {
                 collapse()
                 dev.hearth.launcher.data.ClaudeAssistant.openAssistant(service)
             }
+            // Clawd answers right in the island.
+            GlimmerDoubleTap.Oracle -> {
+                collapse()
+                flash(IslandContent.Alert(Glyph.Spark, dev.hearth.launcher.data.ClawdOracle.ask(), "Clawd-Orakel", Color(0xFFD97757)))
+            }
+            GlimmerDoubleTap.Coin -> {
+                collapse()
+                val side = dev.hearth.launcher.data.ClawdCoin.flip(service)
+                flash(IslandContent.Alert(Glyph.Spark, dev.hearth.launcher.data.ClawdCoin.label(side), "Münze 🪙", Color(0xFFF2C14E)))
+            }
+            GlimmerDoubleTap.Dice -> {
+                collapse()
+                val n = dev.hearth.launcher.data.ClawdDice.roll()
+                flash(IslandContent.Alert(Glyph.Spark, "🎲 $n", "Clawd würfelt", Color(0xFFD97757)))
+            }
         }
     }
     private var receiverRegistered = false

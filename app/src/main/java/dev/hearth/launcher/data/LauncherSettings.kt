@@ -152,6 +152,9 @@ enum class GlimmerDoubleTap(val label: String) {
     Torch("Taschenlampe"),
     Screenshot("Bildschirmfoto"),
     Claude("Claude"),
+    Oracle("Clawd-Orakel"),
+    Coin("Münze werfen"),
+    Dice("Würfeln"),
 }
 
 /** How a closing app flies into Glimmer. */
@@ -386,6 +389,8 @@ data class LauncherSettings(
     val iconGloss: Boolean = true,
     /** Entrance, page and text animations throughout the launcher. */
     val animations: Boolean = true,
+    /** One UI 10 "Fluid": touches spread like liquid light, colors drift behind the screens. */
+    val fluidDesign: Boolean = true,
     val pageTransition: PageTransition = PageTransition.Depth,
     /** Hearth's own control center; off = only the system's (One UI) panel. */
     val ccEnabled: Boolean = true,
@@ -804,6 +809,7 @@ class SettingsRepository(context: Context) {
             removedFromHome = prefs.getStringSet("removedFromHome", null)?.toSet() ?: d.removedFromHome,
             iconGloss = prefs.getBoolean("iconGloss", d.iconGloss),
             animations = prefs.getBoolean("animations", d.animations),
+            fluidDesign = prefs.getBoolean("fluidDesign", d.fluidDesign),
             pageTransition = enumOf("pageTransition", d.pageTransition),
             ccEnabled = prefs.getBoolean(KEY_CC_ENABLED, d.ccEnabled),
             ccStyle = enumOf("ccStyle", d.ccStyle),
@@ -929,6 +935,7 @@ class SettingsRepository(context: Context) {
             .putStringSet("removedFromHome", s.removedFromHome)
             .putBoolean("iconGloss", s.iconGloss)
             .putBoolean("animations", s.animations)
+            .putBoolean("fluidDesign", s.fluidDesign)
             .putString("pageTransition", s.pageTransition.name)
             .putBoolean(KEY_CC_ENABLED, s.ccEnabled)
             .putString("ccStyle", s.ccStyle.name)
