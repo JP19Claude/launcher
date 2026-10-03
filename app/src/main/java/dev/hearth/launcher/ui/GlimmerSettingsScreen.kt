@@ -254,6 +254,9 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
                     }
                 }
 
+                // Looks for a newer version of this app and installs it right here.
+                item { Section("Updates") { AppUpdateContent() } }
+
                 if (app == FamilyApp.Glimmer) {
                     item { GlimmerPreview(s, media) }
                     item { GlimmerSections(s, update) }

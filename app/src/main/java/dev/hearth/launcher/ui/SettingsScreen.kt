@@ -239,6 +239,7 @@ fun SettingsScreen(
             if (oneUi && page == null) {
                 item { OneUISearchField(query, onClawd = { vm.askClaude() }) { query = it } }
                 if (query.isBlank()) item { HearthCard(s) }
+                if (query.isBlank()) item { Section("Updates") { AppUpdateContent() } }
                 val found = SettingsCategories.filter { it.matches(query) }
                 if (found.isEmpty()) {
                     item { Note("Nichts gefunden für „$query“.") }
@@ -613,6 +614,9 @@ fun SettingsScreen(
             }
 
             if (shows("general")) item { BackupSection(vm) }
+
+            // Without One UI's start page, updates sit with the general settings.
+            if (!oneUi) item { Section("Updates") { AppUpdateContent() } }
 
             if (shows("privacy")) item {
                 Section("App-Sperre") {

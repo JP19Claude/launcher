@@ -379,6 +379,13 @@ private fun ClawdAppScreen(
                 }
             }
 
+            // A newer Clawd: found and installed right here.
+            item {
+                Card(null) {
+                    dev.hearth.launcher.ui.AppUpdateContent()
+                }
+            }
+
             // How he looks.
             item {
                 Card(null) {

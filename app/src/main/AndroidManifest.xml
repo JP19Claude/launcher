@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Updates from within each app: asking GitHub for the newest version and installing it
+         (Android asks before every install). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!-- Needed to open the system uninstall dialog from the long-press menu -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
@@ -121,6 +126,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Hearth">
 
+
+        <!-- Android's installer reports here how an update went (and asks to confirm it). -->
+        <receiver
+            android:name=".data.UpdateReceiver"
+            android:exported="false" />
 
         <!-- Clawd Jump: Clawd's little game, in every app of the family that has him. -->
         <activity
