@@ -127,6 +127,12 @@
         android:theme="@style/Theme.Hearth">
 
 
+        <!-- The software update screen (like One UI's), in every app of the family. -->
+        <activity
+            android:name=".UpdateActivity"
+            android:exported="false"
+            android:label="Software-Update" />
+
         <!-- Android's installer reports here how an update went (and asks to confirm it). -->
         <receiver
             android:name=".data.UpdateReceiver"

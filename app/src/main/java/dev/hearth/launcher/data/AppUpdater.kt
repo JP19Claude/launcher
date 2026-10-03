@@ -40,7 +40,12 @@ object AppUpdater {
     }.getOrNull().orEmpty()
 
     /** A newer version, ready to download. */
-    class Release(val version: String, val url: String, val size: Long)
+    class Release(val version: String, val url: String, val size: Long, val notes: String = "")
+
+    private fun prefs(context: Context) = context.getSharedPreferences("hearth_updates", Context.MODE_PRIVATE)
+
+    /** When it last asked GitHub (ms), 0 = never. */
+    fun lastChecked(context: Context): Long = prefs(context).getLong("lastCheck", 0L)
 
     sealed interface Check {
         class Newer(val release: Release) : Check
@@ -97,12 +102,13 @@ object AppUpdater {
                 for (j in 0 until assets.length()) {
                     val asset = assets.getJSONObject(j)
                     if (asset.optString("name").endsWith(".apk")) {
-                        best = Release(version, asset.optString("browser_download_url"), asset.optLong("size"))
+                        best = Release(version, asset.optString("browser_download_url"), asset.optLong("size"), releaseNotes(release.optString("body")))
                         break
                     }
                 }
             }
             val newest = best
+            prefs(context).edit().putLong("lastCheck", System.currentTimeMillis()).apply()
             when {
                 newest == null -> Check.Failed("Keine Version von ${kind.name} gefunden")
                 isNewer(newest.version, current) -> Check.Newer(newest)
@@ -110,6 +116,10 @@ object AppUpdater {
             }
         }.getOrElse { Check.Failed("Keine Verbindung – bist du online?") }
     }
+
+    /** What's new, as the release tells it (without the build line at its end). */
+    private fun releaseNotes(body: String): String =
+        body.lines().filterNot { it.startsWith("Debug-APK") || it.contains("Debug-APK aus Build") }.joinToString("\n").trim()
 
     /** Downloads [release] into the app's cache; [progress] goes from 0 to 1. Null if it failed. */
     suspend fun download(context: Context, release: Release, progress: (Float) -> Unit): File? = withContext(Dispatchers.IO) {

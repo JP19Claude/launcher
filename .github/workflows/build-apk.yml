@@ -97,7 +97,10 @@ jobs:
             IFS='|' read -r file slug name what <<< "$entry"
             tag="$slug-v$v"
             cp "$file" "$name-$v.apk"
-            notes="$name $v – $what. Debug-APK aus Build ${{ github.run_number }} (Commit ${{ github.sha }})."
+            # What's new (German, shown in each app's software update screen), then the build.
+            whatsnew=""
+            if [ -f .github/whatsnew.md ]; then whatsnew="$(cat .github/whatsnew.md)"; fi
+            notes="$(printf '%s\n\n%s\n\nDebug-APK aus Build %s (Commit %s).' "$name $v – $what." "$whatsnew" "${{ github.run_number }}" "${{ github.sha }}")"
             if gh release view "$tag" >/dev/null 2>&1; then
               gh release upload "$tag" "$name-$v.apk" --clobber
               gh release edit "$tag" --notes "$notes" --latest=false
