@@ -97,15 +97,13 @@ class GlimmerBridgeProvider : ContentProvider() {
                 }
                 GlimmerLink.GLOBAL_ACTION -> Bundle().apply {
                     val action = arg?.toIntOrNull()
-                    val any = controlCenter ?: service
-                    putBoolean("ok", action != null && any?.performGlobalAction(action) == true)
+                    putBoolean("ok", action != null && service?.performGlobalAction(action) == true)
                 }
-                // The control center lets the system shade it opened itself stay open.
                 GlimmerLink.NOTIFICATIONS -> Bundle().apply {
-                    putBoolean("ok", controlCenter?.showNotifications() ?: service?.showNotifications() ?: false)
+                    putBoolean("ok", service?.showNotifications() ?: false)
                 }
                 GlimmerLink.QUICK_SETTINGS -> Bundle().apply {
-                    putBoolean("ok", controlCenter?.showSystemQuickSettings() ?: service?.showSystemQuickSettings() ?: false)
+                    putBoolean("ok", service?.showSystemQuickSettings() ?: false)
                 }
                 GlimmerLink.SYNC_SETTINGS -> {
                     if (extras != null) SettingsRepository.writeRaw(context, extras)
