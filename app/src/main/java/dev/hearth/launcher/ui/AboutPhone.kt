@@ -291,6 +291,13 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                     "Hearth ${groups.first().specs.first().value} · ${ClaudeOs.full}",
                     style = TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
                 )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "made by Julius Pranner und Claude Code",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                )
                 Spacer(Modifier.height(18.dp))
             }
             groups.forEach { group ->
