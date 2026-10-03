@@ -1,6 +1,8 @@
 package dev.hearth.launcher.ui
 
 import android.content.Context
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -1138,6 +1140,262 @@ internal fun ClawdBadgesWidget(modifier: Modifier) {
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+        }
+    }
+}
+
+// Clawd-Tagebuch: one face a day
+
+/** How you feel today, with Clawd feeling along; the week as a row of faces. */
+@Composable
+internal fun ClawdDiaryWidget(modifier: Modifier) {
+    val context = LocalContext.current
+    val day = rememberTime(everySecond = false).dayOfYear
+    var face by remember(day) { mutableStateOf(dev.hearth.launcher.data.ClawdDiary.of(context)) }
+    var week by remember(day, face) { mutableStateOf(dev.hearth.launcher.data.ClawdDiary.week(context)) }
+    val player = rememberMoodPlayer()
+    val faces = dev.hearth.launcher.data.ClawdDiary.Faces
+    Row(
+        modifier
+            .padding(12.dp)
+            .tap {
+                val next = dev.hearth.launcher.data.ClawdDiary.next(context)
+                face = next
+                week = dev.hearth.launcher.data.ClawdDiary.week(context)
+                player.play(dev.hearth.launcher.data.ClawdDiary.moodFor(next), 2200)
+            },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Clawd(
+            Modifier.fillMaxHeight(0.7f).width(76.dp),
+            mood = player.mood ?: dev.hearth.launcher.data.ClawdDiary.moodFor(face),
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(face?.let { faces[it] } ?: "❔", fontSize = 26.sp)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    dev.hearth.launcher.data.ClawdDiary.line(face),
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    lineHeight = 16.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            // The week: one face per day, today last.
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                week.forEachIndexed { i, f ->
+                    Box(
+                        Modifier
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = if (i == week.lastIndex) 0.22f else 0.1f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(f?.let { faces[it] } ?: "·", fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Clawd-Münze: heads or tails
+
+/** Tap and Clawd flips a coin: it spins, he flips along, then it lands (rarely on its edge). */
+@Composable
+internal fun ClawdCoinWidget(modifier: Modifier) {
+    val context = LocalContext.current
+    var side by remember { mutableIntStateOf(dev.hearth.launcher.data.ClawdCoin.HEADS) }
+    var flipped by remember { mutableStateOf(false) }
+    val spin = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    BoxWithConstraints(
+        modifier.tap {
+            if (spin.isRunning) return@tap
+            scope.launch {
+                spin.snapTo(0f)
+                val result = dev.hearth.launcher.data.ClawdCoin.flip(context)
+                // Turns over a few times, then shows the side it fell on.
+                spin.animateTo(1f, tween(900, easing = FastOutSlowInEasing))
+                side = result
+                flipped = true
+            }
+        },
+    ) {
+        val boxH = maxHeight
+        val turning = spin.isRunning
+        Column(
+            Modifier.fillMaxSize().padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
+                Clawd(
+                    Modifier.size(width = boxH * 0.4f, height = boxH * 0.34f),
+                    mood = when {
+                        turning -> ClawdMood.Flip
+                        side == dev.hearth.launcher.data.ClawdCoin.EDGE -> ClawdMood.Surprised
+                        flipped -> ClawdMood.Wave
+                        else -> ClawdMood.Idle
+                    },
+                )
+                Canvas(
+                    Modifier
+                        .size(boxH * 0.36f)
+                        .graphicsLayer { translationY = -size.height * 0.5f * sin(spin.value * Math.PI).toFloat() },
+                ) {
+                    // Edge-on every half turn while it spins.
+                    val squeeze = if (turning) abs(kotlin.math.cos(spin.value * Math.PI * 7)).toFloat() else 1f
+                    drawCoin(if (turning) (spin.value * 7).toInt() % 2 else side, squeeze)
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                if (turning) "…" else if (flipped) dev.hearth.launcher.data.ClawdCoin.label(side) else "Kopf oder Zahl?",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+            Text("Antippen zum Werfen", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp, maxLines = 1)
+        }
+    }
+}
+
+/**
+ * A gold coin in pixels: Clawd's face on heads, a heart on tails, a thin upright bar on its
+ * edge. [squeeze] narrows it while it turns (also drawn into the Clawd app's widgets).
+ */
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCoin(side: Int, squeeze: Float = 1f) {
+    val d = size.minDimension
+    val gold = Color(0xFFF2C14E)
+    val rim = Color(0xFFB7832F)
+    val top = (size.height - d) / 2f
+    if (side == dev.hearth.launcher.data.ClawdCoin.EDGE) {
+        drawRoundRect(rim, Offset(size.width / 2f - d * 0.08f, top), Size(d * 0.16f, d), androidx.compose.ui.geometry.CornerRadius(d * 0.06f))
+        drawRect(gold, Offset(size.width / 2f - d * 0.03f, top + d * 0.06f), Size(d * 0.06f, d * 0.88f))
+        return
+    }
+    val w = d * squeeze.coerceIn(0.06f, 1f)
+    val left = (size.width - w) / 2f
+    drawOval(rim, Offset(left, top), Size(w, d))
+    drawOval(gold, Offset(left + w * 0.08f, top + d * 0.08f), Size(w * 0.84f, d * 0.84f))
+    if (squeeze < 0.35f) return
+    val px = d * 0.09f
+    val cx = size.width / 2f
+    val cy = size.height / 2f
+    fun pixel(x: Float, y: Float) = drawRect(rim, Offset(cx + (x - 0.5f) * px * squeeze, cy + (y - 0.5f) * px), Size(px * squeeze, px))
+    if (side == dev.hearth.launcher.data.ClawdCoin.HEADS) {
+        // Clawd's face: two eyes and a little smile.
+        pixel(-1.5f, -1f); pixel(1.5f, -1f)
+        pixel(-1.5f, 1.2f); pixel(-0.5f, 1.8f); pixel(0.5f, 1.8f); pixel(1.5f, 1.2f)
+    } else {
+        // A pixel heart.
+        pixel(-1f, -1f); pixel(1f, -1f)
+        pixel(-1.5f, 0f); pixel(-0.5f, 0f); pixel(0.5f, 0f); pixel(1.5f, 0f)
+        pixel(-1f, 1f); pixel(0f, 1f); pixel(1f, 1f)
+        pixel(0f, 2f)
+    }
+}
+
+// Clawd-Atmen: a calm minute
+
+/** One calm minute: Clawd swells as you breathe in and settles as you breathe out. */
+@Composable
+internal fun ClawdBreathWidget(modifier: Modifier) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val grow = remember { Animatable(0f) }
+    var phase by remember { mutableStateOf<String?>(null) }
+    var round by remember { mutableIntStateOf(0) }
+    var job by remember { mutableStateOf<Job?>(null) }
+    var finished by remember { mutableStateOf(false) }
+    val calm = Color(0xFF7FD1C7)
+    BoxWithConstraints(
+        modifier.tap {
+            val running = job
+            if (running != null) {
+                // Stopped halfway: back to rest.
+                running.cancel()
+                job = null
+                phase = null
+                scope.launch { grow.animateTo(0f, tween(600)) }
+                return@tap
+            }
+            finished = false
+            job = scope.launch {
+                // Timed by the clock too, so it's a real minute even with animations off.
+                suspend fun breathe(to: Float, millis: Long) {
+                    val start = android.os.SystemClock.uptimeMillis()
+                    grow.animateTo(to, tween(millis.toInt(), easing = FastOutSlowInEasing))
+                    val left = millis - (android.os.SystemClock.uptimeMillis() - start)
+                    if (left > 0) delay(left)
+                }
+                for (r in 1..dev.hearth.launcher.data.ClawdBreath.ROUNDS) {
+                    round = r
+                    phase = "Einatmen …"
+                    breathe(1f, dev.hearth.launcher.data.ClawdBreath.IN_MS)
+                    phase = "Ausatmen …"
+                    breathe(0f, dev.hearth.launcher.data.ClawdBreath.OUT_MS)
+                }
+                phase = null
+                finished = true
+                job = null
+                dev.hearth.launcher.data.ClawdBreath.finished(context)
+            }
+        },
+    ) {
+        val boxH = maxHeight
+        // A soft light breathing behind him.
+        Canvas(Modifier.fillMaxSize()) {
+            val g = grow.value
+            drawCircle(
+                calm.copy(alpha = 0.10f + 0.14f * g),
+                radius = size.minDimension * (0.2f + 0.2f * g),
+                center = Offset(size.width / 2f, size.height * 0.4f),
+            )
+        }
+        Column(
+            Modifier.fillMaxSize().padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Clawd(
+                Modifier
+                    .fillMaxWidth(0.5f)
+                    .height(boxH * 0.34f)
+                    .graphicsLayer {
+                        val s = 0.82f + 0.24f * grow.value
+                        scaleX = s
+                        scaleY = s
+                    },
+                mood = when {
+                    finished -> ClawdMood.Love
+                    phase != null -> ClawdMood.Idle
+                    else -> ClawdMood.Wave
+                },
+                // Still while breathing (only the breath moves him), lively again after.
+                animate = phase == null && LocalSettings.current.animations,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                phase ?: if (finished) "Gut gemacht 🧡" else "Atmen",
+                color = Color.White,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+            Text(
+                if (phase != null) "Runde $round von ${dev.hearth.launcher.data.ClawdBreath.ROUNDS} · tippen stoppt" else "1 Minute · antippen",
+                color = calm.copy(alpha = 0.9f),
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

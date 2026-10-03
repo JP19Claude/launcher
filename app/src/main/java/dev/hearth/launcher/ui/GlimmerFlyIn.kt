@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.animation.core.CubicBezierEasing
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
@@ -119,9 +120,7 @@ fun flyInLook(context: Context, app: AppInfo): FlyInLook {
 }
 
 /**
- * Closing an app, the way HarmonyOS does it: the app shrinks to a card in its own colors,
- * rises towards the camera while it flattens into a capsule, turns dark, and flows into
- * Glimmer through a liquid neck (Android 12+); the island takes it in with a springy squash.
+ * Closing an app: it flies into Glimmer, the way HarmonyOS or HyperOS does it ([style]).
  * Draws only, never takes touches.
  */
 @Composable
@@ -144,11 +143,72 @@ fun GlimmerFlyIn(
     target: Offset? = null,
     /** Colors and small icon worked out ahead (see [flyInLook]); else worked out here. */
     look: FlyInLook? = null,
+    /**
+     * True while the finger is still on the glass (the home gesture of another launcher): the
+     * app waits, whole and lifted a little, and flies the moment it turns false.
+     */
+    hold: () -> Boolean = { false },
+    /**
+     * A picture of the home screen, drawn under the flight: it hides the launcher's own closing
+     * animation (the app shrinking back into its icon), then fades to show the real one.
+     */
+    backdrop: ImageBitmap? = null,
 ) {
-    if (style == FlyInStyle.HyperOS) {
-        HyperFlyIn(app, landing, onArrive, onDone, snapshot, target, look)
-        return
+    val done by rememberUpdatedState(onDone)
+    val reveal = remember(app) { Animatable(1f) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    // With a backdrop, the flight ends by fading it: the home screen underneath looks the same.
+    val finish: () -> Unit = remember(app, backdrop) {
+        {
+            if (backdrop == null) {
+                done()
+            } else {
+                scope.launch {
+                    reveal.animateTo(0f, tween(180))
+                    done()
+                }
+            }
+        }
     }
+    val view = LocalView.current
+    Box(Modifier.fillMaxSize()) {
+        if (backdrop != null) {
+            // Drawn 1:1 where it was taken (the whole screen), whatever this window's offset.
+            val origin = remember(view) { IntArray(2).also { view.getLocationOnScreen(it) } }
+            Canvas(Modifier.fillMaxSize()) {
+                drawImage(
+                    image = backdrop,
+                    dstOffset = IntOffset(-origin[0], -origin[1]),
+                    dstSize = IntSize(backdrop.width, backdrop.height),
+                    alpha = reveal.value,
+                    filterQuality = FilterQuality.Low,
+                )
+            }
+        }
+        if (style == FlyInStyle.HyperOS) {
+            HyperFlyIn(app, landing, onArrive, finish, snapshot, target, look, hold)
+        } else {
+            HarmonyFlyIn(app, island, onPulse, finish, snapshot, target, look, hold)
+        }
+    }
+}
+
+/**
+ * Closing an app, the way HarmonyOS does it: the app shrinks to a card in its own colors,
+ * rises towards the camera while it flattens into a capsule, turns dark, and flows into
+ * Glimmer through a liquid neck (Android 12+); the island takes it in with a springy squash.
+ */
+@Composable
+private fun HarmonyFlyIn(
+    app: AppInfo,
+    island: DpSize?,
+    onPulse: () -> Unit,
+    onDone: () -> Unit,
+    snapshot: ImageBitmap?,
+    target: Offset?,
+    look: FlyInLook?,
+    hold: () -> Boolean,
+) {
     val view = LocalView.current
     val density = LocalDensity.current
     val travel = remember(app) { Animatable(0f) }
@@ -199,6 +259,8 @@ fun GlimmerFlyIn(
     }
 
     LaunchedEffect(app) {
+        // The finger is still on the glass: the app waits, whole, until it's let go.
+        if (hold()) snapshotFlow { hold() }.first { !it }
         launch {
             var pulsed = false
             snapshotFlow { travel.value }.collect { t ->
@@ -389,10 +451,14 @@ private fun HyperFlyIn(
     snapshot: ImageBitmap?,
     target: Offset? = null,
     look: FlyInLook? = null,
+    hold: () -> Boolean = { false },
 ) {
     val view = LocalView.current
     val context = LocalContext.current
     val travel = remember(app) { Animatable(0f) }
+    // Held (the home gesture of another launcher): the app lifts off a little and waits.
+    val lift = remember(app) { Animatable(0f) }
+    val held = remember(app) { hold() }
     val arrive by rememberUpdatedState(onArrive)
     val done by rememberUpdatedState(onDone)
     val worked = remember(app, look) { look ?: flyInLook(context, app) }
@@ -425,6 +491,19 @@ private fun HyperFlyIn(
         // The island opens right away, so the app flies into its black, not into the empty
         // space where it will open (no icon yet: it shows when the app lands).
         arrive(null, 0)
+        if (hold()) {
+            launch { lift.animateTo(1f, tween(300, easing = HyperEase)) }
+            // The island stays open while the app waits (asked again now and then).
+            launch {
+                while (hold()) {
+                    delay(900)
+                    if (hold()) arrive(null, 0)
+                }
+            }
+            snapshotFlow { hold() }.first { !it }
+            // Let go: the island stays open for it however long the wait was.
+            arrive(null, 0)
+        }
         launch {
             var sent = false
             snapshotFlow { travel.value }.collect { t ->
@@ -457,14 +536,17 @@ private fun HyperFlyIn(
         // rounds into its square icon.
         val shrink = 1f - (1f - k).pow(1.6f)
         val square = smoothstep(0.35f, 0.8f, k)
-        val cw = lerp(w, iconEnd, shrink)
+        val lifted = lift.value
+        val cw = lerp(w * (1f - 0.07f * lifted), iconEnd, shrink)
         val ch = lerp(h * (cw / w), cw, square)
         // A quick arc: up faster than across, like a flick towards the top.
         val cx = lerp(w / 2f, endX, 1f - (1f - k).pow(1.25f))
         val cy = lerp(h / 2f, endY, 1f - (1f - k).pow(2f))
         val left = cx - cw / 2f
         val top = cy - ch / 2f
-        val r = lerp(36.dp.toPx(), min(cw, ch) * 0.28f, square).coerceAtMost(min(cw, ch) / 2f)
+        // Held, it starts with the screen's own square corners and rounds as it lifts.
+        val cornerIn = if (held) max(lifted, smoothstep(0f, 0.12f, k)) else 1f
+        val r = lerp(36.dp.toPx() * cornerIn, min(cw, ch) * 0.28f, square).coerceAtMost(min(cw, ch) / 2f)
         // The real island takes over at the end.
         val fadeAll = 1f - smoothstep(0.92f, 1f, k)
         if (fadeAll <= 0.001f) return@Canvas
@@ -474,7 +556,7 @@ private fun HyperFlyIn(
         drawIntoCanvas { canvas ->
             val native = canvas.nativeCanvas
             // A light shadow under it while it's big (two plain layers, no blur).
-            val shadow = (1f - smoothstep(0.1f, 0.4f, k)) * 0.22f * fadeAll
+            val shadow = (1f - smoothstep(0.1f, 0.4f, k)) * 0.22f * fadeAll * (if (held) lifted else 1f)
             if (shadow > 0.01f) {
                 cardPaint.shader = null
                 cardPaint.color = Color.Black.copy(alpha = shadow).toArgb()

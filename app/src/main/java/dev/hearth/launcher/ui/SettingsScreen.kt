@@ -833,6 +833,11 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
                 description = "Auch mit One UI, ColorOS, dem Pixel-Launcher und jedem anderen: Glimmer spielt dieselbe Animation wie Hearth selbst – die App fliegt in die Insel (ab Android 11 die App selbst, sonst ihre Karte). Mit Hearth als Launcher macht es Hearth.",
                 checked = s.glimmerFlyInEverywhere,
             ) { v -> update { it.copy(glimmerFlyInEverywhere = v) } }
+            if (s.glimmerFlyInEverywhere) SwitchRow(
+                label = "Launcher-Animation verdecken",
+                description = "One UI, ColorOS und der Pixel-Launcher lassen die App beim Schließen in ihr Icon zurückschrumpfen. Glimmer legt ein Bild deines Startbildschirms darüber: Sobald du nach oben wischst, hebt sich die App ab, die Insel öffnet sich, und beim Loslassen fliegt sie hinein – die Animation des Launchers siehst du nicht mehr. (Abschalten kann sie keine App, nur verdecken.)",
+                checked = s.glimmerFlyInCover,
+            ) { v -> update { it.copy(glimmerFlyInCover = v) } }
             ChoiceRow(
                 label = "So fliegt sie hinein",
                 options = FlyInStyle.entries,

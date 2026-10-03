@@ -436,6 +436,11 @@ data class LauncherSettings(
     val glimmerFlyInStyle: FlyInStyle = FlyInStyle.HarmonyOS,
     /** The fly-in with any launcher (One UI, ColorOS, Pixel …): Glimmer plays it itself. */
     val glimmerFlyInEverywhere: Boolean = true,
+    /**
+     * With another launcher: a picture of the home screen hides the launcher's own closing
+     * animation (the app shrinking back into its icon), so only the flight into Glimmer shows.
+     */
+    val glimmerFlyInCover: Boolean = true,
     val glimmerMusicStyle: GlimmerMusicStyle = GlimmerMusicStyle.Hyper,
     val glimmerUnlock: GlimmerUnlock = GlimmerUnlock.FaceId,
     /** Keep showing music and live activities on the always-on display (dimmed, still). */
@@ -826,6 +831,7 @@ class SettingsRepository(context: Context) {
             glimmerFlyIn = prefs.getBoolean("glimmerFlyIn", d.glimmerFlyIn),
             glimmerFlyInStyle = enumOf("glimmerFlyInStyle", d.glimmerFlyInStyle),
             glimmerFlyInEverywhere = prefs.getBoolean("glimmerFlyInEverywhere", d.glimmerFlyInEverywhere),
+            glimmerFlyInCover = prefs.getBoolean("glimmerFlyInCover", d.glimmerFlyInCover),
             glimmerMusicStyle = enumOf("glimmerMusicStyle", d.glimmerMusicStyle),
             glimmerUnlock = enumOf("glimmerUnlock", d.glimmerUnlock),
             glimmerAod = prefs.getBoolean("glimmerAod", d.glimmerAod),
@@ -949,6 +955,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("glimmerFlyIn", s.glimmerFlyIn)
             .putString("glimmerFlyInStyle", s.glimmerFlyInStyle.name)
             .putBoolean("glimmerFlyInEverywhere", s.glimmerFlyInEverywhere)
+            .putBoolean("glimmerFlyInCover", s.glimmerFlyInCover)
             .putString("glimmerMusicStyle", s.glimmerMusicStyle.name)
             .putString("glimmerUnlock", s.glimmerUnlock.name)
             .putBoolean("glimmerAod", s.glimmerAod)

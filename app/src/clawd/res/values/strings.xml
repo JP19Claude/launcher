@@ -36,4 +36,12 @@
     <string name="clawd_w_game_d">Clawd Jump: antippen und losspielen, dein Rekord im Blick</string>
     <string name="clawd_w_badges">Clawd-Abzeichen</string>
     <string name="clawd_w_badges_d">Deine Abzeichen mit Clawd und welches als Nächstes kommt</string>
+    <string name="clawd_w_diary">Clawd-Tagebuch</string>
+    <string name="clawd_w_diary_d">Wie geht\'s dir heute? Ein Gesicht pro Tag, die Woche im Blick</string>
+    <string name="clawd_w_coin">Clawd-Münze</string>
+    <string name="clawd_w_coin_d">Kopf oder Zahl: antippen und Clawd wirft</string>
+    <string name="clawd_w_breath">Clawd-Atmen</string>
+    <string name="clawd_w_breath_d">Clawd atmet ruhig mit dir: 4 Sekunden ein, 4 aus</string>
+    <string name="clawd_breath_in">Einatmen …</string>
+    <string name="clawd_breath_out">Ausatmen …</string>
 </resources>

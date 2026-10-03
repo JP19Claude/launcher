@@ -20,6 +20,11 @@ object ClawdTalk {
         "Der Eiffelturm ist im Sommer bis zu 15 cm höher – Wärme dehnt Metall.",
         "Kühe haben beste Freundinnen und sind gestresst, wenn man sie trennt.",
         "Das erste Computer-„Bug“ war eine echte Motte in einem Relais (1947).",
+        "Seeotter halten sich beim Schlafen an den Pfoten, damit sie nicht wegtreiben.",
+        "Ein Blitz ist etwa fünfmal heißer als die Oberfläche der Sonne.",
+        "Flamingos sind rosa, weil sie so viele Krebschen essen.",
+        "Das Herz eines Blauwals ist so groß wie ein kleines Auto.",
+        "Schnecken können bis zu drei Jahre schlafen.",
     )
     private var fact = 0
 
@@ -35,6 +40,9 @@ object ClawdTalk {
         "Wie kommt Clawd auf den Startbildschirm? Ganz einfach: mit einem Widget-Sprung.",
         "Warum zählt Clawd nie Schafe? Er zählt Pixel. Bei 104 schläft er ein.",
         "Was sagt Clawd, wenn das WLAN weg ist? Kein Problem, ich bin offline auch lustig.",
+        "Warum hat die Münze nie Angst? Sie hat immer zwei Seiten parat.",
+        "Was macht Clawd beim Yoga? Den herabschauenden Pixel.",
+        "Warum fliegen Apps so gern in Glimmer? Weil es dort schön dunkel und gemütlich ist.",
     )
 
     /** How many jokes Clawd knows; [joke] picks one (any number wraps around). */
@@ -102,6 +110,22 @@ object ClawdTalk {
             m("(magst du mich|hast du mich lieb)") -> Answer("Na klar! Du bist mein Lieblingsmensch. 🧡", egg = "love", mood = ClawdMood.Love)
             m("(mach einen salto|salto|flip|mach nen salto)") -> Answer("Hui! 🤸", mood = ClawdMood.Flip)
             m("(wink|winke|wink mal|winke mal)") -> Answer("👋 Hallihallo!", mood = ClawdMood.Wave)
+            m("(wirf (mal )?(eine )?munze|munze werfen|munzwurf|kopf oder zahl)( bitte)?") -> {
+                val side = ClawdCoin.flip(null)
+                if (side == ClawdCoin.EDGE) {
+                    Answer("Unglaublich – sie ist auf der Kante gelandet! 😲", egg = "coin", mood = ClawdMood.Surprised)
+                } else {
+                    Answer("*schnipp* … ${ClawdCoin.label(side)}!", mood = ClawdMood.Flip)
+                }
+            }
+            m("(ich bin )?(so )?(gestresst|nervos|aufgeregt|angespannt)|stress|atmen|atemubung|beruhige mich|hilf mir runterzukommen") ->
+                Answer("Lass uns zusammen atmen: 4 Sekunden ein … 6 Sekunden aus. Sechsmal. Das Widget „Clawd-Atmen“ zählt mit. 🧘", mood = ClawdMood.Love)
+            m("(mir geht es|mir gehts|mir gehts heute) (schlecht|nicht gut|mies|nicht so gut)|ich bin (so )?traurig|traurig") ->
+                Answer("Oh nein … 🧡 Ich bin da. Halt es im Clawd-Tagebuch fest, trink ein Glas Wasser, atme kurz durch – morgen wird besser.", mood = ClawdMood.Love)
+            m("(mir geht es|mir gehts|mir gehts auch|auch) (gut|super|toll|prima|bestens)|ich bin (so )?glucklich|gut|super") ->
+                Answer("Juhu, das freut mich! ♪", mood = ClawdMood.Dance)
+            m("(motivier mich|motivation|sag (mir )?was nettes|ich brauche motivation)") ->
+                Answer(ClawdMotivation.of(java.time.LocalDate.now().dayOfYear, (0..20).random()), mood = ClawdMood.Love)
             else -> null
         }
     }

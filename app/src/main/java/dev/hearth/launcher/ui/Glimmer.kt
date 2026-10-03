@@ -1380,7 +1380,8 @@ private fun clawdMoodFor(content: IslandContent): ClawdMood = when (content) {
     is IslandContent.Charging -> ClawdMood.Dance
     is IslandContent.Code -> if (content.copied) ClawdMood.Love else ClawdMood.Thinking
     is IslandContent.Screenshot -> ClawdMood.Wave
-    is IslandContent.Arrival -> ClawdMood.Flip
+    // Waiting for the app with wide eyes, then a flip when it lands.
+    is IslandContent.Arrival -> if (content.icon == null && content.color == Color.Transparent) ClawdMood.Surprised else ClawdMood.Flip
     is IslandContent.Unlock -> when {
         content.failed -> ClawdMood.Flip
         content.success -> ClawdMood.Dance

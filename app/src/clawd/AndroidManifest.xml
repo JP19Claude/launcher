@@ -287,6 +287,54 @@
                 android:resource="@xml/clawd_badges_info" />
         </receiver>
 
+        <receiver
+            android:name=".clawd.ClawdDiaryWidget"
+            android:exported="true"
+            android:label="@string/clawd_w_diary">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="dev.hearth.clawd.REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clawd_diary_info" />
+        </receiver>
+
+        <receiver
+            android:name=".clawd.ClawdCoinWidget"
+            android:exported="true"
+            android:label="@string/clawd_w_coin">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="dev.hearth.clawd.REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clawd_coin_info" />
+        </receiver>
+
+        <receiver
+            android:name=".clawd.ClawdBreathWidget"
+            android:exported="true"
+            android:label="@string/clawd_w_breath">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="dev.hearth.clawd.REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clawd_breath_info" />
+        </receiver>
+
         <!-- Hearth hands over Clawd's look through this (signature-protected). -->
         <provider
             android:name=".system.GlimmerBridgeProvider"

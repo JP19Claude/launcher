@@ -139,6 +139,9 @@ private val Entries = listOf(
     WidgetEntry(ClawdFocusWidget::class.java, "Clawd-Fokus", "25-Minuten-Timer, Clawd arbeitet mit und feiert am Ende", ClawdMood.Thinking),
     WidgetEntry(ClawdGameWidget::class.java, "Clawd-Spiel", "Clawd Jump mit einem Tipp starten, Rekord im Blick", ClawdMood.Dance),
     WidgetEntry(ClawdBadgesWidget::class.java, "Clawd-Abzeichen", "Deine gesammelten Abzeichen und das nächste Ziel", ClawdMood.Love),
+    WidgetEntry(ClawdDiaryWidget::class.java, "Clawd-Tagebuch", "Ein Gesicht pro Tag, antippen für das nächste – die Woche im Blick", ClawdMood.Love),
+    WidgetEntry(ClawdCoinWidget::class.java, "Clawd-Münze", "Kopf oder Zahl, antippen und er wirft", ClawdMood.Flip),
+    WidgetEntry(ClawdBreathWidget::class.java, "Clawd-Atmen", "Atmet ruhig mit dir: 4 Sekunden ein, 4 aus", ClawdMood.Idle),
 )
 
 private val Terracotta = Color(0xFFD97757)

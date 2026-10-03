@@ -33,6 +33,9 @@ import dev.hearth.launcher.data.ClawdMotivation
 import dev.hearth.launcher.data.ClawdWater
 import dev.hearth.launcher.data.clawdWeekend
 import dev.hearth.launcher.ui.drawDie
+import dev.hearth.launcher.ui.drawCoin
+import dev.hearth.launcher.data.ClawdCoin
+import dev.hearth.launcher.data.ClawdDiary
 import androidx.compose.ui.graphics.asAndroidBitmap
 import dev.hearth.launcher.data.ClawdPet
 import dev.hearth.launcher.data.ClawdSkin
@@ -166,6 +169,9 @@ abstract class ClawdWidgetProvider : AppWidgetProvider() {
             ClawdFocusWidget::class.java,
             ClawdGameWidget::class.java,
             ClawdBadgesWidget::class.java,
+            ClawdDiaryWidget::class.java,
+            ClawdCoinWidget::class.java,
+            ClawdBreathWidget::class.java,
         )
 
         /** Draws every placed widget again (his look changed, the pet was fed in the app …). */
@@ -655,4 +661,58 @@ class ClawdBadgesWidget : ClawdWidgetProvider() {
             setOnClickPendingIntent(R.id.root, openApp(context))
         }
     }
+}
+
+// Clawd-Tagebuch
+
+class ClawdDiaryWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews {
+        val face = ClawdDiary.of(context)
+        return RemoteViews(context.packageName, R.layout.clawd_widget_diary).apply {
+            setImageViewBitmap(R.id.image, clawdPicture(context, ClawdDiary.moodFor(face)))
+            setTextViewText(R.id.face, face?.let { ClawdDiary.Faces[it] } ?: "❔")
+            setTextViewText(R.id.line, ClawdDiary.line(face))
+            setTextViewText(R.id.week, ClawdDiary.weekLine(context))
+            setOnClickPendingIntent(R.id.root, tap(context, id, "next"))
+        }
+    }
+
+    override fun act(context: Context, id: Int, what: String) {
+        ClawdDiary.next(context)
+        // One diary for all diary widgets.
+        refreshAll(context)
+    }
+}
+
+// Clawd-Münze
+
+class ClawdCoinWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews {
+        val side = widgetPrefs(context).getInt("coin_$id", -1)
+        return RemoteViews(context.packageName, R.layout.clawd_widget_coin).apply {
+            setImageViewBitmap(
+                R.id.image,
+                clawdPicture(context, if (side == ClawdCoin.EDGE) ClawdMood.Surprised else if (side >= 0) ClawdMood.Flip else ClawdMood.Wave),
+            )
+            setImageViewBitmap(R.id.coin, renderPicture(240, 240) { drawCoin(if (side >= 0) side else ClawdCoin.HEADS) })
+            setTextViewText(R.id.label, if (side >= 0) ClawdCoin.label(side) else "Kopf oder Zahl?")
+            setOnClickPendingIntent(R.id.root, tap(context, id, "flip"))
+        }
+    }
+
+    override fun act(context: Context, id: Int, what: String) {
+        widgetPrefs(context).edit().putInt("coin_$id", ClawdCoin.flip(context)).apply()
+    }
+}
+
+// Clawd-Atmen
+
+class ClawdBreathWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews =
+        RemoteViews(context.packageName, R.layout.clawd_widget_breath).apply {
+            // Breathing in he stands tall, breathing out he settles (the flipper swaps them).
+            setImageViewBitmap(R.id.image_in, clawdPicture(context, ClawdMood.Idle))
+            setImageViewBitmap(R.id.image_out, clawdPicture(context, ClawdMood.Love))
+            setOnClickPendingIntent(R.id.root, openApp(context))
+        }
 }

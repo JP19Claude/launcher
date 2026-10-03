@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Twenty easter eggs hidden in Hearth, all with Clawd. Each one found is remembered. A new
+ * Twenty-three easter eggs hidden in Hearth, all with Clawd. Each one found is remembered. A new
  * find shows only a small hint; finding one again shows nothing; only the last one throws a
  * real party (confetti, Clawd dancing, a glass message).
  *
@@ -33,10 +33,13 @@ import kotlinx.coroutines.flow.asStateFlow
  * 18. 100 points in Clawd Jump
  * 19. Drink eight glasses of water with Clawd in a day
  * 20. Pet Clawd five times in a row (Tamagotchi)
+ * 21. Breathe a whole minute with Clawd
+ * 22. Keep Clawd's mood diary seven days in a row
+ * 23. Flip Clawd's coin until it lands on its edge (1 in 250)
  */
 object EasterEggs {
 
-    const val TOTAL = 20
+    const val TOTAL = 23
 
     private const val PREFS = "hearth_eggs"
     private const val KEY = "found"

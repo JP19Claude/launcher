@@ -289,6 +289,8 @@ object ClawdBadges {
         val best = ClawdGameScore.best(context)
         val focus = ClawdFocus.done(context)
         val eggs = EasterEggs.found.value.size
+        val breaths = ClawdBreath.sessions(context)
+        val diary = ClawdDiary.streak(context)
         return listOf(
             Badge("🍕", "Erste Mahlzeit", "Füttere Clawd im Tamagotchi", care >= 1),
             Badge("🧡", "Bester Freund", "Tamagotchi Level 3", level >= 3),
@@ -300,6 +302,8 @@ object ClawdBadges {
             Badge("🎯", "Fokussiert", "Eine Fokus-Runde geschafft", focus >= 1),
             Badge("📚", "Fleißig", "10 Fokus-Runden geschafft", focus >= 10),
             Badge("🎩", "Modebewusst", "Clawd ein Outfit anziehen", settings.clawdOutfit != ClawdOutfit.None),
+            Badge("🧘", "Tief durchgeatmet", "Eine Minute mit Clawd atmen", breaths >= 1),
+            Badge("📔", "Tagebuch-Woche", "7 Tage in Folge im Clawd-Tagebuch", diary >= 7),
             Badge("🥚", "Eiersucher", "5 Easter Eggs gefunden", eggs >= 5),
             Badge("🌟", "Alle Eier!", "Alle ${EasterEggs.TOTAL} Easter Eggs gefunden", eggs >= EasterEggs.TOTAL),
         )
@@ -378,5 +382,102 @@ object ClawdHello {
         if (i == last && pool.size > 1) i = (i + 1) % pool.size
         last = i
         return pool[i]
+    }
+}
+
+/** Clawd's mood diary: one face a day, the last week at a glance. Kept on this phone. */
+object ClawdDiary {
+    /** From sad to happy. */
+    val Faces = listOf("😢", "😕", "😐", "🙂", "😄")
+
+    private fun prefs(context: Context) = context.getSharedPreferences("clawd_diary", Context.MODE_PRIVATE)
+
+    /** The face noted on [day], or null. */
+    fun of(context: Context, day: java.time.LocalDate = java.time.LocalDate.now()): Int? =
+        prefs(context).getInt(day.toString(), -1).takeIf { it in Faces.indices }
+
+    /** Today's face: the first tap notes 🙂, each further one the next face; returns it. */
+    fun next(context: Context): Int {
+        val now = of(context)
+        val face = if (now == null) 3 else (now + 1) % Faces.size
+        prefs(context).edit().putInt(java.time.LocalDate.now().toString(), face).apply()
+        if (streak(context) >= 7) EasterEggs.find(context, "diary")
+        return face
+    }
+
+    /** The last seven days, oldest first (null where nothing was noted). */
+    fun week(context: Context): List<Int?> {
+        val today = java.time.LocalDate.now()
+        return (6 downTo 0).map { of(context, today.minusDays(it.toLong())) }
+    }
+
+    /** Days in a row with a face, up to today. */
+    fun streak(context: Context): Int {
+        var day = java.time.LocalDate.now()
+        var n = 0
+        while (n < 400 && of(context, day) != null) {
+            n++
+            day = day.minusDays(1)
+        }
+        return n
+    }
+
+    /** How Clawd takes it: comforting when it's a bad day, dancing on a great one. */
+    fun moodFor(face: Int?): ClawdMood = when (face) {
+        null -> ClawdMood.Thinking
+        0, 1 -> ClawdMood.Love
+        2 -> ClawdMood.Idle
+        3 -> ClawdMood.Wave
+        else -> ClawdMood.Dance
+    }
+
+    fun line(face: Int?): String = when (face) {
+        null -> "Wie geht's dir heute? Tipp mich an."
+        0 -> "Ich bin für dich da. 🧡 Morgen wird besser."
+        1 -> "Nicht so dein Tag? Eine kleine Pause hilft."
+        2 -> "Ganz okay ist auch okay."
+        3 -> "Schön! Ich freu mich mit dir."
+        else -> "Super Tag! Lass uns tanzen! ♪"
+    }
+
+    /** The week as a row of faces (· for days without one). */
+    fun weekLine(context: Context): String = week(context).joinToString(" ") { f -> f?.let { Faces[it] } ?: "·" }
+}
+
+/** Heads or tails – and once in a long while, the coin lands on its edge (an easter egg). */
+object ClawdCoin {
+    const val HEADS = 0
+    const val TAILS = 1
+    const val EDGE = 2
+
+    fun flip(context: Context?): Int {
+        if ((1..250).random() == 1) {
+            context?.let { EasterEggs.find(it, "coin") }
+            return EDGE
+        }
+        return (HEADS..TAILS).random()
+    }
+
+    fun label(side: Int): String = when (side) {
+        HEADS -> "Kopf"
+        TAILS -> "Zahl"
+        else -> "Auf der Kante!"
+    }
+}
+
+/** Breathing with Clawd: four seconds in, six out, six rounds – one calm minute. */
+object ClawdBreath {
+    const val IN_MS = 4000L
+    const val OUT_MS = 6000L
+    const val ROUNDS = 6
+
+    private fun prefs(context: Context) = context.getSharedPreferences("clawd_breath", Context.MODE_PRIVATE)
+
+    fun sessions(context: Context): Int = prefs(context).getInt("sessions", 0)
+
+    /** A whole minute breathed through. */
+    fun finished(context: Context) {
+        prefs(context).edit().putInt("sessions", sessions(context) + 1).apply()
+        EasterEggs.find(context, "breathe")
     }
 }

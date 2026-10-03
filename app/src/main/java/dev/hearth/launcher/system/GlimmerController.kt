@@ -374,25 +374,59 @@ class GlimmerController(private val service: GlimmerService) {
     /** An app just landed (HyperOS fly-in): its icon sits in the island for a moment. */
     private val arrival = MutableStateFlow<IslandContent.Arrival?>(null)
     private var arrivalId = 0
+    private val dropArrival = Runnable { arrival.value = null }
+
+    private fun waitingArrival(): IslandContent.Arrival? =
+        arrival.value?.takeIf { it.icon == null && it.color == Color.Transparent }
+
     fun arrive(icon: android.graphics.Bitmap?, color: Int) {
+        handler.removeCallbacks(dropArrival)
         // No icon and no color: an app is on its way – open now (empty, black) to catch it.
+        // Asked again while it waits (the finger still on the glass), it just stays open longer.
         if (icon == null && color == 0) {
-            val id = ++arrivalId
-            arrival.value = IslandContent.Arrival(icon = null, color = Color.Transparent, id = id)
-            handler.postDelayed({ if (id == arrivalId) arrival.value = null }, 1800)
+            if (waitingArrival() == null) {
+                arrival.value = IslandContent.Arrival(icon = null, color = Color.Transparent, id = ++arrivalId)
+            }
+            handler.postDelayed(dropArrival, 1800)
             return
         }
         // It landed: in the island that's already open (same one, so nothing jumps).
-        val waiting = arrival.value?.takeIf { it.icon == null && it.color == Color.Transparent }
-        val id = waiting?.id ?: ++arrivalId
+        val id = waitingArrival()?.id ?: ++arrivalId
         arrivalId = id
         arrival.value = IslandContent.Arrival(
             icon = icon?.asImageBitmap(),
             color = if (color != 0) Color(color) else Color.White,
             id = id,
         )
-        handler.postDelayed({ if (id == arrivalId) arrival.value = null }, 1150)
+        handler.postDelayed(dropArrival, 1150)
     }
+
+    /** The app didn't come after all (the gesture went back into it): the open island closes. */
+    fun cancelArrival() {
+        if (waitingArrival() == null) return
+        handler.removeCallbacks(dropArrival)
+        arrival.value = null
+    }
+
+    /**
+     * Puts the island's window on top of Glimmer's others again (the fly-in's, added later), so
+     * a closing app flies under the island into it, never over it.
+     */
+    fun raiseWindow() {
+        val view = root ?: return
+        val p = params ?: return
+        runCatching { windowManager.removeViewImmediate(view) }
+        if (runCatching { windowManager.addView(view, p) }.isSuccess) {
+            windowAddedAt = SystemClock.uptimeMillis()
+        } else {
+            root = null
+            params = null
+            handler.postDelayed({ if (root == null) ensureWindow() }, 1000)
+        }
+    }
+
+    /** True while the island is small (nothing unfolded), e.g. for a calm picture of the screen. */
+    val islandCalm: Boolean get() = !expanded.value && islandSize.height.value < 70f
 
     /** Battery level while charging, when it should stay in the island. */
     private val charging = MutableStateFlow<Int?>(null)
