@@ -27,6 +27,7 @@ import androidx.savedstate.SavedStateRegistryOwner
 import dev.hearth.launcher.data.AppLock
 import dev.hearth.launcher.data.SettingsRepository
 import androidx.core.graphics.drawable.toBitmap
+import androidx.core.view.doOnNextLayout
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
@@ -73,6 +74,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
                 Intent.ACTION_SCREEN_OFF -> {
                     stopAppSnapshots()
                     frontApp = null
+                    removeFlyWindow()
                     AppLockGuard.relock()
                 }
             }
@@ -122,6 +124,12 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
      */
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
+        // The fly-in: the moment the launcher becomes the active window (often before it says
+        // so itself, once its closing animation is over), so the app flies without delay.
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+            if (frontApp != null) checkHomeActive()
+            return
+        }
         val pkg = event.packageName?.toString() ?: return
         // App lock: a locked app came to the front.
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && pkg != SYSTEM_UI) {
@@ -250,7 +258,6 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
     private var frontApp: String? = null
     private var homePackage: String? = null
     private val launchable = HashMap<String, Boolean>()
-    private var flyWindow: android.view.View? = null
 
     /** The phone's home app (the launcher), as Android has it set. */
     private fun home(): String? = homePackage ?: runCatching {
@@ -276,6 +283,13 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
             ?.enabledInputMethodList?.any { it.packageName == pkg } == true
     }.getOrDefault(false)
 
+    /** The windows changed: is the launcher the active one now? Then the app was just closed. */
+    private fun checkHomeActive() {
+        val h = home() ?: return
+        val active = runCatching { windows.firstOrNull { it.isActive }?.root?.packageName?.toString() }.getOrNull()
+        if (active == h) onFront(h)
+    }
+
     /** Something new came to the front: an app (keep its picture), or home (let the app fly). */
     private fun onFront(pkg: String) {
         if (!flyInHere()) return
@@ -285,7 +299,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
                 val app = frontApp ?: return
                 frontApp = null
                 // A picture from just before the home gesture, not one of the window shrinking.
-                val shot = finishAppSnapshots(SystemClock.uptimeMillis() - 450)
+                val shot = finishAppSnapshots(SystemClock.uptimeMillis() - 300)
                 showFlyIn(app, shot)
             }
             pkg == packageName || isLocked() -> Unit
@@ -293,80 +307,74 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
                 if (pkg != frontApp) {
                     frontApp = pkg
                     startAppSnapshots()
+                    // Ready ahead of time, so the fly-in starts the moment the app is closed.
+                    prepareFlight(pkg)
                 }
             }
         }
     }
 
-    /**
-     * The closing app flies into the island – the same fly-in as in Hearth (the app itself,
-     * from its last picture), drawn by Glimmer over whatever launcher is home and aimed at the
-     * island's real place on screen.
-     */
-    private fun showFlyIn(pkg: String, shot: HardwareBuffer?) {
-        val settings = SettingsRepository(this).settings.value
-        val controller = glimmer
-        val app = runCatching {
+    /** One fly-in: everything it needs, handed to the waiting window. */
+    private class Flight(
+        val app: dev.hearth.launcher.data.AppInfo,
+        val snapshot: androidx.compose.ui.graphics.ImageBitmap?,
+        val island: DpSize?,
+        val landing: GlimmerLink.Landing,
+        val target: androidx.compose.ui.geometry.Offset,
+        val settings: dev.hearth.launcher.data.LauncherSettings,
+    )
+
+    private val flight = androidx.compose.runtime.mutableStateOf<Flight?>(null)
+    private var flyWindow: android.view.View? = null
+    private var flyParams: android.view.WindowManager.LayoutParams? = null
+    private var preparedApp: Pair<String, dev.hearth.launcher.data.AppInfo>? = null
+
+    private fun appInfo(pkg: String): dev.hearth.launcher.data.AppInfo? {
+        preparedApp?.let { (p, info) -> if (p == pkg) return info }
+        return runCatching {
             val pm = packageManager
             val info = pm.getApplicationInfo(pkg, 0)
-            val icon = pm.getApplicationIcon(info)
             dev.hearth.launcher.data.AppInfo(
                 label = pm.getApplicationLabel(info).toString(),
                 component = pm.getLaunchIntentForPackage(pkg)?.component ?: android.content.ComponentName(pkg, pkg),
                 user = android.os.Process.myUserHandle(),
-                icon = icon.toBitmap(192, 192).asImageBitmap(),
+                icon = pm.getApplicationIcon(info).toBitmap(192, 192).asImageBitmap(),
             )
         }.getOrNull()
-        if (app == null || controller == null) {
-            shot?.let { runCatching { it.close() } }
-            return
-        }
-        val picture = shot?.let { hb ->
-            runCatching {
-                android.graphics.Bitmap.wrapHardwareBuffer(hb, android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB))
-            }.getOrNull()
-        }
-        val status = GlimmerBridgeProvider.handle(this, GlimmerLink.STATUS, null, null)
-        val landing = GlimmerLink.Landing(
-            status?.getFloat("lw") ?: 0f,
-            status?.getInt("ox") ?: 0,
-            status?.getInt("oy") ?: 0,
-        )
-        val island = controller.islandSize.takeIf { it.width.value > 0f }
-        val center = controller.islandCenterOnScreen()
-        removeFlyWindow()
+    }
+
+    /**
+     * While an app is open: its details are looked up and the fly-in's window waits, tiny and
+     * empty, so closing the app doesn't have to build anything first.
+     */
+    private fun prepareFlight(pkg: String) {
+        appInfo(pkg)?.let { preparedApp = pkg to it }
+        if (flyWindow != null) return
         val compose = androidx.compose.ui.platform.ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@GlimmerService)
             setViewTreeSavedStateRegistryOwner(this@GlimmerService)
             setContent {
-                // Starts once the window is laid out (so it knows its size and place).
-                var ready by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-                androidx.compose.runtime.LaunchedEffect(Unit) {
-                    androidx.compose.runtime.withFrameNanos { }
-                    ready = true
-                }
-                if (ready) {
-                    val view = androidx.compose.ui.platform.LocalView.current
-                    val loc = IntArray(2).also { view.getLocationOnScreen(it) }
-                    androidx.compose.runtime.CompositionLocalProvider(dev.hearth.launcher.ui.LocalSettings provides settings) {
+                val f = flight.value
+                if (f != null) {
+                    androidx.compose.runtime.CompositionLocalProvider(dev.hearth.launcher.ui.LocalSettings provides f.settings) {
                         dev.hearth.launcher.ui.GlimmerFlyIn(
-                            app = app,
-                            island = island,
+                            app = f.app,
+                            island = f.island,
                             onPulse = { pulseGlimmer() },
-                            onDone = { removeFlyWindow() },
-                            snapshot = picture?.asImageBitmap(),
-                            style = settings.glimmerFlyInStyle,
-                            landing = landing,
+                            onDone = { endFlight() },
+                            snapshot = f.snapshot,
+                            style = f.settings.glimmerFlyInStyle,
+                            landing = f.landing,
                             onArrive = { icon, color -> arriveGlimmer(icon, color) },
-                            target = androidx.compose.ui.geometry.Offset(center.x - loc[0], center.y - loc[1]),
+                            target = f.target,
                         )
                     }
                 }
             }
         }
         val params = android.view.WindowManager.LayoutParams(
-            android.view.WindowManager.LayoutParams.MATCH_PARENT,
-            android.view.WindowManager.LayoutParams.MATCH_PARENT,
+            1,
+            1,
             android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
@@ -381,19 +389,84 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
             title = "Glimmer fly-in"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) setFitInsetsTypes(0)
         }
-        val wm = getSystemService(android.view.WindowManager::class.java)
-        if (wm != null && runCatching { wm.addView(compose, params) }.isSuccess) {
+        val wm = getSystemService(android.view.WindowManager::class.java) ?: return
+        if (runCatching { wm.addView(compose, params) }.isSuccess) {
             flyWindow = compose
-            // Never left on screen, whatever happens.
-            handler.postDelayed({ removeFlyWindow() }, 4000)
+            flyParams = params
         }
+    }
+
+    /**
+     * The closing app flies into the island – the same fly-in as in Hearth (the app itself,
+     * from its last picture), drawn by Glimmer over whatever launcher is home and aimed at the
+     * island's real place on screen.
+     */
+    private fun showFlyIn(pkg: String, shot: HardwareBuffer?) {
+        val settings = SettingsRepository(this).settings.value
+        val controller = glimmer
+        val app = appInfo(pkg)
+        if (app == null || controller == null) {
+            shot?.let { runCatching { it.close() } }
+            return
+        }
+        if (flyWindow == null) prepareFlight(pkg)
+        val view = flyWindow
+        val params = flyParams
+        val wm = getSystemService(android.view.WindowManager::class.java)
+        if (view == null || params == null || wm == null) {
+            shot?.let { runCatching { it.close() } }
+            return
+        }
+        val picture = shot?.let { hb ->
+            runCatching {
+                android.graphics.Bitmap.wrapHardwareBuffer(hb, android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB))
+            }.getOrNull()
+        }
+        val status = GlimmerBridgeProvider.handle(this, GlimmerLink.STATUS, null, null)
+        val landing = GlimmerLink.Landing(
+            status?.getFloat("lw") ?: 0f,
+            status?.getInt("ox") ?: 0,
+            status?.getInt("oy") ?: 0,
+        )
+        val center = controller.islandCenterOnScreen()
+        val next = Flight(
+            app = app,
+            snapshot = picture?.asImageBitmap(),
+            island = controller.islandSize.takeIf { it.width.value > 0f },
+            landing = landing,
+            target = androidx.compose.ui.geometry.Offset(center.x, center.y),
+            settings = settings,
+        )
+        // The waiting window covers the screen; the flight starts as soon as it's laid out.
+        params.width = android.view.WindowManager.LayoutParams.MATCH_PARENT
+        params.height = android.view.WindowManager.LayoutParams.MATCH_PARENT
+        runCatching { wm.updateViewLayout(view, params) }
+        view.doOnNextLayout { flight.value = next }
+        handler.removeCallbacks(endFlightLater)
+        // Never left on screen, whatever happens.
+        handler.postDelayed(endFlightLater, 4000)
         // The picture is shared with the window; let it go once the flight is surely over.
         shot?.let { hb -> handler.postDelayed({ runCatching { hb.close() } }, 5000) }
     }
 
+    private val endFlightLater = Runnable { endFlight() }
+
+    /** The flight is over: the window goes back to waiting, tiny and empty. */
+    private fun endFlight() {
+        flight.value = null
+        val view = flyWindow ?: return
+        val params = flyParams ?: return
+        params.width = 1
+        params.height = 1
+        runCatching { getSystemService(android.view.WindowManager::class.java)?.updateViewLayout(view, params) }
+    }
+
     private fun removeFlyWindow() {
+        flight.value = null
+        handler.removeCallbacks(endFlightLater)
         val view = flyWindow ?: return
         flyWindow = null
+        flyParams = null
         runCatching { getSystemService(android.view.WindowManager::class.java)?.removeView(view) }
     }
 

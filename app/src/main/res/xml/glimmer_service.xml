@@ -5,12 +5,12 @@
      memory (never saved) so the app can fly into the island when it's closed. With locked apps or the fly-in
      with another launcher, it also hears which app comes to the front (set at runtime). -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeAnnouncement"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeAnnouncement|typeWindowsChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows"
     android:packageNames="com.android.systemui"
     android:canRetrieveWindowContent="true"
     android:canTakeScreenshot="true"
     android:description="@string/glimmer_service_description"
-    android:notificationTimeout="100"
+    android:notificationTimeout="0"
     android:summary="@string/glimmer_service_summary" />
