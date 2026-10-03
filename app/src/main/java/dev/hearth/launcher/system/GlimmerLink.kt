@@ -16,7 +16,12 @@ import androidx.compose.ui.unit.dp
  * app the call is direct; from another app it goes through the bridge, which only apps
  * signed with the same key may use. Harmless when the app isn't installed or not running.
  */
-open class HearthApp internal constructor(val packageName: String, authority: String) {
+open class HearthApp internal constructor(
+    val packageName: String,
+    authority: String,
+    /** In Hearth One the app is built in: its screen, opened inside Hearth. */
+    private val builtInScreen: String? = null,
+) {
 
     private val bridge: Uri = Uri.parse("content://$authority")
 
@@ -31,6 +36,12 @@ open class HearthApp internal constructor(val packageName: String, authority: St
 
     /** Opens the app (its settings screen). */
     fun openApp(context: Context) {
+        if (builtInScreen != null && context.packageName == packageName) {
+            runCatching {
+                context.startActivity(Intent().setClassName(context.packageName, builtInScreen).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+            return
+        }
         val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return
         runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
@@ -46,6 +57,9 @@ open class HearthApp internal constructor(val packageName: String, authority: St
 
     fun showQuickSettings(context: Context): Boolean = call(context, GlimmerLink.QUICK_SETTINGS)?.getBoolean("ok") == true
 
+    /** Everything the app keeps (its settings, Clawd's progress …), for moving into Hearth One. */
+    fun exportData(context: Context): Bundle? = call(context, GlimmerLink.EXPORT)
+
     /** Hands Hearth's control center look (and accent color) over. */
     fun syncSettings(context: Context, values: Bundle) {
         if (context.packageName == packageName) return
@@ -59,7 +73,11 @@ object ControlsLink : HearthApp("dev.hearth.controls", "dev.hearth.controls.brid
 }
 
 /** Clawd: his own app with his widgets for any launcher (Samsung's too); takes Hearth's look of him. */
-object ClawdLink : HearthApp("dev.hearth.clawd", "dev.hearth.clawd.bridge") {
+object ClawdLink : HearthApp(
+    if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "dev.hearth.launcher" else "dev.hearth.clawd",
+    if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "dev.hearth.launcher.bridge" else "dev.hearth.clawd.bridge",
+    builtInScreen = "dev.hearth.launcher.clawd.ClawdAppActivity",
+) {
     const val DOWNLOAD_URL = "https://github.com/JP19Claude/launcher/releases/latest/download/Clawd.apk"
 
     /** Sent inside the Clawd app when his look changed: the widgets draw him again. */
@@ -67,7 +85,18 @@ object ClawdLink : HearthApp("dev.hearth.clawd", "dev.hearth.clawd.bridge") {
 }
 
 /** Glimmer: the island; also takes the app picture for Hearth's fly-in. */
-object GlimmerLink : HearthApp("dev.hearth.glimmer", "dev.hearth.glimmer.bridge") {
+/**
+ * The separate Glimmer and Clawd apps, as they were before Hearth One: asked for their data
+ * when moving into it, then removed.
+ */
+object OldGlimmerApp : HearthApp("dev.hearth.glimmer", "dev.hearth.glimmer.bridge")
+object OldClawdApp : HearthApp("dev.hearth.clawd", "dev.hearth.clawd.bridge")
+
+object GlimmerLink : HearthApp(
+    if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "dev.hearth.launcher" else "dev.hearth.glimmer",
+    if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "dev.hearth.launcher.bridge" else "dev.hearth.glimmer.bridge",
+    builtInScreen = "dev.hearth.launcher.GlimmerActivity",
+) {
 
     const val GLIMMER_PACKAGE = "dev.hearth.glimmer"
     const val HEARTH_PACKAGE = "dev.hearth.launcher"
@@ -83,6 +112,7 @@ object GlimmerLink : HearthApp("dev.hearth.glimmer", "dev.hearth.glimmer.bridge"
     internal const val QUICK_SETTINGS = "quickSettings"
     internal const val SYNC_SETTINGS = "syncSettings"
     internal const val APP_UNLOCKED = "appUnlocked"
+    internal const val EXPORT = "export"
 
     /** App lock: [packageName] was just unlocked, so Glimmer lets it open without asking again. */
     fun appUnlocked(context: Context, packageName: String) {

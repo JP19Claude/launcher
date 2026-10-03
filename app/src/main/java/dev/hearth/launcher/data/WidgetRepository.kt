@@ -155,6 +155,8 @@ class WidgetRepository(private val context: Context) {
     fun choices(): List<WidgetChoice> {
         val pm = context.packageManager
         return runCatching { manager.installedProviders }.getOrDefault(emptyList())
+            // Hearth One's own Clawd widgets are for other launchers; Hearth has them built in.
+            .filter { it.provider.packageName != context.packageName }
             .map { info ->
                 val appLabel = runCatching {
                     pm.getApplicationLabel(pm.getApplicationInfo(info.provider.packageName, 0)).toString()

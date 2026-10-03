@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Clawd's widgets: in the Clawd app and built into Hearth One. -->
+<resources>
+    <string name="clawd_w_picture">Clawd-Bild</string>
+    <string name="clawd_w_picture_d">Clawd als Bild mit sechs Hintergründen; antippen und er bewegt sich</string>
+    <string name="clawd_w_clock">Clawd-Uhr</string>
+    <string name="clawd_w_clock_d">Uhrzeit und Datum mit Clawd und einem Gruß, nachts schläft er</string>
+    <string name="clawd_w_joke">Clawd-Witz</string>
+    <string name="clawd_w_joke_d">Jeden Tag ein Witz von Clawd, antippen für den nächsten</string>
+    <string name="clawd_w_ask">Frag Clawd</string>
+    <string name="clawd_w_ask_d">Ein Tipp und du sprichst mit Clawd</string>
+    <string name="clawd_w_battery">Clawd-Akku</string>
+    <string name="clawd_w_battery_d">Clawd tanzt beim Laden und wird müde, wenn der Akku leer wird</string>
+    <string name="clawd_w_sticker">Clawd-Sticker</string>
+    <string name="clawd_w_sticker_d">Nur Clawd, klein: antippen für die nächste Pose</string>
+    <string name="clawd_w_pet">Clawd-Tamagotchi</string>
+    <string name="clawd_w_pet_d">Füttern und spielen: Clawd wird hungrig und will beschäftigt werden</string>
+    <string name="clawd_w_oracle">Clawd-Orakel</string>
+    <string name="clawd_w_oracle_d">Denk an eine Ja/Nein-Frage, tipp ihn an – Clawd antwortet</string>
+    <string name="clawd_w_water">Clawd-Wasser</string>
+    <string name="clawd_w_water_d">Gläser Wasser heute: antippen für eins mehr</string>
+    <string name="clawd_w_dice">Clawd-Würfel</string>
+    <string name="clawd_w_dice_d">Antippen und Clawd würfelt für dich</string>
+    <string name="clawd_w_motivation">Clawd-Motivation</string>
+    <string name="clawd_w_motivation_d">Jeden Tag ein liebes Wort von Clawd</string>
+    <string name="clawd_w_weekend">Clawd-Wochenende</string>
+    <string name="clawd_w_weekend_d">Wie lange noch bis zum Wochenende</string>
+    <string name="clawd_w_fashion">Clawd-Modenschau</string>
+    <string name="clawd_w_fashion_d">Clawd probiert Outfits und Hüte an: antippen für den nächsten Look</string>
+    <string name="clawd_w_world">Clawd-Welt</string>
+    <string name="clawd_w_world_d">Clawd in seiner Pixel-Landschaft, mit Tag, Abend und Nacht: antippen und er läuft woanders hin</string>
+    <string name="clawd_w_focus">Clawd-Fokus</string>
+    <string name="clawd_w_focus_d">25 Minuten Fokus-Timer, Clawd arbeitet mit</string>
+    <string name="clawd_w_game">Clawd-Spiel</string>
+    <string name="clawd_w_game_d">Clawd Jump: antippen und losspielen, dein Rekord im Blick</string>
+    <string name="clawd_w_badges">Clawd-Abzeichen</string>
+    <string name="clawd_w_badges_d">Deine Abzeichen mit Clawd und welches als Nächstes kommt</string>
+    <string name="clawd_w_diary">Clawd-Tagebuch</string>
+    <string name="clawd_w_diary_d">Wie geht\'s dir heute? Ein Gesicht pro Tag, die Woche im Blick</string>
+    <string name="clawd_w_coin">Clawd-Münze</string>
+    <string name="clawd_w_coin_d">Kopf oder Zahl: antippen und Clawd wirft</string>
+    <string name="clawd_w_breath">Clawd-Atmen</string>
+    <string name="clawd_w_breath_d">Clawd atmet ruhig mit dir: 4 Sekunden ein, 4 aus</string>
+    <string name="clawd_w_countdown">Clawd-Countdown</string>
+    <string name="clawd_w_countdown_d">Wie lange noch bis Weihnachten, Silvester, Ostern …</string>
+    <string name="clawd_w_riddle">Clawd-Rätsel</string>
+    <string name="clawd_w_riddle_d">Antippen für die Lösung, nochmal für das nächste Rätsel</string>
+    <string name="clawd_w_rps">Clawd: Schnick-Schnack-Schnuck</string>
+    <string name="clawd_w_rps_d">Schere, Stein, Papier gegen Clawd</string>
+    <string name="clawd_breath_in">Einatmen …</string>
+    <string name="clawd_breath_out">Ausatmen …</string>
+</resources>

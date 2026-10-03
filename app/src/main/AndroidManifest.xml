@@ -133,6 +133,12 @@
             android:exported="false"
             android:label="Software-Update" />
 
+        <!-- Hearth One's welcome after the upgrade (old apps to remove, Glimmer to switch on). -->
+        <activity
+            android:name=".OneWelcomeActivity"
+            android:exported="false"
+            android:label="Hearth One" />
+
         <!-- Android's installer reports here how an update went (and asks to confirm it). -->
         <receiver
             android:name=".data.UpdateReceiver"

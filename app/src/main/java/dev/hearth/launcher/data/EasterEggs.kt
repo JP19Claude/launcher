@@ -70,6 +70,12 @@ object EasterEggs {
         }.getOrDefault(emptySet())
     }
 
+    /** Read again from storage (after another app's eggs were joined in). */
+    fun reload(context: Context) {
+        loaded = false
+        init(context)
+    }
+
     fun find(context: Context, egg: String) {
         init(context)
         val first = egg !in _found.value

@@ -12,9 +12,11 @@ android {
         applicationId = "dev.hearth.launcher"
         minSdk = 28
         targetSdk = 35
-        versionCode = 94
+        versionCode = 95
         // Small updates (fixes, little things) +0.1, big ones (many features, redesign) +0.5.
-        versionName = "10.7"
+        versionName = "11.0"
+        // Hearth One (everything in one app) says so; the separate apps don't.
+        buildConfigField("boolean", "ALL_IN_ONE", "false")
     }
 
     // Fixed debug key in the repo, so every CI build installs as an update over the last one.
@@ -45,6 +47,25 @@ android {
             dimension = "app"
             applicationId = "dev.hearth.clawd"
         }
+        // Hearth One: Hearth with Glimmer and Clawd built in, one app. The same package as
+        // Hearth, so it installs over it as an update and keeps everything.
+        create("one") {
+            dimension = "app"
+            applicationId = "dev.hearth.launcher"
+            buildConfigField("boolean", "ALL_IN_ONE", "true")
+        }
+    }
+
+    // Clawd's widgets and his app's screen: in the Clawd app and built into Hearth One.
+    sourceSets {
+        getByName("clawd") {
+            java.srcDirs("src/clawdShared/java")
+            res.srcDirs("src/clawdShared/res")
+        }
+        getByName("one") {
+            java.srcDirs("src/clawdShared/java")
+            res.srcDirs("src/clawdShared/res")
+        }
     }
 
     buildTypes {
@@ -62,6 +83,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

@@ -85,6 +85,11 @@ class MainActivity : ComponentActivity() {
         if (wasInBackground) viewModel.onReturnedHome()
         wasInBackground = false
         viewModel.onResume()
+        // Just moved into Hearth One: once per start, the welcome (old apps to remove …).
+        if (BuildConfig.ALL_IN_ONE && !oneWelcomeShown && dev.hearth.launcher.data.HearthOneUpgrade.oldAppsInstalled(this).isNotEmpty()) {
+            oneWelcomeShown = true
+            runCatching { startActivity(Intent(this, OneWelcomeActivity::class.java)) }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -100,5 +105,8 @@ class MainActivity : ComponentActivity() {
     companion object {
         /** Opens the launcher settings right away (used by the control center overlay). */
         const val EXTRA_OPEN_SETTINGS = "dev.hearth.launcher.OPEN_SETTINGS"
+
+        /** The Hearth One welcome shows at most once per start of the app. */
+        private var oneWelcomeShown = false
     }
 }

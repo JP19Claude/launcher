@@ -113,6 +113,8 @@ class GlimmerBridgeProvider : ContentProvider() {
                     }
                     null
                 }
+                // Moving into Hearth One: everything this app keeps.
+                GlimmerLink.EXPORT -> dev.hearth.launcher.data.AppData.export(context)
                 GlimmerLink.APP_UNLOCKED -> {
                     if (!arg.isNullOrBlank()) AppLockGuard.unlocked(arg)
                     null

@@ -467,6 +467,11 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                     Text(look.tips[Math.floorMod(tip, look.tips.size)], color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp, lineHeight = 19.sp)
                 }
             }
+            // Hearth (on its own) can move to Hearth One: everything in one app.
+            if (!dev.hearth.launcher.BuildConfig.ALL_IN_ONE && context.packageName == "dev.hearth.launcher") {
+                Spacer(Modifier.height(14.dp))
+                HearthOneCard(look.accent)
+            }
             Spacer(Modifier.height(160.dp))
         }
 

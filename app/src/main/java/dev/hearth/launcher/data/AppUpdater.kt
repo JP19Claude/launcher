@@ -23,15 +23,24 @@ object AppUpdater {
 
     private const val REPO = "JP19Claude/launcher"
 
-    /** This app's name in the releases (tag "glimmer-v9.5", file "Glimmer-9.5.apk"). */
-    private class Kind(val slug: String, val name: String)
+    /** An app of the family as the releases name it (tag "glimmer-v9.5", file "Glimmer-9.5.apk"). */
+    class Kind(val slug: String, val name: String, val packageName: String)
 
-    private fun kind(context: Context): Kind = when (context.packageName) {
-        "dev.hearth.glimmer" -> Kind("glimmer", "Glimmer")
-        "dev.hearth.controls" -> Kind("kontrollzentrum", "Kontrollzentrum")
-        "dev.hearth.clawd" -> Kind("clawd", "Clawd")
-        else -> Kind("hearth", "Hearth")
+    val HearthOne = Kind("hearthone", "Hearth One", "dev.hearth.launcher")
+    val GlimmerApp = Kind("glimmer", "Glimmer", "dev.hearth.glimmer")
+    val ClawdApp = Kind("clawd", "Clawd", "dev.hearth.clawd")
+
+    private fun kind(context: Context): Kind = when {
+        dev.hearth.launcher.BuildConfig.ALL_IN_ONE -> HearthOne
+        context.packageName == "dev.hearth.glimmer" -> GlimmerApp
+        context.packageName == "dev.hearth.clawd" -> ClawdApp
+        else -> Kind("hearth", "Hearth", "dev.hearth.launcher")
     }
+
+    /** The version of an installed app of the family, or null. */
+    fun installedVersion(context: Context, packageName: String): String? = runCatching {
+        context.packageManager.getPackageInfo(packageName, 0).versionName
+    }.getOrNull()
 
     fun appName(context: Context): String = kind(context).name
 
@@ -74,10 +83,13 @@ object AppUpdater {
         setRequestProperty("User-Agent", "Hearth-Updater")
     }
 
-    /** Asks GitHub for this app's newest release. */
-    suspend fun check(context: Context): Check = withContext(Dispatchers.IO) {
-        val kind = kind(context)
-        val current = currentVersion(context)
+    /**
+     * Asks GitHub for this app's newest release – or [other]'s (Hearth One to upgrade to, an
+     * old Glimmer to bring up to date), newer than [than] (this app's version by default).
+     */
+    suspend fun check(context: Context, other: Kind? = null, than: String? = null): Check = withContext(Dispatchers.IO) {
+        val kind = other ?: kind(context)
+        val current = than ?: currentVersion(context)
         runCatching {
             val connection = open("https://api.github.com/repos/$REPO/releases?per_page=100")
             connection.setRequestProperty("Accept", "application/vnd.github+json")
@@ -126,7 +138,7 @@ object AppUpdater {
         runCatching {
             val dir = File(context.cacheDir, "updates").apply { mkdirs() }
             dir.listFiles()?.forEach { it.delete() }
-            val file = File(dir, "${kind(context).name}-${release.version}.apk")
+            val file = File(dir, "${kind(context).slug}-${release.version}-${release.url.hashCode()}.apk")
             val connection = open(release.url)
             if (connection.responseCode != 200) {
                 connection.disconnect()
@@ -170,10 +182,10 @@ object AppUpdater {
      * Hands the downloaded APK to Android's installer; it shows its own "update this app?"
      * question (see [UpdateReceiver]). False if it couldn't even start.
      */
-    fun install(context: Context, apk: File): Boolean = runCatching {
+    fun install(context: Context, apk: File, packageName: String = context.packageName): Boolean = runCatching {
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
-            setAppPackageName(context.packageName)
+            setAppPackageName(packageName)
         }
         val id = installer.createSession(params)
         installer.openSession(id).use { session ->
