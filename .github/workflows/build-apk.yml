@@ -119,7 +119,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "build-${{ github.run_number }}" Hearth.apk Glimmer.apk Clawd.apk HearthOne.apk \
+          # What's newest, for the apps' update check: a plain file (no GitHub API, so no
+          # limit on how often phones may ask).
+          v=$(grep -o 'versionName = "[^"]*"' app/build.gradle.kts | cut -d'"' -f2)
+          python3 - "$v" "${{ github.repository }}" "build-${{ github.run_number }}" <<'PY'
+          import json, os, sys
+          v, repo, tag = sys.argv[1:4]
+          notes = open(".github/whatsnew.md").read().strip() if os.path.exists(".github/whatsnew.md") else ""
+          base = f"https://github.com/{repo}/releases/download/{tag}/"
+          out = {"version": v, "notes": notes}
+          for slug, file in [("hearth", "Hearth.apk"), ("glimmer", "Glimmer.apk"), ("clawd", "Clawd.apk"), ("hearthone", "HearthOne.apk")]:
+              out[slug] = {"version": v, "url": base + file, "size": os.path.getsize(file)}
+          json.dump(out, open("versions.json", "w"), ensure_ascii=False, indent=1)
+          PY
+          gh release create "build-${{ github.run_number }}" Hearth.apk Glimmer.apk Clawd.apk HearthOne.apk versions.json \
             --target "${{ github.sha }}" \
             --title "Hearth Build ${{ github.run_number }}" \
             --notes "HearthOne.apk (alles in einer App), Hearth.apk (Launcher), Glimmer.apk (Insel) und Clawd.apk (Clawds Widgets für jeden Launcher). Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \

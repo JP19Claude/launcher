@@ -90,6 +90,11 @@ object AppUpdater {
     suspend fun check(context: Context, other: Kind? = null, than: String? = null): Check = withContext(Dispatchers.IO) {
         val kind = other ?: kind(context)
         val current = than ?: currentVersion(context)
+        // First the plain versions file every build publishes (no API limit), then the API.
+        fromVersionsFile(kind.slug)?.let { newest ->
+            prefs(context).edit().putLong("lastCheck", System.currentTimeMillis()).apply()
+            return@withContext if (isNewer(newest.version, current)) Check.Newer(newest) else Check.UpToDate
+        }
         runCatching {
             val connection = open("https://api.github.com/repos/$REPO/releases?per_page=100")
             connection.setRequestProperty("Accept", "application/vnd.github+json")
@@ -97,7 +102,7 @@ object AppUpdater {
             if (code != 200) {
                 connection.disconnect()
                 return@runCatching Check.Failed(
-                    if (code == 403) "GitHub hat gerade zu viele Anfragen – versuch es in einer Stunde nochmal" else "GitHub antwortet nicht (Fehler $code)",
+                    if (code == 403) "GitHub lässt gerade keine Abfrage zu – versuch es später nochmal" else "GitHub antwortet nicht (Fehler $code)",
                 )
             }
             val text = connection.inputStream.bufferedReader().use { it.readText() }
@@ -128,6 +133,22 @@ object AppUpdater {
             }
         }.getOrElse { Check.Failed("Keine Verbindung – bist du online?") }
     }
+
+    /**
+     * The newest versions as the latest build lists them (versions.json): a plain download,
+     * not GitHub's API, so it works however often phones ask. Null if it isn't there.
+     */
+    private fun fromVersionsFile(slug: String): Release? = runCatching {
+        val connection = open("https://github.com/$REPO/releases/latest/download/versions.json")
+        if (connection.responseCode != 200) {
+            connection.disconnect()
+            return@runCatching null
+        }
+        val json = org.json.JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+        connection.disconnect()
+        val app = json.optJSONObject(slug) ?: return@runCatching null
+        Release(app.getString("version"), app.getString("url"), app.optLong("size"), json.optString("notes"))
+    }.getOrNull()
 
     /** What's new, as the release tells it (without the build line at its end). */
     private fun releaseNotes(body: String): String =
