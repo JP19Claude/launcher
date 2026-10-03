@@ -353,7 +353,7 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
             Spacer(Modifier.height(30.dp))
         }
         AnimatedVisibility(osEgg, enter = fadeIn(tween(500)), exit = fadeOut(tween(300))) {
-            ClaudeOsEgg { osEgg = false }
+            ClaudeOsVersionEgg { osEgg = false }
         }
     }
 }

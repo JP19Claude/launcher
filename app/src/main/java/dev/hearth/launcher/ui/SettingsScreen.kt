@@ -1166,13 +1166,15 @@ internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit)
     ) {
         // One UI: section names in normal case and Galaxy blue; otherwise small capitals.
         val oneUi = LocalSettings.current.galaxyClaude
+        // One UI 10 Fluid: section names in Claude's flowing colors.
+        val fluidTitle = LocalSettings.current.fluidDesign
         Text(
             text = if (oneUi) title else title.uppercase(),
-            color = if (oneUi) LocalSettings.current.accent.color else TextSecondary,
+            color = if (fluidTitle) Color.Unspecified else if (oneUi) LocalSettings.current.accent.color else TextSecondary,
             fontSize = if (oneUi) 14.sp else 13.sp,
-            fontWeight = if (oneUi) FontWeight.SemiBold else FontWeight.Medium,
+            fontWeight = if (oneUi || fluidTitle) FontWeight.SemiBold else FontWeight.Medium,
             letterSpacing = if (oneUi) 0.sp else 1.sp,
-            style = OnWallpaperText,
+            style = if (fluidTitle) OnWallpaperText.copy(brush = Brush.linearGradient(AiFluidColors)) else OnWallpaperText,
             modifier = Modifier.padding(start = 10.dp, bottom = 8.dp),
         )
         LiquidGlass(

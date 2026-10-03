@@ -1,7 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Dark glass, as close as a widget of another launcher can get -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#D91C1A1D" />
-    <stroke android:width="1dp" android:color="#33FFFFFF" />
-    <corners android:radius="24dp" />
-</shape>
+<!-- Dark glass with One UI 10 Fluid: a rim in Claude's colors (terracotta, violet, blue) and
+     a soft glow of them inside – as close as a widget of another launcher can get. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="45"
+                android:centerColor="#FF8E6BFF"
+                android:endColor="#FF3E91FF"
+                android:startColor="#FFD97757"
+                android:type="linear" />
+            <corners android:radius="24dp" />
+        </shape>
+    </item>
+    <item
+        android:bottom="1.5dp"
+        android:left="1.5dp"
+        android:right="1.5dp"
+        android:top="1.5dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#F21C1A1D" />
+            <corners android:radius="22.5dp" />
+        </shape>
+    </item>
+    <item
+        android:bottom="1.5dp"
+        android:left="1.5dp"
+        android:right="1.5dp"
+        android:top="1.5dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:centerX="0.15"
+                android:centerY="0.1"
+                android:endColor="#00000000"
+                android:gradientRadius="220dp"
+                android:startColor="#38D97757"
+                android:type="radial" />
+            <corners android:radius="22.5dp" />
+        </shape>
+    </item>
+    <item
+        android:bottom="1.5dp"
+        android:left="1.5dp"
+        android:right="1.5dp"
+        android:top="1.5dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:centerX="0.9"
+                android:centerY="0.95"
+                android:endColor="#00000000"
+                android:gradientRadius="200dp"
+                android:startColor="#308E6BFF"
+                android:type="radial" />
+            <corners android:radius="22.5dp" />
+        </shape>
+    </item>
+</layer-list>

@@ -336,11 +336,23 @@ fun LauncherScreen(vm: LauncherViewModel) {
         }
     }
 
+    // One UI 10 Fluid: waves of Claude's colors when an app opens, and coming home.
+    val fluidWaves = rememberFluidWaves()
+    val waveOwner = LocalLifecycleOwner.current
+    DisposableEffect(waveOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) fluidWaves.bloom()
+        }
+        waveOwner.lifecycle.addObserver(observer)
+        onDispose { waveOwner.lifecycle.removeObserver(observer) }
+    }
+
     // Apps open with a zoom out of their icon, which the system can start right away.
     val view = LocalView.current
     val launchApp: (AppInfo, Rect?) -> Unit = remember(vm, view) {
         { app, bounds ->
             val area = bounds?.takeIf { it.width > 0f && it.height > 0f }
+            area?.let { fluidWaves.splash(it.center) }
             val source = area?.let {
                 android.graphics.Rect(it.left.roundToInt(), it.top.roundToInt(), it.right.roundToInt(), it.bottom.roundToInt())
             }
@@ -955,6 +967,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     )
                 }
             }
+
+            FluidWaveLayer(fluidWaves)
 
             flyApp?.let { (app, shot, island) ->
                 GlimmerFlyIn(

@@ -21,6 +21,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -198,4 +199,127 @@ fun Modifier.glassSheen(corner: androidx.compose.ui.unit.Dp, tint: Color = Color
         cornerRadius = r,
         style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()),
     )
+}
+
+/**
+ * Fluid glow: Claude's colors drift slowly inside an element, soft and dim, behind its
+ * content – for widgets and cards that should feel alive.
+ */
+fun Modifier.fluidGlow(strength: Float = 1f, enabled: Boolean = true): Modifier = composed {
+    if (!enabled || !LocalSettings.current.fluidDesign) return@composed this
+    val moving = LocalSettings.current.animations
+    val drift = if (moving) {
+        rememberInfiniteTransition(label = "fluidGlow").animateFloat(
+            initialValue = 0f,
+            targetValue = (2 * Math.PI).toFloat(),
+            animationSpec = infiniteRepeatable(tween(14_000, easing = LinearEasing)),
+            label = "glowDrift",
+        )
+    } else {
+        null
+    }
+    this.drawBehind {
+        val t = drift?.value ?: 1f
+        AiFluidColors.take(3).forEachIndexed { i, c ->
+            val phase = i * 2.1f
+            val cx = size.width * (0.5f + 0.45f * cos(t + phase))
+            val cy = size.height * (0.5f + 0.45f * sin(t * 0.8f + phase))
+            val r = size.maxDimension * 0.7f
+            drawCircle(
+                Brush.radialGradient(listOf(c.copy(alpha = 0.16f * strength), Color.Transparent), center = Offset(cx, cy), radius = r),
+                radius = r,
+                center = Offset(cx, cy),
+            )
+        }
+    }
+}
+
+/**
+ * The whole fluid treatment for a widget: colors drifting inside, a flowing rim and a touch
+ * that spreads like liquid light.
+ */
+fun Modifier.fluidWidget(corner: androidx.compose.ui.unit.Dp): Modifier = composed {
+    val on = LocalSettings.current.fluidDesign
+    this
+        .fluidGlow(enabled = on)
+        .aiFluidEdge(corner, strength = 0.6f, enabled = on)
+        .then(if (on) Modifier.fluidTouch(yields = false) else Modifier)
+}
+
+/** One fluid wave: where it starts, when, and whether it blooms up from the bottom. */
+class FluidWave(val at: Offset, val start: Long, val bloom: Boolean)
+
+/**
+ * Fluid waves over a whole screen (One UI 10 Fluid): opening an app sends a ring of Claude's
+ * colors out from its icon; coming home, a soft light blooms up from the bottom edge.
+ */
+class FluidWaves {
+    val waves = androidx.compose.runtime.mutableStateListOf<FluidWave>()
+
+    fun splash(at: Offset) {
+        waves += FluidWave(at, android.os.SystemClock.uptimeMillis(), bloom = false)
+    }
+
+    fun bloom() {
+        waves += FluidWave(Offset.Unspecified, android.os.SystemClock.uptimeMillis(), bloom = true)
+    }
+}
+
+@Composable
+fun rememberFluidWaves(): FluidWaves = remember { FluidWaves() }
+
+/** Draws the waves (never takes a touch); nothing at all while there are none. */
+@Composable
+fun FluidWaveLayer(state: FluidWaves) {
+    if (!LocalSettings.current.fluidDesign || !LocalSettings.current.animations) return
+    if (state.waves.isEmpty()) return
+    var now by remember { mutableStateOf(android.os.SystemClock.uptimeMillis()) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        while (state.waves.isNotEmpty()) {
+            androidx.compose.runtime.withFrameMillis { }
+            now = android.os.SystemClock.uptimeMillis()
+            state.waves.removeAll { now - it.start > (if (it.bloom) 900 else 700) }
+        }
+    }
+    Canvas(Modifier.fillMaxSize()) {
+        val far = hypot(size.width, size.height)
+        state.waves.forEach { w ->
+            if (w.bloom) {
+                val p = ((now - w.start) / 900f).coerceIn(0f, 1f)
+                val c = Offset(size.width / 2f, size.height * 1.05f)
+                val r = far * (0.2f + 0.8f * p)
+                drawCircle(
+                    Brush.radialGradient(
+                        listOf(
+                            AiFluidColors[2].copy(alpha = 0.32f * (1f - p)),
+                            AiFluidColors[0].copy(alpha = 0.18f * (1f - p)),
+                            Color.Transparent,
+                        ),
+                        center = c,
+                        radius = r,
+                    ),
+                    radius = r,
+                    center = c,
+                )
+            } else {
+                val p = ((now - w.start) / 700f).coerceIn(0f, 1f)
+                val ease = 1f - (1f - p) * (1f - p)
+                val r = (far * ease).coerceAtLeast(1f)
+                val fade = 1f - p
+                // A soft fill behind the ring, then the ring in Claude's colors.
+                drawCircle(
+                    Brush.radialGradient(listOf(AiFluidColors[0].copy(alpha = 0.22f * fade), Color.Transparent), center = w.at, radius = r),
+                    radius = r,
+                    center = w.at,
+                )
+                drawCircle(
+                    Brush.sweepGradient(AiFluidColors + AiFluidColors.first(), center = w.at),
+                    radius = r,
+                    center = w.at,
+                    alpha = 0.55f * fade,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = (18.dp.toPx() * fade).coerceAtLeast(1f)),
+                )
+            }
+        }
+    }
 }

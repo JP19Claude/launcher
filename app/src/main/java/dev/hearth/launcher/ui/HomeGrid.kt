@@ -359,7 +359,10 @@ private fun HomeWidgetView(
             blur = 18.dp,
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(24.dp)),
+                .clip(RoundedCornerShape(24.dp))
+                // One UI 10 Fluid: every widget alive with Claude's colors.
+                .fluidWidget(24.dp),
+            fluidEdge = false,
         ) {
             if (repo.isInternal(widget.id)) {
                 InternalWidget(repo, widget.id, Modifier.fillMaxSize().padding(4.dp))

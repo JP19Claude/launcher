@@ -179,7 +179,9 @@ private fun WidgetCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(widget.heightDp.dp)
-                .clip(RoundedCornerShape(28.dp)),
+                .clip(RoundedCornerShape(28.dp))
+                .fluidWidget(28.dp),
+            fluidEdge = false,
         ) {
             if (repo.isInternal(widget.id)) {
                 InternalWidget(repo, widget.id, Modifier.fillMaxSize().padding(6.dp))
