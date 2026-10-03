@@ -744,6 +744,15 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             checked = s.glimmerClawd,
         ) { v -> update { it.copy(glimmerClawd = v) } }
         if (s.glimmerClawd) {
+            SwitchRow(
+                label = "Clawd, wenn nichts los ist",
+                description = if (s.glimmerClawdIdle) {
+                    "An: er sitzt auch in der leeren Pille (nachts schläft er dort)"
+                } else {
+                    "Aus: die leere Pille bleibt schwarz – Clawd kommt erst, wenn etwas passiert (Musik, Anruf, Timer …)"
+                },
+                checked = s.glimmerClawdIdle,
+            ) { v -> update { it.copy(glimmerClawdIdle = v) } }
             // Where he sits: the preview above shows it right away.
             ChoiceRow(
                 label = "Seite",

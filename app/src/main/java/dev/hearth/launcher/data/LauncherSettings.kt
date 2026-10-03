@@ -422,6 +422,8 @@ data class LauncherSettings(
     /** Clawd says hello in Glimmer when the phone is unlocked (every time, or once a day). */
     val glimmerClawdGreeting: Boolean = true,
     val glimmerClawdGreetDaily: Boolean = false,
+    /** Clawd also in the empty pill, when nothing is going on. */
+    val glimmerClawdIdle: Boolean = true,
     val glimmerMessages: Boolean = true,
     /** Tap opens the app (like the iPhone) instead of unfolding; holding does the other. */
     val glimmerTapOpens: Boolean = false,
@@ -814,6 +816,7 @@ class SettingsRepository(context: Context) {
             glimmerClawdSize = prefs.getFloat("glimmerClawdSize", d.glimmerClawdSize),
             glimmerClawdGreeting = prefs.getBoolean("glimmerClawdGreeting", d.glimmerClawdGreeting),
             glimmerClawdGreetDaily = prefs.getBoolean("glimmerClawdGreetDaily", d.glimmerClawdGreetDaily),
+            glimmerClawdIdle = prefs.getBoolean("glimmerClawdIdle", d.glimmerClawdIdle),
             glimmerMessages = prefs.getBoolean("glimmerMessages", d.glimmerMessages),
             glimmerTapOpens = prefs.getBoolean("glimmerTapOpens", d.glimmerTapOpens),
             glimmerAlerts = prefs.getBoolean("glimmerAlerts", d.glimmerAlerts),
@@ -935,6 +938,7 @@ class SettingsRepository(context: Context) {
             .putFloat("glimmerClawdSize", s.glimmerClawdSize)
             .putBoolean("glimmerClawdGreeting", s.glimmerClawdGreeting)
             .putBoolean("glimmerClawdGreetDaily", s.glimmerClawdGreetDaily)
+            .putBoolean("glimmerClawdIdle", s.glimmerClawdIdle)
             .putBoolean("glimmerMessages", s.glimmerMessages)
             .putBoolean("glimmerTapOpens", s.glimmerTapOpens)
             .putBoolean("glimmerAlerts", s.glimmerAlerts)
@@ -1031,7 +1035,7 @@ class SettingsRepository(context: Context) {
          * Only the switch itself and the look (black or glass, which changes the window) restart it.
          */
         val GLIMMER_LIVE_KEYS = setOf(
-            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "clawdSkin", "clawdHat", "clawdOutfit", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
+            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerAutoCollapse",
             "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerSmall", "glimmerPrivacy", "accent", "animations",

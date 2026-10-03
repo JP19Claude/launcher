@@ -35,7 +35,7 @@ wippt, trippelt beim Nachdenken, tanzt, schlägt Salto und schickt Herzen.
   schläft er), bei Musik (er tanzt mit), Anrufen, Timern, Navigation, Nachrichten, Codes,
   Bildschirmfotos, Laden und Taschenlampe – vorne im Inhalt, mit dessen Farben unter ihm;
   aufgeklappt sitzt er neben der Kamera und sagt, was los ist. Beim Sperren und Entsperren
-  hält er sich raus. In der Glimmer-App frei platzierbar: Seite (links/rechts), Position
+  hält er sich raus. In der leeren Pille (wenn nichts los ist) lässt er sich ausschalten. In der Glimmer-App frei platzierbar: Seite (links/rechts), Position
   (vom Inhalt bis an die Kamera) und Größe, mit Vorschau. Nach dem Entsperren
   sagt er bei jedem Mal in der Insel Hallo (morgens „Guten Morgen“, sonst immer
   etwas anders; auf Wunsch nur einmal am Tag).

@@ -1088,7 +1088,7 @@ private fun AppBadge(notice: LiveNotice, size: Dp) {
  */
 @Composable
 private fun CompactContent(content: IslandContent) {
-    if (content is IslandContent.Idle && LocalSettings.current.glimmerClawd) {
+    if (content is IslandContent.Idle && LocalSettings.current.glimmerClawd && LocalSettings.current.glimmerClawdIdle) {
         GlimmerClawd(if (clawdAsleep(java.time.LocalTime.now().hour)) ClawdMood.Sleep else ClawdMood.Idle)
         return
     }
