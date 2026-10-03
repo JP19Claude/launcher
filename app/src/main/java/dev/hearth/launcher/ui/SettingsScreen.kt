@@ -820,6 +820,29 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
         ) { v -> update { it.copy(glimmerIdlePill = v) } }
     }
 
+    // The fly-in: Hearth plays it as the launcher; with any other launcher, Glimmer does.
+    Section("Schließ-Animation") {
+        SwitchRow(
+            label = "Apps fliegen beim Schließen in Glimmer",
+            description = "Schließt du eine App, schrumpft sie und fliegt in die Insel (wie bei HarmonyOS oder HyperOS)",
+            checked = s.glimmerFlyIn,
+        ) { v -> update { it.copy(glimmerFlyIn = v) } }
+        if (s.glimmerFlyIn) {
+            SwitchRow(
+                label = "Auch mit anderen Launchern",
+                description = "Auch mit One UI, ColorOS, dem Pixel-Launcher und jedem anderen: Glimmer spielt die Animation dann selbst. Ab Android 11 fliegt die App selbst, sonst ihre Karte. Mit Hearth als Launcher macht es Hearth.",
+                checked = s.glimmerFlyInEverywhere,
+            ) { v -> update { it.copy(glimmerFlyInEverywhere = v) } }
+            ChoiceRow(
+                label = "So fliegt sie hinein",
+                options = FlyInStyle.entries,
+                selected = s.glimmerFlyInStyle,
+                optionLabel = { it.label },
+                onSelect = { style -> update { it.copy(glimmerFlyInStyle = style) } },
+            )
+        }
+    }
+
     if (!di) Section("Gestaltung") {
         SwitchRow(label = "Leuchten bei Neuem", description = "Glimmer schimmert kurz, wenn etwas Neues kommt", checked = s.glimmerGlow) { v ->
             update { it.copy(glimmerGlow = v) }

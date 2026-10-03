@@ -26,6 +26,10 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import dev.hearth.launcher.data.AppLock
 import dev.hearth.launcher.data.SettingsRepository
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 
 /**
  * The Glimmer app's accessibility service: the island around the camera in every app (with
@@ -54,7 +58,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
         when (key) {
-            AppLock.KEY -> applyEventScope()
+            AppLock.KEY, "glimmerFlyIn", "glimmerFlyInEverywhere" -> applyEventScope()
             // Applied while running, so sliders and switches show at once without a flicker.
             in SettingsRepository.GLIMMER_LIVE_KEYS -> glimmer?.update(SettingsRepository(this).settings.value)
             in SettingsRepository.GLIMMER_KEYS -> restartGlimmer()
@@ -66,6 +70,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
             when (intent.action) {
                 Intent.ACTION_SCREEN_OFF -> {
                     stopAppSnapshots()
+                    frontApp = null
                     AppLockGuard.relock()
                 }
             }
@@ -95,13 +100,15 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
     }
 
     /**
-     * Normally only the system UI's events arrive. With locked apps, Glimmer also needs to
-     * hear which app comes to the front (nothing else of other apps is looked at).
+     * Normally only the system UI's events arrive. With locked apps, or the fly-in with another
+     * launcher, Glimmer also needs to hear which app comes to the front (nothing else of other
+     * apps is looked at).
      */
     private fun applyEventScope() {
         runCatching {
             val info = serviceInfo ?: return
-            val guard = AppLock.lockedPackages(this).isNotEmpty()
+            homePackage = null
+            val guard = AppLock.lockedPackages(this).isNotEmpty() || flyInHere()
             info.packageNames = if (guard) null else arrayOf(SYSTEM_UI)
             serviceInfo = info
         }
@@ -117,6 +124,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         // App lock: a locked app came to the front.
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && pkg != SYSTEM_UI) {
             AppLockGuard.onWindow(this, pkg, event.className?.toString())
+            onFront(pkg)
             return
         }
         // Everything else is only about the system UI (the lock screen's messages).
@@ -159,6 +167,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         glimmer?.stop()
         glimmer = null
         stopAppSnapshots()
+        removeFlyWindow()
         runCatching { unregisterReceiver(screenReceiver) }
         getSharedPreferences(SettingsRepository.PREFS_NAME, MODE_PRIVATE)
             .unregisterOnSharedPreferenceChangeListener(prefsListener)
@@ -231,6 +240,140 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         handler.removeCallbacks(snapshotTick)
         snapshots.forEach { runCatching { it.second.close() } }
         snapshots.clear()
+    }
+
+    // ---- The fly-in with any launcher ----
+
+    /** The app in front (an app with an icon in the launcher), while the fly-in follows apps. */
+    private var frontApp: String? = null
+    private var homePackage: String? = null
+    private val launchable = HashMap<String, Boolean>()
+    private var flyWindow: android.view.View? = null
+
+    /** The phone's home app (the launcher), as Android has it set. */
+    private fun home(): String? = homePackage ?: runCatching {
+        packageManager.resolveActivity(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME),
+            android.content.pm.PackageManager.MATCH_DEFAULT_ONLY,
+        )?.activityInfo?.packageName
+    }.getOrNull().also { homePackage = it }
+
+    /**
+     * Glimmer plays the fly-in itself when another launcher is home (One UI, ColorOS, Pixel …);
+     * with Hearth as home, Hearth plays it.
+     */
+    private fun flyInHere(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return false
+        val s = SettingsRepository(this).settings.value
+        if (!s.glimmerEnabled || !s.glimmerFlyIn || !s.glimmerFlyInEverywhere) return false
+        val h = home() ?: return false
+        return h != GlimmerLink.HEARTH_PACKAGE
+    }
+
+    private fun isKeyboard(pkg: String): Boolean = runCatching {
+        getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+            ?.enabledInputMethodList?.any { it.packageName == pkg } == true
+    }.getOrDefault(false)
+
+    /** Something new came to the front: an app (keep its picture), or home (let the app fly). */
+    private fun onFront(pkg: String) {
+        if (!flyInHere()) return
+        val h = home() ?: return
+        when {
+            pkg == h -> {
+                val app = frontApp ?: return
+                frontApp = null
+                // A picture from just before the home gesture, not one of the window shrinking.
+                val shot = finishAppSnapshots(SystemClock.uptimeMillis() - 300)
+                showFlyIn(app, shot)
+            }
+            pkg == packageName || isLocked() -> Unit
+            launchable.getOrPut(pkg) { packageManager.getLaunchIntentForPackage(pkg) != null && !isKeyboard(pkg) } -> {
+                if (pkg != frontApp) {
+                    frontApp = pkg
+                    startAppSnapshots()
+                }
+            }
+        }
+    }
+
+    /** The closing app flies into the island, drawn by Glimmer over whatever launcher is home. */
+    private fun showFlyIn(pkg: String, shot: HardwareBuffer?) {
+        val settings = SettingsRepository(this).settings.value
+        val app = runCatching {
+            val pm = packageManager
+            val info = pm.getApplicationInfo(pkg, 0)
+            val icon = pm.getApplicationIcon(info)
+            dev.hearth.launcher.data.AppInfo(
+                label = pm.getApplicationLabel(info).toString(),
+                component = pm.getLaunchIntentForPackage(pkg)?.component ?: android.content.ComponentName(pkg, pkg),
+                user = android.os.Process.myUserHandle(),
+                icon = icon.toBitmap(192, 192).asImageBitmap(),
+            )
+        }.getOrNull()
+        if (app == null) {
+            shot?.let { runCatching { it.close() } }
+            return
+        }
+        val picture = shot?.let { hb ->
+            runCatching {
+                android.graphics.Bitmap.wrapHardwareBuffer(hb, android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB))
+            }.getOrNull()
+        }
+        val status = GlimmerBridgeProvider.handle(this, GlimmerLink.STATUS, null, null)
+        val landing = GlimmerLink.Landing(
+            status?.getFloat("lw") ?: 0f,
+            status?.getInt("ox") ?: 0,
+            status?.getInt("oy") ?: 0,
+        )
+        val island = glimmer?.islandSize?.takeIf { it.width.value > 0f }
+        removeFlyWindow()
+        val compose = androidx.compose.ui.platform.ComposeView(this).apply {
+            setViewTreeLifecycleOwner(this@GlimmerService)
+            setViewTreeSavedStateRegistryOwner(this@GlimmerService)
+            setContent {
+                androidx.compose.runtime.CompositionLocalProvider(dev.hearth.launcher.ui.LocalSettings provides settings) {
+                    dev.hearth.launcher.ui.GlimmerFlyIn(
+                        app = app,
+                        island = island,
+                        onPulse = { pulseGlimmer() },
+                        onDone = { removeFlyWindow() },
+                        snapshot = picture?.asImageBitmap(),
+                        style = settings.glimmerFlyInStyle,
+                        landing = landing,
+                        onArrive = { icon, color -> arriveGlimmer(icon, color) },
+                    )
+                }
+            }
+        }
+        val params = android.view.WindowManager.LayoutParams(
+            android.view.WindowManager.LayoutParams.MATCH_PARENT,
+            android.view.WindowManager.LayoutParams.MATCH_PARENT,
+            android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            android.graphics.PixelFormat.TRANSLUCENT,
+        ).apply {
+            layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            title = "Glimmer fly-in"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) setFitInsetsTypes(0)
+        }
+        val wm = getSystemService(android.view.WindowManager::class.java)
+        if (wm != null && runCatching { wm.addView(compose, params) }.isSuccess) {
+            flyWindow = compose
+            // Never left on screen, whatever happens.
+            handler.postDelayed({ removeFlyWindow() }, 4000)
+        }
+        // The picture is shared with the window; let it go once the flight is surely over.
+        shot?.let { hb -> handler.postDelayed({ runCatching { hb.close() } }, 5000) }
+    }
+
+    private fun removeFlyWindow() {
+        val view = flyWindow ?: return
+        flyWindow = null
+        runCatching { getSystemService(android.view.WindowManager::class.java)?.removeView(view) }
     }
 
     /** Glimmer hops and shimmers (an app just flew into it). */
