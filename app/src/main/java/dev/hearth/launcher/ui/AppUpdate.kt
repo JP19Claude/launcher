@@ -434,7 +434,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                     "Letzte Prüfung",
                     if (lastCheck > 0) DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(lastCheck)) else "Noch nie",
                 )
-                InfoRow("Quelle", "GitHub · Vinted7777/launcher")
+                InfoRow("Quelle", "GitHub · JP19Claude/launcher")
             }
 
             if (release != null && release.notes.isNotBlank()) {

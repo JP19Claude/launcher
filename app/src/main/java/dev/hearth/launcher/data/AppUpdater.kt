@@ -21,7 +21,7 @@ import java.net.URL
  */
 object AppUpdater {
 
-    private const val REPO = "Vinted7777/launcher"
+    private const val REPO = "JP19Claude/launcher"
 
     /** This app's name in the releases (tag "glimmer-v9.5", file "Glimmer-9.5.apk"). */
     private class Kind(val slug: String, val name: String)

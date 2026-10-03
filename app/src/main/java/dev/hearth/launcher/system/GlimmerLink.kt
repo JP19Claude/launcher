@@ -55,12 +55,12 @@ open class HearthApp internal constructor(val packageName: String, authority: St
 
 /** The control center app: the glass control center over other apps, replacing One UI's. */
 object ControlsLink : HearthApp("dev.hearth.controls", "dev.hearth.controls.bridge") {
-    const val DOWNLOAD_URL = "https://github.com/Vinted7777/launcher/releases/latest/download/Kontrollzentrum.apk"
+    const val DOWNLOAD_URL = "https://github.com/JP19Claude/launcher/releases/latest/download/Kontrollzentrum.apk"
 }
 
 /** Clawd: his own app with his widgets for any launcher (Samsung's too); takes Hearth's look of him. */
 object ClawdLink : HearthApp("dev.hearth.clawd", "dev.hearth.clawd.bridge") {
-    const val DOWNLOAD_URL = "https://github.com/Vinted7777/launcher/releases/latest/download/Clawd.apk"
+    const val DOWNLOAD_URL = "https://github.com/JP19Claude/launcher/releases/latest/download/Clawd.apk"
 
     /** Sent inside the Clawd app when his look changed: the widgets draw him again. */
     const val ACTION_REFRESH = "dev.hearth.clawd.REFRESH"
@@ -71,7 +71,7 @@ object GlimmerLink : HearthApp("dev.hearth.glimmer", "dev.hearth.glimmer.bridge"
 
     const val GLIMMER_PACKAGE = "dev.hearth.glimmer"
     const val HEARTH_PACKAGE = "dev.hearth.launcher"
-    const val DOWNLOAD_URL = "https://github.com/Vinted7777/launcher/releases/latest/download/Glimmer.apk"
+    const val DOWNLOAD_URL = "https://github.com/JP19Claude/launcher/releases/latest/download/Glimmer.apk"
 
     internal const val STATUS = "status"
     internal const val APP_LAUNCHED = "appLaunched"

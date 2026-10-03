@@ -185,9 +185,9 @@ mit Liquid Glass, und Claude dort, wo bei Samsung Galaxy AI sitzt.
   Hearth reicht das Aussehen seines Kontrollzentrums weiter. Die Apps reden über eine
   Schnittstelle, die nur Apps mit derselben Signatur nutzen dürfen.
 
-Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/download/Hearth.apk) ·
-[Glimmer.apk](https://github.com/Vinted7777/launcher/releases/latest/download/Glimmer.apk) ·
-[Kontrollzentrum.apk](https://github.com/Vinted7777/launcher/releases/latest/download/Kontrollzentrum.apk)
+Download: [Hearth.apk](https://github.com/JP19Claude/launcher/releases/latest/download/Hearth.apk) ·
+[Glimmer.apk](https://github.com/JP19Claude/launcher/releases/latest/download/Glimmer.apk) ·
+[Clawd.apk](https://github.com/JP19Claude/launcher/releases/latest/download/Clawd.apk)
 
 ## Funktionen
 

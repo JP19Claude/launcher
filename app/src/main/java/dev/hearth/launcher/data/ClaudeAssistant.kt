@@ -602,7 +602,7 @@ object ClaudeAssistant {
         val response = send(s, "${s.baseUrl}/chat/completions", body) { connection ->
             connection.setRequestProperty("Authorization", "Bearer ${s.apiKey.trim()}")
             if (s.provider == AiProvider.OpenRouter) {
-                connection.setRequestProperty("HTTP-Referer", "https://github.com/Vinted7777/launcher")
+                connection.setRequestProperty("HTTP-Referer", "https://github.com/JP19Claude/launcher")
                 connection.setRequestProperty("X-Title", "Hearth")
             }
         }
