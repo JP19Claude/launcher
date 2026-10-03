@@ -66,6 +66,9 @@ enum class HearthWidget(val label: String, val description: String, val spanX: I
     ClawdDiary("Clawd-Tagebuch", "Wie geht's dir heute? Ein Gesicht pro Tag, die ganze Woche im Blick – Clawd fühlt mit", 4, 2, 170),
     ClawdCoin("Clawd-Münze", "Kopf oder Zahl: antippen und Clawd wirft – ganz selten landet sie auf der Kante", 2, 2, 170),
     ClawdBreath("Clawd-Atmen", "Eine ruhige Minute: Clawd atmet mit dir ein und aus", 2, 2, 190),
+    ClawdCountdown("Clawd-Countdown", "Wie lange noch bis Weihnachten, Silvester, Ostern … – antippen für den nächsten großen Tag", 2, 2, 180),
+    ClawdRiddle("Clawd-Rätsel", "Clawd stellt dir Rätsel: antippen für die Lösung, nochmal für das nächste", 4, 2, 170),
+    ClawdRps("Clawd: Schnick-Schnack-Schnuck", "Schere, Stein, Papier gegen Clawd – mit Punktestand", 4, 2, 180),
     ;
 
     /** One of Clawd's widgets (shown with him in the picker). */

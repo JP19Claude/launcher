@@ -36,6 +36,9 @@ import dev.hearth.launcher.ui.drawDie
 import dev.hearth.launcher.ui.drawCoin
 import dev.hearth.launcher.data.ClawdCoin
 import dev.hearth.launcher.data.ClawdDiary
+import dev.hearth.launcher.data.ClawdCountdown
+import dev.hearth.launcher.data.ClawdRiddles
+import dev.hearth.launcher.data.ClawdRps
 import androidx.compose.ui.graphics.asAndroidBitmap
 import dev.hearth.launcher.data.ClawdPet
 import dev.hearth.launcher.data.ClawdSkin
@@ -172,6 +175,9 @@ abstract class ClawdWidgetProvider : AppWidgetProvider() {
             ClawdDiaryWidget::class.java,
             ClawdCoinWidget::class.java,
             ClawdBreathWidget::class.java,
+            ClawdCountdownWidget::class.java,
+            ClawdRiddleWidget::class.java,
+            ClawdRpsWidget::class.java,
         )
 
         /** Draws every placed widget again (his look changed, the pet was fed in the app …). */
@@ -715,4 +721,81 @@ class ClawdBreathWidget : ClawdWidgetProvider() {
             setImageViewBitmap(R.id.image_out, clawdPicture(context, ClawdMood.Love))
             setOnClickPendingIntent(R.id.root, openApp(context))
         }
+}
+
+// Clawd-Countdown
+
+class ClawdCountdownWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews {
+        val days = ClawdCountdown.upcoming()
+        val day = days[Math.floorMod(widgetPrefs(context).getInt("countdown_$id", 0), days.size)]
+        val left = ClawdCountdown.daysUntil(day)
+        if (left == 0L) dev.hearth.launcher.data.EasterEggs.find(context, "bigday")
+        val look = Look.of(context)
+        return RemoteViews(context.packageName, R.layout.clawd_widget_countdown).apply {
+            setImageViewBitmap(R.id.image, clawdPicture(context, if (left == 0L) ClawdMood.Dance else ClawdMood.Wave))
+            setTextViewText(R.id.emoji, day.emoji)
+            setTextViewText(R.id.big, if (left == 0L) "Heute!" else if (left == 1L) "Morgen!" else "$left Tage")
+            setTextViewText(R.id.line, "bis ${day.name}")
+            setTextColor(R.id.line, (if (look.accent == Color.White) Color(0xFFE8A07F) else look.accent).toArgb())
+            setOnClickPendingIntent(R.id.root, tap(context, id, "next"))
+        }
+    }
+
+    override fun act(context: Context, id: Int, what: String) {
+        val prefs = widgetPrefs(context)
+        prefs.edit().putInt("countdown_$id", prefs.getInt("countdown_$id", 0) + 1).apply()
+    }
+}
+
+// Clawd-Rätsel
+
+class ClawdRiddleWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews {
+        val prefs = widgetPrefs(context)
+        val n = prefs.getInt("riddle_$id", 0)
+        val shown = prefs.getBoolean("riddleShown_$id", false)
+        val riddle = ClawdRiddles.of(n)
+        return RemoteViews(context.packageName, R.layout.clawd_widget_riddle).apply {
+            setImageViewBitmap(R.id.image, clawdPicture(context, if (shown) ClawdMood.Surprised else ClawdMood.Thinking))
+            setTextViewText(R.id.question, riddle.question)
+            setTextViewText(R.id.answer, if (shown) "💡 ${riddle.answer}" else "Antippen für die Lösung")
+            setOnClickPendingIntent(R.id.root, tap(context, id, "tap"))
+        }
+    }
+
+    override fun act(context: Context, id: Int, what: String) {
+        val prefs = widgetPrefs(context)
+        val n = prefs.getInt("riddle_$id", 0)
+        if (prefs.getBoolean("riddleShown_$id", false)) {
+            prefs.edit().putInt("riddle_$id", n + 1).putBoolean("riddleShown_$id", false).apply()
+        } else {
+            prefs.edit().putBoolean("riddleShown_$id", true).apply()
+            ClawdRiddles.solve(context, n)
+        }
+    }
+}
+
+// Clawd: Schnick-Schnack-Schnuck
+
+class ClawdRpsWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews {
+        val round = ClawdRps.last(context)
+        return RemoteViews(context.packageName, R.layout.clawd_widget_rps).apply {
+            setImageViewBitmap(R.id.image, clawdPicture(context, ClawdRps.moodFor(round)))
+            setTextViewText(R.id.clawd_hand, round?.let { ClawdRps.Hands[it.clawd] } ?: "❔")
+            setTextViewText(R.id.result, round?.let { ClawdRps.line(it) } ?: "Schnick-Schnack-Schnuck!")
+            setTextViewText(R.id.score, round?.let { "Du ${it.wins} : ${it.losses} Clawd" } ?: "Wähl deine Hand")
+            setOnClickPendingIntent(R.id.rock, tap(context, id, "0"))
+            setOnClickPendingIntent(R.id.paper, tap(context, id, "1"))
+            setOnClickPendingIntent(R.id.scissors, tap(context, id, "2"))
+        }
+    }
+
+    override fun act(context: Context, id: Int, what: String) {
+        val you = what.toIntOrNull() ?: return
+        ClawdRps.play(context, you)
+        // One score for all of these widgets.
+        refreshAll(context)
+    }
 }

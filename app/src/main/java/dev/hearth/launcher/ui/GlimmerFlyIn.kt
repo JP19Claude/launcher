@@ -153,6 +153,8 @@ fun GlimmerFlyIn(
      * animation (the app shrinking back into its icon), then fades to show the real one.
      */
     backdrop: ImageBitmap? = null,
+    /** HyperOS: exactly where the icon lands, when Glimmer knows (turned with the phone sideways). */
+    landAt: Offset? = null,
 ) {
     val done by rememberUpdatedState(onDone)
     val reveal = remember(app) { Animatable(1f) }
@@ -186,7 +188,7 @@ fun GlimmerFlyIn(
             }
         }
         if (style == FlyInStyle.HyperOS) {
-            HyperFlyIn(app, landing, onArrive, finish, snapshot, target, look, hold)
+            HyperFlyIn(app, landing, onArrive, finish, snapshot, target, look, hold, landAt)
         } else {
             HarmonyFlyIn(app, island, onPulse, finish, snapshot, target, look, hold)
         }
@@ -452,6 +454,7 @@ private fun HyperFlyIn(
     target: Offset? = null,
     look: FlyInLook? = null,
     hold: () -> Boolean = { false },
+    landAt: Offset? = null,
 ) {
     val view = LocalView.current
     val context = LocalContext.current
@@ -527,8 +530,8 @@ private fun HyperFlyIn(
         val camY = target?.y ?: ((camera?.exactCenterY() ?: 15.dp.toPx()) + landing.dy.dp.toPx())
         // The icon's place in the small island: its left end (as Glimmer draws it).
         val landW = if (landing.width > 0f) landing.width.dp.toPx() else 170.dp.toPx()
-        val endX = camX - landW / 2f + 16.dp.toPx()
-        val endY = camY
+        val endX = landAt?.x ?: (camX - landW / 2f + 16.dp.toPx())
+        val endY = landAt?.y ?: camY
         val iconEnd = 20.dp.toPx()
 
         val k = travel.value.coerceIn(0f, 1f)

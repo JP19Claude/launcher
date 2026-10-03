@@ -84,6 +84,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -198,6 +200,26 @@ private val RainbowColors = listOf(
 
 /** Height of the pill when not expanded: as tall as the status bar row, like the camera ring. */
 const val ISLAND_HEIGHT_DP = 30f
+
+/**
+ * Glimmer held sideways and turned with the phone: laid out as if the phone were upright
+ * (width and height swapped), then turned a quarter so its top faces the camera's edge
+ * ([turn] 1 = left, 2 = right; 0 = as it is). Touches are turned along with it.
+ */
+fun Modifier.turnedWithPhone(turn: Int): Modifier = if (turn == 0) {
+    this
+} else {
+    layout { measurable, constraints ->
+        val w = constraints.maxWidth
+        val h = constraints.maxHeight
+        val placeable = measurable.measure(Constraints.fixed(h, w))
+        layout(w, h) {
+            placeable.placeWithLayer((w - h) / 2, (h - w) / 2) {
+                rotationZ = if (turn == 1) -90f else 90f
+            }
+        }
+    }
+}
 
 /**
  * The front camera, seen from the island: its center sideways from the island's middle, its

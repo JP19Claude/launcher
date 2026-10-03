@@ -38,6 +38,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import dev.hearth.launcher.ui.turnedWithPhone
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -93,6 +97,13 @@ class GlimmerController(private val service: GlimmerService) {
 
     /** Held sideways with the camera at an edge: 1 = left, 2 = right; 0 = at the top as usual. */
     private val side = MutableStateFlow(0)
+
+    /**
+     * Held sideways and turned with the phone (upright around the camera): the camera's edge,
+     * 1 = left, 2 = right; 0 = not turned. What the window was last laid out for: [turnApplied].
+     */
+    private val turn = MutableStateFlow(0)
+    private var turnApplied = 0
     private val screenWidth = MutableStateFlow(360f)
 
     /**
@@ -383,7 +394,7 @@ class GlimmerController(private val service: GlimmerService) {
     fun update(newSettings: LauncherSettings) {
         val effective = newSettings.forGlimmer()
         val moved = effective.glimmerOffsetX != settings.glimmerOffsetX || effective.glimmerOffsetY != settings.glimmerOffsetY ||
-            effective.glimmerSmall != settings.glimmerSmall
+            effective.glimmerSmall != settings.glimmerSmall || effective.glimmerSideways != settings.glimmerSideways
         settings = effective
         settingsState.value = effective
         refreshCharging()
@@ -805,13 +816,39 @@ class GlimmerController(private val service: GlimmerService) {
     private fun placeWindow() {
         val p = params ?: return
         val view = root ?: return
-        val x = windowX()
         insetTop.value = topInsetPx()
         cameraHolePx.value = cameraHole()
-        p.x = x
+        screenWidth.value = islandScreenWidthDp()
+        // Turned with the phone or back: the window lies the other way round now.
+        if ((turnApplied != 0) != (turn.value != 0)) {
+            val w = p.width
+            p.width = p.height
+            p.height = w
+        }
+        turnApplied = turn.value
         p.gravity = gravity()
+        if (turn.value != 0) {
+            placeTurned(p)
+        } else {
+            p.x = windowX()
+            p.y = 0
+        }
         runCatching { windowManager.updateViewLayout(view, p) }
         resizeTo(lastTarget)
+    }
+
+    /** Turned with the phone: at the camera's edge, centered on it along the edge. */
+    private fun placeTurned(p: WindowManager.LayoutParams) {
+        val u = upright() ?: return
+        p.x = 0
+        val mid = if (u.edge == 1) u.length / 2 - windowX() else u.length / 2 + windowX()
+        p.y = mid - p.height / 2
+    }
+
+    /** How wide the screen is for the island (along the camera's edge when turned with the phone). */
+    private fun islandScreenWidthDp(): Float {
+        upright()?.let { u -> return u.length / service.resources.displayMetrics.density }
+        return service.resources.configuration.screenWidthDp.toFloat()
     }
 
     /**
@@ -825,9 +862,14 @@ class GlimmerController(private val service: GlimmerService) {
             // Still there: make sure it sits over the camera (measured only while the screen is
             // on; the AOD may report the screen without its cutout).
             if (service.getSystemService(PowerManager::class.java)?.isInteractive == false) return
-            val x = windowX()
+            val wantTurn = upright()?.edge ?: 0
+            val x = if (wantTurn != 0) 0 else windowX()
             val top = topInsetPx()
-            if (params?.x != x || insetTop.value != top || cameraHolePx.value != cameraHole() || params?.gravity != gravity()) placeWindow()
+            if (turnApplied != wantTurn || params?.x != x || insetTop.value != top || cameraHolePx.value != cameraHole() ||
+                params?.gravity != gravity()
+            ) {
+                placeWindow()
+            }
             return
         }
         if (view != null) {
@@ -845,8 +887,10 @@ class GlimmerController(private val service: GlimmerService) {
      * Held sideways, the camera is at the left or right edge: which one (1 = left, 2 = right)
      * and where exactly (px on screen); null when it's at the top (or unknown).
      */
-    private fun sideCamera(): Pair<Int, android.graphics.Rect>? {
+    private fun cameraAtEdge(): Pair<Int, android.graphics.Rect>? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        // "At the top" sideways: as if the camera weren't at an edge.
+        if (settings.glimmerSideways == dev.hearth.launcher.data.GlimmerSideways.Top) return null
         return runCatching {
             val cutout = windowManager.currentWindowMetrics.windowInsets.displayCutout ?: return null
             val top = cutout.boundingRectTop
@@ -861,6 +905,32 @@ class GlimmerController(private val service: GlimmerService) {
         }.getOrNull()
     }
 
+    /** Sideways and lying across from the camera's edge into the screen. */
+    private fun sideCamera(): Pair<Int, android.graphics.Rect>? =
+        cameraAtEdge()?.takeIf { settings.glimmerSideways == dev.hearth.launcher.data.GlimmerSideways.Across }
+
+    /**
+     * Sideways and turned with the phone, the camera as if held upright (px): its edge (1 = left,
+     * 2 = right), where it is along that edge (from the end that's "left" when upright), how far
+     * from the edge, the edge's length, and the hole's half sizes along and across.
+     */
+    private class Upright(val edge: Int, val along: Int, val fromEdge: Int, val length: Int, val halfAlong: Int, val halfAcross: Int)
+
+    private fun upright(): Upright? {
+        if (settings.glimmerSideways != dev.hearth.launcher.data.GlimmerSideways.Upright) return null
+        val (edge, rect) = cameraAtEdge() ?: return null
+        val (sw, sh) = screenSize()
+        // Camera on the left: upright's "left" is the bottom; on the right it's the top.
+        return if (edge == 1) {
+            Upright(1, sh - rect.centerY(), rect.centerX(), sh, rect.height() / 2, rect.width() / 2)
+        } else {
+            Upright(2, rect.centerY(), sw - rect.centerX(), sh, rect.height() / 2, rect.width() / 2)
+        }
+    }
+
+    /** Turned with the phone right now (so the fly-in aims differently). */
+    val turnedWithPhone: Boolean get() = turn.value != 0
+
     private fun screenSize(): Pair<Int, Int> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         val b = windowManager.currentWindowMetrics.bounds
         b.width() to b.height()
@@ -869,7 +939,7 @@ class GlimmerController(private val service: GlimmerService) {
     }
 
     /** The window's gravity: over the camera at the top, or at the edge where it is sideways. */
-    private fun gravity(): Int = when (sideCamera()?.first) {
+    private fun gravity(): Int = when (sideCamera()?.first ?: upright()?.edge) {
         1 -> Gravity.TOP or Gravity.LEFT
         2 -> Gravity.TOP or Gravity.RIGHT
         else -> Gravity.TOP or Gravity.CENTER_HORIZONTAL
@@ -896,6 +966,13 @@ class GlimmerController(private val service: GlimmerService) {
      * screen, and its radius. Glimmer keeps every number and symbol out of it.
      */
     private fun cameraHole(): List<Int> {
+        // Turned with the phone: just like upright, seen from the camera's edge.
+        upright()?.let { u ->
+            side.value = 0
+            turn.value = u.edge
+            return listOf(u.along - u.length / 2 - windowX(), u.fromEdge, u.halfAlong, u.halfAcross)
+        }
+        turn.value = 0
         // Sideways: how far the camera is from the island's start (left) or end (right) edge.
         sideCamera()?.let { (edge, rect) ->
             side.value = edge
@@ -919,6 +996,10 @@ class GlimmerController(private val service: GlimmerService) {
     }
 
     private fun topInsetPx(): Int {
+        // Turned with the phone: from the camera's edge, the same as from the top when upright.
+        upright()?.let { u ->
+            return ((u.fromEdge - dp(IDLE_HEIGHT) / 2).coerceAtLeast(dp(4f)) + dp(settings.glimmerOffsetY.toFloat())).coerceAtLeast(0)
+        }
         // Sideways: exactly level with the camera; only on a very low screen pushed up a little,
         // so the unfolded card (music, the tallest) still fits below.
         sideCamera()?.let { (_, rect) ->
@@ -929,7 +1010,11 @@ class GlimmerController(private val service: GlimmerService) {
     }
 
     /** Where the window sits sideways: over the camera, plus the nudge from the settings (at an edge: right at it). */
-    private fun windowX(): Int = if (sideCamera() != null) 0 else cameraCenter().first + dp(settings.glimmerOffsetX.toFloat())
+    private fun windowX(): Int {
+        // Turned with the phone: along the camera's edge, like across the top when upright.
+        upright()?.let { u -> return u.along - u.length / 2 + dp(settings.glimmerOffsetX.toFloat()) }
+        return if (sideCamera() != null) 0 else cameraCenter().first + dp(settings.glimmerOffsetX.toFloat())
+    }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun addWindow() {
@@ -937,7 +1022,7 @@ class GlimmerController(private val service: GlimmerService) {
         val topInset = topInsetPx()
         insetTop.value = topInset
         cameraHolePx.value = cameraHole()
-        screenWidth.value = service.resources.configuration.screenWidthDp.toFloat()
+        screenWidth.value = islandScreenWidthDp()
         val frame = object : FrameLayout(service) {
             override fun dispatchTouchEvent(event: MotionEvent): Boolean {
                 // A touch anywhere else on the screen folds the island back up.
@@ -992,6 +1077,7 @@ class GlimmerController(private val service: GlimmerService) {
                 val top by insetTop.collectAsStateWithLifecycle()
                 val holePx by cameraHolePx.collectAsStateWithLifecycle()
                 val edge by side.collectAsStateWithLifecycle()
+                val turned by turn.collectAsStateWithLifecycle()
                 val micOn by micInUse.collectAsStateWithLifecycle()
                 val cameraOn by cameraInUse.collectAsStateWithLifecycle()
                 val widthDp by screenWidth.collectAsStateWithLifecycle()
@@ -1052,7 +1138,7 @@ class GlimmerController(private val service: GlimmerService) {
                     ?: visible.firstOrNull()
                     ?: when {
                         // Sideways it stays at the camera, if the camera's edge is known.
-                        !settings.glimmerIdlePill || (sideways && edge == 0) || aod || stepBack -> IslandContent.Hidden
+                        !settings.glimmerIdlePill || (sideways && edge == 0 && turned == 0) || aod || stepBack -> IslandContent.Hidden
                         // The iPhone's island is just there on the lock screen, no padlock in it.
                         settings.glimmerIsDynamicIsland -> IslandContent.Idle
                         padlockOpen -> IslandContent.Lock(open = true)
@@ -1066,6 +1152,8 @@ class GlimmerController(private val service: GlimmerService) {
                         LocalSettings provides settings,
                         LocalGlassStyle provides GlassStyle.from(settings),
                     ) {
+                        // Held sideways it can turn with the phone: upright around the camera.
+                        Box(Modifier.fillMaxSize().turnedWithPhone(turned)) {
                         GlimmerIsland(
                             content = main,
                             secondary = second,
@@ -1118,6 +1206,7 @@ class GlimmerController(private val service: GlimmerService) {
                                 else -> androidx.compose.ui.Alignment.CenterHorizontally
                             },
                         )
+                        }
                     }
                 }
             }
@@ -1146,6 +1235,14 @@ class GlimmerController(private val service: GlimmerService) {
                 blurBehindRadius = dp(24f)
             }
         }
+        // Turned with the phone: the window lies the other way round, centered on the camera.
+        turnApplied = turn.value
+        if (turn.value != 0) {
+            val w = p.width
+            p.width = p.height
+            p.height = w
+            placeTurned(p)
+        }
         if (runCatching { windowManager.addView(frame, p) }.isSuccess) {
             root = frame
             params = p
@@ -1160,6 +1257,11 @@ class GlimmerController(private val service: GlimmerService) {
 
     /** The island's middle on the screen (px), for the fly-in with another launcher to aim at. */
     fun islandCenterOnScreen(): android.graphics.PointF {
+        upright()?.let { u ->
+            val across = topInsetPx() + dp(IDLE_HEIGHT) / 2f
+            val mid = if (u.edge == 1) u.length / 2f - windowX() else u.length / 2f + windowX()
+            return android.graphics.PointF(if (u.edge == 1) across else screenSize().first - across, mid)
+        }
         val screenW = screenSize().first
         val y = topInsetPx() + dp(IDLE_HEIGHT) / 2f
         sideCamera()?.let { (edge, _) ->
@@ -1167,6 +1269,18 @@ class GlimmerController(private val service: GlimmerService) {
             return android.graphics.PointF(if (edge == 1) dp(PAD) + half else screenW - dp(PAD) - half, y)
         }
         return android.graphics.PointF(screenW / 2f + windowX(), y)
+    }
+
+    /**
+     * Turned with the phone: where an app's icon lands in the island (its upright "left" end,
+     * as wide as [widthDp]); null when not turned (then it's worked out from the island's middle).
+     */
+    fun landingOnScreen(widthDp: Float): android.graphics.PointF? {
+        val u = upright() ?: return null
+        val c = islandCenterOnScreen()
+        val along = dp(widthDp.coerceAtLeast(IDLE_WIDTH)) / 2f - dp(16f)
+        // Upright's left is down with the camera on the left, up with it on the right.
+        return android.graphics.PointF(c.x, if (u.edge == 1) c.y + along else c.y - along)
     }
 
     /** The island's current size on screen (zero while hidden), for the app fly-in to aim at. */
@@ -1187,12 +1301,16 @@ class GlimmerController(private val service: GlimmerService) {
         val view = root ?: return
         val topInset = insetTop.value
         val hidden = size.width.value <= 0f
+        // As if upright: across (w) and down from the camera's edge (h).
         val w = if (hidden) 1 else dp(size.width.value + 2 * PAD)
         val h = if (hidden) 1 else topInset + dp(size.height.value + PAD)
+        val turned = turnApplied != 0
         val token = ++resizeToken
         fun applySize(width: Int, height: Int) {
-            p.width = width
-            p.height = height
+            // Turned with the phone, the window lies the other way round (and stays centered on the camera).
+            p.width = if (turned) height else width
+            p.height = if (turned) width else height
+            if (turned) placeTurned(p)
             p.flags = if (hidden) {
                 p.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
             } else {
@@ -1200,10 +1318,12 @@ class GlimmerController(private val service: GlimmerService) {
             }
             runCatching { windowManager.updateViewLayout(view, p) }
         }
-        if (w >= p.width && h >= p.height && !hidden) {
+        val nowW = if (turned) p.height else p.width
+        val nowH = if (turned) p.width else p.height
+        if (w >= nowW && h >= nowH && !hidden) {
             applySize(w, h)
         } else {
-            if (!hidden) applySize(max(w, p.width), max(h, p.height))
+            if (!hidden) applySize(max(w, nowW), max(h, nowH))
             handler.postDelayed({ if (token == resizeToken) applySize(w, h) }, 450)
         }
     }

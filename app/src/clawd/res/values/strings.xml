@@ -42,6 +42,12 @@
     <string name="clawd_w_coin_d">Kopf oder Zahl: antippen und Clawd wirft</string>
     <string name="clawd_w_breath">Clawd-Atmen</string>
     <string name="clawd_w_breath_d">Clawd atmet ruhig mit dir: 4 Sekunden ein, 4 aus</string>
+    <string name="clawd_w_countdown">Clawd-Countdown</string>
+    <string name="clawd_w_countdown_d">Wie lange noch bis Weihnachten, Silvester, Ostern …</string>
+    <string name="clawd_w_riddle">Clawd-Rätsel</string>
+    <string name="clawd_w_riddle_d">Antippen für die Lösung, nochmal für das nächste Rätsel</string>
+    <string name="clawd_w_rps">Clawd: Schnick-Schnack-Schnuck</string>
+    <string name="clawd_w_rps_d">Schere, Stein, Papier gegen Clawd</string>
     <string name="clawd_breath_in">Einatmen …</string>
     <string name="clawd_breath_out">Ausatmen …</string>
 </resources>

@@ -51,6 +51,8 @@ object ClawdTalk {
     fun joke(n: Int): String = Jokes[Math.floorMod(n, Jokes.size)]
 
     private var joke = 0
+    private var riddle = 0
+    private var lastRiddle: ClawdRiddles.Riddle? = null
 
     fun reply(question: String): Answer? {
         val t = ClaudeTools.fold(question).removeSuffix(" clawd").removePrefix("clawd ").trim()
@@ -124,6 +126,42 @@ object ClawdTalk {
                 Answer("Oh nein … 🧡 Ich bin da. Halt es im Clawd-Tagebuch fest, trink ein Glas Wasser, atme kurz durch – morgen wird besser.", mood = ClawdMood.Love)
             m("(mir geht es|mir gehts|mir gehts auch|auch) (gut|super|toll|prima|bestens)|ich bin (so )?glucklich|gut|super") ->
                 Answer("Juhu, das freut mich! ♪", mood = ClawdMood.Dance)
+            m("((erzahl|sag|stell)( mir)? (ein|einen) )?ratsel|noch ein ratsel|ratsel bitte") -> {
+                val r = ClawdRiddles.of(riddle++)
+                lastRiddle = r
+                Answer("Rätsel: ${r.question} 🤔 (Sag „Lösung“, wenn du sie wissen willst.)", mood = ClawdMood.Thinking)
+            }
+            m("(die )?(losung|auflosung)( bitte)?|sag (mir )?die losung|ich weiss es nicht|keine ahnung") -> {
+                val r = lastRiddle
+                if (r != null) {
+                    lastRiddle = null
+                    Answer("${r.answer} 😄", mood = ClawdMood.Surprised)
+                } else {
+                    Answer("Erst ein Rätsel! Sag einfach „Rätsel“.", mood = ClawdMood.Wave)
+                }
+            }
+            m("(schere|stein|papier)") -> {
+                val you = when {
+                    t.contains("stein") -> 0
+                    t.contains("papier") -> 1
+                    else -> 2
+                }
+                val round = ClawdRps.play(null, you)
+                Answer(
+                    "Ich hatte ${ClawdRps.Hands[round.clawd]} ${ClawdRps.Names[round.clawd]} – ${ClawdRps.line(round)}",
+                    mood = ClawdRps.moodFor(round),
+                )
+            }
+            m("(schnick schnack schnuck|schere stein papier|stein schere papier)( spielen)?") ->
+                Answer("Schnick, Schnack, Schnuck! Sag „Schere“, „Stein“ oder „Papier“. ✊✋✌️", mood = ClawdMood.Wave)
+            m("(wie lange|wie viele tage|wann ist)( noch)?( bis)? (weihnachten|silvester|ostern|halloween|nikolaus|valentinstag|sommeranfang)( noch)?") -> {
+                val day = ClawdCountdown.byName(t)
+                if (day != null) {
+                    Answer(ClawdCountdown.line(day) + " " + day.emoji, mood = if (ClawdCountdown.daysUntil(day) == 0L) ClawdMood.Dance else ClawdMood.Thinking)
+                } else {
+                    null
+                }
+            }
             m("(motivier mich|motivation|sag (mir )?was nettes|ich brauche motivation)") ->
                 Answer(ClawdMotivation.of(java.time.LocalDate.now().dayOfYear, (0..20).random()), mood = ClawdMood.Love)
             else -> null

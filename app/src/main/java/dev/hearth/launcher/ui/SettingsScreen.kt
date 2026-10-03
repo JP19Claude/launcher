@@ -94,6 +94,7 @@ import dev.hearth.launcher.data.GlimmerMode
 import dev.hearth.launcher.data.GlimmerGlowColor
 import dev.hearth.launcher.data.GlimmerOutline
 import dev.hearth.launcher.data.GlimmerMotion
+import dev.hearth.launcher.data.GlimmerSideways
 import dev.hearth.launcher.data.GlimmerDoubleTap
 import dev.hearth.launcher.data.DockStyle
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -895,6 +896,20 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
         IntSlider("Nach links / rechts", s.glimmerOffsetX, -40..40, " dp") { v -> update { it.copy(glimmerOffsetX = v) } }
         IntSlider("Nach oben / unten", s.glimmerOffsetY, -10..24, " dp") { v -> update { it.copy(glimmerOffsetY = v) } }
         Note("Sitzt Glimmer nicht genau um deine Kamera, schieb es hier zurecht. Die Änderung siehst du sofort.")
+        ChoiceRow(
+            label = "Im Querformat",
+            options = GlimmerSideways.entries,
+            selected = s.glimmerSideways,
+            optionLabel = { it.label },
+            onSelect = { v -> update { it.copy(glimmerSideways = v) } },
+        )
+        Note(
+            when (s.glimmerSideways) {
+                GlimmerSideways.Upright -> "Senkrecht: Glimmer dreht sich mit dem Handy und bleibt genau so um die Kamera wie im Hochformat – als senkrechte Pille am Rand, auch aufgeklappt."
+                GlimmerSideways.Across -> "Quer: Glimmer liegt waagerecht neben der Kamera und reicht vom Rand ins Bild."
+                GlimmerSideways.Top -> "Oben: Glimmer sitzt oben in der Mitte (nicht an der Kamera) und zeigt sich nur, wenn etwas läuft."
+            },
+        )
         ActionRow(
             label = "Größe & Position zurücksetzen",
             description = if (s.glimmerSizeIsDefault) {

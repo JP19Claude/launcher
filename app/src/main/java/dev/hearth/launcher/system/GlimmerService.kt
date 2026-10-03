@@ -627,6 +627,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         val settings: dev.hearth.launcher.data.LauncherSettings,
         val look: dev.hearth.launcher.ui.FlyInLook?,
         val backdrop: androidx.compose.ui.graphics.ImageBitmap?,
+        val landAt: androidx.compose.ui.geometry.Offset?,
     )
 
     private val flight = androidx.compose.runtime.mutableStateOf<Flight?>(null)
@@ -696,6 +697,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
                             look = f.look,
                             hold = { holding.value },
                             backdrop = f.backdrop,
+                            landAt = f.landAt,
                         )
                     }
                 }
@@ -762,15 +764,18 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
             status?.getInt("oy") ?: 0,
         )
         val center = controller.islandCenterOnScreen()
+        // Turned with the phone sideways: the island stands upright at the edge.
+        val turned = controller.turnedWithPhone
         val next = Flight(
             app = app,
             snapshot = picture?.asImageBitmap(),
-            island = controller.islandSize.takeIf { it.width.value > 0f },
+            island = controller.islandSize.takeIf { it.width.value > 0f && !turned },
             landing = landing,
             target = androidx.compose.ui.geometry.Offset(center.x, center.y),
             settings = settings,
             look = preparedLook?.takeIf { it.first == pkg }?.second,
             backdrop = homeBackdrop(),
+            landAt = controller.landingOnScreen(landing.width)?.let { androidx.compose.ui.geometry.Offset(it.x, it.y) },
         )
         if (!hold) holding.value = false
         // The waiting window covers the screen; the flight starts as soon as it's laid out.

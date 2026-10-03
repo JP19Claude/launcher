@@ -129,6 +129,16 @@ enum class GlimmerOutline(val label: String) {
 }
 
 /** How springy Glimmer moves. */
+/** Where Glimmer sits with the phone held sideways. */
+enum class GlimmerSideways(val label: String) {
+    /** Turned with the phone: upright along the edge, the camera in it, like held upright. */
+    Upright("Senkrecht"),
+    /** Lying across from the camera's edge into the screen. */
+    Across("Quer"),
+    /** At the top in the middle, away from the camera (only while something runs). */
+    Top("Oben"),
+}
+
 enum class GlimmerMotion(val label: String) {
     Calm("Ruhig"),
     Normal("Normal"),
@@ -453,6 +463,8 @@ data class LauncherSettings(
     /** How wide the small island is, relative to normal. */
     val glimmerWidth: Float = 1f,
     val glimmerMotion: GlimmerMotion = GlimmerMotion.Normal,
+    /** Held sideways: upright around the camera (as if turned with the phone), across, or at the top. */
+    val glimmerSideways: GlimmerSideways = GlimmerSideways.Upright,
     /** Seconds until an unfolded island folds back up by itself; 0 = never. */
     val glimmerAutoCollapse: Int = 9,
     val glimmerDoubleTap: GlimmerDoubleTap = GlimmerDoubleTap.Off,
@@ -841,6 +853,7 @@ class SettingsRepository(context: Context) {
             glimmerOffsetY = prefs.getInt("glimmerOffsetY", d.glimmerOffsetY),
             glimmerWidth = prefs.getFloat("glimmerWidth", d.glimmerWidth),
             glimmerMotion = enumOf("glimmerMotion", d.glimmerMotion),
+            glimmerSideways = enumOf("glimmerSideways", d.glimmerSideways),
             glimmerAutoCollapse = prefs.getInt("glimmerAutoCollapse", d.glimmerAutoCollapse),
             glimmerDoubleTap = enumOf("glimmerDoubleTap", d.glimmerDoubleTap),
             glimmerSwipeTracks = prefs.getBoolean("glimmerSwipeTracks", d.glimmerSwipeTracks),
@@ -965,6 +978,7 @@ class SettingsRepository(context: Context) {
             .putInt("glimmerOffsetY", s.glimmerOffsetY)
             .putFloat("glimmerWidth", s.glimmerWidth)
             .putString("glimmerMotion", s.glimmerMotion.name)
+            .putString("glimmerSideways", s.glimmerSideways.name)
             .putInt("glimmerAutoCollapse", s.glimmerAutoCollapse)
             .putString("glimmerDoubleTap", s.glimmerDoubleTap.name)
             .putBoolean("glimmerSwipeTracks", s.glimmerSwipeTracks)
@@ -1051,7 +1065,7 @@ class SettingsRepository(context: Context) {
         val GLIMMER_LIVE_KEYS = setOf(
             "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
-            "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerAutoCollapse",
+            "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
             "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerSmall", "glimmerPrivacy", "accent", "animations",
         )
         const val KEY_CC_ENABLED = "ccEnabled"

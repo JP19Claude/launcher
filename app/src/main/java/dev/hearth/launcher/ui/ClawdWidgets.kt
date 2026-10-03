@@ -1400,3 +1400,183 @@ internal fun ClawdBreathWidget(modifier: Modifier) {
         }
     }
 }
+
+// Clawd-Countdown: the next big day
+
+/** Days until the next big day (Christmas, New Year's Eve, Easter …); a tap shows the one after. */
+@Composable
+internal fun ClawdCountdownWidget(id: Int, modifier: Modifier) {
+    val context = LocalContext.current
+    val prefs = remember { clawdPrefs(context) }
+    val today = rememberTime(everySecond = false).toLocalDate()
+    val days = remember(today) { dev.hearth.launcher.data.ClawdCountdown.upcoming(today) }
+    var pick by remember(id) { mutableIntStateOf(prefs.getInt("countdown_$id", 0)) }
+    val day = days[Math.floorMod(pick, days.size)]
+    val left = dev.hearth.launcher.data.ClawdCountdown.daysUntil(day, today)
+    val accent = LocalSettings.current.accent.color
+    val player = rememberMoodPlayer()
+    // The big day itself: Clawd dances (and that's an easter egg).
+    androidx.compose.runtime.LaunchedEffect(left) {
+        if (left == 0L) dev.hearth.launcher.data.EasterEggs.find(context, "bigday")
+    }
+    BoxWithConstraints(
+        modifier.tap {
+            pick++
+            prefs.edit().putInt("countdown_$id", pick).apply()
+            player.play(ClawdMood.Jump, 900)
+        },
+    ) {
+        val boxH = maxHeight
+        Column(
+            Modifier.fillMaxSize().padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Clawd(
+                    Modifier.size(width = boxH * 0.34f, height = boxH * 0.3f),
+                    mood = player.mood ?: if (left == 0L) ClawdMood.Dance else ClawdMood.Wave,
+                )
+                Text(day.emoji, fontSize = 30.sp)
+            }
+            Text(
+                if (left == 0L) "Heute!" else if (left == 1L) "Morgen!" else "$left Tage",
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+            Text(
+                "bis ${day.name}",
+                color = accent.copy(alpha = 0.85f),
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+// Clawd-Rätsel: a riddle, then its answer
+
+/** A riddle in Clawd's speech bubble: a tap shows the answer, the next tap the next riddle. */
+@Composable
+internal fun ClawdRiddleWidget(id: Int, modifier: Modifier) {
+    val context = LocalContext.current
+    val prefs = remember { clawdPrefs(context) }
+    var n by remember(id) { mutableIntStateOf(prefs.getInt("riddle_$id", 0)) }
+    var shown by remember(id) { mutableStateOf(prefs.getBoolean("riddleShown_$id", false)) }
+    val riddle = dev.hearth.launcher.data.ClawdRiddles.of(n)
+    Row(
+        modifier
+            .padding(12.dp)
+            .tap {
+                if (shown) {
+                    n++
+                    shown = false
+                } else {
+                    shown = true
+                    dev.hearth.launcher.data.ClawdRiddles.solve(context, n)
+                }
+                prefs.edit().putInt("riddle_$id", n).putBoolean("riddleShown_$id", shown).apply()
+            },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Clawd(Modifier.fillMaxHeight(0.6f).width(72.dp), mood = if (shown) ClawdMood.Surprised else ClawdMood.Thinking)
+        Spacer(Modifier.width(8.dp))
+        Column(
+            Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 20.dp, bottomEnd = 20.dp, bottomStart = 20.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFFE6E0FF), Color(0xFFFAF9F5))))
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+        ) {
+            Text(
+                riddle.question,
+                color = Color(0xFF2B2A27),
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                if (shown) "💡 ${riddle.answer}" else "Antippen für die Lösung",
+                color = if (shown) Color(0xFFB35A3A) else Color(0xFF8A8780),
+                fontSize = 12.sp,
+                fontWeight = if (shown) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+// Clawd: Schnick-Schnack-Schnuck
+
+/** Rock, paper, scissors against Clawd: three hands to pick from, his hand, the score. */
+@Composable
+internal fun ClawdRpsWidget(modifier: Modifier) {
+    val context = LocalContext.current
+    var round by remember { mutableStateOf(dev.hearth.launcher.data.ClawdRps.last(context)) }
+    var shaking by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val hands = dev.hearth.launcher.data.ClawdRps.Hands
+    Row(modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Clawd(
+                Modifier.fillMaxWidth().height(58.dp),
+                mood = if (shaking) ClawdMood.Jump else dev.hearth.launcher.data.ClawdRps.moodFor(round),
+            )
+            Text(
+                if (shaking) "…" else round?.let { hands[it.clawd] } ?: "❔",
+                fontSize = 24.sp,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                when {
+                    shaking -> "Schnick, Schnack …"
+                    round != null -> dev.hearth.launcher.data.ClawdRps.line(round!!)
+                    else -> "Schnick-Schnack-Schnuck!"
+                },
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            round?.let {
+                Text("Du ${it.wins} : ${it.losses} Clawd", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp, maxLines = 1)
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                hands.forEachIndexed { i, hand ->
+                    Box(
+                        Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (!shaking && round?.you == i) LocalSettings.current.accent.color.copy(alpha = 0.35f)
+                                else Color.White.copy(alpha = 0.12f),
+                            )
+                            .tap {
+                                if (shaking) return@tap
+                                shaking = true
+                                scope.launch {
+                                    delay(450)
+                                    round = dev.hearth.launcher.data.ClawdRps.play(context, i)
+                                    shaking = false
+                                }
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(hand, fontSize = 20.sp)
+                    }
+                }
+            }
+        }
+    }
+}

@@ -291,6 +291,8 @@ object ClawdBadges {
         val eggs = EasterEggs.found.value.size
         val breaths = ClawdBreath.sessions(context)
         val diary = ClawdDiary.streak(context)
+        val riddles = ClawdRiddles.solved(context)
+        val rps = ClawdRps.best(context)
         return listOf(
             Badge("🍕", "Erste Mahlzeit", "Füttere Clawd im Tamagotchi", care >= 1),
             Badge("🧡", "Bester Freund", "Tamagotchi Level 3", level >= 3),
@@ -304,6 +306,8 @@ object ClawdBadges {
             Badge("🎩", "Modebewusst", "Clawd ein Outfit anziehen", settings.clawdOutfit != ClawdOutfit.None),
             Badge("🧘", "Tief durchgeatmet", "Eine Minute mit Clawd atmen", breaths >= 1),
             Badge("📔", "Tagebuch-Woche", "7 Tage in Folge im Clawd-Tagebuch", diary >= 7),
+            Badge("🧠", "Rätselfuchs", "10 von Clawds Rätseln gelöst", riddles >= 10),
+            Badge("✌️", "Glückspilz", "3× in Folge gegen Clawd gewonnen (Schnick-Schnack-Schnuck)", rps >= 3),
             Badge("🥚", "Eiersucher", "5 Easter Eggs gefunden", eggs >= 5),
             Badge("🌟", "Alle Eier!", "Alle ${EasterEggs.TOTAL} Easter Eggs gefunden", eggs >= EasterEggs.TOTAL),
         )
@@ -479,5 +483,155 @@ object ClawdBreath {
     fun finished(context: Context) {
         prefs(context).edit().putInt("sessions", sessions(context) + 1).apply()
         EasterEggs.find(context, "breathe")
+    }
+}
+
+/** Clawd counts down to the next big days of the year. */
+object ClawdCountdown {
+    class Day(val name: String, val emoji: String, val date: java.time.LocalDate)
+
+    /** Easter Sunday (the Gregorian computus). */
+    private fun easter(year: Int): java.time.LocalDate {
+        val a = year % 19
+        val b = year / 100
+        val c = year % 100
+        val d = b / 4
+        val e = b % 4
+        val f = (b + 8) / 25
+        val g = (b - f + 1) / 3
+        val h = (19 * a + b - d - g + 15) % 30
+        val i = c / 4
+        val k = c % 4
+        val l = (32 + 2 * e + 2 * i - h - k) % 7
+        val m = (a + 11 * h + 22 * l) / 451
+        val month = (h + l - 7 * m + 114) / 31
+        val day = (h + l - 7 * m + 114) % 31 + 1
+        return java.time.LocalDate.of(year, month, day)
+    }
+
+    /** The coming big days, soonest first (today's still counts). */
+    fun upcoming(today: java.time.LocalDate = java.time.LocalDate.now()): List<Day> {
+        fun next(make: (Int) -> java.time.LocalDate): java.time.LocalDate {
+            val d = make(today.year)
+            return if (d.isBefore(today)) make(today.year + 1) else d
+        }
+        return listOf(
+            Day("Weihnachten", "🎄", next { java.time.LocalDate.of(it, 12, 24) }),
+            Day("Silvester", "🎆", next { java.time.LocalDate.of(it, 12, 31) }),
+            Day("Ostern", "🐣", next { easter(it) }),
+            Day("Halloween", "🎃", next { java.time.LocalDate.of(it, 10, 31) }),
+            Day("Valentinstag", "💝", next { java.time.LocalDate.of(it, 2, 14) }),
+            Day("Sommeranfang", "☀️", next { java.time.LocalDate.of(it, 6, 21) }),
+            Day("Nikolaus", "🎅", next { java.time.LocalDate.of(it, 12, 6) }),
+        ).sortedBy { it.date }
+    }
+
+    fun daysUntil(day: Day, today: java.time.LocalDate = java.time.LocalDate.now()): Long =
+        java.time.temporal.ChronoUnit.DAYS.between(today, day.date)
+
+    fun line(day: Day, today: java.time.LocalDate = java.time.LocalDate.now()): String = when (val n = daysUntil(day, today)) {
+        0L -> "Heute ist ${day.name}! ${day.emoji}"
+        1L -> "Morgen ist ${day.name}!"
+        else -> "Noch $n Tage bis ${day.name}"
+    }
+
+    /** "Wie lange noch bis Weihnachten?" – the day by its (folded) name. */
+    fun byName(folded: String): Day? = upcoming().firstOrNull { folded.contains(ClaudeTools.fold(it.name)) }
+}
+
+/** Clawd's riddles: the question first, a tap shows the answer. */
+object ClawdRiddles {
+    class Riddle(val question: String, val answer: String)
+
+    val All = listOf(
+        Riddle("Was hat Zähne, kann aber nicht beißen?", "Ein Kamm."),
+        Riddle("Was wird nasser, je mehr es trocknet?", "Ein Handtuch."),
+        Riddle("Was hat einen Hals, aber keinen Kopf?", "Eine Flasche."),
+        Riddle("Je mehr man wegnimmt, desto größer wird es. Was ist es?", "Ein Loch."),
+        Riddle("Was hat Tasten, aber kein Schloss?", "Eine Tastatur – oder ein Klavier."),
+        Riddle("Was gehört dir, wird aber von anderen viel öfter benutzt?", "Dein Name."),
+        Riddle("Was kann man fangen, aber nicht werfen?", "Eine Erkältung."),
+        Riddle("Was hat ein Auge, kann aber nicht sehen?", "Eine Nadel."),
+        Riddle("Was steht mitten in Paris?", "Das „r“."),
+        Riddle("Was ist leichter als eine Feder, aber niemand kann es lange halten?", "Den Atem."),
+        Riddle("Was geht durchs Glas, ohne es zu zerbrechen?", "Das Licht."),
+        Riddle("Was hat Hände, kann aber nicht klatschen?", "Eine Uhr."),
+        Riddle("Was läuft, hat aber keine Beine?", "Wasser – oder die Zeit."),
+        Riddle("Welches Wesen hat 104 Pixel und wohnt in deinem Handy?", "Ich! Clawd. 👋"),
+        Riddle("Was hat Blätter, ist aber kein Baum?", "Ein Buch."),
+    )
+
+    fun of(n: Int): Riddle = All[Math.floorMod(n, All.size)]
+
+    private fun prefs(context: Context) = context.getSharedPreferences("clawd_riddles", Context.MODE_PRIVATE)
+
+    /** How many different riddles were solved (answers shown). */
+    fun solved(context: Context): Int = prefs(context).getStringSet("solved", emptySet()).orEmpty().size
+
+    /** The answer to riddle [n] was shown; all of them makes an easter egg. */
+    fun solve(context: Context, n: Int) {
+        val now = prefs(context).getStringSet("solved", emptySet()).orEmpty() + Math.floorMod(n, All.size).toString()
+        prefs(context).edit().putStringSet("solved", now).apply()
+        if (now.size >= All.size) EasterEggs.find(context, "riddles")
+    }
+}
+
+/** Schnick, Schnack, Schnuck with Clawd: rock, paper, scissors. */
+object ClawdRps {
+    val Hands = listOf("✊", "✋", "✌️")
+    val Names = listOf("Stein", "Papier", "Schere")
+
+    /** [result]: 1 you won, 0 a draw, -1 Clawd won. */
+    class Round(val you: Int, val clawd: Int, val result: Int, val wins: Int, val losses: Int, val streak: Int)
+
+    private fun prefs(context: Context) = context.getSharedPreferences("clawd_rps", Context.MODE_PRIVATE)
+
+    /** Who wins with these two hands: 1 the first, 0 nobody, -1 the second. */
+    fun judge(a: Int, b: Int): Int = when (Math.floorMod(a - b, 3)) {
+        0 -> 0
+        1 -> 1
+        else -> -1
+    }
+
+    fun play(context: Context?, you: Int): Round {
+        val clawd = (0..2).random()
+        val result = judge(you, clawd)
+        if (context == null) return Round(you, clawd, result, 0, 0, 0)
+        val p = prefs(context)
+        val wins = p.getInt("wins", 0) + if (result == 1) 1 else 0
+        val losses = p.getInt("losses", 0) + if (result == -1) 1 else 0
+        // A draw doesn't break a winning run.
+        val streak = when (result) {
+            1 -> p.getInt("streak", 0) + 1
+            0 -> p.getInt("streak", 0)
+            else -> 0
+        }
+        val best = maxOf(p.getInt("best", 0), streak)
+        p.edit().putInt("wins", wins).putInt("losses", losses).putInt("streak", streak).putInt("best", best)
+            .putInt("you", you).putInt("clawd", clawd).putInt("result", result).apply()
+        if (streak >= 5) EasterEggs.find(context, "rps")
+        return Round(you, clawd, result, wins, losses, streak)
+    }
+
+    /** The last round played (or null). */
+    fun last(context: Context): Round? {
+        val p = prefs(context)
+        if (!p.contains("result")) return null
+        return Round(p.getInt("you", 0), p.getInt("clawd", 0), p.getInt("result", 0), p.getInt("wins", 0), p.getInt("losses", 0), p.getInt("streak", 0))
+    }
+
+    fun best(context: Context): Int = prefs(context).getInt("best", 0)
+
+    fun line(r: Round): String = when (r.result) {
+        1 -> if (r.streak >= 3) "Du gewinnst – schon ${r.streak}× in Folge! 🔥" else "Du gewinnst! 🎉"
+        0 -> "Unentschieden!"
+        else -> "Clawd gewinnt! 😄"
+    }
+
+    fun moodFor(r: Round?): ClawdMood = when (r?.result) {
+        null -> ClawdMood.Wave
+        1 -> ClawdMood.Dizzy
+        0 -> ClawdMood.Surprised
+        else -> ClawdMood.Dance
     }
 }
