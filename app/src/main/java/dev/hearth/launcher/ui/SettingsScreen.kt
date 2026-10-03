@@ -1099,6 +1099,7 @@ internal fun CcLookRows(s: LauncherSettings, update: ((LauncherSettings) -> Laun
 /** In Hearth: the family's other apps (Glimmer, control center), and the fly-in. */
 @Composable
 private fun GlimmerLinkRows(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
+    val context = LocalContext.current
     Note("Die Insel um die Kamera und das Kontrollzentrum über anderen Apps sind eigene Apps: „Glimmer“ (Insel mit Live-Aktivitäten) und „Kontrollzentrum“ (Glas-Kontrollzentrum in jeder App, ersetzt One UIs). Beide laufen mit jedem Launcher; mit Hearth fliegen geschlossene Apps in Glimmer.")
     FamilyAppRow("Glimmer", GlimmerLink, GlimmerLink.DOWNLOAD_URL)
     FamilyAppRow("Kontrollzentrum", ControlsLink, ControlsLink.DOWNLOAD_URL)
@@ -1106,13 +1107,20 @@ private fun GlimmerLinkRows(s: LauncherSettings, update: ((LauncherSettings) -> 
         label = "Apps fliegen in Glimmer",
         description = "Schließt du eine App, die du über Hearth geöffnet hast, fliegt sie selbst in die Insel (wie bei HarmonyOS). Braucht Glimmer.",
         checked = s.glimmerFlyIn,
-    ) { v -> update { it.copy(glimmerFlyIn = v) } }
+    ) { v ->
+        update { it.copy(glimmerFlyIn = v) }
+        pushToGlimmer(context) { putBoolean("glimmerFlyIn", v) }
+    }
     if (s.glimmerFlyIn) ChoiceRow(
         label = "So fliegt sie hinein",
         options = FlyInStyle.entries,
         selected = s.glimmerFlyInStyle,
         optionLabel = { it.label },
-        onSelect = { style -> update { it.copy(glimmerFlyInStyle = style) } },
+        onSelect = { style ->
+            update { it.copy(glimmerFlyInStyle = style) }
+            // Glimmer plays it itself with other launchers: it takes the same style.
+            pushToGlimmer(context) { putString("glimmerFlyInStyle", style.name) }
+        },
     )
     if (s.glimmerFlyIn) Note(
         if (s.glimmerFlyInStyle == FlyInStyle.HyperOS) {
@@ -1653,4 +1661,10 @@ private fun BackupSection(vm: LauncherViewModel) {
         ) { runCatching { restore.launch(arrayOf("application/json", "text/plain", "*/*")) } }
         status?.let { Note(it) }
     }
+}
+
+/** Hands a fly-in setting to Glimmer right when it's changed here (Glimmer has its own too). */
+private fun pushToGlimmer(context: android.content.Context, put: android.os.Bundle.() -> Unit) {
+    val app = context.applicationContext
+    Thread { GlimmerLink.syncSettings(app, android.os.Bundle().apply(put)) }.start()
 }

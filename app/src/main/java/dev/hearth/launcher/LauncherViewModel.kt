@@ -243,6 +243,23 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
         }
 
+        // Once: the fly-in style chosen here so far goes to Glimmer too (it plays the fly-in
+        // itself with other launchers); after that, only when it's changed here.
+        viewModelScope.launch(Dispatchers.IO) {
+            val app = getApplication<Application>()
+            val once = app.getSharedPreferences("hearth_once", android.content.Context.MODE_PRIVATE)
+            if (once.getBoolean("flyInHandedOver", false)) return@launch
+            val s = settings.value
+            GlimmerLink.syncSettings(
+                app,
+                android.os.Bundle().apply {
+                    putBoolean("glimmerFlyIn", s.glimmerFlyIn)
+                    putString("glimmerFlyInStyle", s.glimmerFlyInStyle.name)
+                },
+            )
+            if (GlimmerLink.isInstalled(app)) once.edit().putBoolean("flyInHandedOver", true).apply()
+        }
+
         // Re-render icons whenever the icon pack or icon style changes.
         viewModelScope.launch {
             settings

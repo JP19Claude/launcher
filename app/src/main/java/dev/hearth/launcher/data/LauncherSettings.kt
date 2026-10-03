@@ -996,6 +996,9 @@ class SettingsRepository(context: Context) {
          */
         const val KEY_CLAWD_GLIMMER = "clawdInGlimmer"
 
+        /** Set in either app, handed over only when changed in Hearth (never undoing Glimmer's own choice). */
+        val PUSHED_KEYS = setOf(KEY_CLAWD_GLIMMER, "glimmerFlyIn", "glimmerFlyInStyle")
+
         /** The shared settings as they are stored, for [writeRaw] in the other app. */
         fun readShared(context: Context): Bundle = Bundle().apply {
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).all.forEach { (key, value) ->
@@ -1014,7 +1017,7 @@ class SettingsRepository(context: Context) {
         fun writeRaw(context: Context, values: Bundle) {
             val edit = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
             for (key in values.keySet()) {
-                if (!isShared(key) && key != KEY_CLAWD_GLIMMER) continue
+                if (!isShared(key) && key !in PUSHED_KEYS) continue
                 @Suppress("DEPRECATION")
                 when (val value = values.get(key)) {
                     is String -> edit.putString(key, value)
