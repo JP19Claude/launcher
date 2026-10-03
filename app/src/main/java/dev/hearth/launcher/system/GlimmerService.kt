@@ -225,6 +225,15 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
      */
     private var snapshotting = false
     private val snapshots = ArrayDeque<Pair<Long, HardwareBuffer>>()
+    private var snapshotCount = 0
+
+    /**
+     * The app in front comes out black in pictures (banking, passwords: it protects its screen).
+     * Then its colored card flies instead, and its closing isn't covered with a black screen.
+     * Looked at in the background, on the first picture and now and then after.
+     */
+    @Volatile
+    private var frontSecure = false
     private val snapshotTick = object : Runnable {
         override fun run() {
             if (!snapshotting || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
@@ -244,6 +253,18 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
                                 }
                                 snapshots.addLast(SystemClock.uptimeMillis() to buffer)
                                 while (snapshots.size > 2) snapshots.removeFirst().second.close()
+                                if (snapshotCount++ % 8 == 0) {
+                                    // The bitmap keeps its own hold on the picture.
+                                    val picture = runCatching {
+                                        android.graphics.Bitmap.wrapHardwareBuffer(
+                                            buffer,
+                                            android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB),
+                                        )
+                                    }.getOrNull()
+                                    if (picture != null) {
+                                        Thread { frontSecure = !dev.hearth.launcher.ui.snapshotLooksReal(picture) }.start()
+                                    }
+                                }
                             }
 
                             override fun onFailure(errorCode: Int) = Unit
@@ -259,6 +280,8 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
     fun startAppSnapshots() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         snapshots.clear()
+        snapshotCount = 0
+        frontSecure = false
         snapshotting = true
         handler.removeCallbacks(snapshotTick)
         // Give the app a moment to draw its first screen.
@@ -377,7 +400,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
             }
             return
         }
-        if (covering == null && frontFull && activePkg == app && flight.value == null && !isLocked() && coverWanted()) {
+        if (covering == null && frontFull && !frontSecure && activePkg == app && flight.value == null && !isLocked() && coverWanted()) {
             coverApp(app)
         }
     }
@@ -436,7 +459,10 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
 
     /** The home gesture began: the app's picture, lifted a little, over a picture of home. */
     private fun coverApp(pkg: String) {
-        val shot = finishAppSnapshots(SystemClock.uptimeMillis() - 150)
+        val before = SystemClock.uptimeMillis() - 150
+        // No picture of the app yet (it only just opened): nothing to cover with.
+        if (snapshots.none { it.first <= before && before - it.first < 4000 }) return
+        val shot = finishAppSnapshots(before)
         covering = pkg
         holding.value = true
         if (!showFlyIn(pkg, shot, hold = true)) {
@@ -723,7 +749,8 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
             shot?.let { runCatching { it.close() } }
             return false
         }
-        val picture = shot?.let { hb ->
+        // A black picture (the app protects its screen): its colored card flies instead.
+        val picture = shot?.takeUnless { frontSecure }?.let { hb ->
             runCatching {
                 android.graphics.Bitmap.wrapHardwareBuffer(hb, android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB))
             }.getOrNull()

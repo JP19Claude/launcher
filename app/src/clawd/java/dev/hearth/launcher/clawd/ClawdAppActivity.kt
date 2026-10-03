@@ -171,6 +171,7 @@ private fun ClawdAppScreen(
         if (answer != null) {
             said = answer.text
             mood = answer.mood ?: ClawdMood.Wave
+            answer.egg?.let { dev.hearth.launcher.data.EasterEggs.find(context, it) }
             if (answer.game) dev.hearth.launcher.data.ClawdGameScore.open(context)
             return
         }
