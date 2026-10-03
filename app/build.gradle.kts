@@ -12,8 +12,8 @@ android {
         applicationId = "dev.hearth.launcher"
         minSdk = 28
         targetSdk = 35
-        versionCode = 86
-        versionName = "9.3"
+        versionCode = 87
+        versionName = "9.4"
     }
 
     // Fixed debug key in the repo, so every CI build installs as an update over the last one.

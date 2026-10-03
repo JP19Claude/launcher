@@ -319,9 +319,30 @@ class GlimmerController(private val service: GlimmerService) {
         override fun onDisplayAdded(displayId: Int) = Unit
         override fun onDisplayRemoved(displayId: Int) = Unit
         override fun onDisplayChanged(displayId: Int) {
-            if (displayId == Display.DEFAULT_DISPLAY) updateDozing()
+            if (displayId != Display.DEFAULT_DISPLAY) return
+            updateDozing()
+            // Turned round: also from one sideways to the other (by 180°), which Android doesn't
+            // count as a configuration change – the camera is at the other edge then.
+            val rotation = service.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)?.rotation ?: return
+            if (rotation != lastRotation) {
+                lastRotation = rotation
+                placeAgainSoon()
+            }
         }
     }
+    private var lastRotation = -1
+
+    /**
+     * Over the camera again after turning: right away, and once more shortly after (the
+     * camera's new place can take a moment to be known).
+     */
+    private fun placeAgainSoon() {
+        placeWindow()
+        handler.removeCallbacks(placeCheck)
+        handler.postDelayed(placeCheck, 250)
+        handler.postDelayed(placeCheck, 900)
+    }
+    private val placeCheck = Runnable { ensureWindow() }
     private fun updateDozing() {
         // A screen that's on for the user is never the AOD, whatever the display reports in
         // between (some phones keep saying "doze" for a moment after waking up).
@@ -665,6 +686,9 @@ class GlimmerController(private val service: GlimmerService) {
         lastAlarm = runCatching { service.getSystemService(AlarmManager::class.java)?.nextAlarmClock?.triggerTime }.getOrNull()
         refreshCharging()
         startHeadphoneWatch()
+        lastRotation = runCatching {
+            service.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)?.rotation
+        }.getOrNull() ?: -1
         runCatching { service.getSystemService(DisplayManager::class.java)?.registerDisplayListener(displayListener, handler) }
         runCatching { camera?.registerTorchCallback(torchCallback, handler) }
         // Camera and microphone use, for the privacy dot (the callbacks report the current state too).
@@ -773,7 +797,7 @@ class GlimmerController(private val service: GlimmerService) {
         landscape.value = config.orientation == Configuration.ORIENTATION_LANDSCAPE
         screenWidth.value = config.screenWidthDp.toFloat()
         // The camera moves with rotation (or folding); place the window again.
-        placeWindow()
+        placeAgainSoon()
         ensureWindow()
     }
 
@@ -895,10 +919,11 @@ class GlimmerController(private val service: GlimmerService) {
     }
 
     private fun topInsetPx(): Int {
-        // Sideways: level with the camera, leaving room below for the unfolded card.
+        // Sideways: exactly level with the camera; only on a very low screen pushed up a little,
+        // so the unfolded card (music, the tallest) still fits below.
         sideCamera()?.let { (_, rect) ->
             val wanted = rect.centerY() - dp(IDLE_HEIGHT) / 2
-            return wanted.coerceAtMost(screenSize().second - dp(210f)).coerceAtLeast(0)
+            return wanted.coerceAtMost(screenSize().second - dp(192f)).coerceAtLeast(0)
         }
         return ((cameraCenter().second - dp(IDLE_HEIGHT) / 2).coerceAtLeast(dp(4f)) + dp(settings.glimmerOffsetY.toFloat())).coerceAtLeast(0)
     }
