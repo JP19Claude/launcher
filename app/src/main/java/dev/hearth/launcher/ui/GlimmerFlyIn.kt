@@ -525,3 +525,104 @@ private fun lerpColor(a: Color, b: Color, t: Float) = Color(
     blue = lerp(a.blue, b.blue, t),
     alpha = 1f,
 )
+
+/**
+ * The fly-in with another launcher (One UI, ColorOS, Pixel …): that launcher has just shrunk
+ * the app into its icon, so the icon lifts off right there ([from], on screen) and flies in an
+ * arc into Glimmer ([to], the island's middle on screen) – landing in the island (HyperOS) or
+ * melting into it at the camera (HarmonyOS). Without its icon on the screen, it rises from
+ * the middle.
+ */
+@Composable
+fun IconFlyIn(
+    app: AppInfo,
+    from: android.graphics.RectF?,
+    to: Offset,
+    islandWidth: Float,
+    style: FlyInStyle,
+    onPulse: () -> Unit,
+    onArrive: (Bitmap?, Int) -> Unit,
+    onDone: () -> Unit,
+) {
+    val view = LocalView.current
+    val travel = remember(app) { Animatable(0f) }
+    val pulse by rememberUpdatedState(onPulse)
+    val arrive by rememberUpdatedState(onArrive)
+    val done by rememberUpdatedState(onDone)
+    val color = remember(app) { iconColor(app) }
+    val smallIcon = remember(app) {
+        runCatching {
+            val bitmap = app.icon.asAndroidBitmap()
+            val soft = if (bitmap.config == Bitmap.Config.HARDWARE) bitmap.copy(Bitmap.Config.ARGB_8888, false) else bitmap
+            Bitmap.createScaledBitmap(soft, 96, 96, true)
+        }.getOrNull()
+    }
+    LaunchedEffect(app) {
+        launch {
+            var sent = false
+            snapshotFlow { travel.value }.collect { t ->
+                if (!sent && t > 0.86f) {
+                    sent = true
+                    if (style == FlyInStyle.HyperOS) arrive(smallIcon, color.toArgb())
+                }
+            }
+        }
+        travel.animateTo(1f, tween(640, easing = CubicBezierEasing(0.3f, 0f, 0.15f, 1f)))
+        if (style != FlyInStyle.HyperOS) pulse()
+        delay(120)
+        done()
+    }
+    val icon = app.icon
+    Canvas(Modifier.fillMaxSize()) {
+        // Screen positions into this window's (it covers the screen, but be exact).
+        val loc = IntArray(2)
+        view.getLocationOnScreen(loc)
+        val ox = loc[0].toFloat()
+        val oy = loc[1].toFloat()
+        val startSide = from?.let { min(it.width(), it.height()) } ?: 56.dp.toPx()
+        val sx = (from?.centerX() ?: (size.width / 2f + ox)) - ox
+        val sy = (from?.centerY() ?: (size.height * 0.55f + oy)) - oy
+        val hyper = style == FlyInStyle.HyperOS
+        // HyperOS: the icon's place at the island's left end; HarmonyOS: right into the camera.
+        val ex = (if (hyper) to.x - islandWidth / 2f + 16.dp.toPx() else to.x) - ox
+        val ey = to.y - oy
+        val endSide = if (hyper) 20.dp.toPx() else 12.dp.toPx()
+
+        val k = travel.value.coerceIn(0f, 1f)
+        // A little lift-off first (it grows a touch), then it shrinks on the way up.
+        val lift = 1f + 0.12f * smoothstep(0f, 0.12f, k) * (1f - smoothstep(0.12f, 0.35f, k))
+        val side = lerp(startSide, endSide, smoothstep(0.08f, 1f, k)) * lift
+        // Up faster than across: a quick flick towards the top.
+        val cx = lerp(sx, ex, 1f - (1f - k).pow(1.3f))
+        val cy = lerp(sy, ey, 1f - (1f - k).pow(2.4f))
+        val fade = 1f - smoothstep(0.9f, 1f, k)
+        if (fade <= 0.001f) return@Canvas
+        val pos = Offset(cx - side / 2f, cy - side / 2f)
+        val r = side * 0.3f
+        // A soft shadow while it's lifted off.
+        val shadow = (1f - smoothstep(0.2f, 0.55f, k)) * 0.35f
+        if (shadow > 0.01f) {
+            drawRoundRect(
+                Color.Black.copy(alpha = shadow * fade),
+                Offset(pos.x, pos.y + side * 0.08f),
+                Size(side, side),
+                CornerRadius(r),
+            )
+        }
+        val clip = Path().apply { addRoundRect(RoundRect(pos.x, pos.y, pos.x + side, pos.y + side, CornerRadius(r))) }
+        clipPath(clip) {
+            drawImage(
+                image = icon,
+                dstOffset = IntOffset(pos.x.roundToInt(), pos.y.roundToInt()),
+                dstSize = IntSize(side.roundToInt().coerceAtLeast(1), side.roundToInt().coerceAtLeast(1)),
+                alpha = fade,
+                filterQuality = FilterQuality.Medium,
+            )
+            // HarmonyOS: it darkens into the island as it reaches the camera.
+            if (!hyper) {
+                val dark = smoothstep(0.6f, 0.95f, k) * fade
+                if (dark > 0.01f) drawRect(Color.Black.copy(alpha = dark), pos, Size(side, side))
+            }
+        }
+    }
+}

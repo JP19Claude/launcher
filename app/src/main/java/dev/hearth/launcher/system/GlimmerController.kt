@@ -1029,6 +1029,16 @@ class GlimmerController(private val service: GlimmerService) {
 
     private var resizeToken = 0
 
+    /** The island's middle on the screen (px), for the fly-in with another launcher to aim at. */
+    fun islandCenterOnScreen(): android.graphics.PointF {
+        val screenW = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            windowManager.currentWindowMetrics.bounds.width()
+        } else {
+            service.resources.displayMetrics.widthPixels
+        }
+        return android.graphics.PointF(screenW / 2f + windowX(), topInsetPx() + dp(IDLE_HEIGHT) / 2f)
+    }
+
     /** The island's current size on screen (zero while hidden), for the app fly-in to aim at. */
     var islandSize: DpSize = DpSize.Zero
         private set

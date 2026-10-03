@@ -286,8 +286,9 @@ Download: [Hearth.apk](https://github.com/Vinted7777/launcher/releases/latest/do
     Icon; kurz vor der Ankunft übernimmt Glimmer selbst: die Insel öffnet sich, das Icon sitzt
     einen Moment darin (wie Xiaomis Hyper Island), dann schließt sie sich wieder
   - Auch mit jedem anderen Launcher (One UI, ColorOS, Pixel …): Glimmer erkennt, wenn eine App
-    geschlossen wird und der Startbildschirm kommt, und spielt die Schließ-Animation selbst über
-    dem Launcher (Glimmer-App → „Schließ-Animation“ → „Auch mit anderen Launchern“, an
+    geschlossen wird und der Startbildschirm kommt; der Launcher hat die App gerade in ihr Icon
+    geschrumpft, also hebt genau dieses Icon dort ab und fliegt im Bogen in die Insel (HyperOS:
+    landet darin, HarmonyOS: verschmilzt an der Kamera) – ohne Bilder der App (Glimmer-App → „Schließ-Animation“ → „Auch mit anderen Launchern“, an
     Standard; Stil dort wählbar). Mit Hearth als Launcher macht es Hearth wie bisher.
   - Auf dem Sperrbildschirm ist Glimmer immer da: die Pille trägt ein Schloss, das beim
     Entsperren aufspringt; Aktivitäten erscheinen dort wie sonst, Antippen klappt auf statt eine
