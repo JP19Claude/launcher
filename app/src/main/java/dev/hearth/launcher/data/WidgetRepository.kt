@@ -61,6 +61,7 @@ enum class HearthWidget(val label: String, val description: String, val spanX: I
     ClawdDice("Clawd-Würfel", "Antippen und Clawd würfelt für dich", 2, 2, 160),
     ClawdMotivation("Clawd-Motivation", "Jeden Tag ein liebes Wort von Clawd", 4, 2, 160),
     ClawdWeekend("Clawd-Wochenende", "Wie lange noch bis zum Wochenende – am Wochenende tanzt er", 2, 2, 180),
+    ClawdBadges("Clawd-Abzeichen", "Wie viele Abzeichen du mit Clawd gesammelt hast und welches als Nächstes kommt", 2, 2, 190),
     ClawdGame("Clawd-Spiel", "Clawd Jump: antippen und losspielen – spring über Bugs, sammle Herzen", 2, 2, 180),
     ;
 

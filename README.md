@@ -33,10 +33,14 @@ wippt, trippelt beim Nachdenken, tanzt, schlägt Salto und schickt Herzen.
   schläft er), bei Musik (er tanzt mit), Anrufen, Timern, Navigation, Nachrichten, Codes,
   Bildschirmfotos, Laden und Taschenlampe – vorne im Inhalt, mit dessen Farben unter ihm;
   aufgeklappt sitzt er neben der Kamera und sagt, was los ist. Beim Sperren und Entsperren
-  hält er sich raus.
+  hält er sich raus. In der Glimmer-App frei platzierbar: Seite (links/rechts), Position
+  (vom Inhalt bis an die Kamera) und Größe, mit Vorschau; beim ersten Entsperren des Tages
+  sagt er in der Insel Hallo.
+- Abzeichen: 12 Ziele über alles mit Clawd (Tamagotchi-Level, Clawd Jump, Wasser, Fokus,
+  Outfit, Easter Eggs) – in Einstellungen → Clawd, der Clawd-App und als Widget.
 - Noch mehr Widgets: Clawd-Modenschau, Clawd-Wasser, Clawd-Würfel, Clawd-Motivation,
-  Clawd-Wochenende und Clawd-Spiel. Alle 16 Clawd-Widgets gibt es im Launcher und in der
-  Clawd-App (für jeden Launcher).
+  Clawd-Wochenende, Clawd-Spiel und Clawd-Abzeichen. Alle 17 Clawd-Widgets gibt es im
+  Launcher und in der Clawd-App (für jeden Launcher).
 - Clawd Jump: Clawds Spiel – er rennt, du tippst zum Springen, über Bugs hüpfen und Herzen
   sammeln, es wird immer schneller; Rekord bleibt gespeichert. Start über das Clawd-Spiel-Widget,
   Einstellungen → Clawd, die Clawd-App oder im Chat mit „Lass uns spielen“.

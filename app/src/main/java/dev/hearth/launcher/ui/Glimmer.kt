@@ -72,6 +72,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import dev.hearth.launcher.data.ClawdMood
+import dev.hearth.launcher.data.ClawdSide
 import dev.hearth.launcher.data.clawdAsleep
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
@@ -261,8 +262,8 @@ fun islandSize(
     cameraClearance: Dp = 0.dp,
     /** The 85 % mode: every state narrower, the height as it is. */
     narrow: Float = 1f,
-    /** Clawd rides along: the small states get a little room on the left for him. */
-    clawd: Boolean = false,
+    /** Clawd rides along at this size (0 = he's off): the small states get room for him. */
+    clawd: Float = 0f,
 ): DpSize {
     // Unfolded it's always as wide as at 100 % (the 85 % mode only slims the small states).
     val full = if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, 420f).dp
@@ -279,7 +280,7 @@ fun islandSize(
         content is IslandContent.Lock -> DpSize(idle.dp + 26.dp, ISLAND_HEIGHT_DP.dp)
         // Like Face ID on the iPhone: the island becomes a rounded square for the moment.
         content is IslandContent.Unlock -> DpSize(UNLOCK_SIZE_DP.dp, UNLOCK_SIZE_DP.dp)
-        !expanded -> DpSize(compact + if (clawd && content !is IslandContent.Hidden) ClawdExtra else 0.dp, ISLAND_HEIGHT_DP.dp)
+        !expanded -> DpSize(compact + if (clawd > 0f && content !is IslandContent.Hidden) clawdExtra(clawd) else 0.dp, ISLAND_HEIGHT_DP.dp)
         else -> DpSize(
             full,
             cameraClearance + when (content) {
@@ -370,7 +371,7 @@ fun GlimmerIsland(
         settings.glimmerIsDynamicIsland,
         cameraClearance = cameraClearance(camera),
         narrow = settings.glimmerNarrow,
-        clawd = settings.glimmerClawd,
+        clawd = if (settings.glimmerClawd) settings.glimmerClawdSize else 0f,
     )
     LaunchedEffect(target) { onTargetSize(target) }
     val collapseAfter = settings.glimmerAutoCollapse
@@ -1278,6 +1279,12 @@ private fun AroundCamera(
     val hole = LocalCameraHole.current
     // Room for the privacy dot at the right end.
     val endEdge = edge + if (LocalPrivacyDot.current) 10.dp else 0.dp
+    // Clawd, if he rides along: on his side, at his spot (0 = beside the content, 1 = at the camera).
+    val rider = LocalClawdRider.current
+    val glimmerSettings = LocalSettings.current
+    val riderLeft = rider.takeIf { glimmerSettings.glimmerClawdSide == ClawdSide.Left }
+    val riderRight = rider.takeIf { glimmerSettings.glimmerClawdSide == ClawdSide.Right }
+    val spot = glimmerSettings.glimmerClawdSpot.coerceIn(0f, 1f)
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val w = maxWidth
         // Only where the camera actually reaches into the pill; else split in the middle.
@@ -1294,15 +1301,13 @@ private fun AroundCamera(
                 .padding(start = edge.coerceAtMost(holeStart)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            LocalClawdRider.current?.let { mood ->
-                Clawd(
-                    Modifier.size(width = 20.dp, height = 17.dp),
-                    mood = mood,
-                    animate = LocalSettings.current.animations && !LocalGlimmerStill.current,
-                )
-                Spacer(Modifier.width(5.dp))
-            }
             left()
+            // Clawd between the content and the camera, where he's been put.
+            if (riderLeft != null) {
+                Spacer(Modifier.weight(spot + 0.001f))
+                RiderClawd(riderLeft)
+                Spacer(Modifier.weight(1.001f - spot))
+            }
         }
         Row(
             Modifier
@@ -1313,16 +1318,35 @@ private fun AroundCamera(
                 .padding(end = endEdge.coerceAtMost(w - holeEnd)),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
-            content = right,
-        )
+        ) {
+            if (riderRight != null) {
+                Spacer(Modifier.weight(1.001f - spot))
+                RiderClawd(riderRight)
+                Spacer(Modifier.weight(spot + 0.001f))
+            }
+            right()
+        }
     }
 }
 
 /**
- * How much wider the small states get with Clawd: half of it lands left of the camera, where
- * he rides at the front of the content.
+ * How much wider the small states get with Clawd at [size]: the island grows evenly, so the
+ * side he sits on gains half of it – his width and a little air.
  */
-private val ClawdExtra = 40.dp
+private fun clawdExtra(size: Float): Dp = ((20f * size.coerceIn(0.7f, 1.4f) + 10f) * 2f).dp
+
+/** Clawd as he rides in the island: his size from the Glimmer settings. */
+@Composable
+private fun RiderClawd(mood: ClawdMood) {
+    val k = LocalSettings.current.glimmerClawdSize.coerceIn(0.7f, 1.4f)
+    Clawd(
+        Modifier
+            .padding(horizontal = 3.dp)
+            .size(width = 20.dp * k, height = 17.dp * k),
+        mood = mood,
+        animate = LocalSettings.current.animations && !LocalGlimmerStill.current,
+    )
+}
 
 /** Clawd riding along at the start of the island's left part (set while he's switched on). */
 private val LocalClawdRider = compositionLocalOf<ClawdMood?> { null }
@@ -1395,54 +1419,67 @@ private fun CompactWithClawd(content: IslandContent) {
 @Composable
 private fun BoxScope.ExpandedClawd(content: IslandContent, band: Dp) {
     val hole = LocalCameraHole.current
+    val right = LocalSettings.current.glimmerClawdSide == ClawdSide.Right
     BoxWithConstraints(
         Modifier
             .align(Alignment.TopStart)
             .fillMaxWidth()
             .height(band),
     ) {
-        // Up to the camera, never under it.
-        val room = (maxWidth / 2 + hole.x - hole.radius - CameraMargin - 18.dp).coerceAtLeast(0.dp)
+        // Up to the camera, never under it, on his side.
+        val room = if (right) {
+            (maxWidth / 2 - hole.x - hole.radius - CameraMargin - 18.dp).coerceAtLeast(0.dp)
+        } else {
+            (maxWidth / 2 + hole.x - hole.radius - CameraMargin - 18.dp).coerceAtLeast(0.dp)
+        }
+        val k = LocalSettings.current.glimmerClawdSize.coerceIn(0.7f, 1.4f)
+        val h = ((band - 6.dp).coerceIn(12.dp, 20.dp) * k).coerceAtMost(band)
         Row(
             Modifier
-                .padding(start = 18.dp)
+                .align(if (right) Alignment.CenterEnd else Alignment.CenterStart)
+                .padding(start = if (right) 0.dp else 18.dp, end = if (right) 18.dp else 0.dp)
                 .width(room)
                 .fillMaxHeight()
                 .clipToBounds(),
+            horizontalArrangement = if (right) Arrangement.End else Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val h = (band - 6.dp).coerceIn(12.dp, 20.dp)
-            Clawd(
-                Modifier.size(width = h * 1.2f, height = h),
-                mood = clawdMoodFor(content),
-                animate = LocalSettings.current.animations && !LocalGlimmerStill.current,
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                clawdLine(content),
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 11.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            val clawd: @Composable () -> Unit = {
+                Clawd(
+                    Modifier.size(width = h * 1.2f, height = h),
+                    mood = clawdMoodFor(content),
+                    animate = LocalSettings.current.animations && !LocalGlimmerStill.current,
+                )
+            }
+            val line: @Composable () -> Unit = {
+                Text(
+                    clawdLine(content),
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (right) {
+                line()
+                Spacer(Modifier.width(6.dp))
+                clawd()
+            } else {
+                clawd()
+                Spacer(Modifier.width(6.dp))
+                line()
+            }
         }
     }
 }
 
-/** Clawd in the island, left of the camera; [right] beside the camera on the other side. */
+/** Clawd in the empty pill, on his side of the camera. */
 @Composable
-private fun GlimmerClawd(mood: ClawdMood, right: @Composable RowScope.() -> Unit = {}) {
-    AroundCamera(
-        edge = 9.dp,
-        left = {
-            Clawd(
-                Modifier.size(width = 24.dp, height = 20.dp),
-                mood = mood,
-                animate = LocalSettings.current.animations && !LocalGlimmerStill.current,
-            )
-        },
-        right = right,
-    )
+private fun GlimmerClawd(mood: ClawdMood) {
+    // In the empty pill he sits where he's been put, like everywhere else.
+    CompositionLocalProvider(LocalClawdRider provides mood) {
+        AroundCamera(edge = 9.dp, left = {}, right = {})
+    }
 }
 
 /** A small dot that breathes: something new is waiting. */

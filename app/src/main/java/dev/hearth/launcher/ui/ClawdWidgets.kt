@@ -1055,3 +1055,39 @@ internal fun ClawdGameWidget(modifier: Modifier) {
         }
     }
 }
+
+// Clawd-Abzeichen: how many badges, and the next one to get
+
+/** Clawd's badges at a glance: how many, and what's next. */
+@Composable
+internal fun ClawdBadgesWidget(modifier: Modifier) {
+    val context = LocalContext.current
+    val settings = LocalSettings.current
+    val minute = rememberTime(everySecond = false).minute
+    val badges = remember(settings, minute) { dev.hearth.launcher.data.ClawdBadges.all(context, settings) }
+    val earned = badges.count { it.earned }
+    val next = badges.firstOrNull { !it.earned }
+    val player = rememberMoodPlayer()
+    BoxWithConstraints(modifier.tap { player.play(ClawdMood.Love) }) {
+        val boxH = maxHeight
+        Column(
+            Modifier.fillMaxSize().padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Clawd(
+                Modifier.fillMaxWidth(0.5f).height(boxH * 0.34f),
+                mood = player.mood ?: if (next == null) ClawdMood.Dance else ClawdMood.Wave,
+            )
+            Text("🏅 $earned / ${badges.size}", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                if (next == null) "Alle Abzeichen! 🎉" else "Nächstes: ${next.hint}",
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 11.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+        }
+    }
+}

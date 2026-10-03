@@ -279,6 +279,12 @@ enum class ClawdHat(val label: String) {
     val tall: Boolean get() = this != None && this != Sunglasses
 }
 
+/** Which side of the camera Clawd sits on in Glimmer. */
+enum class ClawdSide(val label: String) {
+    Left("Links"),
+    Right("Rechts"),
+}
+
 /** What Clawd wears on his body – his wardrobe. */
 enum class ClawdOutfit(val label: String) {
     None("Nichts"),
@@ -409,6 +415,12 @@ data class LauncherSettings(
     val glimmerIdlePill: Boolean = true,
     /** Clawd sits in the island beside the camera: asleep at night, dancing on the charger (shared with Glimmer). */
     val glimmerClawd: Boolean = false,
+    /** Where he sits: which side, how close to the camera (0 = beside the content, 1 = at the camera), how big. */
+    val glimmerClawdSide: ClawdSide = ClawdSide.Left,
+    val glimmerClawdSpot: Float = 0.55f,
+    val glimmerClawdSize: Float = 1f,
+    /** Clawd says good morning in Glimmer at the first unlock of the day. */
+    val glimmerClawdGreeting: Boolean = true,
     val glimmerMessages: Boolean = true,
     /** Tap opens the app (like the iPhone) instead of unfolding; holding does the other. */
     val glimmerTapOpens: Boolean = false,
@@ -796,6 +808,10 @@ class SettingsRepository(context: Context) {
             glimmerStyle = enumOf("glimmerStyle", d.glimmerStyle),
             glimmerIdlePill = prefs.getBoolean("glimmerIdlePill", d.glimmerIdlePill),
             glimmerClawd = prefs.getBoolean(KEY_CLAWD_GLIMMER, d.glimmerClawd),
+            glimmerClawdSide = enumOf("glimmerClawdSide", d.glimmerClawdSide),
+            glimmerClawdSpot = prefs.getFloat("glimmerClawdSpot", d.glimmerClawdSpot),
+            glimmerClawdSize = prefs.getFloat("glimmerClawdSize", d.glimmerClawdSize),
+            glimmerClawdGreeting = prefs.getBoolean("glimmerClawdGreeting", d.glimmerClawdGreeting),
             glimmerMessages = prefs.getBoolean("glimmerMessages", d.glimmerMessages),
             glimmerTapOpens = prefs.getBoolean("glimmerTapOpens", d.glimmerTapOpens),
             glimmerAlerts = prefs.getBoolean("glimmerAlerts", d.glimmerAlerts),
@@ -912,6 +928,10 @@ class SettingsRepository(context: Context) {
             .putString("glimmerStyle", s.glimmerStyle.name)
             .putBoolean("glimmerIdlePill", s.glimmerIdlePill)
             .putBoolean(KEY_CLAWD_GLIMMER, s.glimmerClawd)
+            .putString("glimmerClawdSide", s.glimmerClawdSide.name)
+            .putFloat("glimmerClawdSpot", s.glimmerClawdSpot)
+            .putFloat("glimmerClawdSize", s.glimmerClawdSize)
+            .putBoolean("glimmerClawdGreeting", s.glimmerClawdGreeting)
             .putBoolean("glimmerMessages", s.glimmerMessages)
             .putBoolean("glimmerTapOpens", s.glimmerTapOpens)
             .putBoolean("glimmerAlerts", s.glimmerAlerts)
@@ -1008,7 +1028,7 @@ class SettingsRepository(context: Context) {
          * Only the switch itself and the look (black or glass, which changes the window) restart it.
          */
         val GLIMMER_LIVE_KEYS = setOf(
-            "glimmerIdlePill", "clawdInGlimmer", "clawdSkin", "clawdHat", "clawdOutfit", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
+            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "clawdSkin", "clawdHat", "clawdOutfit", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerAutoCollapse",
             "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerSmall", "glimmerPrivacy", "accent", "animations",

@@ -448,6 +448,7 @@ class GlimmerController(private val service: GlimmerService) {
                         // Unlocked (PIN, pattern, or a biometric that wasn't caught): the tick,
                         // unless it was already shown for this wake-up.
                         Intent.ACTION_USER_PRESENT -> {
+                            greetOncePerDay()
                             if (settings.glimmerUnlock == GlimmerUnlock.Off || keyguard()?.isDeviceSecure != true) {
                                 if (settings.glimmerIdlePill) openPadlock()
                             }
@@ -551,6 +552,21 @@ class GlimmerController(private val service: GlimmerService) {
     }
 
     private var alertToken = 0
+    /** Clawd says hello in the island at the first unlock of the day (after the unlock tick). */
+    private fun greetOncePerDay() {
+        if (!settings.glimmerClawd || !settings.glimmerClawdGreeting) return
+        val now = java.time.LocalDateTime.now()
+        if (now.hour < 5) return
+        val prefs = service.getSharedPreferences("clawd_glimmer", Context.MODE_PRIVATE)
+        val today = now.toLocalDate().toString()
+        if (prefs.getString("greeted", null) == today) return
+        prefs.edit().putString("greeted", today).apply()
+        val hello = dev.hearth.launcher.data.clawdGreeting(now.hour)
+        handler.postDelayed({
+            flash(IslandContent.Alert(Glyph.Spark, hello, "Clawd", Color(0xFFD97757)))
+        }, 1800)
+    }
+
     private fun flash(content: IslandContent.Alert) {
         alert.value = content
         val token = ++alertToken

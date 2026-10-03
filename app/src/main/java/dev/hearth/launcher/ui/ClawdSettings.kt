@@ -83,6 +83,8 @@ internal fun ClawdSettings(
             onSelect = { v -> update { it.copy(clawdHat = v) } },
         )
         RowDivider()
+        ClawdBadgeGrid(s)
+        RowDivider()
         ActionRow(
             label = "Clawd Jump spielen",
             description = "Clawd rennt, du tippst zum Springen: über Bugs hüpfen, Herzen sammeln. Rekord: ${dev.hearth.launcher.data.ClawdGameScore.best(context)}",
@@ -168,6 +170,53 @@ private fun <T> Wardrobe(
                     )
                     Text(optionLabel(option), color = Color.White, fontSize = 11.sp, maxLines = 1)
                 }
+            }
+        }
+    }
+}
+
+/** Clawd's badges, three in a row: earned ones bright, the others grey with how to get them. */
+@Composable
+internal fun ClawdBadgeGrid(s: LauncherSettings) {
+    val context = LocalContext.current
+    val badges = remember(s) { dev.hearth.launcher.data.ClawdBadges.all(context, s) }
+    val earned = badges.count { it.earned }
+    androidx.compose.foundation.layout.Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+        Text(
+            "Abzeichen · $earned von ${badges.size}",
+            color = Color.White,
+            fontSize = 15.sp,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+        )
+        badges.chunked(3).forEach { row ->
+            Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { b ->
+                    androidx.compose.foundation.layout.Column(
+                        Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (b.earned) Color(0xFFD97757).copy(alpha = 0.25f) else Color.White.copy(alpha = 0.06f))
+                            .padding(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(if (b.earned) b.emoji else "🔒", fontSize = 22.sp)
+                        Text(
+                            b.title,
+                            color = if (b.earned) Color.White else Color.White.copy(alpha = 0.55f),
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                        )
+                        Text(
+                            b.hint,
+                            color = Color.White.copy(alpha = 0.45f),
+                            fontSize = 9.sp,
+                            lineHeight = 11.sp,
+                            maxLines = 2,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        )
+                    }
+                }
+                repeat(3 - row.size) { androidx.compose.foundation.layout.Spacer(Modifier.weight(1f)) }
             }
         }
     }

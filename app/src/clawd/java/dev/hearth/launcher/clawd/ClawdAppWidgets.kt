@@ -23,6 +23,7 @@ import dev.hearth.launcher.data.ClawdHat
 import dev.hearth.launcher.data.ClawdOutfit
 import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.ClawdOracle
+import dev.hearth.launcher.data.ClawdBadges
 import dev.hearth.launcher.data.ClawdFocus
 import dev.hearth.launcher.data.ClawdGameScore
 import dev.hearth.launcher.ui.drawClawdAt
@@ -164,6 +165,7 @@ abstract class ClawdWidgetProvider : AppWidgetProvider() {
             ClawdWorldWidget::class.java,
             ClawdFocusWidget::class.java,
             ClawdGameWidget::class.java,
+            ClawdBadgesWidget::class.java,
         )
 
         /** Draws every placed widget again (his look changed, the pet was fed in the app …). */
@@ -635,6 +637,22 @@ class ClawdGameWidget : ClawdWidgetProvider() {
             setImageViewBitmap(R.id.image, clawdPicture(context, ClawdMood.Dance))
             setTextViewText(R.id.best, if (best > 0) "Rekord $best · tippen zum Spielen" else "Tippen zum Spielen")
             setOnClickPendingIntent(R.id.root, open)
+        }
+    }
+}
+
+// Clawd-Abzeichen
+
+class ClawdBadgesWidget : ClawdWidgetProvider() {
+    override fun views(context: Context, id: Int): RemoteViews {
+        val badges = ClawdBadges.all(context, SettingsRepository(context).settings.value)
+        val earned = badges.count { it.earned }
+        val next = badges.firstOrNull { !it.earned }
+        return RemoteViews(context.packageName, R.layout.clawd_widget_badges).apply {
+            setImageViewBitmap(R.id.image, clawdPicture(context, if (next == null) ClawdMood.Dance else ClawdMood.Wave))
+            setTextViewText(R.id.count, "🏅 $earned / ${badges.size}")
+            setTextViewText(R.id.next, if (next == null) "Alle Abzeichen! 🎉" else "Nächstes: ${next.hint}")
+            setOnClickPendingIntent(R.id.root, openApp(context))
         }
     }
 }

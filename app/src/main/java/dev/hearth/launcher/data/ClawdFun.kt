@@ -56,7 +56,10 @@ object ClawdPet {
         State(decayed(context, "food", FOOD_PER_HOUR), decayed(context, "joy", JOY_PER_HOUR), level(context))
 
     /** Every bit of care counts: a new level every twelve. */
-    private fun level(context: Context): Int = 1 + prefs(context).getInt("care", 0) / 12
+    private fun level(context: Context): Int = 1 + care(context) / 12
+
+    /** How often he's been fed, played with or petted, ever. */
+    fun care(context: Context): Int = prefs(context).getInt("care", 0)
 
     private fun cared(context: Context) {
         val p = prefs(context)
@@ -188,9 +191,14 @@ object ClawdWater {
     /** One more glass (or one less with [delta] = -1); returns today's count. */
     fun add(context: Context, delta: Int = 1): Int {
         val count = (glasses(context) + delta).coerceIn(0, 30)
-        prefs(context).edit().putString("day", today()).putInt("count", count).apply()
+        val edit = prefs(context).edit().putString("day", today()).putInt("count", count)
+        // Remembered for Clawd's badges.
+        if (count >= GOAL) edit.putBoolean("goalReached", true)
+        edit.apply()
         return count
     }
+
+    fun goalEverReached(context: Context): Boolean = prefs(context).getBoolean("goalReached", false)
 
     fun line(count: Int): String = when {
         count == 0 -> "Noch kein Glas heute – los geht's! 💧"
@@ -264,5 +272,34 @@ object ClawdGameScore {
                     .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
             )
         }
+    }
+}
+
+/** Clawd's badges: little goals across everything he does, collected over time. */
+object ClawdBadges {
+
+    class Badge(val emoji: String, val title: String, val hint: String, val earned: Boolean)
+
+    fun all(context: Context, settings: LauncherSettings): List<Badge> {
+        EasterEggs.init(context)
+        val care = ClawdPet.care(context)
+        val level = ClawdPet.state(context).level
+        val best = ClawdGameScore.best(context)
+        val focus = ClawdFocus.done(context)
+        val eggs = EasterEggs.found.value.size
+        return listOf(
+            Badge("🍕", "Erste Mahlzeit", "Füttere Clawd im Tamagotchi", care >= 1),
+            Badge("🧡", "Bester Freund", "Tamagotchi Level 3", level >= 3),
+            Badge("👑", "Pixel-Profi", "Tamagotchi Level 10", level >= 10),
+            Badge("🦘", "Hüpfer", "25 Punkte in Clawd Jump", best >= 25),
+            Badge("🐞", "Bug-Jäger", "100 Punkte in Clawd Jump", best >= 100),
+            Badge("🏆", "Legende", "300 Punkte in Clawd Jump", best >= 300),
+            Badge("💧", "Gut gewässert", "Wasserziel an einem Tag erreicht", ClawdWater.goalEverReached(context)),
+            Badge("🎯", "Fokussiert", "Eine Fokus-Runde geschafft", focus >= 1),
+            Badge("📚", "Fleißig", "10 Fokus-Runden geschafft", focus >= 10),
+            Badge("🎩", "Modebewusst", "Clawd ein Outfit anziehen", settings.clawdOutfit != ClawdOutfit.None),
+            Badge("🥚", "Eiersucher", "5 Easter Eggs gefunden", eggs >= 5),
+            Badge("🌟", "Alle Eier!", "Alle ${EasterEggs.TOTAL} Easter Eggs gefunden", eggs >= EasterEggs.TOTAL),
+        )
     }
 }

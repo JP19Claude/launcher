@@ -743,7 +743,34 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             },
             checked = s.glimmerClawd,
         ) { v -> update { it.copy(glimmerClawd = v) } }
-        Note("Er trägt Farbe, Hut und Outfit aus Hearth bzw. der Clawd-App. Nachts schläft er in der Pille.")
+        if (s.glimmerClawd) {
+            // Where he sits: the preview above shows it right away.
+            ChoiceRow(
+                label = "Seite",
+                options = dev.hearth.launcher.data.ClawdSide.entries,
+                selected = s.glimmerClawdSide,
+                optionLabel = { it.label },
+                onSelect = { side -> update { it.copy(glimmerClawdSide = side) } },
+            )
+            SliderRow(
+                label = "Position",
+                value = s.glimmerClawdSpot,
+                range = 0f..1f,
+                valueText = when {
+                    s.glimmerClawdSpot < 0.2f -> "Am Inhalt"
+                    s.glimmerClawdSpot > 0.8f -> "An der Kamera"
+                    else -> "Dazwischen"
+                },
+                onChange = { v -> update { it.copy(glimmerClawdSpot = v) } },
+            )
+            PercentSlider("Größe", s.glimmerClawdSize, 0.7f..1.4f) { v -> update { it.copy(glimmerClawdSize = v) } }
+            SwitchRow(
+                label = "Clawd begrüßt dich",
+                description = "Beim ersten Entsperren des Tages sagt er in der Insel Hallo",
+                checked = s.glimmerClawdGreeting,
+            ) { v -> update { it.copy(glimmerClawdGreeting = v) } }
+        }
+        Note("Er trägt Farbe, Hut und Outfit aus Hearth bzw. der Clawd-App. Nachts schläft er in der Pille. Seite, Position und Größe siehst du oben in der Vorschau.")
     }
     Section("Glimmer") {
         Note("Die Insel um die Frontkamera, in jeder App: Musik, Anrufe, Timer, Stoppuhr, Navigation, Downloads, Nachrichten, Laden und mehr. Nach unten ziehen klappt sie auf, nach oben schließt sie, zur Seite wechselt zwischen zwei Aktivitäten.")

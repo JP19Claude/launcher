@@ -34,4 +34,6 @@
     <string name="clawd_w_focus_d">25 Minuten Fokus-Timer, Clawd arbeitet mit</string>
     <string name="clawd_w_game">Clawd-Spiel</string>
     <string name="clawd_w_game_d">Clawd Jump: antippen und losspielen, dein Rekord im Blick</string>
+    <string name="clawd_w_badges">Clawd-Abzeichen</string>
+    <string name="clawd_w_badges_d">Deine Abzeichen mit Clawd und welches als Nächstes kommt</string>
 </resources>
