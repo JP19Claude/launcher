@@ -262,8 +262,6 @@ fun islandSize(
     cameraClearance: Dp = 0.dp,
     /** The 85 % mode: every state narrower, the height as it is. */
     narrow: Float = 1f,
-    /** Clawd rides along at this size (0 = he's off): the small states get room for him. */
-    clawd: Float = 0f,
 ): DpSize {
     // Unfolded it's always as wide as at 100 % (the 85 % mode only slims the small states).
     val full = if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, 420f).dp
@@ -280,7 +278,7 @@ fun islandSize(
         content is IslandContent.Lock -> DpSize(idle.dp + 26.dp, ISLAND_HEIGHT_DP.dp)
         // Like Face ID on the iPhone: the island becomes a rounded square for the moment.
         content is IslandContent.Unlock -> DpSize(UNLOCK_SIZE_DP.dp, UNLOCK_SIZE_DP.dp)
-        !expanded -> DpSize(compact + if (clawd > 0f && content !is IslandContent.Hidden) clawdExtra(clawd) else 0.dp, ISLAND_HEIGHT_DP.dp)
+        !expanded -> DpSize(compact, ISLAND_HEIGHT_DP.dp)
         else -> DpSize(
             full,
             cameraClearance + when (content) {
@@ -371,7 +369,6 @@ fun GlimmerIsland(
         settings.glimmerIsDynamicIsland,
         cameraClearance = cameraClearance(camera),
         narrow = settings.glimmerNarrow,
-        clawd = if (settings.glimmerClawd) settings.glimmerClawdSize else 0f,
     )
     LaunchedEffect(target) { onTargetSize(target) }
     val collapseAfter = settings.glimmerAutoCollapse
@@ -1329,13 +1326,7 @@ private fun AroundCamera(
     }
 }
 
-/**
- * How much wider the small states get with Clawd at [size]: the island grows evenly, so the
- * side he sits on gains half of it – his width and a little air.
- */
-private fun clawdExtra(size: Float): Dp = ((20f * size.coerceIn(0.7f, 1.4f) + 10f) * 2f).dp
-
-/** Clawd as he rides in the island: his size from the Glimmer settings. */
+/** Clawd as he rides in the island (in the room it already has – it doesn't grow for him): his size from the Glimmer settings. */
 @Composable
 private fun RiderClawd(mood: ClawdMood) {
     val k = LocalSettings.current.glimmerClawdSize.coerceIn(0.7f, 1.4f)
