@@ -174,7 +174,7 @@ fun Modifier.aiFluidEdge(
         val w = width.toPx()
         val r = corner.toPx().coerceAtMost(size.minDimension / 2f)
         val half = maxOf(size.width, size.height) / 2f
-        val c = center
+        val c = Offset(size.width / 2f, size.height / 2f)
         fun brushAt(a: Float): Brush {
             val start = Offset(c.x + cos(a) * half, c.y + sin(a) * half)
             val end = Offset(2 * c.x - start.x, 2 * c.y - start.y)
