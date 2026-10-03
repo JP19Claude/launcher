@@ -61,10 +61,17 @@ import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.isSpecified
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.layout.onSizeChanged
+import kotlin.math.pow
 
 /*
  * The easter eggs behind the versions change with every big version, like Android's do:
- * Hearth up to 12.0 had its planet, 12.5 has the fluid ocean; ClaudeOS 1 had "Ember" (the
+ * Hearth up to 12.0 had its planet, 12.5 the fluid ocean, 13 has silk; ClaudeOS 1 had "Ember" (the
  * spinning star), ClaudeOS 2 has "Blaze" (the fire). New big versions bring new ones.
  */
 
@@ -181,6 +188,161 @@ internal fun FluidOceanEgg(version: String, name: String, onClose: () -> Unit) {
         Column(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 36.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("$name $version · Fluid-Ozean", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             Text(if (splashes >= 15) "Clawd ist ein Profi-Schwimmer! 🌊" else "Antippen · gedrückt halten", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp)
+        }
+        EggClose(onClose)
+    }
+}
+
+/** One silk ribbon: where its head is and the path it has left. */
+private class Ribbon(val color: Color, val follow: Float, val width: Float) {
+    var head = Offset.Unspecified
+    val trail = ArrayDeque<Offset>()
+}
+
+/** Where the finger is on the silk (not state: the frame loop reads it). */
+private class SilkTouch {
+    var at = Offset.Unspecified
+    var spun = 0f
+    var area = Size.Zero
+}
+
+/**
+ * Hearth 13's egg, "Seide": ribbons of silk in Claude's colors follow your finger, soft and
+ * smooth – Hearth 13 is the butter-smooth one. Left alone they dance a figure of eight; spin
+ * enough silk and Clawd comes to ride it.
+ */
+@Composable
+internal fun SilkEgg(version: String, name: String, onClose: () -> Unit) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { EasterEggs.find(context, "version") }
+    BackHandler(onBack = onClose)
+    val scope = rememberCoroutineScope()
+    val ribbons = remember { AiFluidColors.mapIndexed { i, c -> Ribbon(c, 0.2f - i * 0.03f, 16f - i * 2f) } }
+    val touch = remember { SilkTouch() }
+    var now by remember { mutableLongStateOf(0L) }
+    var riding by remember { mutableStateOf(false) }
+    val clawd = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        var last = -1L
+        while (true) {
+            withFrameMillis { t ->
+                val dt = if (last < 0) 16f else (t - last).coerceIn(1L, 50L).toFloat()
+                last = t
+                val w = touch.area.width
+                val h = touch.area.height
+                if (w > 0f) {
+                    val sec = t / 1000f
+                    ribbons.forEachIndexed { i, r ->
+                        val target = if (touch.at.isSpecified) {
+                            touch.at
+                        } else {
+                            Offset(
+                                w / 2f + w * 0.32f * sin(sec * 0.9f - i * 0.35f),
+                                h * 0.42f + h * 0.14f * sin(sec * 1.8f - i * 0.7f),
+                            )
+                        }
+                        // Frame-rate independent easing: the same silk at 60 or 120 Hz.
+                        val k = 1f - (1f - r.follow).pow(dt / 16f)
+                        val head = if (r.head.isSpecified) r.head + (target - r.head) * k else target
+                        if (i == 0 && r.head.isSpecified && touch.at.isSpecified) touch.spun += (head - r.head).getDistance()
+                        r.head = head
+                        r.trail.addLast(head)
+                        while (r.trail.size > 36) r.trail.removeFirst()
+                    }
+                    if (!riding && touch.spun > h * 8f) {
+                        riding = true
+                        scope.launch { clawd.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 180f)) }
+                    }
+                }
+                now = t
+            }
+        }
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF120A2A), Color(0xFF1C0F3A), Color(0xFF07040F))))
+            .onSizeChanged { touch.area = Size(it.width.toFloat(), it.height.toFloat()) }
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    touch.at = down.position
+                    do {
+                        val event = awaitPointerEvent()
+                        event.changes.firstOrNull()?.let { if (it.pressed) touch.at = it.position }
+                    } while (event.changes.any { it.pressed })
+                    touch.at = Offset.Unspecified
+                }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        // The version, breathing softly behind the silk.
+        Text(
+            version,
+            style = TextStyle(
+                brush = Brush.linearGradient(listOf(Color(0xFFFFB494), Color(0xFFFF6FB5), Color(0xFF8E6BFF), Color(0xFF3E91FF))),
+                fontSize = 120.sp,
+                fontWeight = FontWeight.Light,
+            ),
+            modifier = Modifier.graphicsLayer {
+                val b = 1f + 0.03f * sin(now / 900f)
+                scaleX = b
+                scaleY = b
+                alpha = 0.9f
+            },
+        )
+        Canvas(Modifier.fillMaxSize()) {
+            if (now < 0L) return@Canvas
+            ribbons.forEach { r ->
+                val pts = r.trail
+                val n = pts.size
+                for (j in 1 until n) {
+                    val f = j / n.toFloat()
+                    drawLine(
+                        r.color.copy(alpha = 0.9f * f),
+                        pts[j - 1],
+                        pts[j],
+                        strokeWidth = r.width.dp.toPx() * (0.2f + 0.8f * f),
+                        cap = StrokeCap.Round,
+                    )
+                }
+                if (n > 0) {
+                    val glow = 36.dp.toPx()
+                    drawCircle(
+                        Brush.radialGradient(listOf(r.color.copy(alpha = 0.45f), Color.Transparent), center = pts[n - 1], radius = glow),
+                        radius = glow,
+                        center = pts[n - 1],
+                    )
+                }
+            }
+        }
+        // Clawd, riding the first ribbon once there's silk enough.
+        if (riding) {
+            Clawd(
+                Modifier
+                    .align(Alignment.TopStart)
+                    .size(width = 64.dp, height = 54.dp)
+                    .graphicsLayer {
+                        val t = now
+                        val head = ribbons[0].head
+                        if (head.isSpecified) {
+                            translationX = head.x - 32.dp.toPx()
+                            translationY = head.y - 64.dp.toPx() + sin(t / 160f) * 3.dp.toPx()
+                        }
+                        scaleX = clawd.value
+                        scaleY = clawd.value
+                    },
+                mood = ClawdMood.Flip,
+            )
+        }
+        Column(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 36.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("$name $version · Seide", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                if (riding) "Butterweich – Clawd surft auf deiner Seide! 🧈" else "Zieh den Finger übers Display",
+                color = Color.White.copy(alpha = 0.55f),
+                fontSize = 13.sp,
+            )
         }
         EggClose(onClose)
     }

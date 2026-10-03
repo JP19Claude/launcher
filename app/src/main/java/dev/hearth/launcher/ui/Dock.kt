@@ -37,8 +37,8 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
             cornerRadius = 34.dp,
             refraction = 22.dp,
             interactive = true,
-            // One UI 10 Fluid: Claude's colors flowing round the dock.
-            modifier = modifier.fillMaxWidth().aiFluidEdge(34.dp, strength = 0.6f, enabled = LocalSettings.current.fluidDesign),
+            // One UI 10 Fluid: Claude's colors round the dock (standing still: it's always on screen).
+            modifier = modifier.fillMaxWidth().aiFluidEdge(34.dp, strength = 0.6f, enabled = LocalSettings.current.fluidDesign, flowing = false),
             fluidEdge = false,
         ) {
             Row(
@@ -55,7 +55,7 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
                 cornerRadius = 30.dp,
                 refraction = 20.dp,
                 interactive = true,
-                modifier = Modifier.aiFluidEdge(30.dp, strength = 0.6f, enabled = LocalSettings.current.fluidDesign),
+                modifier = Modifier.aiFluidEdge(30.dp, strength = 0.6f, enabled = LocalSettings.current.fluidDesign, flowing = false),
                 fluidEdge = false,
             ) {
                 Row(

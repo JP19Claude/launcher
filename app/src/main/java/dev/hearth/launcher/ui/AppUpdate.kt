@@ -536,11 +536,12 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
         }
 
         AnimatedVisibility(egg, enter = fadeIn(tween(400)), exit = fadeOut(tween(300))) {
-            // Each big Hearth version has its own egg: the fluid ocean from 12.5 on, before it the planet.
-            if (versionNumber(current) >= 12.5f) {
-                FluidOceanEgg(current, name) { egg = false }
-            } else {
-                VersionEgg(current, name, look) { egg = false }
+            // Each big Hearth version has its own egg: silk from 13 on, the fluid ocean in 12.5,
+            // before it the planet.
+            when {
+                versionNumber(current) >= 13f -> SilkEgg(current, name) { egg = false }
+                versionNumber(current) >= 12.5f -> FluidOceanEgg(current, name) { egg = false }
+                else -> VersionEgg(current, name, look) { egg = false }
             }
         }
         AnimatedVisibility(osEgg, enter = fadeIn(tween(500)), exit = fadeOut(tween(300))) {

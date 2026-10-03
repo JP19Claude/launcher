@@ -696,6 +696,8 @@ fun GlimmerIsland(
                         // Quiet round the empty pill, bright while something runs or arrives.
                         strength = (if (isPassive(drawn) && drawn !is IslandContent.Arrival) 0.3f else 0.75f) + 0.8f * shimmer.value,
                         enabled = settings.glimmerAiFluid && !dimmed && !hidden && drawn !is IslandContent.Unlock,
+                        // Flowing only while something runs or arrives; the empty pill rests.
+                        flowing = !isPassive(drawn) || drawn is IslandContent.Arrival,
                     )
                     // A touch spreads like liquid light through the island.
                     .then(if (settings.glimmerAiFluid && !dimmed) Modifier.fluidTouch(glowColor, yields = false) else Modifier)
@@ -984,18 +986,13 @@ private fun IslandShape(
         ) { content() }
         // AI Fluid: black, with Claude's colors drifting slowly inside like an AI thinking.
         GlimmerStyle.Fluid -> {
-            val drift = rememberInfiniteTransition(label = "islandFluid").animateFloat(
-                initialValue = 0f,
-                targetValue = (2 * Math.PI).toFloat(),
-                animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing)),
-                label = "drift",
-            )
+            val drift = flowPhase(9000, LocalSettings.current.animations)
             Box(
                 modifier
                     .clip(RoundedCornerShape(corner))
                     .background(Color.Black)
                     .drawBehind {
-                        val t = drift.value
+                        val t = drift?.invoke() ?: 1f
                         AiFluidColors.take(3).forEachIndexed { i, c ->
                             val phase = i * 2.1f
                             val cx = size.width * (0.5f + 0.42f * kotlin.math.cos(t + phase))

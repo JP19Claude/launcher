@@ -70,8 +70,8 @@ fun HearthTheme(
     dark: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
-        colorScheme = if (dark) DarkScheme else LightScheme,
-        content = content,
-    )
+    MaterialTheme(colorScheme = if (dark) DarkScheme else LightScheme) {
+        // One clock for every flowing effect of the screen (see Fluid.kt).
+        dev.hearth.launcher.ui.ProvideFluidClock(content)
+    }
 }

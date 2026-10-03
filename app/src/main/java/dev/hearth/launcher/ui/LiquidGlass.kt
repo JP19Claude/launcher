@@ -65,7 +65,10 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
-import androidx.compose.animation.core.animateOffsetAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Path
@@ -368,6 +371,9 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.trackPre
     }
 }
 
+private val PullFollow = spring<Offset>(dampingRatio = 0.8f, stiffness = 900f)
+private val PullBack = spring<Offset>(dampingRatio = 0.42f, stiffness = 340f)
+
 /**
  * A liquid glass surface: blurs and bends the wallpaper behind it, catches light
  * on its rim and, if [interactive], swells and glows under the finger.
@@ -430,13 +436,11 @@ fun LiquidGlass(
         animationSpec = spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessMediumLow),
         label = "glassSwell",
     )
-    // Liquid: the glass is pulled along with the finger and wobbles back when let go.
+    // Liquid: the glass is pulled along with the finger and wobbles back when let go. Driven
+    // straight from the touch, so a moving finger doesn't recompose the glass on every move.
     var pressStart by remember { mutableStateOf(Offset.Zero) }
-    val pull by animateOffsetAsState(
-        targetValue = if (pressed) touch - pressStart else Offset.Zero,
-        animationSpec = spring(dampingRatio = 0.42f, stiffness = 340f),
-        label = "glassPull",
-    )
+    val pull = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
+    val scope = rememberCoroutineScope()
     val maxPullPx = with(density) { 7.dp.toPx() }
 
     val baseTint = tint ?: style.tint
@@ -453,19 +457,20 @@ fun LiquidGlass(
                     // finger pulls (thinner the other way, like a drop), then wobbles back.
                     val w = size.width.coerceAtLeast(1f)
                     val h = size.height.coerceAtLeast(1f)
-                    val px = (pull.x / w).coerceIn(-1f, 1f)
-                    val py = (pull.y / h).coerceIn(-1f, 1f)
+                    val pulled = pull.value
+                    val px = (pulled.x / w).coerceIn(-1f, 1f)
+                    val py = (pulled.y / h).coerceIn(-1f, 1f)
                     scaleX = 1f + 0.08f * swell + abs(px) * 0.12f - abs(py) * 0.04f
                     scaleY = 1f + 0.05f * swell + abs(py) * 0.12f - abs(px) * 0.04f
-                    translationX = (pull.x * 0.12f).coerceIn(-maxPullPx, maxPullPx)
-                    translationY = (pull.y * 0.12f).coerceIn(-maxPullPx, maxPullPx)
+                    translationX = (pulled.x * 0.12f).coerceIn(-maxPullPx, maxPullPx)
+                    translationY = (pulled.y * 0.12f).coerceIn(-maxPullPx, maxPullPx)
                 }
             }
             .then(modifier)
             // One UI 10 Fluid on every glass surface: Claude's colors along the rim, and a
             // touch spreading like liquid light where it can be pressed.
+            // (The glass glows under the finger itself, so no second touch layer on top.)
             .aiFluidEdge(cornerRadius, strength = 0.3f, width = 1.dp, enabled = fluid && fluidEdge, flowing = false)
-            .then(if (fluid && interactive) Modifier.fluidTouch(yields = false) else Modifier)
             .then(
                 if (isInteractive) {
                     Modifier.pointerInput(Unit) {
@@ -474,9 +479,16 @@ fun LiquidGlass(
                                 pressed = true
                                 touch = it
                                 pressStart = it
+                                scope.launch { pull.snapTo(Offset.Zero) }
                             },
-                            onMove = { touch = it },
-                            onRelease = { pressed = false },
+                            onMove = {
+                                touch = it
+                                scope.launch { pull.animateTo(it - pressStart, PullFollow) }
+                            },
+                            onRelease = {
+                                pressed = false
+                                scope.launch { pull.animateTo(Offset.Zero, PullBack) }
+                            },
                         )
                     }
                 } else {

@@ -13,16 +13,40 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Velocity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -52,11 +76,18 @@ fun Modifier.fluidTouch(color: Color = Color.White, yields: Boolean = true): Mod
     val give = remember { Animatable(1f) }
     var at by remember { mutableStateOf(Offset.Zero) }
     this
-        .graphicsLayer {
-            scaleX = give.value
-            scaleY = give.value
-        }
-        .pointerInput(Unit) {
+        // Only what gives under the finger needs a layer of its own.
+        .then(
+            if (yields) {
+                Modifier.graphicsLayer {
+                    scaleX = give.value
+                    scaleY = give.value
+                }
+            } else {
+                Modifier
+            },
+        )
+        .pointerInput(yields) {
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false)
                 at = down.position
@@ -97,13 +128,9 @@ fun Modifier.fluidTouch(color: Color = Color.White, yields: Boolean = true): Mod
 @Composable
 fun FluidBackdrop(colors: List<Color>, modifier: Modifier = Modifier, strength: Float = 1f) {
     if (!LocalSettings.current.fluidDesign) return
-    val t by rememberInfiniteTransition(label = "fluid").animateFloat(
-        initialValue = 0f,
-        targetValue = (2 * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(tween(24_000, easing = LinearEasing), RepeatMode.Restart),
-        label = "drift",
-    )
+    val flow = flowPhase(24_000, LocalSettings.current.animations)
     Canvas(modifier.fillMaxSize()) {
+        val t = flow?.invoke() ?: 1.2f
         colors.forEachIndexed { i, c ->
             val phase = i * 2.1f
             val cx = size.width * (0.5f + 0.38f * cos(t + phase))
@@ -133,52 +160,44 @@ val AiFluidColors = listOf(
  * it (above 1 for a moment when something new comes).
  */
 fun Modifier.aiFluidEdge(
-    corner: androidx.compose.ui.unit.Dp,
+    corner: Dp,
     strength: Float = 1f,
-    width: androidx.compose.ui.unit.Dp = androidx.compose.ui.unit.Dp(1.5f),
+    width: Dp = Dp(1.5f),
     enabled: Boolean = true,
-    /** False: the colors stand still (for the many small glass surfaces of the home screen). */
+    /** False: the colors stand still (most surfaces – flowing costs a frame every frame). */
     flowing: Boolean = true,
 ): Modifier = composed {
     if (!enabled || strength <= 0.01f) return@composed this
-    val moving = LocalSettings.current.animations && flowing
-    val turn = if (moving) {
-        rememberInfiniteTransition(label = "aiFluid").animateFloat(
-            initialValue = 0f,
-            targetValue = (2 * Math.PI).toFloat(),
-            animationSpec = infiniteRepeatable(tween(4200, easing = LinearEasing)),
-            label = "aiTurn",
-        )
-    } else {
-        null
-    }
-    this.drawWithContent {
-        drawContent()
+    val phase = flowPhase(4200, LocalSettings.current.animations && flowing)
+    // Sizes, strokes and (when still) the gradient are made once per size, not every frame.
+    this.drawWithCache {
         val w = width.toPx()
-        val a = turn?.value ?: 0.8f
+        val r = corner.toPx().coerceAtMost(size.minDimension / 2f)
         val half = maxOf(size.width, size.height) / 2f
         val c = center
-        val start = Offset(c.x + cos(a) * half, c.y + sin(a) * half)
-        val end = Offset(2 * c.x - start.x, 2 * c.y - start.y)
-        val brush = Brush.linearGradient(AiFluidColors, start, end, androidx.compose.ui.graphics.TileMode.Mirror)
-        val r = corner.toPx().coerceAtMost(size.minDimension / 2f)
-        // A soft glow inside the edge, then the line itself.
-        drawRoundRect(
-            brush,
-            topLeft = Offset(w * 1.5f, w * 1.5f),
-            size = androidx.compose.ui.geometry.Size(size.width - w * 3f, size.height - w * 3f),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius((r - w * 1.5f).coerceAtLeast(0f)),
-            style = androidx.compose.ui.graphics.drawscope.Stroke(w * 3f),
-            alpha = (0.16f * strength).coerceIn(0f, 0.5f),
-        )
-        drawRoundRect(
-            brush,
-            topLeft = Offset(w / 2f, w / 2f),
-            size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius((r - w / 2f).coerceAtLeast(0f)),
-            style = androidx.compose.ui.graphics.drawscope.Stroke(w),
-            alpha = (0.85f * strength).coerceIn(0f, 1f),
-        )
+        fun brushAt(a: Float): Brush {
+            val start = Offset(c.x + cos(a) * half, c.y + sin(a) * half)
+            val end = Offset(2 * c.x - start.x, 2 * c.y - start.y)
+            return Brush.linearGradient(AiFluidColors, start, end, TileMode.Mirror)
+        }
+        val still = if (phase == null) brushAt(0.8f) else null
+        val glowAt = Offset(w * 1.5f, w * 1.5f)
+        val glowSize = Size(size.width - w * 3f, size.height - w * 3f)
+        val glowCorner = CornerRadius((r - w * 1.5f).coerceAtLeast(0f))
+        val glowStroke = Stroke(w * 3f)
+        val glowAlpha = (0.16f * strength).coerceIn(0f, 0.5f)
+        val lineAt = Offset(w / 2f, w / 2f)
+        val lineSize = Size(size.width - w, size.height - w)
+        val lineCorner = CornerRadius((r - w / 2f).coerceAtLeast(0f))
+        val lineStroke = Stroke(w)
+        val lineAlpha = (0.85f * strength).coerceIn(0f, 1f)
+        onDrawWithContent {
+            drawContent()
+            val brush = still ?: brushAt(phase?.invoke() ?: 0.8f)
+            // A soft glow inside the edge, then the line itself.
+            drawRoundRect(brush, topLeft = glowAt, size = glowSize, cornerRadius = glowCorner, style = glowStroke, alpha = glowAlpha)
+            drawRoundRect(brush, topLeft = lineAt, size = lineSize, cornerRadius = lineCorner, style = lineStroke, alpha = lineAlpha)
+        }
     }
 }
 
@@ -205,31 +224,20 @@ fun Modifier.glassSheen(corner: androidx.compose.ui.unit.Dp, tint: Color = Color
  * Fluid glow: Claude's colors drift slowly inside an element, soft and dim, behind its
  * content – for widgets and cards that should feel alive.
  */
-fun Modifier.fluidGlow(strength: Float = 1f, enabled: Boolean = true): Modifier = composed {
+fun Modifier.fluidGlow(strength: Float = 1f, enabled: Boolean = true, flowing: Boolean = false): Modifier = composed {
     if (!enabled || !LocalSettings.current.fluidDesign) return@composed this
-    val moving = LocalSettings.current.animations
-    val drift = if (moving) {
-        rememberInfiniteTransition(label = "fluidGlow").animateFloat(
-            initialValue = 0f,
-            targetValue = (2 * Math.PI).toFloat(),
-            animationSpec = infiniteRepeatable(tween(14_000, easing = LinearEasing)),
-            label = "glowDrift",
-        )
-    } else {
-        null
-    }
-    this.drawBehind {
-        val t = drift?.value ?: 1f
-        AiFluidColors.take(3).forEachIndexed { i, c ->
-            val phase = i * 2.1f
-            val cx = size.width * (0.5f + 0.45f * cos(t + phase))
-            val cy = size.height * (0.5f + 0.45f * sin(t * 0.8f + phase))
-            val r = size.maxDimension * 0.7f
-            drawCircle(
-                Brush.radialGradient(listOf(c.copy(alpha = 0.16f * strength), Color.Transparent), center = Offset(cx, cy), radius = r),
-                radius = r,
-                center = Offset(cx, cy),
-            )
+    val phase = flowPhase(14_000, LocalSettings.current.animations && flowing)
+    this.drawWithCache {
+        fun blobs(t: Float) = AiFluidColors.take(3).mapIndexed { i, c ->
+            val p = i * 2.1f
+            val at = Offset(size.width * (0.5f + 0.45f * cos(t + p)), size.height * (0.5f + 0.45f * sin(t * 0.8f + p)))
+            at to Brush.radialGradient(listOf(c.copy(alpha = 0.16f * strength), Color.Transparent), center = at, radius = size.maxDimension * 0.7f)
+        }
+        // Standing still, the glow is painted from the same three brushes every time.
+        val still = if (phase == null) blobs(1f) else null
+        val r = size.maxDimension * 0.7f
+        onDrawBehind {
+            (still ?: blobs(phase?.invoke() ?: 1f)).forEach { (at, brush) -> drawCircle(brush, radius = r, center = at) }
         }
     }
 }
@@ -238,11 +246,13 @@ fun Modifier.fluidGlow(strength: Float = 1f, enabled: Boolean = true): Modifier 
  * The whole fluid treatment for a widget: colors drifting inside, a flowing rim and a touch
  * that spreads like liquid light.
  */
-fun Modifier.fluidWidget(corner: androidx.compose.ui.unit.Dp): Modifier = composed {
+fun Modifier.fluidWidget(corner: Dp): Modifier = composed {
     val on = LocalSettings.current.fluidDesign
+    // Standing still: widgets sit on the home screen all the time, and colors moving on every
+    // one of them kept the whole screen drawing – that was a good part of the lag.
     this
         .fluidGlow(enabled = on)
-        .aiFluidEdge(corner, strength = 0.6f, enabled = on)
+        .aiFluidEdge(corner, strength = 0.6f, enabled = on, flowing = false)
         .then(if (on) Modifier.fluidTouch(yields = false) else Modifier)
 }
 
@@ -278,14 +288,14 @@ fun FluidWaveLayer(state: FluidWaves) {
         while (state.waves.isNotEmpty()) {
             androidx.compose.runtime.withFrameMillis { }
             now = android.os.SystemClock.uptimeMillis()
-            state.waves.removeAll { now - it.start > (if (it.bloom) 900 else 700) }
+            state.waves.removeAll { now - it.start > (if (it.bloom) 620 else 560) }
         }
     }
     Canvas(Modifier.fillMaxSize()) {
         val far = hypot(size.width, size.height)
         state.waves.forEach { w ->
             if (w.bloom) {
-                val p = ((now - w.start) / 900f).coerceIn(0f, 1f)
+                val p = ((now - w.start) / 620f).coerceIn(0f, 1f)
                 val c = Offset(size.width / 2f, size.height * 1.05f)
                 val r = far * (0.2f + 0.8f * p)
                 drawCircle(
@@ -302,16 +312,12 @@ fun FluidWaveLayer(state: FluidWaves) {
                     center = c,
                 )
             } else {
-                val p = ((now - w.start) / 700f).coerceIn(0f, 1f)
+                val p = ((now - w.start) / 560f).coerceIn(0f, 1f)
                 val ease = 1f - (1f - p) * (1f - p)
                 val r = (far * ease).coerceAtLeast(1f)
                 val fade = 1f - p
-                // A soft fill behind the ring, then the ring in Claude's colors.
-                drawCircle(
-                    Brush.radialGradient(listOf(AiFluidColors[0].copy(alpha = 0.22f * fade), Color.Transparent), center = w.at, radius = r),
-                    radius = r,
-                    center = w.at,
-                )
+                // Just the ring in Claude's colors (a full-screen fill behind it cost the
+                // opening app its first frames).
                 drawCircle(
                     Brush.sweepGradient(AiFluidColors + AiFluidColors.first(), center = w.at),
                     radius = r,
@@ -321,5 +327,104 @@ fun FluidWaveLayer(state: FluidWaves) {
                 )
             }
         }
+    }
+}
+
+
+/**
+ * One clock for every flowing effect, instead of an animation of their own each. It runs only
+ * while something flows and the screen can be seen, and holds still while anything scrolls
+ * or swipes – so the fluid never takes a frame away from the finger.
+ */
+@Stable
+class FluidClock {
+    /** Seconds of flow so far. */
+    var seconds by mutableFloatStateOf(0f)
+        internal set
+    internal var flowing by mutableIntStateOf(0)
+    @Volatile internal var calmUntil = 0L
+
+    /** Hold still for [ms] (scrolling, swiping, opening something). */
+    fun calm(ms: Long = 280) {
+        calmUntil = maxOf(calmUntil, android.os.SystemClock.uptimeMillis() + ms)
+    }
+}
+
+val LocalFluidClock = staticCompositionLocalOf<FluidClock?> { null }
+
+/** Gives everything inside one [FluidClock] (part of HearthTheme, so every screen has it). */
+@Composable
+fun ProvideFluidClock(content: @Composable () -> Unit) {
+    val clock = remember { FluidClock() }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var seen by remember { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, _ -> seen = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(clock) {
+        snapshotFlow { seen && clock.flowing > 0 }.collectLatest { run ->
+            if (!run) return@collectLatest
+            var last = -1L
+            while (true) {
+                val wait = clock.calmUntil - android.os.SystemClock.uptimeMillis()
+                if (wait > 0) {
+                    delay(wait)
+                    last = -1L
+                    continue
+                }
+                withFrameMillis { now ->
+                    if (last >= 0) clock.seconds = (clock.seconds + (now - last).coerceIn(0L, 50L) / 1000f) % 50_400f
+                    last = now
+                }
+            }
+        }
+    }
+    val calmOnScroll = remember(clock) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                clock.calm()
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                clock.calm(650)
+                return Velocity.Zero
+            }
+        }
+    }
+    CompositionLocalProvider(LocalFluidClock provides clock) {
+        Box(Modifier.nestedScroll(calmOnScroll), propagateMinConstraints = true) { content() }
+    }
+}
+
+/**
+ * The phase (0 to 2π) of a flow that takes [periodMs] a round, from the shared clock – or
+ * null when it should stand still. Read it only while drawing, so it never recomposes.
+ */
+@Composable
+internal fun flowPhase(periodMs: Int, moving: Boolean): (() -> Float)? {
+    if (!moving) return null
+    val clock = LocalFluidClock.current
+    if (clock == null) {
+        // No clock above (a window of its own): a little animation of its own.
+        val t = rememberInfiniteTransition(label = "flow").animateFloat(
+            initialValue = 0f,
+            targetValue = (2 * Math.PI).toFloat(),
+            animationSpec = infiniteRepeatable(tween(periodMs, easing = LinearEasing), RepeatMode.Restart),
+            label = "phase",
+        )
+        return { t.value }
+    }
+    DisposableEffect(clock) {
+        clock.flowing++
+        onDispose { clock.flowing-- }
+    }
+    return remember(clock, periodMs) {
+        val perSecond = (2 * Math.PI * 1000.0 / periodMs).toFloat()
+        val round = (2 * Math.PI).toFloat()
+        val phase: () -> Float = { (clock.seconds * perSecond) % round }
+        phase
     }
 }

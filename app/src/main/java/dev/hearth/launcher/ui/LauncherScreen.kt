@@ -871,8 +871,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
 
                 AnimatedVisibility(
                     visible = drawerOpen,
-                    enter = fadeIn(tween(200)) + slideInVertically(tween(320)) { it / 6 },
-                    exit = fadeOut(tween(180)) + slideOutVertically(tween(240)) { it / 6 },
+                    // The drawer lets its rows rise in itself; from outside just a short, soft lift.
+                    enter = fadeIn(tween(140)) + slideInVertically(spring(dampingRatio = 0.86f, stiffness = 420f)) { it / 14 },
+                    exit = fadeOut(tween(170)) + slideOutVertically(tween(220)) { it / 9 },
                 ) {
                     OneUIDrawer(
                         apps = apps,

@@ -1,8 +1,8 @@
 package dev.hearth.launcher.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -86,8 +86,14 @@ fun GlassMenuOverlay(request: GlassMenuRequest?, onDismiss: () -> Unit) {
     ) {
         val current = shown ?: return@AnimatedVisibility
         val appear = remember(current) { Animatable(0f) }
-        LaunchedEffect(current) {
-            appear.animateTo(1f, spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMediumLow))
+        // Springs open, and on closing folds back into the icon instead of just fading.
+        val leaving = transition.targetState != EnterExitState.Visible
+        LaunchedEffect(current, leaving) {
+            if (leaving) {
+                appear.animateTo(0f, spring(dampingRatio = 1f, stiffness = 1500f))
+            } else {
+                appear.animateTo(1f, spring(dampingRatio = 0.68f, stiffness = 520f))
+            }
         }
 
         Box(
@@ -117,9 +123,10 @@ fun GlassMenuOverlay(request: GlassMenuRequest?, onDismiss: () -> Unit) {
                         .width(if (oneUi) 284.dp else 250.dp)
                         .graphicsLayer {
                             val v = appear.value
-                            alpha = v.coerceIn(0f, 1f)
-                            scaleX = 0.75f + 0.25f * v
-                            scaleY = 0.75f + 0.25f * v
+                            alpha = (v * 1.4f).coerceIn(0f, 1f)
+                            scaleX = 0.62f + 0.38f * v
+                            scaleY = 0.5f + 0.5f * v
+                            translationY = (1f - v) * -10.dp.toPx()
                             transformOrigin = TransformOrigin(0.5f, 0f)
                         }
                         .clip(RoundedCornerShape(if (oneUi) 28.dp else 24.dp)),

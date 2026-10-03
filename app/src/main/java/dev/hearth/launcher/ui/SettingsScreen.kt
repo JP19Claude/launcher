@@ -1186,8 +1186,8 @@ internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit)
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(26.dp))
-                // AI Fluid: Claude's colors flowing round every card.
-                .aiFluidEdge(26.dp, strength = 0.4f, width = 1.dp, enabled = LocalSettings.current.fluidDesign),
+                // AI Fluid: Claude's colors round every card – standing still, so scrolling stays smooth.
+                .aiFluidEdge(26.dp, strength = 0.4f, width = 1.dp, enabled = LocalSettings.current.fluidDesign, flowing = false),
             fluidEdge = false,
         ) {
             Column(Modifier.padding(vertical = 6.dp), content = content)

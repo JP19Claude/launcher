@@ -64,7 +64,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -352,6 +352,12 @@ fun AppIconImage(app: AppInfo, size: Dp, modifier: Modifier = Modifier) {
     }
 }
 
+/** Where an icon and its cell are laid out; read on demand, never observed. */
+private class IconPlace {
+    var icon: androidx.compose.ui.layout.LayoutCoordinates? = null
+    var cell: androidx.compose.ui.layout.LayoutCoordinates? = null
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppIcon(
@@ -382,34 +388,39 @@ fun AppIcon(
         animationSpec = tween(if (pressed || pressedByHand) 160 else 420),
         label = "fluidHalo",
     )
-    var bounds by remember { mutableStateOf(Rect.Zero) }
-    var cellOrigin by remember { mutableStateOf(Offset.Zero) }
+    // Where the icon sits, asked only when needed (tap, long press, drag): keeping it in state
+    // wrote to every icon on every frame of a swipe – one of the reasons paging lagged.
+    val place = remember { IconPlace() }
+    fun bounds(): Rect = place.icon?.takeIf { it.isAttached }?.boundsInRoot() ?: Rect.Zero
     val selection = LocalSelection.current
     val isSelected = selection.active && app.key in selection.selected
     val launch by rememberUpdatedState(onLaunch)
     val currentActions by rememberUpdatedState(actions)
     val longPress = {
         if (settings.haptics) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-        if (selection.active) selection.toggle(app) else currentActions.menu(app, bounds)
+        if (selection.active) selection.toggle(app) else currentActions.menu(app, bounds())
     }
     val gestures = if (draggable && !selection.active) {
         Modifier
-            .onGloballyPositioned { cellOrigin = it.positionInRoot() }
+            .onPlaced { place.cell = it }
             .semantics(mergeDescendants = true) {
-                onClick { launch(app, bounds); true }
+                onClick { launch(app, bounds()); true }
                 onLongClick { longPress(); true }
             }
             .tapMenuOrDrag(
-                onTap = { launch(app, bounds) },
+                onTap = { launch(app, bounds()) },
                 onLongPress = longPress,
-                onDragStart = { local -> currentActions.dragStart(app, cellOrigin + local, bounds) },
+                onDragStart = { local ->
+                    val cellOrigin = place.cell?.takeIf { it.isAttached }?.positionInRoot() ?: Offset.Zero
+                    currentActions.dragStart(app, cellOrigin + local, bounds())
+                },
                 onPressChange = { pressedByHand = it },
             )
     } else {
         Modifier.combinedClickable(
             interactionSource = interaction,
             indication = null,
-            onClick = { if (selection.active) selection.toggle(app) else launch(app, bounds) },
+            onClick = { if (selection.active) selection.toggle(app) else launch(app, bounds()) },
             onLongClick = longPress,
         )
     }
@@ -447,7 +458,7 @@ fun AppIcon(
                     // Bounds of the icon itself (before the press scale), for the launch zoom
                     // and the lifted icon in the context menu.
                     modifier = Modifier
-                        .onGloballyPositioned { bounds = it.boundsInRoot() }
+                        .onPlaced { place.icon = it }
                         .graphicsLayer {
                             scaleX = scale
                             scaleY = scale
