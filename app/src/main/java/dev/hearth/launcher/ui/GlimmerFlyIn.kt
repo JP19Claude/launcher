@@ -404,7 +404,22 @@ private fun HyperFlyIn(
         val rects: List<Rect> = view.rootWindowInsets?.displayCutout?.boundingRects.orEmpty()
         rects.minByOrNull { it.top }?.takeIf { it.top < view.height / 4 }
     }
-    val shadowPaint = remember { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG) }
+    // Drawn with bitmap shaders in rounded rects: no clip paths, no blurred shadows, so every
+    // frame is cheap and the flight stays smooth.
+    val snapPaint = remember(snapshot) {
+        snapshot?.let {
+            android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG or android.graphics.Paint.FILTER_BITMAP_FLAG).apply {
+                shader = android.graphics.BitmapShader(it.asAndroidBitmap(), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+            }
+        }
+    }
+    val iconPaint = remember(icon) {
+        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG or android.graphics.Paint.FILTER_BITMAP_FLAG).apply {
+            shader = android.graphics.BitmapShader(icon.asAndroidBitmap(), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+        }
+    }
+    val cardPaint = remember { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG) }
+    val matrix = remember { android.graphics.Matrix() }
 
     LaunchedEffect(app) {
         // The island opens right away, so the app flies into its black, not into the empty
@@ -414,14 +429,14 @@ private fun HyperFlyIn(
             var sent = false
             snapshotFlow { travel.value }.collect { t ->
                 // Lands: its icon appears in the already open island.
-                if (!sent && t > 0.9f) {
+                if (!sent && t > 0.92f) {
                     sent = true
                     arrive(smallIcon, color.toArgb())
                 }
             }
         }
-        travel.animateTo(1f, tween(620, easing = HyperEase))
-        delay(140)
+        travel.animateTo(1f, tween(560, easing = HyperEase))
+        delay(100)
         done()
     }
 
@@ -438,91 +453,62 @@ private fun HyperFlyIn(
         val iconEnd = 20.dp.toPx()
 
         val k = travel.value.coerceIn(0f, 1f)
-        // Keeps its proportions while shrinking, only near the end it rounds into a square.
-        val square = smoothstep(0.45f, 0.85f, k)
-        val cw = lerp(w, iconEnd, k)
+        // It shrinks all the way (a little faster at first), keeping its proportions until it
+        // rounds into its square icon.
+        val shrink = 1f - (1f - k).pow(1.6f)
+        val square = smoothstep(0.35f, 0.8f, k)
+        val cw = lerp(w, iconEnd, shrink)
         val ch = lerp(h * (cw / w), cw, square)
         // A quick arc: up faster than across, like a flick towards the top.
-        val cx = lerp(w / 2f, endX, 1f - (1f - k).pow(1.3f))
-        val cy = lerp(h / 2f, endY, 1f - (1f - k).pow(2.2f))
-        val pos = Offset(cx - cw / 2f, cy - ch / 2f)
-        val r = lerp(36.dp.toPx(), min(cw, ch) * 0.3f, square).coerceAtMost(min(cw, ch) / 2f)
-        // The real island covers it in the end; what's left here fades as Glimmer takes over.
-        val fadeAll = 1f - smoothstep(0.93f, 1f, k)
+        val cx = lerp(w / 2f, endX, 1f - (1f - k).pow(1.25f))
+        val cy = lerp(h / 2f, endY, 1f - (1f - k).pow(2f))
+        val left = cx - cw / 2f
+        val top = cy - ch / 2f
+        val r = lerp(36.dp.toPx(), min(cw, ch) * 0.28f, square).coerceAtMost(min(cw, ch) / 2f)
+        // The real island takes over at the end.
+        val fadeAll = 1f - smoothstep(0.92f, 1f, k)
         if (fadeAll <= 0.001f) return@Canvas
+        val content = 1f - smoothstep(0.3f, 0.62f, k)
+        val asIcon = smoothstep(0.28f, 0.6f, k)
 
-        // A soft shadow under the lifted app (only while the app itself still covers it).
-        val shadow = (1f - smoothstep(0.15f, 0.4f, k)) * 0.45f
-        if (shadow > 0.01f) {
-            drawIntoCanvas { canvas ->
-                shadowPaint.color = color.toArgb()
-                shadowPaint.setShadowLayer(
-                    lerp(28.dp.toPx(), 8.dp.toPx(), k),
-                    0f,
-                    lerp(12.dp.toPx(), 2.dp.toPx(), k),
-                    Color.Black.copy(alpha = shadow).toArgb(),
-                )
-                canvas.nativeCanvas.drawRoundRect(pos.x, pos.y, pos.x + cw, pos.y + ch, r, r, shadowPaint)
+        drawIntoCanvas { canvas ->
+            val native = canvas.nativeCanvas
+            // A light shadow under it while it's big (two plain layers, no blur).
+            val shadow = (1f - smoothstep(0.1f, 0.4f, k)) * 0.22f * fadeAll
+            if (shadow > 0.01f) {
+                cardPaint.shader = null
+                cardPaint.color = Color.Black.copy(alpha = shadow).toArgb()
+                val grow = 6.dp.toPx()
+                native.drawRoundRect(left - grow, top - grow + 8.dp.toPx(), left + cw + grow, top + ch + grow + 8.dp.toPx(), r + grow, r + grow, cardPaint)
             }
-        }
-
-        val clip = Path().apply { addRoundRect(RoundRect(pos.x, pos.y, pos.x + cw, pos.y + ch, CornerRadius(r))) }
-        // The app: its own picture (or its colors) at first, its icon at the end.
-        val content = 1f - smoothstep(0.4f, 0.72f, k)
-        clipPath(clip) {
+            // The app itself (its picture, or its colors).
             if (content > 0.001f) {
-                if (snapshot != null) {
+                if (snapPaint != null && snapshot != null) {
                     val scale = max(cw / snapshot.width, ch / snapshot.height)
-                    val dw = snapshot.width * scale
-                    val dh = snapshot.height * scale
-                    drawImage(
-                        image = snapshot,
-                        srcOffset = IntOffset.Zero,
-                        srcSize = IntSize(snapshot.width, snapshot.height),
-                        dstOffset = IntOffset((pos.x + (cw - dw) / 2f).roundToInt(), (pos.y + (ch - dh) / 2f).roundToInt()),
-                        dstSize = IntSize(dw.roundToInt().coerceAtLeast(1), dh.roundToInt().coerceAtLeast(1)),
-                        alpha = content * fadeAll,
-                        filterQuality = FilterQuality.Low,
-                    )
+                    matrix.setScale(scale, scale)
+                    matrix.postTranslate(left + (cw - snapshot.width * scale) / 2f, top + (ch - snapshot.height * scale) / 2f)
+                    snapPaint.shader.setLocalMatrix(matrix)
+                    snapPaint.alpha = (255 * content * fadeAll).roundToInt().coerceIn(0, 255)
+                    native.drawRoundRect(left, top, left + cw, top + ch, r, r, snapPaint)
                 } else {
-                    drawRect(
-                        Brush.verticalGradient(
-                            0f to lerpColor(color, Color.White, 0.18f),
-                            1f to lerpColor(color, Color.Black, 0.3f),
-                            startY = pos.y,
-                            endY = pos.y + ch,
-                        ),
-                        topLeft = pos,
-                        size = Size(cw, ch),
-                        alpha = content * fadeAll,
-                    )
-                    // Its icon in the middle, like the app's splash.
-                    val big = min(cw, ch) * 0.32f
-                    if (big > 1f) drawImage(
-                        image = icon,
-                        dstOffset = IntOffset((pos.x + cw / 2f - big / 2f).roundToInt(), (pos.y + ch / 2f - big / 2f).roundToInt()),
-                        dstSize = IntSize(big.roundToInt(), big.roundToInt()),
-                        alpha = content * fadeAll,
-                        filterQuality = FilterQuality.Medium,
-                    )
+                    cardPaint.shader = null
+                    cardPaint.color = color.copy(alpha = content * fadeAll).toArgb()
+                    native.drawRoundRect(left, top, left + cw, top + ch, r, r, cardPaint)
                 }
             }
-            // Turning into its icon.
-            val asIcon = smoothstep(0.38f, 0.7f, k) * fadeAll
-            if (asIcon > 0.001f) {
+            // Turning into its icon, which keeps shrinking with it.
+            if (asIcon * fadeAll > 0.001f) {
                 val side = min(cw, ch)
-                drawImage(
-                    image = icon,
-                    dstOffset = IntOffset((pos.x + (cw - side) / 2f).roundToInt(), (pos.y + (ch - side) / 2f).roundToInt()),
-                    dstSize = IntSize(side.roundToInt().coerceAtLeast(1), side.roundToInt().coerceAtLeast(1)),
-                    alpha = asIcon,
-                    filterQuality = FilterQuality.Medium,
-                )
+                val il = left + (cw - side) / 2f
+                val itop = top + (ch - side) / 2f
+                matrix.setScale(side / icon.width.coerceAtLeast(1), side / icon.height.coerceAtLeast(1))
+                matrix.postTranslate(il, itop)
+                iconPaint.shader.setLocalMatrix(matrix)
+                iconPaint.alpha = (255 * asIcon * fadeAll).roundToInt().coerceIn(0, 255)
+                val ir = min(r, side * 0.28f)
+                native.drawRoundRect(il, itop, il + side, itop + side, ir, ir, iconPaint)
             }
         }
-        // A thin bright rim while it's big, like glass catching the light.
-        val rim = (1f - smoothstep(0.3f, 0.6f, k)) * 0.25f * fadeAll
-        if (rim > 0.01f) drawRoundRect(Color.White.copy(alpha = rim), pos, Size(cw, ch), CornerRadius(r), style = Stroke(1.dp.toPx()))
     }
 }
 
