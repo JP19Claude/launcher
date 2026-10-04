@@ -117,6 +117,11 @@ object HearthUi {
     fun markIntroSeen(context: Context) {
         prefs(context).edit().putInt("introSeen", INTRO_VERSION).apply()
     }
+
+    /** Hearth Labs: show the welcome tour again next time. */
+    fun resetIntro(context: Context) {
+        prefs(context).edit().remove("introSeen").apply()
+    }
 }
 
 /** Hearth UI 14's look: the stacked clock and calm rims (the tour offers it). */
@@ -163,6 +168,56 @@ internal object HearthChangelog {
     private val Slate = Color(0xFF5E6C84)
 
     val releases: List<ChangeRelease> = listOf(
+        ChangeRelease(
+            version = "15.0",
+            name = "Menüs & Geheimnisse",
+            summary = "Viel mehr Menüs überall – und versteckte Menüs, die man erst finden muss.",
+            sections = listOf(
+                ChangeSection(
+                    "Hearth-Menü", Icons.Rounded.Menu, Blue,
+                    listOf(
+                        "Neues Hearth-Menü: ein Glas-Blatt von unten mit allem griffbereit – Einstellungen, Finder, alle Apps, Clawd, Widgets, Hintergrund, Schnelleinstellungen, Mitteilungen, Taschenlampe, Nachtmodus, Apps auswählen und Ein/Aus.",
+                        "Öffnet sich über „Hearth-Menü“ in der Bearbeiten-Leiste (lange auf den Startbildschirm drücken), im Startbildschirm-Menü oder per Doppeltippen (Startbildschirm → Doppeltippen → „Hearth-Menü“).",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Ein/Aus-Menü", Icons.Rounded.Refresh, Terracotta,
+                    listOf(
+                        "Ein eigenes Ein/Aus-Menü aus Glas: Bildschirm aus, Neustart und Ausschalten (mit Shizuku; Neustart und Ausschalten fragen mit einem zweiten Tipp nach).",
+                        "Erreichbar im Hearth-Menü, in den Einstellungen unter „Menüs“ oder per Doppeltippen.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Versteckte Menüs", Icons.Rounded.Search, Violet,
+                    listOf(
+                        "Wie die Servicecodes eines Galaxy: Der Finder kennt jetzt Geheimcodes, die mit *# anfangen und versteckte Menüs öffnen – Hardware-Test, Versionen, Akku-Status, Diagnose, Clawd-Studio und mehr. Welche das sind? Findest du selbst heraus … 🤫",
+                        "Hardware-Test: Display-Farben, Touch-Test zum Malen, Vibrationsmuster und alle Sensoren.",
+                        "Akku-Status und Diagnose zeigen live Strom, Temperatur, Spannung, Arbeitsspeicher, Speicher und Laufzeit.",
+                        "Clawd-Studio: Clawd in jeder Stimmung ansehen – und auf den Startbildschirm schicken.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Hearth Labs", Icons.Rounded.Build, Green,
+                    listOf(
+                        "Wie Androids Entwickleroptionen: Hearth Labs versteckt sich hinter einigen Tipps an einer bekannten Stelle in „Über das Telefon“.",
+                        "Darin: Bildrate-Anzeige (FPS) auf dem Startbildschirm, Fingertipps und Zeigerposition zeigen, Layout-Grenzen, Animationstempo bis zur Zeitlupe, Willkommens-Tour wiederholen und Hearth neu starten.",
+                        "Einmal freigeschaltet, steht Hearth Labs auch in den Einstellungen unter „Menüs“ und in „Über das Telefon“.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Easter Eggs", Icons.Rounded.Star, Orange,
+                    listOf(
+                        "Hearth UI 15: „Tresor“ – das Update der versteckten Menüs hat einen versteckten Tresor. Die Kombination steckt in der Version …",
+                        "Zwei neue Eggs zum Finden – jetzt sind es 30.",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
         ChangeRelease(
             version = "14.9",
             name = "Glimmer bei Nacht",

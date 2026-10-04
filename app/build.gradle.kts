@@ -12,9 +12,9 @@ android {
         applicationId = "dev.hearth.launcher"
         minSdk = 28
         targetSdk = 35
-        versionCode = 110
+        versionCode = 111
         // Small updates (fixes, little things) +0.1, big ones (many features, redesign) +0.5.
-        versionName = "14.9"
+        versionName = "15.0"
         // Hearth One (everything in one app) says so; the separate apps don't.
         buildConfigField("boolean", "ALL_IN_ONE", "false")
     }

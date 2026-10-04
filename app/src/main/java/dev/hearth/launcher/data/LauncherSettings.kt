@@ -251,6 +251,8 @@ enum class HomeGesture(val label: String) {
     Drawer("App-Übersicht"),
     Notifications("Mitteilungen"),
     Torch("Taschenlampe"),
+    Menu("Hearth-Menü"),
+    Power("Ein/Aus-Menü"),
 }
 
 /** The home clock's typeface. */

@@ -161,6 +161,9 @@ fun SettingsScreen(
 
     var pickerOpen by remember { mutableStateOf(false) }
     var lockPickerOpen by remember { mutableStateOf(false) }
+    // Hearth UI 15: hidden menus open right over the settings.
+    var secret by remember { mutableStateOf<SecretMenu?>(null) }
+    LaunchedEffect(Unit) { HearthLabs.init(context) }
     val listState = rememberLazyListState()
     val appVersion = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
@@ -215,6 +218,10 @@ fun SettingsScreen(
                             fontSize = 40.sp,
                             fontWeight = FontWeight.Bold,
                             style = OnWallpaperText,
+                            // Hidden: holding the big title opens the secret codes.
+                            modifier = Modifier.pointerInput(Unit) {
+                                detectTapGestures(onLongPress = { secret = SecretMenu.Codes })
+                            },
                         )
                         Text(
                             "${if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) HearthUi.NAME else "Hearth"} ${HearthUi.major(appVersion)} · ${dev.hearth.launcher.data.ClaudeOs.full} „${dev.hearth.launcher.data.ClaudeOs.CODENAME}“",
@@ -694,6 +701,26 @@ fun SettingsScreen(
 
             if (shows("general")) item { BackupSection(vm) }
 
+            if (shows("general")) item {
+                Section("Menüs") {
+                    ActionRow(
+                        label = "Ein/Aus-Menü",
+                        description = "Bildschirm aus, Neustart und Ausschalten – mit Shizuku",
+                        onClick = { secret = SecretMenu.Power },
+                    )
+                    Note("Das Hearth-Menü hat alles griffbereit: Finder, Widgets, Nachtmodus, Taschenlampe, Ein/Aus … Es öffnet sich per Doppeltippen (Startbildschirm → Doppeltippen → „Hearth-Menü“), über „Hearth-Menü“ in der Bearbeiten-Leiste oder lange drücken auf den Startbildschirm.")
+                    if (HearthLabs.unlocked) {
+                        RowDivider()
+                        ActionRow(
+                            label = "Hearth Labs 🧪",
+                            description = "Freigeschaltet – Experimente, Bildrate, Fingertipps, Layout-Grenzen",
+                            onClick = { secret = SecretMenu.Labs },
+                        )
+                    }
+                    Note("Psst: Es gibt noch mehr versteckte Menüs. Ein Tipp – der Finder kennt Geheimcodes, die mit *# anfangen. 🤫")
+                }
+            }
+
             // Without One UI's start page, updates sit with the general settings.
             if (!oneUi) item { Section("Updates") { AppUpdateContent() } }
 
@@ -836,6 +863,8 @@ fun SettingsScreen(
                 onDone = { pickerOpen = false },
             )
         }
+
+        secret?.let { open -> SecretMenuScreen(open) { secret = null } }
     }
 }
 

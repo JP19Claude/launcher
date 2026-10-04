@@ -155,6 +155,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import dev.hearth.launcher.data.EasterEggs
 import dev.hearth.launcher.data.ClockFont
 import dev.hearth.launcher.data.HomeGesture
+import dev.hearth.launcher.data.NightMode
 import androidx.compose.material.icons.rounded.Share
 import dev.hearth.launcher.data.HearthWidget
 import dev.hearth.launcher.data.ClockStyle
@@ -198,6 +199,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
     var flyLook by remember { mutableStateOf<FlyInLook?>(null) }
     var flyLanding by remember { mutableStateOf(GlimmerLink.Landing()) }
     var menu by remember { mutableStateOf<GlassMenuRequest?>(null) }
+    // Hearth UI 15: the Hearth menu, and the hidden menus behind secret codes.
+    var hubOpen by remember { mutableStateOf(false) }
+    var secret by remember { mutableStateOf<SecretMenu?>(null) }
     var widgetPickerOpen by remember { mutableStateOf(false) }
     var selecting by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(emptySet<String>()) }
@@ -207,6 +211,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     }
 
     val context = LocalContext.current
+    remember { HearthLabs.init(context) }
     val scope = rememberCoroutineScope()
     // Hearth UI 14: the tour of what's new, once after the big update.
     var showIntro by remember { mutableStateOf(!HearthUi.introSeen(context)) }
@@ -438,6 +443,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 },
                 GlassMenuItem("Hintergrundbild ändern", Icons.Rounded.Edit) { vm.openWallpaperPicker() },
                 GlassMenuItem("Suche öffnen", Icons.Rounded.Search) { searchOpen = true },
+                GlassMenuItem("Hearth-Menü", Icons.Rounded.Star) { hubOpen = true },
+                GlassMenuItem("Ein/Aus-Menü", Icons.Rounded.Lock) { secret = SecretMenu.Power },
             ),
         )
         }
@@ -449,6 +456,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
     LaunchedEffect(Unit) {
         vm.homeEvents.collect { alreadyInFront ->
             menu = null
+            hubOpen = false
+            secret = null
             openFolder = null
             openHomeFolder = null
             renaming = null
@@ -764,6 +773,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                             HomeGesture.Drawer -> if (settings.galaxyClaude) drawerOpen = true else searchOpen = true
                                             HomeGesture.Notifications -> openNotifications()
                                             HomeGesture.Torch -> vm.controls.setTorch(!vm.controls.torchOn.value)
+                                            HomeGesture.Menu -> hubOpen = true
+                                            HomeGesture.Power -> secret = SecretMenu.Power
                                         }
                                         Unit
                                     },
@@ -944,6 +955,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             selecting = true
                             selected = emptySet()
                         },
+                        onMenu = {
+                            editMode = false
+                            hubOpen = true
+                        },
                         onDismiss = { editMode = false },
                     )
                 }
@@ -974,6 +989,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             searchOpen = false
                         },
                         claudeFirst = settings.galaxyClaude,
+                        onSecret = {
+                            searchOpen = false
+                            secret = it
+                        },
                         onDismiss = { searchOpen = false },
                         suggestions = library.suggestions,
                     )
@@ -1098,6 +1117,56 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         settingsOpen = true
                     },
                 )
+            }
+
+            // Hearth UI 15: the Hearth menu – everything one tap away.
+            if (hubOpen) {
+                val torch by vm.controls.torchOn.collectAsStateWithLifecycle()
+                HearthMenu(
+                    tiles = listOf(
+                        HubTile("Einstellungen", Icons.Rounded.Settings, Color(0xFF8E8E93)) { settingsOpen = true },
+                        HubTile("Finder", Icons.Rounded.Search, Color(0xFF3E91FF)) { searchOpen = true },
+                        HubTile("Alle Apps", Icons.Rounded.Home, Color(0xFF30B0C7)) {
+                            if (settings.galaxyClaude) drawerOpen = true else searchOpen = true
+                        },
+                        HubTile("Clawd", Icons.Rounded.Face, Color(0xFFD97757)) { vm.askClaude() },
+                        HubTile("Widgets", Icons.Rounded.Add, Color(0xFF34C759)) {
+                            widgetTarget = (pagerState.currentPage - widgetPages).coerceAtLeast(0)
+                            widgetPickerOpen = true
+                        },
+                        HubTile("Hintergrund", Icons.Rounded.Edit, Color(0xFFFF6FB5)) { vm.openWallpaperPicker() },
+                        HubTile("Schnell-\neinstellungen", Icons.Rounded.CheckCircle, Color(0xFF5E5CE6)) {
+                            vm.controls.expandQuickSettings()
+                        },
+                        HubTile("Mitteilungen", Icons.Rounded.Info, Color(0xFFFF9F0A)) { openNotifications() },
+                        HubTile(if (torch) "Licht aus" else "Taschen-\nlampe", Icons.Rounded.Star, Color(0xFFFFCC00)) {
+                            vm.controls.setTorch(!torch)
+                        },
+                        HubTile(if (storedSettings.nightMode == NightMode.Off) "Nachtmodus" else "Nachtmodus\naus", Icons.Rounded.DateRange, Color(0xFF8E6BFF)) {
+                            vm.updateSettings { it.copy(nightMode = if (it.nightMode == NightMode.Off) NightMode.On else NightMode.Off) }
+                        },
+                        HubTile("Apps\nauswählen", Icons.Rounded.CheckCircle, Color(0xFF64D2FF)) {
+                            selecting = true
+                            selected = emptySet()
+                        },
+                        HubTile("Ein/Aus", Icons.Rounded.Lock, Color(0xFFFF453A)) { secret = SecretMenu.Power },
+                    ),
+                    onSecret = {
+                        hubOpen = false
+                        secret = SecretMenu.Codes
+                    },
+                    onClose = { hubOpen = false },
+                )
+            }
+
+            // Hidden menus (secret codes in the finder, Hearth Labs, the power menu).
+            secret?.let { open -> SecretMenuScreen(open) { secret = null } }
+
+            // Hearth Labs: the frame counter.
+            if (HearthLabs.fps) {
+                Box(Modifier.fillMaxSize()) {
+                    FpsMeter(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 8.dp, top = 4.dp))
+                }
             }
 
             // Easter eggs: confetti and a glass message when one is found.

@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Twenty-eight easter eggs hidden in Hearth, all with Clawd. Each one found is remembered. A new
+ * Thirty easter eggs hidden in Hearth, all with Clawd. Each one found is remembered. A new
  * find shows only a small hint; finding one again shows nothing; only the last one throws a
  * real party (confetti, Clawd dancing, a glass message).
  *
@@ -41,10 +41,12 @@ import kotlinx.coroutines.flow.asStateFlow
  * 26. Solve all of Clawd's riddles
  * 27. Tap "Version" in the software update screen five times quickly
  * 28. Tap the ClaudeOS version five times, then spin the Claude star ten whole turns
+ * 29. Open the list of secret codes (*#0000# in the finder)
+ * 30. Unlock Hearth Labs (seven taps on the build number)
  */
 object EasterEggs {
 
-    const val TOTAL = 28
+    const val TOTAL = 30
 
     private const val PREFS = "hearth_eggs"
     private const val KEY = "found"

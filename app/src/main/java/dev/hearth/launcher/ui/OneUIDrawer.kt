@@ -661,6 +661,7 @@ fun OneUIEditBar(
     onSettings: () -> Unit,
     onSelectApps: () -> Unit,
     onDismiss: () -> Unit,
+    onMenu: () -> Unit = {},
 ) {
     Box(
         Modifier
@@ -679,6 +680,7 @@ fun OneUIEditBar(
             EditAction(Icons.Rounded.Edit, "Hintergrund\nund Stil", onWallpaper)
             EditAction(Icons.Rounded.Add, "Widgets", onWidgets)
             EditAction(Icons.Rounded.CheckCircle, "Apps\nauswählen", onSelectApps)
+            EditAction(Icons.Rounded.Menu, "Hearth-\nMenü", onMenu)
             EditAction(Icons.Rounded.Settings, "Einstellungen", onSettings)
         }
     }

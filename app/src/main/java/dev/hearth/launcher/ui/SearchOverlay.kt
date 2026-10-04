@@ -80,6 +80,8 @@ fun SearchOverlay(
     suggestions: List<AppInfo> = emptyList(),
     /** Galaxy × Claude: Claude comes first, and "Go" without a matching app asks Claude. */
     claudeFirst: Boolean = false,
+    /** Hearth UI 15: a secret code (*#0*#, *#1234# …) opens its hidden menu. */
+    onSecret: (SecretMenu) -> Unit = {},
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
@@ -90,6 +92,7 @@ fun SearchOverlay(
         if (trimmed.equals("regenbogen", ignoreCase = true) || trimmed.equals("rainbow", ignoreCase = true)) {
             dev.hearth.launcher.data.EasterEggs.find(eggContext, "rainbow")
         }
+        SecretMenu.forCode(trimmed)?.let { onSecret(it) }
         // Looking for Clawd himself.
         if (trimmed.equals("clawd", ignoreCase = true)) {
             dev.hearth.launcher.data.ClaudeAssistant.react(dev.hearth.launcher.data.ClawdMood.Dance)

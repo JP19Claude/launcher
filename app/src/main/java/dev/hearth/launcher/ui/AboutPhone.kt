@@ -85,6 +85,8 @@ private class Spec(
     val claudeOs: Boolean = false,
     /** Hearth UI's own version: five taps open its easter egg. */
     val hearthEgg: Boolean = false,
+    /** The build number: seven taps unlock Hearth Labs, like Android's developer options. */
+    val labs: Boolean = false,
 )
 
 private class SpecGroup(val title: String, val specs: List<Spec>)
@@ -184,7 +186,7 @@ private fun gatherSpecs(context: Context): List<SpecGroup> {
                 Spec(if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "Hearth UI-Version" else "Hearth-Version", hearth, hearthEgg = true),
                 Spec("ClaudeOS-Version", "${ClaudeOs.VERSION} („${ClaudeOs.CODENAME}“)", claudeOs = true),
                 Spec("Ausgabe", edition),
-                Spec("Build-Nummer", build),
+                Spec("Build-Nummer", build, labs = true),
                 Spec("Design", "Hearth UI 14 · One UI 10 Fluid · Liquid Glass"),
             ),
         ),
@@ -271,6 +273,17 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
     // Hidden: holding the "made by" line opens the map of all easter eggs.
     var eggMap by remember { mutableStateOf(false) }
     var hearthTaps by remember { mutableIntStateOf(0) }
+    // Hidden: seven taps on the build number unlock Hearth Labs.
+    LaunchedEffect(Unit) { HearthLabs.init(context) }
+    var labsOpen by remember { mutableStateOf(false) }
+    var labsTaps by remember { mutableIntStateOf(0) }
+    var labsHint by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(labsHint) {
+        if (labsHint != null) {
+            delay(1800)
+            labsHint = null
+        }
+    }
     var hearthLastTap by remember { mutableLongStateOf(0L) }
     val appName = remember { dev.hearth.launcher.data.AppUpdater.appName(context) }
     // Battery, memory and uptime change: read again now and then.
@@ -280,7 +293,7 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
             groups = gatherSpecs(context)
         }
     }
-    BackHandler(enabled = !osEgg && !hearthEgg && !eggMap, onBack = onClose)
+    BackHandler(enabled = !osEgg && !hearthEgg && !eggMap && !labsOpen, onBack = onClose)
     val name = remember { phoneName(context) }
 
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF070912), Color(0xFF050506))))) {
@@ -360,6 +373,24 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                                                 hearthEgg = true
                                             }
                                         }
+                                        spec.labs -> Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
+                                            if (HearthLabs.unlocked) {
+                                                labsHint = "Hearth Labs ist schon freigeschaltet"
+                                                return@clickable
+                                            }
+                                            labsTaps++
+                                            val left = 7 - labsTaps
+                                            when {
+                                                left <= 0 -> {
+                                                    labsTaps = 0
+                                                    HearthLabs.unlock(context)
+                                                    labsHint = "Hearth Labs freigeschaltet! 🧪"
+                                                    labsOpen = true
+                                                }
+                                                left <= 4 -> labsHint = if (left == 1) "Noch 1 Tipp bis Hearth Labs" else "Noch $left Tipps bis Hearth Labs"
+                                                else -> Unit
+                                            }
+                                        }
                                         else -> Modifier
                                     },
                                 )
@@ -384,7 +415,47 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                     }
                 }
             }
+            if (HearthLabs.unlocked) {
+                Text(
+                    "Versteckt",
+                    color = Color(0xFF7FB2FF),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 6.dp),
+                )
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(26.dp))
+                        .background(Color(0xFF16161A).copy(alpha = 0.82f))
+                        .glassSheen(26.dp)
+                        .aiFluidEdge(26.dp, strength = 0.45f, width = 1.dp)
+                        .clickable { labsOpen = true }
+                        .fluidTouch()
+                        .padding(horizontal = 20.dp, vertical = 15.dp),
+                ) {
+                    Text("Hearth Labs 🧪", color = Color.White, fontSize = 16.sp)
+                    Text("Experimente, Bildrate, Fingertipps, Layout-Grenzen …", color = Color.White.copy(alpha = 0.62f), fontSize = 14.sp)
+                }
+            }
             Spacer(Modifier.height(30.dp))
+        }
+        labsHint?.let { hint ->
+            Text(
+                hint,
+                color = Color.White,
+                fontSize = 14.sp,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 30.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF2A2A30).copy(alpha = 0.95f))
+                    .padding(horizontal = 18.dp, vertical = 10.dp),
+            )
+        }
+        AnimatedVisibility(labsOpen, enter = fadeIn(tween(300)), exit = fadeOut(tween(250))) {
+            SecretMenuScreen(SecretMenu.Labs) { labsOpen = false }
         }
         AnimatedVisibility(osEgg, enter = fadeIn(tween(500)), exit = fadeOut(tween(300))) {
             ClaudeOsVersionEgg { osEgg = false }
