@@ -649,7 +649,9 @@ private sealed interface Downgrade {
     class Failed(val reason: String) : Downgrade
     class Downloading(val release: AppUpdater.Release, val progress: Float) : Downgrade
     class Installing(val release: AppUpdater.Release) : Downgrade
-    /** Without Shizuku Android won't install an older version over a newer one. */
+    /** Android's installer was asked; if it says no, the other ways are a tap away. */
+    class Asked(val release: AppUpdater.Release) : Downgrade
+    /** Android wouldn't install the older version over the newer one: Shizuku, or by hand. */
     class NeedsShizuku(val release: AppUpdater.Release) : Downgrade
 }
 
@@ -666,8 +668,11 @@ private fun DowngradeCard(name: String, current: String, look: UpdateLook) {
     var confirm by remember { mutableStateOf<String?>(null) }
 
     fun goBack(release: AppUpdater.Release) {
-        if (!dev.hearth.launcher.data.ShizukuBridge.isReady(context)) {
-            state = Downgrade.NeedsShizuku(release)
+        val shizuku = dev.hearth.launcher.data.ShizukuBridge.isReady(context)
+        // Without Shizuku the app installs it itself (asking Android to allow the older
+        // version); that needs "install unknown apps" once.
+        if (!shizuku && !AppUpdater.canInstall(context)) {
+            AppUpdater.askInstallPermission(context)
             return
         }
         state = Downgrade.Downloading(release, 0f)
@@ -680,9 +685,15 @@ private fun DowngradeCard(name: String, current: String, look: UpdateLook) {
                 return@launch
             }
             state = Downgrade.Installing(release)
-            // Hearth closes while its older self is installed; it comes back on its own.
-            if (!dev.hearth.launcher.data.ShizukuBridge.installApk(apk, allowDowngrade = true)) {
-                state = Downgrade.Failed("Android hat die Version ${release.version} nicht installiert")
+            if (shizuku) {
+                // Hearth closes while its older self is installed; it comes back on its own.
+                if (!dev.hearth.launcher.data.ShizukuBridge.installApk(apk, allowDowngrade = true)) {
+                    state = Downgrade.NeedsShizuku(release)
+                }
+            } else if (!AppUpdater.install(context, apk, downgrade = true)) {
+                state = Downgrade.NeedsShizuku(release)
+            } else {
+                state = Downgrade.Asked(release)
             }
         }
     }
@@ -751,10 +762,23 @@ private fun DowngradeCard(name: String, current: String, look: UpdateLook) {
             }
             is Downgrade.Downloading -> DowngradeRow("Lade ${s.release.version} … ${(s.progress * 100).toInt()} %", look.accent) {}
             is Downgrade.Installing -> DowngradeRow("Installiere ${s.release.version} – $name startet gleich neu …", look.accent) {}
+            is Downgrade.Asked -> {
+                Text(
+                    "Android fragt jetzt, ob du $name ${s.release.version} installieren willst. Kommt „App nicht installiert“, lässt dein Handy den Downgrade " +
+                        "ohne Shizuku nicht zu – dann hilft einer der Wege unten.",
+                    color = Color.White.copy(alpha = 0.75f),
+                    fontSize = 14.sp,
+                    lineHeight = 19.sp,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+                )
+                DowngradeRow("Andere Wege anzeigen", look.accent) { state = Downgrade.NeedsShizuku(s.release) }
+            }
             is Downgrade.NeedsShizuku -> {
                 Text(
-                    "Eine ältere Version über eine neuere installiert Android nur mit Shizuku (Einstellungen → System). " +
-                        "Ohne Shizuku: Version herunterladen, Hearth sichern (Einstellungen → Allgemein → Sichern), Hearth deinstallieren und die Datei installieren.",
+                    "Android installiert eine ältere Version nicht über eine neuere. Zwei Wege:\n" +
+                        "1. Mit Shizuku (Einstellungen → System): dann klappt es hier mit einem Tipp, und alles bleibt.\n" +
+                        "2. Von Hand: Hearth sichern (Einstellungen → Allgemein → Sichern), die Datei herunterladen, $name deinstallieren, " +
+                        "die Datei aus „Downloads“ installieren und die Sicherung wieder einspielen.",
                     color = Color.White.copy(alpha = 0.75f),
                     fontSize = 14.sp,
                     lineHeight = 19.sp,
@@ -764,6 +788,13 @@ private fun DowngradeCard(name: String, current: String, look: UpdateLook) {
                     runCatching {
                         context.startActivity(
                             Intent(Intent.ACTION_VIEW, android.net.Uri.parse(s.release.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }
+                }
+                DowngradeRow("$name deinstallieren", look.accent) {
+                    runCatching {
+                        context.startActivity(
+                            Intent(Intent.ACTION_DELETE, android.net.Uri.parse("package:${context.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                         )
                     }
                 }

@@ -1,6 +1,5 @@
-Hearth UI 14.6 auf ClaudeOS 3.1
+Hearth UI 14.7 auf ClaudeOS 3.1
 
-↩ Downgrade
-• Ganz unten im Software-Update: alle früheren Versionen – eine antippen (zweimal zur Sicherheit) und zurückwechseln
-• Mit Shizuku wird die ältere Version direkt drüber installiert, deine Einstellungen bleiben
-• Ohne Shizuku lässt Android das nicht zu: Hearth lädt die Datei und erklärt den Weg von Hand
+↩ Downgrade verbessert
+• Ohne Shizuku installiert Hearth die ältere Version jetzt selbst und bittet Android, den Downgrade zu erlauben
+• Lehnt Android ab („App nicht installiert“), zeigt Hearth beide Wege: mit Shizuku (ein Tipp, alles bleibt) oder von Hand – mit Knopf zum Datei-Laden und Deinstallieren

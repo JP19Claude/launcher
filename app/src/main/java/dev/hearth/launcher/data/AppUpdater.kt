@@ -250,11 +250,14 @@ object AppUpdater {
      * Hands the downloaded APK to Android's installer; it shows its own "update this app?"
      * question (see [UpdateReceiver]). False if it couldn't even start.
      */
-    fun install(context: Context, apk: File, packageName: String = context.packageName): Boolean = runCatching {
+    fun install(context: Context, apk: File, packageName: String = context.packageName, downgrade: Boolean = false): Boolean = runCatching {
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(packageName)
         }
+        // Going back to an older version: Android allows it for Hearth's (debuggable) builds
+        // when the installer asks for it – which only works where the system lets an app ask.
+        if (downgrade) requestDowngrade(params)
         val id = installer.createSession(params)
         installer.openSession(id).use { session ->
             session.openWrite("update.apk", 0, apk.length()).use { out ->
@@ -272,6 +275,22 @@ object AppUpdater {
         }
         true
     }.getOrDefault(false)
+}
+
+/** Asks the installer to allow an older version (INSTALL_REQUEST_DOWNGRADE); quietly does nothing where it can't. */
+private fun requestDowngrade(params: PackageInstaller.SessionParams) {
+    val viaMethod = runCatching {
+        PackageInstaller.SessionParams::class.java
+            .getMethod("setRequestDowngrade", Boolean::class.javaPrimitiveType)
+            .invoke(params, true)
+    }.isSuccess
+    if (!viaMethod) {
+        runCatching {
+            val field = PackageInstaller.SessionParams::class.java.getDeclaredField("installFlags")
+            field.isAccessible = true
+            field.setInt(params, field.getInt(params) or 0x00000080)
+        }
+    }
 }
 
 /** What Android's installer says about an update: it asks the user, or it's done (or failed). */

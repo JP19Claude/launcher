@@ -164,6 +164,21 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "14.7",
+            name = "Downgrade verbessert",
+            summary = "Der Downgrade versucht es jetzt auch ohne Shizuku – und zeigt sonst den Weg.",
+            sections = listOf(
+                ChangeSection(
+                    "Downgrade", Icons.Rounded.Refresh, Blue,
+                    listOf(
+                        "Ohne Shizuku installiert Hearth die ältere Version jetzt selbst und bittet Android, den Downgrade zu erlauben.",
+                        "Lehnt Android ab („App nicht installiert“), zeigt Hearth beide Wege: mit Shizuku (ein Tipp, alles bleibt) oder von Hand mit Sichern, Datei laden und Deinstallieren-Knopf.",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "14.6",
             name = "Downgrade",
             summary = "Zurück zu jeder früheren Version – direkt im Software-Update.",
