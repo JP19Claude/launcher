@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -268,17 +269,13 @@ fun OneUIDrawer(
                     fontSize = 13.sp,
                     modifier = Modifier.weight(1f),
                 )
-                Row(
-                    Modifier
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.12f))
-                        .clickable {
-                            onSettingsChange {
-                                it.copy(drawerSort = DrawerSort.entries[(it.drawerSort.ordinal + 1) % DrawerSort.entries.size])
-                            }
+                GlassCapsule(
+                    onClick = {
+                        onSettingsChange {
+                            it.copy(drawerSort = DrawerSort.entries[(it.drawerSort.ordinal + 1) % DrawerSort.entries.size])
                         }
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    },
+                    padding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 ) {
                     Icon(sortIcon(settings.drawerSort), contentDescription = null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(6.dp))
@@ -406,31 +403,16 @@ private fun sortIcon(sort: DrawerSort): ImageVector = when (sort) {
     DrawerSort.MostUsed -> Icons.Rounded.Star
 }
 
-/** The ⋮ button: a glass circle that gives under the finger and turns while the menu is open. */
+/** The ⋮ button: a liquid glass circle that turns while the menu is open. */
 @Composable
 private fun MoreButton(progress: () -> Float, onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val press by animateFloatAsState(
-        targetValue = if (pressed) 0.84f else 1f,
-        animationSpec = spring(dampingRatio = 0.5f, stiffness = 700f),
-        label = "morePress",
-    )
-    Box(
-        Modifier
-            .size(46.dp)
-            .graphicsLayer {
-                scaleX = press
-                scaleY = press
-            }
-            .clip(CircleShape)
-            .drawBehind {
-                val p = progress().coerceIn(0f, 1f)
-                drawCircle(Color.White.copy(alpha = 0.10f + 0.14f * p))
-            }
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
+    // Liquid glass, giving under the finger; brighter while its menu is open.
+    GlassCircle(onClick = onClick) {
+        Box(
+            Modifier
+                .size(46.dp)
+                .drawBehind { drawCircle(Color.White.copy(alpha = 0.14f * progress().coerceIn(0f, 1f))) },
+        )
         Icon(
             Icons.Rounded.MoreVert,
             contentDescription = "Mehr",

@@ -73,10 +73,10 @@ enum class SearchEngine(val label: String, val url: String?) {
 
 /** What swiping down on the home screen does. */
 enum class SwipeDownAction(val label: String) {
+    Search("Suche (Finder)"),
     Split("Links Mitteilungen, rechts Schnelleinstellungen"),
     ControlCenter("Schnelleinstellungen"),
     Notifications("Mitteilungen"),
-    Search("Suche"),
 }
 
 /** Strip along the top edge that opens the Hearth control center in every app. */
@@ -361,7 +361,7 @@ data class LauncherSettings(
     val dimWallpaper: Float = 0.2f,
     val showSearchPill: Boolean = true,
     val swipeOpensSearch: Boolean = true,
-    val swipeDownAction: SwipeDownAction = SwipeDownAction.Split,
+    val swipeDownAction: SwipeDownAction = SwipeDownAction.Search,
     val showClaudeCard: Boolean = true,
     /**
      * Galaxy × Claude: Claude woven into the launcher like Galaxy AI into One UI – the Now Brief
@@ -612,7 +612,8 @@ data class LauncherSettings(
             galaxyClaude = true,
             // One UI has no search on the home screen: it sits on top of the app drawer.
             showSearchPill = false,
-            swipeDownAction = SwipeDownAction.Split,
+            // Hearth 13.2: up opens the drawer, down the finder.
+            swipeDownAction = SwipeDownAction.Search,
             pageTransition = PageTransition.Flat,
         ).withCcStyle(CcStyle.OneUI)
         DesignPreset.ColorOSClaude -> copy(
@@ -630,7 +631,7 @@ data class LauncherSettings(
             clockStyle = ClockStyle.ColorOS,
             showGreeting = true,
             showClaudeCard = true,
-            swipeDownAction = SwipeDownAction.Split,
+            swipeDownAction = SwipeDownAction.Search,
         ).withCcStyle(CcStyle.ColorOS)
         DesignPreset.IOSGlass -> copy(
             galaxyClaude = false,
@@ -790,7 +791,7 @@ class SettingsRepository(context: Context) {
             dimWallpaper = prefs.getFloat("dimWallpaper", d.dimWallpaper),
             showSearchPill = prefs.getBoolean("showSearchPill", d.showSearchPill),
             swipeOpensSearch = prefs.getBoolean("swipeOpensSearch", d.swipeOpensSearch),
-            swipeDownAction = enumOf("swipeDownAction", d.swipeDownAction),
+            swipeDownAction = enumOf("swipeDownAction13", d.swipeDownAction),
             showClaudeCard = prefs.getBoolean("showClaudeCard", d.showClaudeCard),
             galaxyClaude = prefs.getBoolean("galaxyClaude", d.galaxyClaude),
             drawerSort = enumOf("drawerSort", d.drawerSort),
@@ -921,7 +922,7 @@ class SettingsRepository(context: Context) {
             .putFloat("dimWallpaper", s.dimWallpaper)
             .putBoolean("showSearchPill", s.showSearchPill)
             .putBoolean("swipeOpensSearch", s.swipeOpensSearch)
-            .putString("swipeDownAction", s.swipeDownAction.name)
+            .putString("swipeDownAction13", s.swipeDownAction.name)
             .putBoolean("showClaudeCard", s.showClaudeCard)
             .putBoolean("galaxyClaude", s.galaxyClaude)
             .putString("drawerSort", s.drawerSort.name)

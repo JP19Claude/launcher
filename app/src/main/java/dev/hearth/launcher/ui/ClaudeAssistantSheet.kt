@@ -508,16 +508,9 @@ private fun ProblemLine(text: String, fix: ClaudeFix?, onFix: (ClaudeFix) -> Uni
                 )
                 // Without a key, questions can still go to the Claude app.
                 if (fix == ClaudeFix.ApiKey) {
-                    Text(
-                        "In Claude-App fragen",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.12f))
-                            .clickable(onClick = onHandOver)
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                    )
+                    GlassCapsule(onClick = onHandOver) {
+                        Text("In Claude-App fragen", color = Color.White, fontSize = 14.sp)
+                    }
                 }
             }
         }
@@ -544,16 +537,9 @@ private fun Thinking(onStop: () -> Unit) {
         }
         Spacer(Modifier.width(6.dp))
         Text("Clawd erledigt das …", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp, modifier = Modifier.weight(1f))
-        Text(
-            "Stopp",
-            color = Color.White.copy(alpha = 0.8f),
-            fontSize = 13.sp,
-            modifier = Modifier
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.10f))
-                .clickable(onClick = onStop)
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-        )
+        GlassCapsule(onClick = onStop, padding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
+            Text("Stopp", color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp)
+        }
     }
 }
 

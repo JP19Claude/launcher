@@ -10,7 +10,7 @@ package dev.hearth.launcher.data
  */
 object ClaudeOs {
     const val NAME = "ClaudeOS"
-    const val VERSION = "2.1"
+    const val VERSION = "2.2"
 
     /**
      * Like Android's desserts: each ClaudeOS has a codename. 1.0 was "Ember", the glow Hearth

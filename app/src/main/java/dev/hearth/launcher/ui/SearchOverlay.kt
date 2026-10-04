@@ -55,8 +55,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.AppInfo
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
+import dev.hearth.launcher.ui.theme.HearthTheme
 
-/** Full-screen search, opened by swiping or tapping the search pill. */
+/**
+ * The finder: swipe down on the home screen (or tap the search pill). Frosted wallpaper with
+ * Claude's colors drifting through it, a liquid glass search bar whose rim flows while you
+ * type, and everything found on glass – Clawd's prompts, suggestions, apps, settings, the web.
+ */
 @Composable
 fun SearchOverlay(
     apps: List<AppInfo>,
@@ -87,219 +98,220 @@ fun SearchOverlay(
     }
     val results = remember(trimmed, apps) {
         if (trimmed.isEmpty()) {
-            apps
+            apps.sortedBy { it.label.lowercase() }
         } else {
             apps.filter { it.label.contains(trimmed, ignoreCase = true) }
                 .sortedByDescending { it.label.startsWith(trimmed, ignoreCase = true) }
         }
     }
-    val colors = MaterialTheme.colorScheme
+    val columns = LocalSettings.current.columns.coerceIn(4, 5)
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
     val hasGlass = LocalBackdrop.current != null
+    // Comes down from the top like a sheet of liquid, and the results follow a moment later.
+    val appear = remember { Animatable(if (LocalSettings.current.animations) 0f else 1f) }
+    LaunchedEffect(Unit) { appear.animateTo(1f, spring(dampingRatio = 0.8f, stiffness = 260f)) }
 
+    // Always dark glass, whatever the system theme: light text on the frosted wallpaper.
+    HearthTheme(dark = true) {
     Box(Modifier.fillMaxSize()) {
-    // Frosted glass sheet over the wallpaper; nearly opaque if the wallpaper can't be read.
-    GlassBackdropFill(blur = 40.dp, modifier = Modifier.matchParentSize())
-    Box(
-        Modifier
-            .matchParentSize()
-            .background(colors.background.copy(alpha = if (hasGlass) 0.55f else 0.94f)),
-    )
-    Column(
-        Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .imePadding(),
-    ) {
-        Row(
+        GlassBackdropFill(blur = 40.dp, modifier = Modifier.matchParentSize())
+        Box(
             Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SearchField(
-                value = query,
-                onValueChange = { query = it },
-                placeholder = if (claudeFirst) "Frag Clawd oder suche Apps" else "Apps und Web durchsuchen",
-                trailing = if (claudeFirst) {
-                    { ClawdInBar(26.dp) { onAskClaude(trimmed) } }
-                } else {
-                    null
-                },
-                onSubmit = {
-                    val first = results.firstOrNull()
-                    when {
-                        first != null -> onLaunch(first, null)
-                        trimmed.isEmpty() -> Unit
-                        claudeFirst -> onAskClaude(trimmed)
-                        else -> onWebSearch(trimmed)
-                    }
-                },
-                modifier = Modifier
-                    .weight(1f)
-                    .focusRequester(focusRequester),
-            )
-            Spacer(Modifier.width(8.dp))
-            LiquidGlass(
-                cornerRadius = 23.dp,
-                refraction = 12.dp,
-                interactive = true,
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onOpenSettings),
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Settings,
-                    contentDescription = "Einstellungen",
-                    tint = colors.onSurface,
-                    modifier = Modifier.align(Alignment.Center),
-                )
-            }
-            TextButton(onClick = onDismiss) {
-                Text("Abbrechen", color = colors.primary, fontSize = 16.sp)
-            }
-        }
-
-        Text(
-            text = when {
-                trimmed.isEmpty() -> "Alle Apps"
-                calculate(trimmed) != null -> "Rechner"
-                results.isEmpty() -> "Keine App gefunden"
-                else -> "Apps"
-            },
-            fontFamily = FontFamily.Serif,
-            fontSize = 22.sp,
-            color = colors.onBackground,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                .matchParentSize()
+                .background(Color(0xFF06060C).copy(alpha = if (hasGlass) 0.42f else 0.94f)),
         )
-
-        // All results sit on one big sheet of liquid glass.
-        LiquidGlass(
-            cornerRadius = 30.dp,
-            refraction = 22.dp,
-            blur = 20.dp,
-            modifier = Modifier
-                .padding(start = 10.dp, end = 10.dp, bottom = 10.dp)
+        // One UI 10 Fluid: Claude's colors drift slowly behind everything (and hold still
+        // while the results scroll).
+        FluidBackdrop(AiFluidColors.take(3), modifier = Modifier.matchParentSize(), strength = 0.5f)
+        Column(
+            Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(30.dp)),
+                .statusBarsPadding()
+                .imePadding(),
         ) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(LocalSettings.current.columns),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 24.dp),
-        ) {
-            // Galaxy × Claude: things to ask Claude, before anything is typed.
-            if (trimmed.isEmpty() && claudeFirst) {
-                item(span = { GridItemSpan(maxLineSpan) }, key = "claude-prompts") {
-                    Column(Modifier.padding(top = 4.dp, bottom = 8.dp)) {
-                        Text(
-                            "Claude",
-                            color = colors.onSurfaceVariant,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(start = 12.dp, bottom = 6.dp),
-                        )
-                        Row(
-                            Modifier
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 14.dp, end = 12.dp, top = 12.dp, bottom = 6.dp)
+                    .graphicsLayer {
+                        val p = appear.value
+                        alpha = p.coerceIn(0f, 1f)
+                        translationY = (1f - p) * -24.dp.toPx()
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SearchField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = if (claudeFirst) "Frag Clawd oder suche" else "Apps und Web durchsuchen",
+                    trailing = if (claudeFirst) {
+                        { ClawdInBar(26.dp) { onAskClaude(trimmed) } }
+                    } else {
+                        null
+                    },
+                    onSubmit = {
+                        val first = results.firstOrNull()
+                        when {
+                            trimmed.isEmpty() -> Unit
+                            first != null -> onLaunch(first, null)
+                            claudeFirst -> onAskClaude(trimmed)
+                            else -> onWebSearch(trimmed)
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(focusRequester),
+                )
+                Spacer(Modifier.width(8.dp))
+                GlassCircle(onClick = onOpenSettings) {
+                    Icon(Icons.Rounded.Settings, contentDescription = "Einstellungen", tint = Color.White)
+                }
+                Spacer(Modifier.width(6.dp))
+                GlassCircle(onClick = onDismiss) {
+                    Icon(Icons.Rounded.Close, contentDescription = "Schließen", tint = Color.White)
+                }
+            }
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(columns),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .fadingEdges(top = 10.dp, bottom = 36.dp)
+                    .graphicsLayer {
+                        val p = appear.value
+                        alpha = ((p - 0.15f) / 0.85f).coerceIn(0f, 1f)
+                        translationY = (1f - p) * -40.dp.toPx()
+                    },
+                contentPadding = PaddingValues(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 28.dp),
+            ) {
+                // Galaxy × Claude: things to ask Claude, before anything is typed.
+                if (trimmed.isEmpty() && claudeFirst) {
+                    item(span = { GridItemSpan(maxLineSpan) }, key = "claude-prompts") {
+                        Column(Modifier.padding(top = 4.dp, bottom = 10.dp)) {
+                            SectionLabel("Clawd")
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(horizontal = 2.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                ClaudePrompts.forEach { (label, prompt) ->
+                                    GlassCapsule(onClick = { onAskClaude(prompt) }, tint = Color(0xFFD97757).copy(alpha = 0.22f)) {
+                                        Clawd(Modifier.size(16.dp), animate = false)
+                                        Spacer(Modifier.width(7.dp))
+                                        Text(label, color = Color.White, fontSize = 14.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (trimmed.isEmpty() && suggestions.isNotEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }, key = "suggestions") {
+                        Column(Modifier.padding(bottom = 12.dp)) {
+                            SectionLabel("Vorschläge")
+                            // The apps you'll likely want, on their own piece of glass.
+                            LiquidGlass(
+                                cornerRadius = 26.dp,
+                                refraction = 16.dp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(26.dp)),
+                            ) {
+                                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                                    for (c in 0 until columns) {
+                                        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                            suggestions.getOrNull(c)?.let { app ->
+                                                AppIcon(app, actions, onWallpaper = true, fillCell = true, onLaunch = onLaunch)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (trimmed.isNotEmpty()) {
+                    calculate(trimmed)?.let { result ->
+                        item(span = { GridItemSpan(maxLineSpan) }, key = "calculator") {
+                            CalculatorRow(trimmed, result, onDone = onDismiss)
+                        }
+                    }
+                    // Galaxy × Claude: asking Claude comes first.
+                    if (claudeFirst) {
+                        item(span = { GridItemSpan(maxLineSpan) }, key = "claude-first") {
+                            ClaudeRow(query = trimmed, onClick = { onAskClaude(trimmed) })
+                        }
+                    }
+                    matchingSettings(trimmed).forEach { setting ->
+                        item(span = { GridItemSpan(maxLineSpan) }, key = "setting-${setting.label}") {
+                            SettingRow(setting, onDone = onDismiss)
+                        }
+                    }
+                }
+                if (results.isNotEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }, key = "apps-label") {
+                        SectionLabel(if (trimmed.isEmpty()) "Alle Apps" else "Apps", Modifier.padding(top = 6.dp))
+                    }
+                }
+                items(results, key = { it.key }) { app ->
+                    // Results glide into place while typing.
+                    Box(Modifier.animateItem(), contentAlignment = Alignment.Center) {
+                        AppIcon(app, actions, onWallpaper = true, fillCell = true, onLaunch = onLaunch)
+                    }
+                }
+                // Nothing found: Clawd scratches his head and offers to help.
+                if (trimmed.isNotEmpty() && results.isEmpty() && calculate(trimmed) == null) {
+                    item(span = { GridItemSpan(maxLineSpan) }, key = "clawd-empty") {
+                        LiquidGlass(
+                            cornerRadius = 22.dp,
+                            interactive = true,
+                            modifier = Modifier
+                                .padding(top = 12.dp)
                                 .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                .clip(RoundedCornerShape(22.dp))
+                                .clickable { onAskClaude(trimmed) },
                         ) {
-                            ClaudePrompts.forEach { (label, prompt) ->
-                                Row(
-                                    Modifier
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFD97757).copy(alpha = 0.18f))
-                                        .clickable { onAskClaude(prompt) }
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Clawd(Modifier.size(16.dp), animate = false)
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(label, color = colors.onSurface, fontSize = 14.sp)
+                            Row(
+                                Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Clawd(Modifier.size(width = 56.dp, height = 46.dp), mood = dev.hearth.launcher.data.ClawdMood.Thinking)
+                                Spacer(Modifier.size(12.dp))
+                                Column {
+                                    Text("Hier ist keine App mit dem Namen.", color = Color.White, fontSize = 15.sp)
+                                    Text("Tipp mich an, dann kümmere ich mich drum.", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
                                 }
                             }
                         }
                     }
                 }
-            }
-            if (trimmed.isEmpty() && suggestions.isNotEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }, key = "suggestions") {
-                    Column(Modifier.padding(top = 4.dp, bottom = 8.dp)) {
-                        Text(
-                            "Vorschläge",
-                            color = colors.onSurfaceVariant,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(start = 12.dp, bottom = 2.dp),
-                        )
-                        Row(Modifier.fillMaxWidth()) {
-                            suggestions.take(LocalSettings.current.columns).forEach { app ->
-                                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                                    AppIcon(app, actions, onWallpaper = false, fillCell = true, onLaunch = onLaunch)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if (trimmed.isNotEmpty()) {
-                calculate(trimmed)?.let { result ->
-                    item(span = { GridItemSpan(maxLineSpan) }, key = "calculator") {
-                        CalculatorRow(trimmed, result, onDone = onDismiss)
-                    }
-                }
-                // Galaxy × Claude: asking Claude comes first.
-                if (claudeFirst) {
-                    item(span = { GridItemSpan(maxLineSpan) }, key = "claude-first") {
+                if (trimmed.isNotEmpty()) {
+                    if (!claudeFirst) item(span = { GridItemSpan(maxLineSpan) }, key = "claude-last") {
                         ClaudeRow(query = trimmed, onClick = { onAskClaude(trimmed) })
                     }
-                }
-                matchingSettings(trimmed).forEach { setting ->
-                    item(span = { GridItemSpan(maxLineSpan) }, key = "setting-${setting.label}") {
-                        SettingRow(setting, onDone = onDismiss)
+                    item(span = { GridItemSpan(maxLineSpan) }, key = "web") {
+                        WebSearchRow(query = trimmed, onClick = { onWebSearch(trimmed) })
                     }
                 }
             }
-            items(results, key = { it.key }) { app ->
-                // Results glide into place while typing.
-                Box(Modifier.animateItem(), contentAlignment = Alignment.Center) {
-                    AppIcon(app, actions, onWallpaper = false, fillCell = true, onLaunch = onLaunch)
-                }
-            }
-            // Nothing found: Clawd scratches his head and offers to help.
-            if (trimmed.isNotEmpty() && results.isEmpty() && calculate(trimmed) == null) {
-                item(span = { GridItemSpan(maxLineSpan) }, key = "clawd-empty") {
-                    androidx.compose.foundation.layout.Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { onAskClaude(trimmed) }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Clawd(Modifier.size(width = 56.dp, height = 46.dp), mood = dev.hearth.launcher.data.ClawdMood.Thinking)
-                        androidx.compose.foundation.layout.Spacer(Modifier.size(12.dp))
-                        Column {
-                            Text("Hier ist keine App mit dem Namen.", color = colors.onBackground, fontSize = 15.sp)
-                            Text("Tipp mich an, dann kümmere ich mich drum.", color = colors.onSurfaceVariant, fontSize = 13.sp)
-                        }
-                    }
-                }
-            }
-            if (trimmed.isNotEmpty()) {
-                if (!claudeFirst) item(span = { GridItemSpan(maxLineSpan) }) {
-                    ClaudeRow(query = trimmed, onClick = { onAskClaude(trimmed) })
-                }
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    WebSearchRow(query = trimmed, onClick = { onWebSearch(trimmed) })
-                }
-            }
-        }
         }
     }
     }
+}
+
+@Composable
+private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        color = Color.White.copy(alpha = 0.62f),
+        fontSize = 13.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = modifier.padding(start = 10.dp, bottom = 6.dp),
+    )
 }
 
 @Composable
@@ -312,44 +324,58 @@ private fun SearchField(
     /** Clawd at the bar's end (Galaxy × Claude), where Galaxy AI would be. */
     trailing: (@Composable () -> Unit)? = null,
 ) {
-    val colors = MaterialTheme.colorScheme
+    var focused by remember { mutableStateOf(false) }
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        textStyle = TextStyle(color = colors.onSurface, fontSize = 17.sp),
-        cursorBrush = SolidColor(colors.primary),
+        textStyle = TextStyle(color = Color.White, fontSize = 17.sp),
+        cursorBrush = SolidColor(Color(0xFFFFB494)),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
         keyboardActions = KeyboardActions(onGo = { onSubmit() }),
-        modifier = modifier,
+        modifier = modifier.onFocusChanged { focused = it.isFocused },
         decorationBox = { innerTextField ->
+            // A liquid glass capsule; while you type, Claude's colors flow round its rim.
             LiquidGlass(
-                cornerRadius = 23.dp,
+                cornerRadius = 26.dp,
                 refraction = 14.dp,
-                tint = colors.surface.copy(alpha = 0.25f),
+                tint = Color.White.copy(alpha = 0.06f),
+                fluidEdge = false,
+                modifier = Modifier.aiFluidEdge(
+                    26.dp,
+                    strength = if (focused) 0.75f else 0.35f,
+                    enabled = LocalSettings.current.fluidDesign,
+                    flowing = focused,
+                ),
             ) {
-            Row(
-                Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Search,
-                    contentDescription = null,
-                    tint = colors.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-                Box(Modifier.weight(1f)) {
-                    if (value.isEmpty()) {
-                        Text(placeholder, color = colors.onSurfaceVariant, fontSize = 17.sp)
+                Row(
+                    Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.75f),
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Box(Modifier.weight(1f)) {
+                        if (value.isEmpty()) {
+                            Text(
+                                placeholder,
+                                color = Color.White.copy(alpha = 0.6f),
+                                fontSize = 17.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        innerTextField()
                     }
-                    innerTextField()
+                    if (trailing != null) {
+                        Spacer(Modifier.width(8.dp))
+                        trailing()
+                    }
                 }
-                if (trailing != null) {
-                    Spacer(Modifier.width(8.dp))
-                    trailing()
-                }
-            }
             }
         },
     )
@@ -361,9 +387,9 @@ private fun WebSearchRow(query: String, onClick: () -> Unit) {
     LiquidGlass(
         cornerRadius = 20.dp,
         interactive = true,
-        tint = colors.surface.copy(alpha = 0.25f),
+        tint = Color.White.copy(alpha = 0.06f),
         modifier = Modifier
-            .padding(horizontal = 12.dp, vertical = 12.dp)
+            .padding(top = 12.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick),
@@ -394,7 +420,7 @@ private fun ClaudeRow(query: String, onClick: () -> Unit) {
         interactive = true,
         tint = Color(0xFFD97757).copy(alpha = 0.22f),
         modifier = Modifier
-            .padding(start = 12.dp, end = 12.dp, top = 12.dp)
+            .padding(top = 12.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick),

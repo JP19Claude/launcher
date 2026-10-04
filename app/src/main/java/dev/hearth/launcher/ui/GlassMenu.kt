@@ -216,14 +216,16 @@ private fun OneUIAction(item: GlassMenuItem, modifier: Modifier, onClick: () -> 
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            Modifier
+        // A drop of liquid glass for each action.
+        LiquidGlass(
+            cornerRadius = 20.dp,
+            refraction = 9.dp,
+            tint = Color.White.copy(alpha = 0.08f),
+            modifier = Modifier
                 .size(40.dp)
-                .clip(androidx.compose.foundation.shape.CircleShape)
-                .background(Color.White.copy(alpha = 0.14f)),
-            contentAlignment = Alignment.Center,
+                .clip(androidx.compose.foundation.shape.CircleShape),
         ) {
-            Icon(item.icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+            Icon(item.icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp).align(Alignment.Center))
         }
         Spacer(Modifier.height(5.dp))
         Text(

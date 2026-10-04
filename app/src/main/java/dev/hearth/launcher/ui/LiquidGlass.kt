@@ -371,8 +371,8 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.trackPre
     }
 }
 
-private val PullFollow = spring<Offset>(dampingRatio = 0.8f, stiffness = 900f)
-private val PullBack = spring<Offset>(dampingRatio = 0.42f, stiffness = 340f)
+private val PullFollow = spring<Offset>(dampingRatio = 0.7f, stiffness = 700f)
+private val PullBack = spring<Offset>(dampingRatio = 0.3f, stiffness = 320f)
 
 /**
  * A liquid glass surface: blurs and bends the wallpaper behind it, catches light
@@ -431,17 +431,24 @@ fun LiquidGlass(
         animationSpec = tween(if (pressed) 120 else 500),
         label = "glassGlow",
     )
-    val swell by animateFloatAsState(
+    // Liquid: width and height spring on their own, a little out of step, so on letting go
+    // the glass wobbles like a drop of jelly settling instead of just shrinking back.
+    val swellX by animateFloatAsState(
         targetValue = if (pressed) 1f else 0f,
-        animationSpec = spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessMediumLow),
-        label = "glassSwell",
+        animationSpec = spring(dampingRatio = 0.3f, stiffness = 300f),
+        label = "glassSwellX",
+    )
+    val swellY by animateFloatAsState(
+        targetValue = if (pressed) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.34f, stiffness = 460f),
+        label = "glassSwellY",
     )
     // Liquid: the glass is pulled along with the finger and wobbles back when let go. Driven
     // straight from the touch, so a moving finger doesn't recompose the glass on every move.
     var pressStart by remember { mutableStateOf(Offset.Zero) }
     val pull = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
     val scope = rememberCoroutineScope()
-    val maxPullPx = with(density) { 7.dp.toPx() }
+    val maxPullPx = with(density) { 9.dp.toPx() }
 
     val baseTint = tint ?: style.tint
     val shaderActive = backdrop != null && glassEffect != null
@@ -460,10 +467,12 @@ fun LiquidGlass(
                     val pulled = pull.value
                     val px = (pulled.x / w).coerceIn(-1f, 1f)
                     val py = (pulled.y / h).coerceIn(-1f, 1f)
-                    scaleX = 1f + 0.08f * swell + abs(px) * 0.12f - abs(py) * 0.04f
-                    scaleY = 1f + 0.05f * swell + abs(py) * 0.12f - abs(px) * 0.04f
-                    translationX = (pulled.x * 0.12f).coerceIn(-maxPullPx, maxPullPx)
-                    translationY = (pulled.y * 0.12f).coerceIn(-maxPullPx, maxPullPx)
+                    // Smaller glass gives more, big sheets only a little.
+                    val give = (120.dp.toPx() / maxOf(w, h)).coerceIn(0.35f, 1f)
+                    scaleX = 1f + (0.09f * swellX - 0.025f * swellY + abs(px) * 0.14f - abs(py) * 0.05f) * give
+                    scaleY = 1f + (0.07f * swellY - 0.02f * swellX + abs(py) * 0.14f - abs(px) * 0.05f) * give
+                    translationX = (pulled.x * 0.16f).coerceIn(-maxPullPx, maxPullPx)
+                    translationY = (pulled.y * 0.16f).coerceIn(-maxPullPx, maxPullPx)
                 }
             }
             .then(modifier)

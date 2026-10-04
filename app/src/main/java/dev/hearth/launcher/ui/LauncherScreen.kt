@@ -46,6 +46,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -927,8 +928,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
 
                 AnimatedVisibility(
                     visible = searchOpen,
-                    enter = fadeIn(tween(180)) + slideInVertically(tween(260)) { -it / 10 },
-                    exit = fadeOut(tween(160)) + slideOutVertically(tween(200)) { -it / 10 },
+                    // The finder comes down from the top, like a sheet of liquid.
+                    enter = fadeIn(tween(160)) + slideInVertically(spring(dampingRatio = 0.84f, stiffness = 380f)) { -it / 8 },
+                    exit = fadeOut(tween(170)) + slideOutVertically(tween(220)) { -it / 8 },
                 ) {
                     SearchOverlay(
                         apps = apps,
@@ -1493,13 +1495,7 @@ private fun NowBriefCard(onAsk: (String?) -> Unit, modifier: Modifier = Modifier
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 ClaudePrompts.forEach { (label, prompt) ->
-                    Box(
-                        Modifier
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.14f))
-                            .clickable { onAsk(prompt) }
-                            .padding(horizontal = 13.dp, vertical = 7.dp),
-                    ) {
+                    GlassCapsule(onClick = { onAsk(prompt) }, padding = PaddingValues(horizontal = 13.dp, vertical = 7.dp)) {
                         Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     }
                 }

@@ -71,7 +71,8 @@ import kotlin.math.pow
 
 /*
  * The easter eggs behind the versions change with every big version, like Android's do:
- * Hearth up to 12.0 had its planet, 12.5 the fluid ocean, 13 has silk; ClaudeOS 1 had "Ember" (the
+ * Hearth up to 12.0 had its planet, 12.5 the fluid ocean, 13 silk, 13.5 drops of liquid
+ * glass; ClaudeOS 1 had "Ember" (the
  * spinning star), ClaudeOS 2 has "Blaze" (the fire). New big versions bring new ones.
  */
 
@@ -188,6 +189,177 @@ internal fun FluidOceanEgg(version: String, name: String, onClose: () -> Unit) {
         Column(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 36.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("$name $version · Fluid-Ozean", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             Text(if (splashes >= 15) "Clawd ist ein Profi-Schwimmer! 🌊" else "Antippen · gedrückt halten", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp)
+        }
+        EggClose(onClose)
+    }
+}
+
+/** A drop of liquid glass: where it is, how big, how fast. */
+private class Drop(var x: Float, var y: Float, var r: Float, val hue: Int) {
+    var vx = 0f
+    var vy = 0f
+}
+
+/** The finger on the drops (not state: the frame loop reads it). */
+private class DropHand {
+    var drop: Drop? = null
+    var at = Offset.Unspecified
+    var area = Size.Zero
+}
+
+/**
+ * Hearth 13.5's egg, "Tropfen": drops of liquid glass fall, bounce and roll. Tap to let a new
+ * one fall, grab one and throw it – and when two touch, they flow together into one.
+ */
+@Composable
+internal fun DropsEgg(version: String, name: String, onClose: () -> Unit) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { EasterEggs.find(context, "version") }
+    BackHandler(onBack = onClose)
+    val drops = remember { mutableListOf<Drop>() }
+    val hand = remember { DropHand() }
+    var now by remember { mutableLongStateOf(0L) }
+    var merges by remember { mutableIntStateOf(0) }
+    var hues by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        var last = -1L
+        while (true) {
+            withFrameMillis { t ->
+                val dt = if (last < 0) 0.016f else (t - last).coerceIn(1L, 40L) / 1000f
+                last = t
+                val w = hand.area.width
+                val h = hand.area.height
+                if (w > 0f) {
+                    if (drops.isEmpty()) {
+                        repeat(6) { i -> drops += Drop(w * (0.15f + 0.14f * i), h * (0.1f + 0.05f * (i % 3)), w * (0.05f + 0.012f * (i % 4)), hues++) }
+                    }
+                    drops.forEach { d ->
+                        val held = d === hand.drop && hand.at.isSpecified
+                        if (held) {
+                            // Follows the finger like something heavy and soft.
+                            d.vx = (hand.at.x - d.x) * 14f
+                            d.vy = (hand.at.y - d.y) * 14f
+                        } else {
+                            d.vy += 1400f * dt
+                        }
+                        d.x += d.vx * dt
+                        d.y += d.vy * dt
+                        if (d.x - d.r < 0f) { d.x = d.r; d.vx = -d.vx * 0.55f }
+                        if (d.x + d.r > w) { d.x = w - d.r; d.vx = -d.vx * 0.55f }
+                        if (d.y - d.r < 0f) { d.y = d.r; d.vy = -d.vy * 0.5f }
+                        if (d.y + d.r > h) {
+                            d.y = h - d.r
+                            d.vy = -d.vy * 0.45f
+                            d.vx *= 0.97f
+                        }
+                    }
+                    // Two drops touching flow together (keeping all their glass).
+                    var i = 0
+                    while (i < drops.size) {
+                        var j = i + 1
+                        while (j < drops.size) {
+                            val a = drops[i]
+                            val b = drops[j]
+                            val dx = a.x - b.x
+                            val dy = a.y - b.y
+                            if (dx * dx + dy * dy < (a.r + b.r) * (a.r + b.r) * 0.7f) {
+                                val ma = a.r * a.r
+                                val mb = b.r * b.r
+                                val m = ma + mb
+                                a.x = (a.x * ma + b.x * mb) / m
+                                a.y = (a.y * ma + b.y * mb) / m
+                                a.vx = (a.vx * ma + b.vx * mb) / m
+                                a.vy = (a.vy * ma + b.vy * mb) / m
+                                a.r = kotlin.math.sqrt(m).coerceAtMost(w * 0.42f)
+                                if (hand.drop === b) hand.drop = a
+                                drops.removeAt(j)
+                                merges++
+                            } else {
+                                j++
+                            }
+                        }
+                        i++
+                    }
+                }
+                now = t
+            }
+        }
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF0B1630), Color(0xFF241243), Color(0xFF090611))))
+            .onSizeChanged { hand.area = Size(it.width.toFloat(), it.height.toFloat()) }
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    val p = down.position
+                    val grabbed = drops.minByOrNull { (it.x - p.x) * (it.x - p.x) + (it.y - p.y) * (it.y - p.y) }
+                        ?.takeIf { (it.x - p.x) * (it.x - p.x) + (it.y - p.y) * (it.y - p.y) < (it.r * 1.4f) * (it.r * 1.4f) }
+                    if (grabbed != null) {
+                        hand.drop = grabbed
+                        hand.at = p
+                    } else if (drops.size < 24) {
+                        // A new drop, falling from where you tapped.
+                        drops += Drop(p.x, p.y, size.width * (0.04f + 0.03f * Math.random().toFloat()), hues++)
+                    }
+                    do {
+                        val event = awaitPointerEvent()
+                        event.changes.firstOrNull()?.let { if (it.pressed) hand.at = it.position }
+                    } while (event.changes.any { it.pressed })
+                    hand.drop = null
+                    hand.at = Offset.Unspecified
+                }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        // The version, behind the glass.
+        Text(
+            version,
+            style = TextStyle(
+                brush = Brush.linearGradient(listOf(Color(0xFFBFE6FF), Color(0xFF8E6BFF), Color(0xFFFF6FB5))),
+                fontSize = 120.sp,
+                fontWeight = FontWeight.Light,
+            ),
+        )
+        Canvas(Modifier.fillMaxSize()) {
+            if (now < 0L) return@Canvas
+            drops.forEach { d ->
+                val c = Offset(d.x, d.y)
+                val tint = AiFluidColors[d.hue % AiFluidColors.size]
+                // The body: clear in the middle, a little color caught towards the bottom.
+                drawCircle(
+                    Brush.radialGradient(listOf(Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = 0.16f)), center = c, radius = d.r),
+                    radius = d.r,
+                    center = c,
+                )
+                drawCircle(
+                    Brush.radialGradient(listOf(tint.copy(alpha = 0.45f), Color.Transparent), center = c + Offset(d.r * 0.25f, d.r * 0.4f), radius = d.r * 0.9f),
+                    radius = d.r,
+                    center = c,
+                )
+                // The rim, and light caught at the top left.
+                drawCircle(Color.White.copy(alpha = 0.55f), radius = d.r, center = c, style = Stroke(1.5.dp.toPx()))
+                val spot = c + Offset(-d.r * 0.38f, -d.r * 0.42f)
+                drawCircle(
+                    Brush.radialGradient(listOf(Color.White.copy(alpha = 0.85f), Color.Transparent), center = spot, radius = d.r * 0.3f),
+                    radius = d.r * 0.3f,
+                    center = spot,
+                )
+            }
+        }
+        Column(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 36.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("$name $version · Tropfen", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                when {
+                    merges >= 20 -> "Ein Meer aus Glas! 💧"
+                    merges > 0 -> "$merges Tropfen zusammengeflossen"
+                    else -> "Antippen · Tropfen greifen und werfen"
+                },
+                color = Color.White.copy(alpha = 0.55f),
+                fontSize = 13.sp,
+            )
         }
         EggClose(onClose)
     }
