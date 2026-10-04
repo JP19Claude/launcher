@@ -53,6 +53,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.asImageBitmap
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -270,6 +272,7 @@ fun ClawdIlluminationScreen(
                     "Bringt das große AOD mit Hintergrundbild auf jedes Handy – auch auf Geräte, die es nicht haben (z. B. S22 Ultra): das Hintergrundbild gedimmt, davor eine große Uhr. Braucht Glimmer und das AOD des Handys auf „Immer anzeigen“.",
                     settings.fullAod,
                 ) { v -> onChange { it.copy(fullAod = v) } }
+                AodPicturePicker(settings.aodImage) { v -> onChange { it.copy(aodImage = v, fullAod = if (v.isNotBlank()) true else it.fullAod) } }
                 IlluminatiChoice("🕰", "Uhr", AodClock.entries, settings.aodClock, { it.label }) { v -> onChange { it.copy(aodClock = v) } }
                 IlluminatiChoice("🎨", "Farbe der Uhr", AodTint.entries, settings.aodTint, { it.label }) { v -> onChange { it.copy(aodTint = v) } }
                 IlluminatiChoice("☀", "Helligkeit des Hintergrunds", AodBrightness.entries, settings.aodBrightness, { it.label }) { v -> onChange { it.copy(aodBrightness = v) } }
@@ -555,6 +558,116 @@ private fun <T> IlluminatiChoice(icon: String, title: String, options: List<T>, 
         }
     }
 }
+
+/**
+ * OMEGA UI 18.2: an own picture for the full AOD – picked from the gallery (no permission
+ * needed), kept as a smaller copy in the app, shown instead of the wallpaper.
+ */
+@Composable
+private fun AodPicturePicker(current: String, onSet: (String) -> Unit) {
+    val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val preview = remember(current) {
+        if (current.isBlank()) null else runCatching {
+            android.graphics.BitmapFactory.decodeFile(java.io.File(context.filesDir, current).path)?.asImageBitmap()
+        }.getOrNull()
+    }
+    val picker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val name = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { saveAodPicture(context, uri) }
+                if (name != null) onSet(name)
+            }
+        }
+    }
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(width = 54.dp, height = 96.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.Black)
+                .border(1.dp, IlluminatiGold.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (preview != null) {
+                androidx.compose.foundation.Image(
+                    preview,
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.matchParentSize(),
+                )
+            } else {
+                Text("🖼", fontSize = 22.sp)
+            }
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Eigenes Bild fürs AOD", color = Color(0xFFF3E6C8), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif)
+            Text(
+                if (preview != null) "Dein Bild ist das große AOD." else "Ohne Bild zeigt das große AOD dein Hintergrundbild.",
+                color = Color.White.copy(alpha = 0.55f),
+                fontSize = 13.sp,
+                lineHeight = 17.sp,
+            )
+            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    Modifier
+                        .clip(CircleShape)
+                        .background(IlluminatiGold.copy(alpha = 0.22f))
+                        .border(1.dp, IlluminatiGold, CircleShape)
+                        .clickable {
+                            picker.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly,
+                                ),
+                            )
+                        }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                ) {
+                    Text(if (preview != null) "Anderes Bild" else "Bild auswählen", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+                if (current.isNotBlank()) {
+                    Box(
+                        Modifier
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.06f))
+                            .border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape)
+                            .clickable {
+                                runCatching { java.io.File(context.filesDir, current).delete() }
+                                onSet("")
+                            }
+                            .padding(horizontal = 14.dp, vertical = 7.dp),
+                    ) {
+                        Text("Entfernen", color = Color.White, fontSize = 13.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Keeps the picked picture for the AOD: decoded no bigger than the screen needs, saved as a
+ * JPEG in the app's own storage (older AOD pictures are removed). Returns its file name.
+ */
+private fun saveAodPicture(context: android.content.Context, uri: android.net.Uri): String? = runCatching {
+    val source = android.graphics.ImageDecoder.createSource(context.contentResolver, uri)
+    val bitmap = android.graphics.ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+        val longest = maxOf(info.size.width, info.size.height).coerceAtLeast(1)
+        val scale = (2000f / longest).coerceAtMost(1f)
+        decoder.setTargetSize((info.size.width * scale).toInt().coerceAtLeast(1), (info.size.height * scale).toInt().coerceAtLeast(1))
+        decoder.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE
+    }
+    context.filesDir.listFiles { f -> f.name.startsWith("aod_picture_") }?.forEach { it.delete() }
+    val name = "aod_picture_${System.currentTimeMillis()}.jpg"
+    java.io.File(context.filesDir, name).outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, it) }
+    name
+}.getOrNull()
 
 /** The lock screen's own message, typed in. */
 @Composable

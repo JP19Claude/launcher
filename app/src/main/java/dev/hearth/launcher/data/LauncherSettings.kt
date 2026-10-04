@@ -520,6 +520,8 @@ data class LauncherSettings(
     val aodBrightness: AodBrightness = AodBrightness.Medium,
     val aodTint: AodTint = AodTint.Omega,
     val lockMessage: String = "",
+    /** OMEGA UI 18.2: an own picture for the full AOD (file in the app's storage; "" = wallpaper). */
+    val aodImage: String = "",
     val fullAod: Boolean = false,
     val aodClawd: Boolean = true,
     val aodBattery: Boolean = true,
@@ -1015,6 +1017,7 @@ class SettingsRepository(context: Context) {
             aodBrightness = enumOf("aodBrightness", d.aodBrightness),
             aodTint = enumOf("aodTint", d.aodTint),
             lockMessage = prefs.getString("lockMessage", null) ?: d.lockMessage,
+            aodImage = prefs.getString("aodImage", null) ?: d.aodImage,
             clawdCompanion = prefs.getBoolean("clawdCompanion", d.clawdCompanion),
             // Older installs had only "double tap locks" on or off.
             doubleTapAction = enumOf(
@@ -1187,6 +1190,7 @@ class SettingsRepository(context: Context) {
             .putString("aodBrightness", s.aodBrightness.name)
             .putString("aodTint", s.aodTint.name)
             .putString("lockMessage", s.lockMessage)
+            .putString("aodImage", s.aodImage)
             .putBoolean("clawdCompanion", s.clawdCompanion)
             .putString("doubleTapAction", s.doubleTapAction.name)
             .putString("clockFont", s.clockFont.name)
@@ -1339,7 +1343,7 @@ class SettingsRepository(context: Context) {
          * Only the switch itself and the look (black or glass, which changes the window) restart it.
          */
         val GLIMMER_LIVE_KEYS = setOf(
-            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
+            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
             "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerPrivacy", "accent", "animations",

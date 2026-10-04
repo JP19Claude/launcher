@@ -56,10 +56,11 @@ class LockStage(private val service: GlimmerService, private val onShown: () -> 
                 .distinctUntilChanged()
                 .collect { show -> if (show) add(settings, locked, dozing) else remove() }
         }
-        // The full AOD shows the wallpaper: read once (smaller), when it is switched on.
+        // The full AOD shows the chosen picture, or else the wallpaper: read (smaller) when it is
+        // switched on or another picture is chosen.
         s.launch {
-            settings.map { it.fullAod }.distinctUntilChanged().collect { on ->
-                if (on && wallpaper.value == null) wallpaper.value = withContext(Dispatchers.IO) { readWallpaper() }
+            settings.map { it.fullAod to it.aodImage }.distinctUntilChanged().collect { (on, image) ->
+                if (on) wallpaper.value = withContext(Dispatchers.IO) { readPicture(image) ?: readWallpaper() }
             }
         }
     }
@@ -69,6 +70,10 @@ class LockStage(private val service: GlimmerService, private val onShown: () -> 
         scope?.cancel()
         scope = null
     }
+
+    private fun readPicture(name: String): ImageBitmap? = if (name.isBlank()) null else runCatching {
+        android.graphics.BitmapFactory.decodeFile(java.io.File(service.filesDir, name).path)?.asImageBitmap()
+    }.getOrNull()
 
     private fun readWallpaper(): ImageBitmap? = runCatching {
         val drawable = WallpaperManager.getInstance(service).drawable ?: return@runCatching null

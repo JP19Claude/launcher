@@ -178,6 +178,22 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "18.2",
+            name = "Dein AOD",
+            summary = "Ein eigenes Bild für das große Always On Display.",
+            sections = listOf(
+                ChangeSection(
+                    "Always On Display", Icons.Rounded.Star, Violet,
+                    listOf(
+                        "Eigenes Bild fürs große AOD: in den Clawd Illuminati ein Bild aus der Galerie auswählen – es wird dein großes Always On Display, statt des Hintergrundbilds.",
+                        "Das Bild wird verkleinert in der App gespeichert, mit Vorschau; „Anderes Bild“ tauscht es, „Entfernen“ zeigt wieder das Hintergrundbild.",
+                        "Beim Auswählen eines Bildes geht das große AOD gleich mit an.",
+                    ),
+                    hearth,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "18.1",
             name = "Always On",
             summary = "Ein volles Always On Display wie beim Galaxy S24 Ultra und viele neue Einstellungen für den Sperrbildschirm – in den Clawd Illuminati.",
