@@ -80,6 +80,20 @@ internal fun ClawdSettings(
                 if (v != ClawdOutfit.None && s.clawdHat != ClawdHat.None) dev.hearth.launcher.data.EasterEggs.find(context, "fashion")
             },
         )
+        // OMEGA UI 17.1: the color of his clothes, and the Ω on his chest.
+        ChoiceRow(
+            label = "Farbe der Kleidung",
+            options = dev.hearth.launcher.data.ClawdCloth.entries,
+            selected = s.clawdCloth,
+            optionLabel = { it.label },
+            swatch = { it.color ?: androidx.compose.ui.graphics.Color(0xFF8E8E93) },
+            onSelect = { v -> update { it.copy(clawdCloth = v) } },
+        )
+        SwitchRow(
+            label = "OMEGA-Abzeichen",
+            description = "Ein kleiner Rubin mit dem Ω auf Clawds Brust",
+            checked = s.clawdOmega,
+        ) { v -> update { it.copy(clawdOmega = v) } }
         Wardrobe(
             label = "Hut & Accessoire",
             options = ClawdHat.entries,

@@ -184,6 +184,7 @@ internal fun FireflyEgg(version: String, name: String, onClose: () -> Unit) {
                 textAlign = TextAlign.Center,
             )
         }
+        OmegaFinale(best >= 16)
         EggCloseButton(onClose)
     }
 }
@@ -295,6 +296,7 @@ internal fun AuroraEgg(onClose: () -> Unit) {
                 textAlign = TextAlign.Center,
             )
         }
+        ClaudeOsFinale(ribbons.size >= 5, ClaudeMarkStyle.Aurora)
         EggCloseButton(onClose)
     }
 }

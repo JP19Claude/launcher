@@ -652,6 +652,7 @@ internal fun BlazeEgg(onClose: () -> Unit) {
                 fontSize = 13.sp,
             )
         }
+        ClaudeOsFinale(blaze, ClaudeMarkStyle.Blaze)
         EggClose(onClose)
     }
 }
@@ -1091,6 +1092,7 @@ internal fun NovaEgg(onClose: () -> Unit) {
                 fontSize = 13.sp,
             )
         }
+        ClaudeOsFinale(formed, ClaudeMarkStyle.Nova)
         EggClose(onClose)
     }
 }

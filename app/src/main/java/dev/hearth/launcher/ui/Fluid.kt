@@ -131,6 +131,9 @@ fun Modifier.fluidTouch(color: Color = Color.White, yields: Boolean = true): Mod
 @Composable
 fun FluidBackdrop(colors: List<Color>, modifier: Modifier = Modifier, strength: Float = 1f) {
     if (!LocalSettings.current.fluidDesign) return
+    // OMEGA Glass: OMEGA Fluid drifts behind every screen instead.
+    @Suppress("NAME_SHADOWING")
+    val colors = if (LocalSettings.current.omegaGlass) OmegaFluidColors.take(colors.size.coerceAtLeast(1)) else colors
     val flow = flowPhase(24_000, LocalSettings.current.animations)
     Canvas(modifier.fillMaxSize()) {
         val t = flow?.invoke() ?: 1.2f
@@ -156,6 +159,28 @@ val CalmFluidColors = listOf(
     Color(0xFFD9E6F7),
     Color(0xFFF6E7DE),
 )
+
+/** OMEGA Fluid (OMEGA UI 17.1): ruby flowing through rose, amber and coral. */
+val OmegaFluidColors = listOf(
+    Color(0xFFC8102E),
+    Color(0xFFFF6B7D),
+    Color(0xFFFF9A3D),
+    Color(0xFFE5243F),
+    Color(0xFFFFC2CA),
+)
+
+/** OMEGA Fluid, calm: glass-white with a breath of ruby and amber. */
+val OmegaCalmColors = listOf(
+    Color(0xFFF6D9DD),
+    Color(0xFFF8E2D6),
+    Color(0xFFF3D3DA),
+    Color(0xFFF9E6E0),
+    Color(0xFFF4DCE3),
+)
+
+/** The fluid colors in use: OMEGA Fluid with OMEGA Glass on, else Claude's. */
+@Composable
+internal fun fluidPalette(): List<Color> = if (LocalSettings.current.omegaGlass) OmegaFluidColors else AiFluidColors
 
 /** The AI Fluid colors: Claude's terracotta flowing through violet, blue and pink. */
 val AiFluidColors = listOf(
@@ -184,7 +209,13 @@ fun Modifier.aiFluidEdge(
     // Hearth UI 14 "Dezent": rims that stand still are calm glass with a hint of Claude's
     // colors; flowing ones (something running, something new) keep their full colors.
     val calm = phase == null && LocalSettings.current.fluidRims == FluidRims.Calm
-    val colors = if (calm) CalmFluidColors else AiFluidColors
+    val omega = LocalSettings.current.omegaGlass
+    val colors = when {
+        omega && calm -> OmegaCalmColors
+        omega -> OmegaFluidColors
+        calm -> CalmFluidColors
+        else -> AiFluidColors
+    }
     val fade = if (calm) 0.7f else 1f
     // Sizes, strokes and (when still) the gradient are made once per size, not every frame.
     this.drawWithCache {
@@ -244,8 +275,9 @@ fun Modifier.glassSheen(corner: androidx.compose.ui.unit.Dp, tint: Color = Color
 fun Modifier.fluidGlow(strength: Float = 1f, enabled: Boolean = true, flowing: Boolean = false): Modifier = composed {
     if (!enabled || !LocalSettings.current.fluidDesign) return@composed this
     val phase = flowPhase(14_000, LocalSettings.current.animations && flowing)
+    val palette = fluidPalette()
     this.drawWithCache {
-        fun blobs(t: Float) = AiFluidColors.take(3).mapIndexed { i, c ->
+        fun blobs(t: Float) = palette.take(3).mapIndexed { i, c ->
             val p = i * 2.1f
             val at = Offset(size.width * (0.5f + 0.45f * cos(t + p)), size.height * (0.5f + 0.45f * sin(t * 0.8f + p)))
             at to Brush.radialGradient(listOf(c.copy(alpha = 0.16f * strength), Color.Transparent), center = at, radius = size.maxDimension * 0.7f)
@@ -314,6 +346,7 @@ fun FluidWaveLayer(state: FluidWaves) {
         return
     }
     if (state.waves.isEmpty()) return
+    val palette = fluidPalette()
     var now by remember { mutableLongStateOf(android.os.SystemClock.uptimeMillis()) }
     LaunchedEffect(Unit) {
         // Runs for as long as the layer is there (it leaves by itself once no wave is left).
@@ -336,8 +369,8 @@ fun FluidWaveLayer(state: FluidWaves) {
                 drawCircle(
                     Brush.radialGradient(
                         listOf(
-                            AiFluidColors[2].copy(alpha = 0.22f * (1f - p)),
-                            AiFluidColors[0].copy(alpha = 0.12f * (1f - p)),
+                            palette[2].copy(alpha = 0.22f * (1f - p)),
+                            palette[0].copy(alpha = 0.12f * (1f - p)),
                             Color.Transparent,
                         ),
                         center = c,
@@ -354,7 +387,7 @@ fun FluidWaveLayer(state: FluidWaves) {
                 // Just the ring in Claude's colors (a full-screen fill behind it cost the
                 // opening app its first frames).
                 drawCircle(
-                    Brush.sweepGradient(AiFluidColors + AiFluidColors.first(), center = w.at),
+                    Brush.sweepGradient(palette + palette.first(), center = w.at),
                     radius = r,
                     center = w.at,
                     alpha = 0.45f * fade,
@@ -391,6 +424,9 @@ val LocalFluidClock = staticCompositionLocalOf<FluidClock?> { null }
 @Composable
 fun ProvideFluidClock(content: @Composable () -> Unit) {
     val clock = remember { FluidClock() }
+    // OMEGA UI 17.1 "Flüssig-Modus": slow color flows need no 120 frames a second – half the
+    // work for every flowing rim, backdrop and glow, the rest of the screen stays at full speed.
+    val smooth = LocalSettings.current.smoothMode
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var seen by remember { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
     DisposableEffect(lifecycle) {
@@ -398,7 +434,7 @@ fun ProvideFluidClock(content: @Composable () -> Unit) {
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(clock) {
+    LaunchedEffect(clock, smooth) {
         snapshotFlow { seen && clock.flowing > 0 }.collectLatest { run ->
             if (!run) return@collectLatest
             var last = -1L
@@ -413,6 +449,7 @@ fun ProvideFluidClock(content: @Composable () -> Unit) {
                     if (last >= 0) clock.seconds = (clock.seconds + (now - last).coerceIn(0L, 50L) / 1000f) % 50_400f
                     last = now
                 }
+                if (smooth) delay(28)
             }
         }
     }

@@ -158,6 +158,7 @@ internal fun SparkEgg(version: String, name: String, onClose: () -> Unit) {
                 textAlign = TextAlign.Center,
             )
         }
+        OmegaFinale(hits >= 5)
         GlassCircle(
             onClick = onClose,
             modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp),

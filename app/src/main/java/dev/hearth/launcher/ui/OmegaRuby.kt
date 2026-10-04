@@ -66,46 +66,19 @@ private fun polygon(points: List<Offset>): Path = Path().apply {
     close()
 }
 
-// The stone's light colors: pale rose glass with a warm glow inside.
+// OMEGA UI's ruby, as a clean mark: four reds, no glow.
+private val GemLight = Color(0xFFFF5C72)
+private val GemMid = Color(0xFFE0203F)
+private val GemDark = Color(0xFFB30F2E)
+private val GemDeep = Color(0xFF7E0820)
 private val GemPale = Color(0xFFFFC9CE)
-private val GemRose = Color(0xFFF58C9B)
-private val GemCoral = Color(0xFFE8697C)
-private val GemDeep = Color(0xFFB24560)
-private val GemGlow = Color(0xFFFF8A3D)
 
 /**
- * The ruby of OMEGA UI, as in Omega Ruby: a pointed top, sloping crown facets, a broad band
- * round the middle and a faceted, flattened base – pale rose glass you can see into, with an
- * orange ring of light glowing inside around the Ω. Rays of light burst out behind it.
+ * The ruby of OMEGA UI as a logo: the shape of Omega Ruby's stone – a pointed top, sloping
+ * crown facets, a broad band round the middle, a faceted base – drawn flat and crisp in four
+ * reds, light from the upper right. No glow, no rays: a mark, not a rendering.
  */
-private fun DrawScope.drawRuby(shine: Float, glow: Float, rays: Boolean) {
-    val c = at(0.5f, 0.52f)
-    // Rays bursting out behind the stone, slowly turning, in soft rainbow colors.
-    if (rays) {
-        val rayColors = listOf(Color(0xFFFFB0A0), Color(0xFFA8E6FF), Color(0xFFC8FFB0), Color(0xFFFFE3A0), Color(0xFFE0B8FF))
-        val turn = shine * 0.6f
-        for (i in 0 until 48) {
-            val a = (i / 48f + turn / 48f) * 2f * PI.toFloat()
-            val len = size.width * (0.9f + 0.45f * ((i * 37) % 10) / 10f)
-            drawLine(
-                Brush.linearGradient(
-                    listOf(rayColors[i % rayColors.size].copy(alpha = 0.32f * glow), Color.Transparent),
-                    start = c,
-                    end = Offset(c.x + cos(a) * len, c.y + sin(a) * len),
-                ),
-                c,
-                Offset(c.x + cos(a) * len, c.y + sin(a) * len),
-                strokeWidth = (if (i % 3 == 0) 2.2f else 1.2f).dp.toPx(),
-            )
-        }
-        // Warm light pooling under it.
-        drawCircle(
-            Brush.radialGradient(listOf(GemGlow.copy(alpha = 0.35f * glow), Color.Transparent), center = at(0.5f, 1.05f), radius = size.width * 0.8f),
-            radius = size.width * 0.8f,
-            center = at(0.5f, 1.05f),
-        )
-    }
-    // The outline: apex, shoulders, the broad band, the lower facets, the flat base.
+private fun DrawScope.drawRuby() {
     val apex = at(0.5f, 0f)
     val ul = at(0.17f, 0.2f)
     val ur = at(0.83f, 0.2f)
@@ -118,24 +91,6 @@ private fun DrawScope.drawRuby(shine: Float, glow: Float, rays: Boolean) {
     val bl = at(0.33f, 0.97f)
     val br = at(0.67f, 0.97f)
     val bottom = at(0.5f, 1f)
-    val outline = polygon(listOf(apex, ur, r1, r2, lr, br, bottom, bl, ll, l2, l1, ul))
-    // Inside first: rose glass, and the orange ring of light around the middle.
-    drawPath(outline, Brush.radialGradient(listOf(GemRose, GemCoral, GemDeep), center = c, radius = size.width * 0.7f))
-    val ringR = size.width * 0.3f
-    drawCircle(
-        Brush.radialGradient(
-            0.0f to Color(0xFFFF5A1F).copy(alpha = 0.55f),
-            0.45f to GemGlow.copy(alpha = 0.25f),
-            0.7f to Color(0xFFFFB070).copy(alpha = 0.75f * glow),
-            0.86f to GemGlow.copy(alpha = 0.3f),
-            1f to Color.Transparent,
-            center = c,
-            radius = ringR,
-        ),
-        radius = ringR,
-        center = c,
-    )
-    // The facets over it, see-through, each catching the light a little differently.
     val m1 = at(0.38f, 0.2f)
     val m2 = at(0.62f, 0.2f)
     val b1 = at(0.3f, 0.42f)
@@ -144,107 +99,58 @@ private fun DrawScope.drawRuby(shine: Float, glow: Float, rays: Boolean) {
     val c2 = at(0.7f, 0.6f)
     val d1 = at(0.36f, 0.8f)
     val d2 = at(0.64f, 0.8f)
-    val wobble = 0.06f * sin(shine * 2f * PI.toFloat())
-    fun glass(points: List<Offset>, color: Color, alpha: Float) = drawPath(polygon(points), color.copy(alpha = (alpha + wobble).coerceIn(0f, 1f)))
-    // Crown.
-    glass(listOf(apex, ul, m1), GemRose, 0.55f)
-    glass(listOf(apex, m1, m2), GemPale, 0.45f)
-    glass(listOf(apex, m2, ur), GemPale, 0.7f)
-    glass(listOf(ul, m1, b1, l1), GemCoral, 0.4f)
-    glass(listOf(m1, m2, b2, b1), GemRose, 0.22f)
-    glass(listOf(m2, ur, r1, b2), GemPale, 0.5f)
-    // The broad band round the middle.
-    glass(listOf(l1, b1, c1, l2), GemDeep, 0.45f)
-    glass(listOf(b1, b2, c2, c1), GemRose, 0.12f)
-    glass(listOf(b2, r1, r2, c2), GemCoral, 0.4f)
-    // Lower facets and the base.
-    glass(listOf(l2, c1, d1, ll), GemCoral, 0.5f)
-    glass(listOf(c1, c2, d2, d1), GemRose, 0.35f)
-    glass(listOf(c2, r2, lr, d2), GemDeep, 0.45f)
-    glass(listOf(ll, d1, bl), GemDeep, 0.5f)
-    glass(listOf(d1, d2, br, bottom, bl), GemRose, 0.45f)
-    glass(listOf(d2, lr, br), GemCoral, 0.55f)
-    // Fine bright edges.
-    val edge = Color(0xFFFFE3E6).copy(alpha = 0.55f)
-    val hair = 1.dp.toPx()
+    fun facet(color: Color, vararg points: Offset) = drawPath(polygon(points.toList()), color)
+    // Crown: lighter towards the upper right.
+    facet(GemMid, apex, ul, m1)
+    facet(GemLight, apex, m1, m2)
+    facet(GemPale, apex, m2, ur)
+    facet(GemDark, ul, m1, b1, l1)
+    facet(GemMid, m1, m2, b2, b1)
+    facet(GemLight, m2, ur, r1, b2)
+    // The band round the middle.
+    facet(GemDeep, l1, b1, c1, l2)
+    facet(GemMid, b1, b2, c2, c1)
+    facet(GemDark, b2, r1, r2, c2)
+    // The base.
+    facet(GemDark, l2, c1, d1, ll)
+    facet(GemDark, c1, c2, d2, d1)
+    facet(GemDeep, c2, r2, lr, d2)
+    facet(GemDeep, ll, d1, bl)
+    facet(GemDark, d1, d2, br, bottom, bl)
+    facet(GemDeep, d2, lr, br)
+    // Thin light lines between the facets, a crisp edge round it.
+    val line = GemPale.copy(alpha = 0.45f)
+    val hair = (size.width * 0.008f).coerceAtLeast(1f)
     listOf(
         apex to m1, apex to m2, ul to ur, m1 to b1, m2 to b2, l1 to r1, b1 to c1, b2 to c2, l2 to r2,
         c1 to d1, c2 to d2, ll to lr, d1 to bl, d2 to br,
-    ).forEach { (a, b) -> drawLine(edge, a, b, hair) }
-    drawPath(outline, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.9f), GemPale, GemCoral), start = apex, end = bottom), style = Stroke(1.6.dp.toPx()))
-    // Light on the glass: streaks across, a glare at the upper right, a wandering gleam.
-    clipPath(outline) {
-        val sweep = (-0.3f + 1.6f * shine) * size.width
-        drawRect(
-            Brush.linearGradient(
-                listOf(Color.Transparent, Color.White.copy(alpha = 0.3f), Color.Transparent),
-                start = Offset(sweep - size.width * 0.3f, 0f),
-                end = Offset(sweep + size.width * 0.1f, size.height * 0.8f),
-            ),
-        )
-        for (k in 0 until 7) {
-            val y = size.height * (0.15f + k * 0.11f)
-            drawLine(
-                Color.White.copy(alpha = 0.12f + 0.06f * (k % 2)),
-                Offset(size.width * 0.05f, y + size.height * 0.08f),
-                Offset(size.width * 0.95f, y - size.height * 0.08f),
-                (if (k % 3 == 0) 1.6f else 0.8f).dp.toPx(),
-            )
-        }
-    }
-    val glare = at(0.78f, 0.44f)
-    drawCircle(
-        Brush.radialGradient(listOf(Color.White.copy(alpha = 0.85f), Color.White.copy(alpha = 0.2f), Color.Transparent), center = glare, radius = size.width * 0.16f),
-        radius = size.width * 0.16f,
-        center = glare,
+    ).forEach { (a, b) -> drawLine(line, a, b, hair) }
+    drawPath(
+        polygon(listOf(apex, ur, r1, r2, lr, br, bottom, bl, ll, l2, l1, ul)),
+        GemDeep,
+        style = Stroke((size.width * 0.018f).coerceAtLeast(1.2f)),
     )
-    for (i in 0 until 8) {
-        val a = i * PI.toFloat() / 4f + shine * 0.4f
-        val len = size.width * (if (i % 2 == 0) 0.32f else 0.16f)
-        drawLine(
-            Brush.linearGradient(listOf(Color.White.copy(alpha = 0.7f), Color.Transparent), start = glare, end = Offset(glare.x + cos(a) * len, glare.y + sin(a) * len)),
-            glare,
-            Offset(glare.x + cos(a) * len, glare.y + sin(a) * len),
-            strokeWidth = 1.4.dp.toPx(),
-        )
-    }
-    // A bright dot on the left side, as on the real stone.
-    drawCircle(Color.White.copy(alpha = 0.95f), 3.dp.toPx(), at(0.14f, 0.47f))
 }
 
 /**
- * OMEGA UI's logo: the ruby with a clear, dark Ω glowing orange inside – and, if given, the
- * system version under it (as on a phone's "about" screen).
+ * OMEGA UI's logo: the ruby with a big white Ω on it – and, if given, the system version
+ * under it (as on a phone's "about" screen). Still, so it costs nothing to show.
  */
 @Composable
-fun OmegaRuby(modifier: Modifier = Modifier, size: Dp = 150.dp, version: String? = null, animate: Boolean = LocalSettings.current.animations) {
-    val shine by if (animate) {
-        rememberInfiniteTransition(label = "ruby").animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(6000, easing = LinearEasing), RepeatMode.Restart),
-            label = "shine",
-        )
-    } else {
-        remember { androidx.compose.runtime.mutableFloatStateOf(0.3f) }
-    }
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val glowPx = with(density) { (size * 0.12f).toPx() }
-    // Big logos burst with rays; small ones (a card, a list) stay calm.
-    val rays = size >= 100.dp
+fun OmegaRuby(modifier: Modifier = Modifier, size: Dp = 150.dp, version: String? = null, @Suppress("UNUSED_PARAMETER") animate: Boolean = false) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.size(width = size, height = size * 1.18f), contentAlignment = Alignment.Center) {
-            Canvas(Modifier.fillMaxSize()) { drawRuby(shine, 1f, rays) }
-            // The Ω inside: dark and clear, glowing orange round its edges.
+            Canvas(Modifier.fillMaxSize()) { drawRuby() }
+            // The Ω, big and clear.
             Text(
                 "Ω",
                 style = TextStyle(
-                    brush = Brush.verticalGradient(listOf(Color(0xFF6A1A12), Color(0xFF3A0A08), Color(0xFF240404))),
-                    fontSize = (size.value * 0.46f).sp,
+                    color = Color.White,
+                    fontSize = (size.value * 0.62f).sp,
                     fontWeight = FontWeight.Black,
-                    shadow = androidx.compose.ui.graphics.Shadow(Color(0xFFFF6A1F), Offset.Zero, glowPx),
+                    shadow = androidx.compose.ui.graphics.Shadow(GemDeep.copy(alpha = 0.55f), Offset(0f, size.value * 0.02f), 0f),
                 ),
-                modifier = Modifier.padding(top = size * 0.05f),
+                modifier = Modifier.padding(top = size * 0.06f),
             )
         }
         if (version != null) {
@@ -252,12 +158,11 @@ fun OmegaRuby(modifier: Modifier = Modifier, size: Dp = 150.dp, version: String?
             Text(
                 version,
                 style = TextStyle(
-                    brush = Brush.verticalGradient(listOf(Color.White, GemPale, GemCoral)),
+                    color = Color.White,
                     fontSize = (size.value * 0.15f).sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = (size.value * 0.004f).sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (size.value * 0.006f).sp,
                     textAlign = TextAlign.Center,
-                    shadow = androidx.compose.ui.graphics.Shadow(GemDeep.copy(alpha = 0.8f), Offset(0f, 2f), glowPx * 0.5f),
                 ),
             )
         }

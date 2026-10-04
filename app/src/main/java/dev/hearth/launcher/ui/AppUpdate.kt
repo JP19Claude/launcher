@@ -1188,5 +1188,7 @@ internal fun ClaudeOsEgg(onClose: () -> Unit) {
         ) {
             Icon(Icons.Rounded.Close, contentDescription = "Schließen", tint = Color.White)
         }
+        // At the end: ClaudeOS 1's own Claude mark.
+        ClaudeOsFinale(clawds, ClaudeMarkStyle.Ember)
     }
 }

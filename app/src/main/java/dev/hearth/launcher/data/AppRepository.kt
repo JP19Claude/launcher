@@ -58,10 +58,13 @@ class AppRepository(
 ) {
 
     private val launcherApps = context.getSystemService(LauncherApps::class.java)
-    // 72 dp is the largest icon size in the settings; bigger bitmaps only cost memory,
-    // and a launcher that uses less memory is closed less often in the background.
-    // Sharp up to the biggest icon size in the settings (96 dp).
-    private val iconSizePx = (context.resources.displayMetrics.density * 96).toInt()
+    // Icons are loaded as big as they're shown (at least 72 dp, up to 96 dp when chosen that
+    // big): bigger bitmaps only cost memory and drawing time, and a launcher that uses less
+    // memory is closed less often in the background. Changing the size reloads them.
+    private val iconSizePx = (
+        context.resources.displayMetrics.density *
+            context.getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE).getInt("iconSize", 58).coerceIn(72, 96)
+        ).toInt()
     private val cache = IconCache(context)
     @Volatile private var cacheChecked = false
     private val densityDpi = context.resources.displayMetrics.densityDpi

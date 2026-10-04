@@ -178,6 +178,52 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "17.1",
+            name = "OMEGA Glass",
+            summary = "OMEGA Glass im ganzen System, ein flüssigeres OMEGA UI, ein klares Logo und neue Kleidung für Clawd.",
+            sections = listOf(
+                ChangeSection(
+                    "Flüssiger", Icons.Rounded.Refresh, Green,
+                    listOf(
+                        "Neuer Flüssig-Modus (an): Farbflüsse laufen mit ruhigerer Bildrate, die Glas-Linse nur noch auf großen Flächen – deutlich weniger Last und Ruckeln.",
+                        "Das Logo ist ein stilles Bild statt einer Dauer-Animation.",
+                        "Die OMEGA-Uhr zeichnet nur noch ihre Sekundenlinie jede Sekunde neu, nicht die ganze Uhr.",
+                        "Icons werden nur so groß geladen, wie sie angezeigt werden.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "OMEGA Glass", Icons.Rounded.Star, Pink,
+                    listOf(
+                        "Neue Option „OMEGA Glass“ (Design → OMEGA): Rubin-Glas im ganzen System, und überall fließt OMEGA Fluid – Rubin, Rosé und Bernstein statt Claudes Farben. Auf dem Startbildschirm, in Menüs, Einstellungen, im Finder und in Glimmer.",
+                    ),
+                    withGlimmer,
+                ),
+                ChangeSection(
+                    "Logo", Icons.Rounded.Favorite, Pink,
+                    listOf("Das Logo ist jetzt ein klares Zeichen: der Rubin flach in vier Rottönen mit sauberer Kante – ohne Glühen und Strahlen – und einem großen weißen Ω."),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Clawd", Icons.Rounded.Face, Terracotta,
+                    listOf(
+                        "Neue Kleidung: Mantel, Hoodie, Regenjacke und Latzhose.",
+                        "Farbe der Kleidung frei wählbar: Rubin, Marine, Schwarz, Tanne, Camel, Himmel, Flieder, Creme – oder die Originalfarben.",
+                        "OMEGA-Abzeichen: ein kleiner Rubin mit dem Ω auf Clawds Brust.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Easter Eggs", Icons.Rounded.Star, Orange,
+                    listOf(
+                        "Am Ende der OMEGA-UI-Eggs erscheint das OMEGA-Logo.",
+                        "Am Ende jedes ClaudeOS-Eggs erscheint eine eigene Variante des Claude-Logos: Ember (Glut), Blaze (Feuer), Nova (Sternenlicht) und Aurora (Nordlicht).",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "17.0",
             name = "OMEGA UI 17",
             summary = "Aus Hearth UI wird OMEGA UI: ein neues Logo, ein neuer Startbildschirm, neue Uhren, Docks, Menüs und Fenster, OMEGA Cloud und viele neue Designs.",

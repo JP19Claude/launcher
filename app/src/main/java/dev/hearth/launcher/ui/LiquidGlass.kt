@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import dev.hearth.launcher.data.GlassTint
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.WallpaperBackdrop
 import kotlin.math.abs
@@ -109,10 +110,14 @@ data class GlassStyle(
             refraction = s.glassRefraction,
             dispersion = s.glassDispersion,
             specular = s.glassSpecular,
-            tint = s.glassTint.color.copy(alpha = (s.glassTint.color.alpha * s.glassTintStrength).coerceIn(0f, 1f)),
+            // OMEGA Glass: ruby glass through the whole system.
+            tint = (if (s.omegaGlass) GlassTint.Ruby else s.glassTint).color.let { t ->
+                t.copy(alpha = (t.alpha * s.glassTintStrength).coerceIn(0f, 1f))
+            },
             interactive = s.glassInteractive,
             dark = s.darkGlass,
-            lensMinDp = s.glassQuality.lensMinDp,
+            // Flüssig-Modus: the lens only on big glass; small glass gets the drawn edge (much lighter).
+            lensMinDp = if (s.smoothMode) maxOf(s.glassQuality.lensMinDp, 96f) else s.glassQuality.lensMinDp,
         )
     }
 }

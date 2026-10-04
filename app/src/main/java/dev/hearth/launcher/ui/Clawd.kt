@@ -90,6 +90,9 @@ fun Clawd(
     outfit: ClawdOutfit = LocalSettings.current.clawdOutfit,
 ) {
     val skin = LocalSettings.current.clawdSkin
+    // OMEGA UI 17.1: the color of his clothes and the Ω on his chest, for every Clawd drawn.
+    ClawdWardrobe.cloth = LocalSettings.current.clawdCloth.color
+    ClawdWardrobe.omega = LocalSettings.current.clawdOmega
     if (!animate) {
         val body = color ?: skin.color
         Canvas(modifier) { drawClawdPose(mood, body, hat, outfit) }
@@ -117,6 +120,15 @@ fun Clawd(
             ClawdMood.Surprised -> drawClawd(body, blink = false, bob = -abs(sin(phase * 4f)) * 0.6f, legPhase = 0f, armLift = 1f, spin = 0f, hearts = 0f, hat = hat, outfit = outfit, wide = true)
         }
     }
+}
+
+/**
+ * What Clawd wears beyond the outfit itself, chosen in the settings: the color of his clothes
+ * (null: each outfit's own) and whether the OMEGA Ω sits on his chest.
+ */
+object ClawdWardrobe {
+    @Volatile var cloth: Color? = null
+    @Volatile var omega: Boolean = false
 }
 
 /** The rainbow skin's color at [t] (0..1): soft, so the eyes stay visible. */
@@ -249,6 +261,7 @@ internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawd(
             cell(8, 7, 1, 2, dy = -liftA)
             cell(10, 7, 1, 2, dy = -liftB)
             if (outfit != ClawdOutfit.None) drawOutfit(outfit, color, left, top, px, armDy = -armLift.coerceIn(-1f, 1f) * 1.2f, face = false)
+            if (ClawdWardrobe.omega) drawOmegaBadge(left, top, px)
         }
         // Eyes: two dark slits (when blinking, just a thin line).
         translate(top = bob * px) {
@@ -425,6 +438,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOutfit(
         r(12f, 3f + armDy, 2f, 2f, c)
     }
     val white = Color(0xFFF7F7F7)
+    // The chosen color for the clothes, else the outfit's own.
+    fun cloth(own: Color): Color = ClawdWardrobe.cloth ?: own
     if (face) {
         when (outfit) {
             ClawdOutfit.Pirate -> {
@@ -450,7 +465,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOutfit(
     when (outfit) {
         ClawdOutfit.None -> Unit
         ClawdOutfit.Suit -> {
-            val navy = Color(0xFF2B3A55)
+            val navy = cloth(Color(0xFF2B3A55))
             r(2f, 3.2f, 10f, 3.8f, navy)
             sleeves(navy)
             r(5.8f, 3.2f, 2.4f, 2.2f, white)
@@ -460,7 +475,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOutfit(
             r(0f, 4.6f, 0.5f, 0.4f, white)
         }
         ClawdOutfit.Tuxedo -> {
-            val black = Color(0xFF1A1A1E)
+            val black = cloth(Color(0xFF1A1A1E))
             r(2f, 3.2f, 10f, 3.8f, black)
             sleeves(black)
             r(5.6f, 3.2f, 2.8f, 3.8f, white)
@@ -510,7 +525,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOutfit(
             r(6.4f, 5f, 1.2f, 0.8f, Color(0xFFE5E5E5))
         }
         ClawdOutfit.Pirate -> {
-            val red = Color(0xFFC8342F)
+            val red = cloth(Color(0xFFC8342F))
             r(2f, 3.3f, 10f, 3.7f, red)
             r(2f, 4f, 10f, 0.5f, white)
             r(2f, 5.1f, 10f, 0.5f, white)
@@ -518,13 +533,13 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOutfit(
             r(2f, 3.3f, 10f, 0.35f, Color(0xFF3B2A20))
         }
         ClawdOutfit.Ninja -> {
-            val dark = Color(0xFF24252C)
+            val dark = cloth(Color(0xFF24252C))
             r(2f, 3f, 10f, 4f, dark)
             sleeves(dark)
             r(2f, 5.4f, 10f, 0.45f, Color(0xFFE0443E))
         }
         ClawdOutfit.Sweater -> {
-            val green = Color(0xFF2E7D4F)
+            val green = cloth(Color(0xFF2E7D4F))
             r(2f, 3.2f, 10f, 3.8f, green)
             sleeves(green)
             var x = 2f
@@ -539,7 +554,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOutfit(
             r(9.8f, 5.4f, 0.6f, 0.6f, Color(0xFFD7263D))
         }
         ClawdOutfit.Scarf -> {
-            val red = Color(0xFFD9433B)
+            val red = cloth(Color(0xFFD9433B))
             r(2f, 2.9f, 10f, 0.9f, red)
             r(9f, 3.8f, 1.3f, 2.6f, red)
             r(9f, 4.8f, 1.3f, 0.35f, white)
@@ -547,5 +562,72 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOutfit(
             r(4f, 2.9f, 0.5f, 0.9f, white)
             r(7f, 2.9f, 0.5f, 0.9f, white)
         }
+        ClawdOutfit.Coat -> {
+            // A long coat over his body and down over the tops of his legs, collar and buttons.
+            val coat = cloth(Color(0xFFB98A55))
+            val shade = coat.copy(red = coat.red * 0.78f, green = coat.green * 0.78f, blue = coat.blue * 0.78f)
+            r(2f, 3f, 10f, 4.6f, coat)
+            sleeves(coat)
+            r(2f, 7f, 2.4f, 1.1f, coat)
+            r(9.6f, 7f, 2.4f, 1.1f, coat)
+            r(6.8f, 3f, 0.4f, 4.6f, shade)
+            r(4.6f, 2.8f, 2.2f, 0.9f, shade)
+            r(7.2f, 2.8f, 2.2f, 0.9f, shade)
+            r(5.9f, 4.2f, 0.5f, 0.5f, Color(0xFF2A2018))
+            r(5.9f, 5.4f, 0.5f, 0.5f, Color(0xFF2A2018))
+            r(7.6f, 4.2f, 0.5f, 0.5f, Color(0xFF2A2018))
+            r(7.6f, 5.4f, 0.5f, 0.5f, Color(0xFF2A2018))
+            r(2f, 6.1f, 10f, 0.45f, shade)
+        }
+        ClawdOutfit.Hoodie -> {
+            val hood = cloth(Color(0xFF5B6270))
+            r(2f, 3.1f, 10f, 3.9f, hood)
+            sleeves(hood)
+            r(5.2f, 5f, 3.6f, 1.4f, hood.copy(alpha = 0.85f))
+            r(5.2f, 5f, 3.6f, 0.25f, Color.Black.copy(alpha = 0.25f))
+            r(6.2f, 3.1f, 0.3f, 1.5f, white)
+            r(7.5f, 3.1f, 0.3f, 1.5f, white)
+            r(2f, 2.6f, 10f, 0.6f, hood)
+        }
+        ClawdOutfit.Raincoat -> {
+            val rain = cloth(Color(0xFFFFC928))
+            r(2f, 3f, 10f, 4.2f, rain)
+            sleeves(rain)
+            r(1.6f, -0.6f, 10.8f, 0.9f, rain)
+            r(6.8f, 3f, 0.35f, 4.2f, Color.Black.copy(alpha = 0.2f))
+            r(4f, 5.6f, 1.6f, 0.9f, Color.Black.copy(alpha = 0.15f))
+            r(8.4f, 5.6f, 1.6f, 0.9f, Color.Black.copy(alpha = 0.15f))
+        }
+        ClawdOutfit.Overalls -> {
+            val denim = cloth(Color(0xFF3F67A8))
+            r(3.4f, 4.4f, 7.2f, 2.6f, denim)
+            r(4f, 3f, 0.7f, 1.6f, denim)
+            r(9.3f, 3f, 0.7f, 1.6f, denim)
+            r(4.1f, 4.6f, 0.5f, 0.5f, Color(0xFFFFD54A))
+            r(9.4f, 4.6f, 0.5f, 0.5f, Color(0xFFFFD54A))
+            r(5.8f, 5f, 2.4f, 1.2f, denim.copy(red = denim.red * 0.85f, green = denim.green * 0.85f, blue = denim.blue * 0.85f))
+            r(3.2f, 7f, 1.6f, 1.2f, denim)
+            r(9.2f, 7f, 1.6f, 1.2f, denim)
+        }
     }
+}
+
+/** OMEGA UI 17.1: a little ruby with a white Ω on his chest, in his grid's pixels. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOmegaBadge(left: Float, top: Float, px: Float) {
+    fun r(x: Float, y: Float, w: Float, h: Float, c: Color) =
+        drawRect(c, Offset(left + x * px, top + y * px), Size(w * px + 0.5f, h * px + 0.5f))
+    val ruby = Color(0xFFC8102E)
+    val light = Color(0xFFFF6B7D)
+    // The stone: a small cut gem.
+    r(5.6f, 3.5f, 2.8f, 2.4f, ruby)
+    r(5.9f, 3.2f, 2.2f, 0.3f, light)
+    r(5.9f, 5.9f, 2.2f, 0.3f, ruby)
+    r(5.6f, 3.5f, 0.6f, 0.6f, light)
+    // The Ω in white.
+    val w = Color.White
+    r(6.3f, 3.8f, 1.4f, 0.35f, w)
+    r(6.1f, 4.1f, 0.35f, 1f, w)
+    r(7.55f, 4.1f, 0.35f, 1f, w)
+    r(5.9f, 5.1f, 0.65f, 0.35f, w)
+    r(7.45f, 5.1f, 0.65f, 0.35f, w)
 }

@@ -54,27 +54,36 @@ private fun accentFace(accent: Color): Brush = Brush.verticalGradient(listOf(Col
 // Home clocks
 // ---------------------------------------------------------------------------------------------
 
-/** "OMEGA": thin, tall numerals in the accent's colors, the seconds as an arc running under them. */
+/** "OMEGA": thin, tall numerals in the accent's colors, the seconds as a line under them. */
 @Composable
 internal fun OmegaHomeClock(settings: LauncherSettings, modifier: Modifier = Modifier) {
-    val now = rememberTime(everySecond = settings.animations)
+    // The time itself changes once a minute; only the little seconds line ticks every second
+    // (in its own small part, so the clock above isn't redrawn each second).
+    val now = rememberTime(everySecond = false)
     val accent = settings.accent.color
     Column(modifier) {
         Text(
             now.format(DateTimeFormatter.ofPattern("HH:mm")),
             style = TextStyle(brush = accentFace(accent), fontSize = 86.sp, fontWeight = FontWeight.Thin, lineHeight = 90.sp, shadow = OnWallpaperText.shadow),
         )
-        Canvas(Modifier.width(220.dp).height(6.dp)) {
-            val p = now.second / 60f
-            drawLine(Color.White.copy(alpha = 0.18f), Offset(0f, size.height / 2f), Offset(size.width, size.height / 2f), strokeWidth = size.height, cap = StrokeCap.Round)
-            drawLine(accent, Offset(0f, size.height / 2f), Offset(size.width * p.coerceAtLeast(0.02f), size.height / 2f), strokeWidth = size.height, cap = StrokeCap.Round)
-        }
+        SecondsLine(accent, settings.animations, Modifier.width(220.dp).height(6.dp))
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Ω", color = accent, fontSize = 16.sp, fontWeight = FontWeight.Black, style = OnWallpaperText)
             Spacer(Modifier.width(8.dp))
             Text(dateLine(now), color = Color.White.copy(alpha = 0.9f), fontSize = 16.sp, style = OnWallpaperText)
         }
+    }
+}
+
+/** The seconds as a line filling up – the only part that ticks every second. */
+@Composable
+private fun SecondsLine(accent: Color, ticking: Boolean, modifier: Modifier) {
+    val now = rememberTime(everySecond = ticking)
+    Canvas(modifier) {
+        val p = now.second / 60f
+        drawLine(Color.White.copy(alpha = 0.18f), Offset(0f, size.height / 2f), Offset(size.width, size.height / 2f), strokeWidth = size.height, cap = StrokeCap.Round)
+        drawLine(accent, Offset(0f, size.height / 2f), Offset(size.width * p.coerceAtLeast(0.02f), size.height / 2f), strokeWidth = size.height, cap = StrokeCap.Round)
     }
 }
 
@@ -225,7 +234,7 @@ private fun DrawScope.drawDial(now: LocalDateTime, accent: Color, omega: Boolean
 @Composable
 internal fun OmegaClockWidget(modifier: Modifier) {
     val settings = LocalSettings.current
-    val now = rememberTime(everySecond = settings.animations)
+    val now = rememberTime(everySecond = false)
     val accent = settings.accent.color
     BoxWithConstraints(modifier.padding(16.dp), contentAlignment = Alignment.CenterStart) {
         val big = (min(maxWidth.value * 0.28f, maxHeight.value * 0.55f)).coerceIn(30f, 80f)
@@ -239,11 +248,7 @@ internal fun OmegaClockWidget(modifier: Modifier) {
                 now.format(DateTimeFormatter.ofPattern("HH:mm")),
                 style = TextStyle(brush = accentFace(accent), fontSize = big.sp, fontWeight = FontWeight.Thin, lineHeight = (big * 1.05f).sp),
             )
-            Canvas(Modifier.fillMaxWidth().height(5.dp)) {
-                val p = now.second / 60f
-                drawLine(Color.White.copy(alpha = 0.15f), Offset(0f, size.height / 2f), Offset(size.width, size.height / 2f), strokeWidth = size.height, cap = StrokeCap.Round)
-                drawLine(accent, Offset(0f, size.height / 2f), Offset(size.width * p.coerceAtLeast(0.02f), size.height / 2f), strokeWidth = size.height, cap = StrokeCap.Round)
-            }
+            SecondsLine(accent, settings.animations, Modifier.fillMaxWidth().height(5.dp))
         }
     }
 }

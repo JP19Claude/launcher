@@ -179,6 +179,7 @@ internal fun VaultEgg(version: String, name: String, onClose: () -> Unit) {
                 textAlign = TextAlign.Center,
             )
         }
+        OmegaFinale(opened)
         GlassCircle(
             onClick = onClose,
             modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp),

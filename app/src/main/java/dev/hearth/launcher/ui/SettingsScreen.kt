@@ -310,6 +310,23 @@ fun SettingsScreen(
                 }
             }
 
+            // OMEGA UI 17.1: OMEGA Glass all through the system, and the smooth mode.
+            if (shows("design")) item {
+                Section("OMEGA") {
+                    SwitchRow(
+                        label = "OMEGA Glass",
+                        description = "Rubin-Glas im ganzen System, und überall fließt OMEGA Fluid (Rubin, Rosé, Bernstein) statt Claudes Farben – Startbildschirm, Menüs, Einstellungen, Glimmer",
+                        checked = s.omegaGlass,
+                    ) { v -> update { it.copy(omegaGlass = v) } }
+                    RowDivider()
+                    SwitchRow(
+                        label = "Flüssig-Modus",
+                        description = "Weniger Last, weniger Ruckeln: Farbflüsse laufen ruhiger, die Glas-Linse nur auf großen Flächen. Empfohlen.",
+                        checked = s.smoothMode,
+                    ) { v -> update { it.copy(smoothMode = v) } }
+                }
+            }
+
             if (shows("design")) item {
                 Section("Design-Vorlage") {
                     ChoiceRow(
