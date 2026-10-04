@@ -164,6 +164,30 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "14.8",
+            name = "Nachtmodus",
+            summary = "Ein Nachtmodus für ganz Hearth – und mit Shizuku fürs ganze Handy.",
+            sections = listOf(
+                ChangeSection(
+                    "Nachtmodus", Icons.Rounded.Star, Violet,
+                    listOf(
+                        "Design → Nachtmodus: An, Aus oder nach Uhrzeit (Beginn und Ende frei wählbar).",
+                        "Nachts wird Hearth dunkler und wärmer: dunkleres Hintergrundbild, dunkles ruhiges Glas, gedämpfte Fluid-Farben – auf Startbildschirm, im Drawer, im Finder und in den Einstellungen.",
+                        "Mit Shizuku schalten Androids Dunkelmodus und der Augenkomfort (Blaulichtfilter) mit; zwischendurch von Hand Geändertes bleibt.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Behoben", Icons.Rounded.CheckCircle, Green,
+                    listOf(
+                        "Einstellungen: Unten schien der Startbildschirm durch, wenn das Hintergrundbild zuletzt im Querformat gelesen wurde.",
+                        "Einstellungen: Die Titelleiste beim Scrollen ist jetzt dunkel genug, dass nichts mehr durchscheint.",
+                    ),
+                    hearth,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "14.7",
             name = "Downgrade verbessert",
             summary = "Der Downgrade versucht es jetzt auch ohne Shizuku – und zeigt sonst den Weg.",

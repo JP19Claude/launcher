@@ -94,6 +94,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -157,6 +158,8 @@ import dev.hearth.launcher.data.HomeGesture
 import androidx.compose.material.icons.rounded.Share
 import dev.hearth.launcher.data.HearthWidget
 import dev.hearth.launcher.data.ClockStyle
+import dev.hearth.launcher.data.nightActive
+import dev.hearth.launcher.data.forNight
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.SwipeDownAction
 import kotlinx.coroutines.delay
@@ -172,7 +175,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val dock by vm.dock.collectAsStateWithLifecycle()
     val backdrop by vm.backdrop.collectAsStateWithLifecycle()
     val needsWallpaperAccess by vm.needsWallpaperAccess.collectAsStateWithLifecycle()
-    val settings by vm.settings.collectAsStateWithLifecycle()
+    val storedSettings by vm.settings.collectAsStateWithLifecycle()
+    // Night mode: by night the whole of Hearth gets darker and calmer (Auto follows the clock).
+    // (Derived, so the minute ticking by doesn't redraw the whole screen – only night changing.)
+    val clock = rememberNow()
+    val night by remember { derivedStateOf { storedSettings.nightActive(clock.value.hour) } }
+    val settings = remember(storedSettings, night) { if (night) storedSettings.forNight() else storedSettings }
     val library by vm.library.collectAsStateWithLifecycle()
     val assistantOpen by vm.assistantOpen.collectAsStateWithLifecycle()
     val appUsage by vm.appUsage.collectAsStateWithLifecycle()
@@ -202,6 +210,17 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val scope = rememberCoroutineScope()
     // Hearth UI 14: the tour of what's new, once after the big update.
     var showIntro by remember { mutableStateOf(!HearthUi.introSeen(context)) }
+    // Night mode reaches Android too (with Shizuku): dark mode and eye comfort follow it.
+    // Only a change of night is passed on, so switching them by hand in between stays.
+    LaunchedEffect(night, storedSettings.nightSystem) {
+        if (!storedSettings.nightSystem || !dev.hearth.launcher.data.ShizukuBridge.isReady(context)) return@LaunchedEffect
+        val prefs = context.getSharedPreferences("hearth_night", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("applied", false) == night) return@LaunchedEffect
+        val v = if (night) 1 else 0
+        dev.hearth.launcher.data.ShizukuBridge.setDarkMode(night)
+        dev.hearth.launcher.data.ShizukuBridge.run("settings put system blue_light_filter $v; settings put secure night_display_activated $v")
+        prefs.edit().putBoolean("applied", night).apply()
+    }
     val storagePermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { vm.refreshWallpaper() }
@@ -975,6 +994,15 @@ fun LauncherScreen(vm: LauncherViewModel) {
             }
 
             FluidWaveLayer(fluidWaves)
+
+            // Night mode: a warm, dim veil over everything of Hearth (it takes no touches).
+            if (night) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF1A0C00).copy(alpha = 0.22f)),
+                )
+            }
 
             flyApp?.let { (app, shot, island) ->
                 GlimmerFlyIn(

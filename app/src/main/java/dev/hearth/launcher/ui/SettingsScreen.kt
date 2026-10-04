@@ -91,6 +91,7 @@ import dev.hearth.launcher.data.CcStyle
 import dev.hearth.launcher.data.CcToggleShape
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.FluidRims
+import dev.hearth.launcher.data.NightMode
 import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.GlimmerMusicStyle
 import dev.hearth.launcher.data.GlimmerStyle
@@ -411,6 +412,41 @@ fun SettingsScreen(
                         optionLabel = { it.label },
                         onSelect = { t -> update { it.copy(pageTransition = t) } },
                     )
+                }
+            }
+
+            if (shows("design")) item {
+                // Hearth UI 14.8: night mode for the whole of Hearth, and with Shizuku for Android.
+                Section("Nachtmodus") {
+                    ChoiceRow(
+                        label = "Nachtmodus",
+                        options = NightMode.entries,
+                        selected = s.nightMode,
+                        optionLabel = { it.label },
+                        onSelect = { m -> update { it.copy(nightMode = m) } },
+                    )
+                    if (s.nightMode == NightMode.Auto) {
+                        ChoiceRow(
+                            label = "Beginnt um",
+                            options = (17..23).toList(),
+                            selected = s.nightFrom,
+                            optionLabel = { "$it:00" },
+                            onSelect = { h -> update { it.copy(nightFrom = h) } },
+                        )
+                        ChoiceRow(
+                            label = "Endet um",
+                            options = (4..10).toList(),
+                            selected = s.nightTo,
+                            optionLabel = { "$it:00" },
+                            onSelect = { h -> update { it.copy(nightTo = h) } },
+                        )
+                    }
+                    SwitchRow(
+                        label = "Auch Android dunkel",
+                        description = "Mit Shizuku schalten Dunkelmodus und Augenkomfort (Blaulichtfilter) im ganzen Handy mit",
+                        checked = s.nightSystem,
+                    ) { v -> update { it.copy(nightSystem = v) } }
+                    Note("Nachts wird Hearth dunkler und wärmer: dunkleres Hintergrundbild, dunkles ruhiges Glas, gedämpfte Farben – auf Startbildschirm, Drawer, Finder und in den Einstellungen.")
                 }
             }
 
@@ -752,9 +788,10 @@ fun SettingsScreen(
                 Modifier
                     .fillMaxWidth()
                     .graphicsLayer { alpha = collapsed() }
-                    .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent)))
+                    // Dark enough that cards sliding underneath don't show through the title.
+                    .background(Brush.verticalGradient(listOf(Color(0xF00A0A12), Color(0xD90A0A12), Color.Transparent)))
                     .statusBarsPadding()
-                    .height(64.dp),
+                    .height(76.dp),
             )
             Row(
                 Modifier
@@ -1533,7 +1570,7 @@ internal class SettingsCategory(
 
 internal val SettingsCategories = listOf(
     SettingsCategory("design", "Design & Liquid Glass", "Vorlagen, Glas, Icons, Icon-Packs, Animationen", Icons.Rounded.Star, Color(0xFF8E6BFF),
-        "look vorlage galaxy ios coloros glas farbe tönung unschärfe icon form größe pack animation bewegung"),
+        "look vorlage galaxy ios coloros glas farbe tönung unschärfe icon form größe pack animation bewegung nacht nachtmodus dunkel"),
     SettingsCategory("home", "Startbildschirm", "Raster, Uhr, Dock, Gesten, App-Übersicht", Icons.Rounded.Home, Color(0xFF3E91FF),
         "home raster spalten reihen uhr widgets dock wischen gesten doppeltippen sperren seiten"),
     SettingsCategory("claude", "Claude & KI", "Assistent, Anbieter, Schlüssel, Sparmodus", Icons.Rounded.Face, Color(0xFFD97757),

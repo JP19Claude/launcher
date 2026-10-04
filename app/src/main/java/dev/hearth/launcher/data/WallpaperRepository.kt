@@ -190,7 +190,9 @@ class WallpaperRepository(private val context: Context) {
         val display = context.getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY)
         val metrics = DisplayMetrics()
         display.getRealMetrics(metrics)
-        return metrics.widthPixels to metrics.heightPixels
+        // Hearth stands upright: measured while the phone was sideways (a video, a game), the
+        // copy came out landscape and glass behind the settings covered only the top half.
+        return minOf(metrics.widthPixels, metrics.heightPixels) to maxOf(metrics.widthPixels, metrics.heightPixels)
     }
 
     fun close() {

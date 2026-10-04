@@ -40,6 +40,13 @@ enum class FluidRims(val label: String) {
     Vivid("Lebendig"),
 }
 
+/** Hearth UI's night mode: everything darker and warmer – always, never or by the clock. */
+enum class NightMode(val label: String) {
+    Off("Aus"),
+    On("An"),
+    Auto("Nach Uhrzeit"),
+}
+
 /** Base color the glass is tinted with. */
 enum class GlassTint(val label: String, val color: Color) {
     Claude("Claude", Color(0xFFD97757).copy(alpha = 0.14f)),
@@ -501,6 +508,11 @@ data class LauncherSettings(
     val glimmerBreathe: Boolean = false,
     /** AI Fluid: Claude's colors flow round the island's edge while something runs. */
     val glimmerAiFluid: Boolean = true,
+    /** Night mode, its hours (Auto) and whether Android goes dark with it (Shizuku). */
+    val nightMode: NightMode = NightMode.Off,
+    val nightFrom: Int = 21,
+    val nightTo: Int = 7,
+    val nightSystem: Boolean = true,
     /** A green or orange dot in Glimmer while an app uses the camera or the microphone. */
     val glimmerPrivacy: Boolean = true,
     /** 85 % of the size, and unfolded content kept below the camera so it never covers any. */
@@ -888,6 +900,10 @@ class SettingsRepository(context: Context) {
             glimmerScreenshots = prefs.getBoolean("glimmerScreenshots", d.glimmerScreenshots),
             glimmerBreathe = prefs.getBoolean("glimmerBreathe", d.glimmerBreathe),
             glimmerAiFluid = prefs.getBoolean("glimmerAiFluid", d.glimmerAiFluid),
+            nightMode = enumOf("nightMode", d.nightMode),
+            nightFrom = prefs.getInt("nightFrom", d.nightFrom),
+            nightTo = prefs.getInt("nightTo", d.nightTo),
+            nightSystem = prefs.getBoolean("nightSystem", d.nightSystem),
             glimmerPrivacy = prefs.getBoolean("glimmerPrivacy", d.glimmerPrivacy),
             glimmerSmall = prefs.getBoolean("glimmerSmall", d.glimmerSmall),
             badgeStyle = enumOf("badgeStyle", d.badgeStyle),
@@ -1016,6 +1032,10 @@ class SettingsRepository(context: Context) {
             .putBoolean("glimmerScreenshots", s.glimmerScreenshots)
             .putBoolean("glimmerBreathe", s.glimmerBreathe)
             .putBoolean("glimmerAiFluid", s.glimmerAiFluid)
+            .putString("nightMode", s.nightMode.name)
+            .putInt("nightFrom", s.nightFrom)
+            .putInt("nightTo", s.nightTo)
+            .putBoolean("nightSystem", s.nightSystem)
             .putBoolean("glimmerPrivacy", s.glimmerPrivacy)
             .putBoolean("glimmerSmall", s.glimmerSmall)
             .putString("badgeStyle", s.badgeStyle.name)
@@ -1099,3 +1119,19 @@ class SettingsRepository(context: Context) {
         const val KEY_CC_ENABLED = "ccEnabled"
     }
 }
+
+/** Is it night for Hearth at [hour]? */
+fun LauncherSettings.nightActive(hour: Int): Boolean = when (nightMode) {
+    NightMode.Off -> false
+    NightMode.On -> true
+    NightMode.Auto -> if (nightFrom <= nightTo) hour in nightFrom until nightTo else hour >= nightFrom || hour < nightTo
+}
+
+/** The look at night: a darker wallpaper, dark calm glass, quiet fluid rims. */
+fun LauncherSettings.forNight(): LauncherSettings = copy(
+    dimWallpaper = maxOf(dimWallpaper, 0.5f),
+    glassTint = GlassTint.Dark,
+    glassTintStrength = maxOf(glassTintStrength, 1.3f),
+    glassSpecular = glassSpecular * 0.6f,
+    fluidRims = FluidRims.Calm,
+)
