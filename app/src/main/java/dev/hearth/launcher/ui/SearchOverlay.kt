@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -46,7 +47,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -117,6 +120,12 @@ fun SearchOverlay(
     val appear = remember { Animatable(if (animate) 0f else 1f) }
     LaunchedEffect(Unit) { appear.animateTo(1f, spring(dampingRatio = 0.8f, stiffness = 260f)) }
 
+    val omega = LocalSettings.current.omegaGlass
+    val fluidOn = LocalSettings.current.fluidDesign
+    val palette = fluidPalette()
+    // The results' glass: OMEGA glass (or the glass tint), a little deeper so labels stay clear.
+    val sheetTint = LocalGlassStyle.current.tint.compositeOver(Color.Black.copy(alpha = 0.3f))
+
     // Always dark glass, whatever the system theme: light text on the frosted wallpaper.
     HearthTheme(dark = true) {
     Box(Modifier.fillMaxSize()) {
@@ -124,11 +133,27 @@ fun SearchOverlay(
         Box(
             Modifier
                 .matchParentSize()
-                .background(Color(0xFF06060C).copy(alpha = if (hasGlass) 0.42f else 0.94f)),
+                // OMEGA UI 17.3: lighter, so the glass and the fluid behind it really show.
+                .background(Color(0xFF06060C).copy(alpha = if (hasGlass) (if (omega) 0.24f else 0.34f) else 0.94f)),
         )
-        // One UI 10 Fluid: Claude's colors drift slowly behind everything (and hold still
+        // OMEGA Glass: the whole finder is tinted like OMEGA glass – deepest at the top, where
+        // you type, and once more at the bottom.
+        if (omega) {
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to palette[0].copy(alpha = 0.28f),
+                            0.4f to palette[0].copy(alpha = 0.05f),
+                            1f to palette[1].copy(alpha = 0.2f),
+                        ),
+                    ),
+            )
+        }
+        // One UI 10 Fluid / OMEGA Fluid: the colors drift behind everything (and hold still
         // while the results scroll).
-        FluidBackdrop(AiFluidColors.take(3), modifier = Modifier.matchParentSize(), strength = 0.5f)
+        FluidBackdrop(palette, modifier = Modifier.matchParentSize(), strength = if (omega) 0.85f else 0.7f)
         Column(
             Modifier
                 .fillMaxSize()
@@ -178,17 +203,40 @@ fun SearchOverlay(
                 }
             }
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(columns),
+            // OMEGA UI 17.3: the results lie on one big sheet of glass, with the fluid colors
+            // drifting inside it and flowing round its rim.
+            LiquidGlass(
+                cornerRadius = 30.dp,
+                refraction = 22.dp,
+                tint = sheetTint,
+                fluidEdge = false,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .fadingEdges(top = 10.dp, bottom = 36.dp)
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 10.dp)
                     .graphicsLayer {
                         val p = appear.value
                         alpha = ((p - 0.15f) / 0.85f).coerceIn(0f, 1f)
                         translationY = (1f - p) * -40.dp.toPx()
-                    },
-                contentPadding = PaddingValues(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 28.dp),
+                    }
+                    .aiFluidEdge(30.dp, strength = if (omega) 0.85f else 0.5f, width = 1.5.dp, enabled = fluidOn, flowing = false),
+            ) {
+            if (fluidOn) {
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(30.dp))
+                        .fluidGlow(strength = if (omega) 0.9f else 0.6f, flowing = omega),
+                )
+            }
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(columns),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(30.dp))
+                    .fadingEdges(top = 14.dp, bottom = 30.dp),
+                contentPadding = PaddingValues(start = 6.dp, end = 6.dp, top = 12.dp, bottom = 20.dp),
             ) {
                 // Galaxy × Claude: things to ask Claude, before anything is typed.
                 if (trimmed.isEmpty() && claudeFirst) {
@@ -302,6 +350,7 @@ fun SearchOverlay(
                     }
                 }
             }
+            }
         }
     }
     }
@@ -339,19 +388,18 @@ private fun SearchField(
         keyboardActions = KeyboardActions(onGo = { onSubmit() }),
         modifier = modifier.onFocusChanged { focused = it.isFocused },
         decorationBox = { innerTextField ->
-            // A liquid glass capsule; while you type, Claude's colors flow round its rim.
+            // A liquid glass capsule; while you type, the fluid colors flow round its rim and
+            // drift inside. OMEGA Glass: OMEGA glass with OMEGA Fluid flowing all the time.
+            val omega = LocalSettings.current.omegaGlass
             LiquidGlass(
                 cornerRadius = 26.dp,
-                refraction = 14.dp,
-                tint = Color.White.copy(alpha = 0.06f),
+                refraction = 16.dp,
+                // An explicit tint would cover OMEGA's.
+                tint = if (omega) null else Color.White.copy(alpha = 0.06f),
                 fluidEdge = false,
-                modifier = Modifier.aiFluidEdge(
-                    26.dp,
-                    strength = if (focused) 0.75f else 0.35f,
-                    enabled = LocalSettings.current.fluidDesign,
-                    flowing = focused,
-                ),
+                modifier = Modifier.searchFluidRim(26.dp, active = focused),
             ) {
+                SearchFluidFill(26.dp, active = focused)
                 Row(
                     Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -391,7 +439,7 @@ private fun WebSearchRow(query: String, onClick: () -> Unit) {
     LiquidGlass(
         cornerRadius = 20.dp,
         interactive = true,
-        tint = Color.White.copy(alpha = 0.06f),
+        tint = if (LocalSettings.current.omegaGlass) null else Color.White.copy(alpha = 0.06f),
         modifier = Modifier
             .padding(top = 12.dp)
             .fillMaxWidth()

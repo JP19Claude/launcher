@@ -224,16 +224,20 @@ fun OneUIDrawer(
                     .rise({ appear.value }, 0),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // The search bar as a liquid glass capsule.
+                // The search bar as a liquid glass capsule – OMEGA UI 17.3: with OMEGA Fluid
+                // flowing round it and drifting inside.
                 LiquidGlass(
                     cornerRadius = 24.dp,
-                    refraction = 14.dp,
+                    refraction = 16.dp,
                     interactive = true,
+                    fluidEdge = false,
                     modifier = Modifier
                         .weight(1f)
+                        .searchFluidRim(24.dp)
                         .clip(CircleShape)
                         .clickable(onClick = onOpenSearch),
                 ) {
+                    SearchFluidFill(24.dp)
                     Row(
                         Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,

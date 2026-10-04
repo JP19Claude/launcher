@@ -1976,14 +1976,18 @@ private fun PageDots(count: Int, position: () -> Float, modifier: Modifier = Mod
 private fun SearchPill(onClick: () -> Unit) {
     // Galaxy × Claude: the pill asks Claude first, like Galaxy AI's search bar.
     val galaxy = LocalSettings.current.galaxyClaude
+    // OMEGA UI 17.3: OMEGA glass with OMEGA Fluid flowing round it and drifting inside.
     LiquidGlass(
         cornerRadius = 20.dp,
-        refraction = 10.dp,
+        refraction = 12.dp,
         interactive = true,
+        fluidEdge = false,
         modifier = Modifier
+            .searchFluidRim(20.dp)
             .clip(CircleShape)
             .clickable(onClick = onClick),
     ) {
+        SearchFluidFill(20.dp)
         Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,

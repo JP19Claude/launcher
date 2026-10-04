@@ -119,12 +119,15 @@ private fun LibrarySearchBar(onClick: () -> Unit) {
         cornerRadius = 22.dp,
         refraction = 14.dp,
         interactive = true,
+        fluidEdge = false,
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 6.dp)
+            .searchFluidRim(22.dp)
             .clip(RoundedCornerShape(22.dp))
             .clickable(onClick = onClick),
     ) {
+        SearchFluidFill(22.dp)
         Row(
             Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,

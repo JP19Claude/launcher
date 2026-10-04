@@ -178,6 +178,36 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "17.3",
+            name = "Fluid Finder",
+            summary = "Galaxy Omega in Blau und Rubin statt Lila, und der Finder und alle Suchleisten ganz aus OMEGA Glass und OMEGA Fluid.",
+            sections = listOf(
+                ChangeSection(
+                    "Galaxy Omega", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Galaxy Omega ist jetzt Galaxy-Blau mit OMEGA-Rubin statt Lila: tiefblaues Glas, OMEGA Fluid in Blau, Rubin, Himmelblau und Eisweiß.",
+                        "Akzentfarbe und Glas-Tönung „Galaxy Omega“ sind mit umgezogen – wer Galaxy Omega nutzt, bekommt die neuen Farben sofort.",
+                    ),
+                    withGlimmer,
+                ),
+                ChangeSection(
+                    "Finder", Icons.Rounded.Search, Pink,
+                    listOf(
+                        "Der Finder ist jetzt richtiges Glas: heller, mit OMEGA-Tönung und kräftigerem OMEGA Fluid im Hintergrund.",
+                        "Alle Ergebnisse liegen auf einer großen Glasfläche, in der OMEGA Fluid treibt und um deren Rand es leuchtet.",
+                        "Die Suchleiste im Finder ist OMEGA Glass mit fließendem OMEGA-Fluid-Rand und Fluid im Glas – beim Tippen noch heller.",
+                        "Auch „Im Web suchen“ ist jetzt OMEGA Glass.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Suchleisten", Icons.Rounded.Favorite, Violet,
+                    listOf("Die Suchleiste auf dem Homescreen, im App-Drawer und in der App-Mediathek: OMEGA Glass, OMEGA Fluid fließt um den Rand und treibt im Glas."),
+                    hearth,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "17.2",
             name = "Galaxy Omega",
             summary = "Mehr OMEGA Glass und OMEGA Fluid überall, die neue Farbe Galaxy Omega, ein größeres Ω und Clawd in Galaxy.",

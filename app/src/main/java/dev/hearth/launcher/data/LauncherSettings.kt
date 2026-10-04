@@ -68,8 +68,8 @@ enum class GlassTint(val label: String, val color: Color) {
     Blue("Blau", Color(0xFF6FA8FF).copy(alpha = 0.18f)),
     /** OMEGA UI: glass with a breath of ruby. */
     Ruby("Rubin", Color(0xFFB0102C).copy(alpha = 0.16f)),
-    /** OMEGA UI 17.2: deep violet glass with a ruby glow. */
-    GalaxyOmega("Galaxy Omega", Color(0xFF6A2BC9).copy(alpha = 0.2f)),
+    /** OMEGA UI 17.3: deep Galaxy blue glass (the ruby comes from OMEGA Fluid). */
+    GalaxyOmega("Galaxy Omega", Color(0xFF1E46B4).copy(alpha = 0.2f)),
 }
 
 /** The color OMEGA Glass and OMEGA Fluid run in. */
@@ -97,8 +97,8 @@ enum class AccentColor(val label: String, val color: Color) {
     Lilac("Flieder", Color(0xFFC6A8FF)),
     /** OMEGA UI's ruby red. */
     Ruby("Rubin", Color(0xFFE5243F)),
-    /** OMEGA UI 17.2: Galaxy's violet meeting OMEGA's ruby. */
-    GalaxyOmega("Galaxy Omega", Color(0xFFB04CE8)),
+    /** OMEGA UI 17.3: Galaxy blue – no more violet; the ruby comes from OMEGA Fluid. */
+    GalaxyOmega("Galaxy Omega", Color(0xFF3D7BFF)),
 }
 
 enum class SearchEngine(val label: String, val url: String?) {

@@ -180,13 +180,13 @@ val OmegaCalmColors = listOf(
     Color(0xFFF4DCE3),
 )
 
-/** OMEGA Fluid in Galaxy Omega: ruby, violet and deep blue with a magenta light. */
+/** OMEGA Fluid in Galaxy Omega: Galaxy blue and sky with OMEGA's ruby and an icy light. */
 val GalaxyOmegaFluidColors = listOf(
-    Color(0xFFC8102E),
-    Color(0xFF8E3BFF),
-    Color(0xFF3E5BFF),
-    Color(0xFFFF4FA8),
-    Color(0xFFD9C2FF),
+    Color(0xFF2F6BFF),
+    Color(0xFFD0103A),
+    Color(0xFF5CC8FF),
+    Color(0xFFFF5C72),
+    Color(0xFFCFE3FF),
 )
 
 /** The OMEGA Fluid colors for these settings (Rubin or Galaxy Omega). */
