@@ -164,6 +164,74 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "14.5",
+            name = "Power-Update",
+            summary = "15 Dinge, die One UI und ColorOS nicht können – damit sich Hearth UI lohnt.",
+            sections = listOf(
+                ChangeSection(
+                    "Warum Hearth UI", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Neue Seite in den Einstellungen: 15 Vorteile von Hearth UI gegenüber One UI und ColorOS auf einen Blick.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Turbo & Speicher", Icons.Rounded.Refresh, Orange,
+                    listOf(
+                        "Turbo: Hintergrund-Apps beenden und alle App-Caches leeren mit einem Tipp – samt Anzeige, wie viel frei wurde.",
+                        "Nur Caches leeren, ohne Apps zu beenden.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Entrümpeln", Icons.Rounded.Build, Pink,
+                    listOf(
+                        "Vorinstallierte Apps entfernen (Facebook-Dienste, Samsung Free, OneDrive, AR-Zone, Samsung TV Plus …) – ohne Root.",
+                        "Entfernte Apps jederzeit mit einem Tipp zurückholen. Entfernen fragt zur Sicherheit zweimal.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Datenschutz-Check", Icons.Rounded.Info, Blue,
+                    listOf(
+                        "Welche deiner Apps dürfen Standort, Kamera, Mikrofon, Kontakte, SMS, Anrufliste und Körpersensoren?",
+                        "Mit Shizuku entzieht ein Tipp den Zugriff sofort; ohne öffnet er die Berechtigungen der App.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Akku & Anzeige", Icons.Rounded.Settings, Violet,
+                    listOf(
+                        "Hintergrund-Sperre: lange auf eine App drücken → „Im Hintergrund verbieten“ – Stromfresser laufen nur noch, wenn sie offen sind.",
+                        "Bildschirm beim Laden anlassen, Pop-up-Benachrichtigungen aus, Extra dunkel.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Apps", Icons.Rounded.Menu, Slate,
+                    listOf(
+                        "APK teilen: jede App als Datei weitergeben oder sichern – direkt aus dem App-Menü (auch geteilte Apps).",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Clawd", Icons.Rounded.Face, Terracotta,
+                    listOf(
+                        "„Räum den Speicher auf“, „Beende die Hintergrund-Apps“, „Turbo“ – Clawd pflegt das Handy für dich (mit Shizuku).",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Easter Egg & Basis", Icons.Rounded.Favorite, Orange,
+                    listOf(
+                        "Hearth UI 14.5: „Kometen“ – zurückziehen, loslassen und fünf Kometen um den Hearth-Stern kreisen lassen.",
+                        "ClaudeOS 3.1: Shizuku-Anbindung als Teil der Basis.",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "14.3",
             name = "Mehr mit Shizuku",
             summary = "Tempo, Werbeblocker, Apps stoppen und einfrieren, Neustart – und Clawd schaltet für dich.",

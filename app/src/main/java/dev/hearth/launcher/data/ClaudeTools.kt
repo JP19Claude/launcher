@@ -123,6 +123,8 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
                     "setting" to str("Was", listOf("wifi", "bluetooth", "mobile_data", "airplane", "location", "nfc", "dark_mode", "battery_saver")),
                     "on" to bool("an (true) oder aus (false)"),
                 ), "setting", "on"))
+            put(tool("phone_care", "Pflegt das Handy (braucht Shizuku): Speicher aufräumen (alle App-Caches leeren), Hintergrund-Apps beenden oder Turbo (beides).",
+                props("action" to str("Aktion", listOf("clean_storage", "kill_background", "turbo"))), "action"))
             put(tool("open_settings", "Öffnet eine Seite der Systemeinstellungen.",
                 props("page" to str("Seite", SettingsPages.keys.toList())), "page"))
             put(tool("copy_text", "Kopiert Text in die Zwischenablage.", props("text" to str("Text")), "text"))
@@ -199,6 +201,7 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
         "system_action" -> systemAction(a.optString("action"))
         "open_settings" -> openSettings(a.optString("page"))
         "system_switch" -> systemSwitch(a.optString("setting"), a.optBoolean("on", true))
+        "phone_care" -> phoneCare(a.optString("action"))
         "copy_text" -> copyText(a.optString("text"))
         "device_status" -> ToolResult(true, deviceStatus())
         "launcher" -> launcher(a.optString("action"), a.optString("design"))
@@ -690,6 +693,24 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
             "quick_settings" -> ToolResult(controls.expandQuickSettings(), "Schnelleinstellungen.", label = "Schnelleinstellungen", opensScreen = true)
             else -> ToolResult(false, "Unbekannte Aktion $action.")
         }
+    }
+
+    /** Clean storage, end background apps, or both – with Shizuku. */
+    private suspend fun phoneCare(action: String): ToolResult {
+        if (!ShizukuBridge.isReady(context)) {
+            return ToolResult(false, "Dafür braucht Hearth Shizuku (Einstellungen → System). Shizuku ist gerade nicht aktiv.", label = "Shizuku fehlt")
+        }
+        val free = { runCatching { android.os.StatFs(android.os.Environment.getDataDirectory().path).availableBytes }.getOrDefault(0L) }
+        val before = free()
+        if (action == "kill_background" || action == "turbo") ShizukuBridge.killBackgroundApps()
+        if (action == "clean_storage" || action == "turbo") ShizukuBridge.trimCaches()
+        val freedMb = ((free() - before).coerceAtLeast(0L) / 1_048_576L)
+        val text = when (action) {
+            "kill_background" -> "Hintergrund-Apps beendet"
+            "clean_storage" -> "Speicher aufgeräumt, $freedMb MB frei geworden"
+            else -> "Turbo: Hintergrund-Apps beendet, $freedMb MB Speicher frei"
+        }
+        return ToolResult(true, "$text.", label = text, say = "$text.")
     }
 
     /** Switches with Shizuku's rights; without Shizuku the system's own switch opens. */

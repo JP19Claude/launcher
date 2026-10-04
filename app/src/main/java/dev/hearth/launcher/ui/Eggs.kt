@@ -1093,3 +1093,137 @@ internal fun NovaEgg(onClose: () -> Unit) {
         EggClose(onClose)
     }
 }
+
+/** A comet: where it is, how fast, and the trail it leaves. */
+private class Comet(var x: Float, var y: Float, var vx: Float, var vy: Float, val color: Color) {
+    val trail = ArrayDeque<Offset>()
+}
+
+/** The finger's slingshot between frames. */
+private class Sling {
+    var area = Size.Zero
+    var from = Offset.Unspecified
+    var to = Offset.Unspecified
+}
+
+/**
+ * Hearth UI 14.5's egg, "Kometen": pull back like a slingshot and let go – a comet flies off
+ * and the Hearth star in the middle pulls it into orbit. Keep five comets circling at once.
+ */
+@Composable
+internal fun CometEgg(version: String, name: String, onClose: () -> Unit) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { EasterEggs.find(context, "version") }
+    BackHandler(onBack = onClose)
+    val comets = remember { mutableListOf<Comet>() }
+    val sling = remember { Sling() }
+    var now by remember { mutableLongStateOf(0L) }
+    var orbiting by remember { mutableIntStateOf(0) }
+    var thrown by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        var last = -1L
+        while (true) {
+            withFrameMillis { t ->
+                val dt = if (last < 0) 0.016f else (t - last).coerceIn(1L, 40L) / 1000f
+                last = t
+                val w = sling.area.width
+                val h = sling.area.height
+                if (w > 0f) {
+                    val c = Offset(w / 2f, h * 0.45f)
+                    val pull = 0.12f * w * w * w
+                    comets.forEach { k ->
+                        val dx = c.x - k.x
+                        val dy = c.y - k.y
+                        val d2 = (dx * dx + dy * dy).coerceAtLeast(900f)
+                        val d = kotlin.math.sqrt(d2)
+                        val a = pull / d2
+                        k.vx += dx / d * a * dt
+                        k.vy += dy / d * a * dt
+                        k.x += k.vx * dt
+                        k.y += k.vy * dt
+                        k.trail.addLast(Offset(k.x, k.y))
+                        while (k.trail.size > 40) k.trail.removeFirst()
+                    }
+                    // Comets that fell into the star or flew far away are gone.
+                    comets.removeAll { k ->
+                        val d = kotlin.math.hypot(k.x - c.x, k.y - c.y)
+                        d < w * 0.05f || d > kotlin.math.hypot(w, h) * 1.5f
+                    }
+                    val circling = comets.count { k -> kotlin.math.hypot(k.x - c.x, k.y - c.y) < w * 0.7f }
+                    if (circling != orbiting) orbiting = circling
+                }
+                now = t
+            }
+        }
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF03030C), Color(0xFF0D0820), Color(0xFF020205))))
+            .onSizeChanged { sling.area = Size(it.width.toFloat(), it.height.toFloat()) }
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    sling.from = down.position
+                    sling.to = down.position
+                    do {
+                        val event = awaitPointerEvent()
+                        event.changes.firstOrNull()?.let { if (it.pressed) sling.to = it.position }
+                    } while (event.changes.any { it.pressed })
+                    // Let go: the comet flies the other way, faster the farther it was pulled.
+                    val from = sling.from
+                    val to = sling.to
+                    if (comets.size < 12) {
+                        comets += Comet(from.x, from.y, (from.x - to.x) * 2.4f, (from.y - to.y) * 2.4f, AiFluidColors[thrown % AiFluidColors.size])
+                        thrown++
+                    }
+                    sling.from = Offset.Unspecified
+                    sling.to = Offset.Unspecified
+                }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(HearthUi.major(version), color = Color.White.copy(alpha = 0.05f), fontSize = 200.sp, fontWeight = FontWeight.Black)
+        Canvas(Modifier.fillMaxSize()) {
+            if (now < 0L) return@Canvas
+            val c = Offset(size.width / 2f, size.height * 0.45f)
+            // The Hearth star.
+            val r = size.width * 0.06f * (1f + 0.05f * sin(now / 300f))
+            drawCircle(Brush.radialGradient(listOf(Color(0xFFFFB494).copy(alpha = 0.5f), Color.Transparent), center = c, radius = r * 4f), radius = r * 4f, center = c)
+            drawCircle(Brush.radialGradient(listOf(Color.White, Color(0xFFD97757)), center = c, radius = r), radius = r, center = c)
+            // The comets and their tails.
+            comets.forEach { k ->
+                val n = k.trail.size
+                for (j in 1 until n) {
+                    val f = j / n.toFloat()
+                    drawLine(k.color.copy(alpha = 0.8f * f), k.trail.elementAt(j - 1), k.trail.elementAt(j), strokeWidth = 6.dp.toPx() * f, cap = StrokeCap.Round)
+                }
+                drawCircle(Color.White, radius = 4.dp.toPx(), center = Offset(k.x, k.y))
+            }
+            // The slingshot while pulling.
+            if (sling.from.isSpecified && sling.to.isSpecified) {
+                drawLine(Color.White.copy(alpha = 0.5f), sling.from, sling.to, strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+                drawCircle(Color.White.copy(alpha = 0.8f), radius = 6.dp.toPx(), center = sling.from)
+            }
+        }
+        if (orbiting >= 5) {
+            Clawd(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 130.dp)
+                    .size(width = 80.dp, height = 68.dp),
+                mood = ClawdMood.Dance,
+            )
+        }
+        Column(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 36.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("$name $version · Kometen", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                if (orbiting >= 5) "Fünf Kometen auf der Bahn! ☄️" else "Zurückziehen und loslassen · $orbiting/5 auf der Bahn",
+                color = Color.White.copy(alpha = 0.55f),
+                fontSize = 13.sp,
+            )
+        }
+        EggClose(onClose)
+    }
+}

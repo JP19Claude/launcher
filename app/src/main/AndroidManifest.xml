@@ -169,6 +169,17 @@
         </service>
 
 
+        <!-- Sharing an app's APK from its menu. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/hearth_files" />
+        </provider>
+
         <!-- Shizuku hands Hearth its binder through this (system switches with ADB rights). -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"

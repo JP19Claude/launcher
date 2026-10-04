@@ -74,7 +74,7 @@ import kotlin.math.roundToInt
  */
 
 /** One page of the system's settings: the first of its intents that opens wins. */
-private class SystemPage(
+internal class SystemPage(
     val title: String,
     val subtitle: String,
     val color: Color,
@@ -292,7 +292,7 @@ internal fun SystemSettingsContent(controls: SystemControls) {
 
 /** A row like One UI's: a colored round icon, the name, what's inside, and an arrow. */
 @Composable
-private fun SystemPageRow(page: SystemPage, onClick: () -> Unit) {
+internal fun SystemPageRow(page: SystemPage, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -413,7 +413,11 @@ private fun ShizukuSection(state: ControlState, onChanged: () -> Unit) {
             }
         }
     }
-    if (status == ShizukuBridge.Status.Ready) ShizukuTools()
+    if (status == ShizukuBridge.Status.Ready) {
+        ShizukuTools()
+        ShizukuPowerTools()
+    }
+    PrivacyCheck(status == ShizukuBridge.Status.Ready)
 }
 
 private fun toast(context: Context, text: String) {

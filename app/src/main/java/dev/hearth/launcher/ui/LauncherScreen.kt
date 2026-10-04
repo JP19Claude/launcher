@@ -1133,7 +1133,18 @@ private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Un
         add(GlassMenuItem("Einfrieren", Icons.Rounded.Lock) {
             vm.shizukuAction("${app.label} eingefroren") { dev.hearth.launcher.data.ShizukuBridge.freeze(app.packageName) }
         })
+        val context = vm.getApplication<android.app.Application>()
+        if (BackgroundLock.isLocked(context, app.packageName)) {
+            add(GlassMenuItem("Im Hintergrund erlauben", Icons.Rounded.CheckCircle) {
+                vm.shizukuAction("${app.label} darf wieder im Hintergrund laufen") { BackgroundLock.set(context, app.packageName, false) }
+            })
+        } else {
+            add(GlassMenuItem("Im Hintergrund verbieten", Icons.Rounded.Clear) {
+                vm.shizukuAction("${app.label} läuft nur noch, wenn sie offen ist") { BackgroundLock.set(context, app.packageName, true) }
+            })
+        }
     }
+    add(GlassMenuItem("APK teilen", Icons.Rounded.Share) { vm.shareApk(app) })
     if (vm.isInDock(app)) {
         val dockKeys = vm.dock.value.map { it.key }
         val index = dockKeys.indexOf(app.key)

@@ -627,6 +627,7 @@ fun SettingsScreen(
             }
 
             if (shows("system")) item { SystemSettingsContent(vm.controls) }
+            if (shows("vorteile")) item { HearthAdvantages() }
 
             if (shows("general")) item {
                 Section("Suche") {
@@ -1545,6 +1546,9 @@ internal val SettingsCategories = listOf(
         "sperre pin fingerabdruck biometrie ausblenden versteckt privat"),
     SettingsCategory("general", "Allgemein", "Suche, Vibration, Sichern & Wiederherstellen", Icons.Rounded.Settings, Color(0xFF8E8E93),
         "suche suchmaschine vibration standard launcher sichern backup wiederherstellen export import"),
+    // Hearth UI 14.5: what Hearth UI does that One UI and ColorOS don't.
+    SettingsCategory("vorteile", "Warum Hearth UI", "15 Dinge, die One UI und ColorOS nicht können", Icons.Rounded.Star, Color(0xFF34C759),
+        "vorteile warum hearth ui one ui coloros vergleich werbeblocker entrümpeln turbo datenschutz"),
     // Hearth UI 14.1: the phone's own settings, inside Hearth's.
     SettingsCategory("system", "System", "Helligkeit, Töne, WLAN, Bluetooth, Akku, Apps, Sicherheit …", Icons.Rounded.Phone, Color(0xFF5E6C84),
         "system wlan wifi bluetooth mobile daten flugmodus hotspot nfc vpn helligkeit drehen timeout bildschirm lautstärke " +
@@ -1558,7 +1562,7 @@ private val SettingsGroups: List<List<SettingsCategory>> = listOf(
     SettingsCategories.filter { it.id == "design" || it.id == "home" },
     SettingsCategories.filter { it.id == "claude" || it.id == "clawd" || it.id == "glimmer" },
     SettingsCategories.filter { it.id == "privacy" || it.id == "general" },
-    SettingsCategories.filter { it.id == "system" },
+    SettingsCategories.filter { it.id == "system" || it.id == "vorteile" },
 )
 
 /** One UI's settings search, as a glass capsule. */

@@ -513,6 +513,45 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
     fun openAppInfo(app: AppInfo) = repo.openAppInfo(app)
 
+    /**
+     * Shares an app as a file (its APK, and the parts of a split app), through Android's share
+     * sheet – to send it to someone or keep it as a backup.
+     */
+    fun shareApk(app: AppInfo) {
+        val context = getApplication<Application>()
+        viewModelScope.launch {
+            val uris = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    val info = context.packageManager.getApplicationInfo(app.packageName, 0)
+                    val dir = java.io.File(context.cacheDir, "apks").apply {
+                        deleteRecursively()
+                        mkdirs()
+                    }
+                    val name = app.label.replace(Regex("[^A-Za-z0-9äöüÄÖÜß _-]"), "").ifBlank { app.packageName }
+                    val parts = listOf(info.sourceDir) + info.splitSourceDirs.orEmpty().toList()
+                    parts.mapIndexed { i, path ->
+                        val out = java.io.File(dir, if (i == 0) "$name.apk" else "$name-${java.io.File(path).name}")
+                        java.io.File(path).copyTo(out, overwrite = true)
+                        androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.files", out)
+                    }
+                }.getOrNull()
+            }
+            if (uris.isNullOrEmpty()) {
+                runCatching { android.widget.Toast.makeText(context, "APK ließ sich nicht kopieren", android.widget.Toast.LENGTH_SHORT).show() }
+                return@launch
+            }
+            val send = if (uris.size == 1) {
+                Intent(Intent.ACTION_SEND).setType("application/vnd.android.package-archive").putExtra(Intent.EXTRA_STREAM, uris.first())
+            } else {
+                Intent(Intent.ACTION_SEND_MULTIPLE).setType("application/vnd.android.package-archive")
+                    .putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+            }
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val chooser = Intent.createChooser(send, "„${app.label}“ als APK teilen").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            runCatching { context.startActivity(chooser) }
+        }
+    }
+
     /** Runs something through Shizuku and says how it went. */
     fun shizukuAction(done: String, action: suspend () -> Boolean) {
         viewModelScope.launch {

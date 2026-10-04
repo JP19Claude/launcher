@@ -159,6 +159,37 @@ object ShizukuBridge {
         run("settings put global private_dns_specifier ${dns.host} && settings put global private_dns_mode hostname")
     }
 
+    /** The packages installed for this user ([flags] e.g. "-u" for removed ones too). */
+    suspend fun packages(flags: String = ""): Set<String> =
+        output("pm list packages $flags")?.lines().orEmpty()
+            .map { it.trim() }
+            .filter { it.startsWith("package:") }
+            .map { it.removePrefix("package:") }
+            .toSet()
+
+    /** Removes a preinstalled app for this user; it stays on the phone and can come back. */
+    suspend fun removeForUser(packageName: String) = run("pm uninstall -k --user 0 $packageName")
+
+    /** Brings back an app removed with [removeForUser]. */
+    suspend fun restore(packageName: String) = run("cmd package install-existing $packageName")
+
+    /** Takes a permission back from an app (it can ask again). */
+    suspend fun revoke(packageName: String, permission: String) = run("pm revoke $packageName $permission")
+
+    /** Forbids (or allows again) an app to run in the background – saves battery. */
+    suspend fun restrictBackground(packageName: String, restrict: Boolean) = if (restrict) {
+        run("cmd appops set $packageName RUN_ANY_IN_BACKGROUND ignore && (am set-standby-bucket $packageName restricted || true)")
+    } else {
+        run("cmd appops set $packageName RUN_ANY_IN_BACKGROUND allow && (am set-standby-bucket $packageName active || true)")
+    }
+
+    /** Empties the caches of all apps (what each app can download again anyway). */
+    suspend fun trimCaches() = run("pm trim-caches 999G")
+
+    suspend fun putGlobal(key: String, value: String) = run("settings put global $key $value")
+
+    suspend fun putSecure(key: String, value: String) = run("settings put secure $key $value")
+
     suspend fun screenOff() = run("input keyevent 223")
 
     suspend fun reboot() = run("svc power reboot")

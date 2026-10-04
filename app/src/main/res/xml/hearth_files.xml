@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What Hearth hands to other apps: copies of APKs to share ("APK teilen"). -->
+<paths>
+    <cache-path name="apks" path="apks/" />
+</paths>
