@@ -164,6 +164,27 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "14.9",
+            name = "Glimmer bei Nacht",
+            summary = "Der Nachtmodus erreicht Glimmer – und ein geheimes Menü verrät alle Easter Eggs.",
+            sections = listOf(
+                ChangeSection(
+                    "Nachtmodus", Icons.Rounded.Star, Violet,
+                    listOf(
+                        "Glimmer wird im Nachtmodus dunkler: gedämpfte Insel, ruhiges Glas, dezente Fluid-Ränder.",
+                    ),
+                    withGlimmer,
+                ),
+                ChangeSection(
+                    "Geheim", Icons.Rounded.Face, Orange,
+                    listOf(
+                        "Ein verstecktes Menü zeigt, wo sich alle Easter Eggs befinden und welche du schon gefunden hast. Wie man es öffnet? Das bleibt geheim … 🤫",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "14.8",
             name = "Nachtmodus",
             summary = "Ein Nachtmodus für ganz Hearth – und mit Shizuku fürs ganze Handy.",

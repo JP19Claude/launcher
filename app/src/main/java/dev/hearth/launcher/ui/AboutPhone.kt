@@ -54,6 +54,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -266,6 +268,8 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
     var lastTap by remember { mutableLongStateOf(0L) }
     // Hearth UI's own easter egg, five taps on its version – next to ClaudeOS's.
     var hearthEgg by remember { mutableStateOf(false) }
+    // Hidden: holding the "made by" line opens the map of all easter eggs.
+    var eggMap by remember { mutableStateOf(false) }
     var hearthTaps by remember { mutableIntStateOf(0) }
     var hearthLastTap by remember { mutableLongStateOf(0L) }
     val appName = remember { dev.hearth.launcher.data.AppUpdater.appName(context) }
@@ -276,7 +280,7 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
             groups = gatherSpecs(context)
         }
     }
-    BackHandler(enabled = !osEgg && !hearthEgg, onBack = onClose)
+    BackHandler(enabled = !osEgg && !hearthEgg && !eggMap, onBack = onClose)
     val name = remember { phoneName(context) }
 
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF070912), Color(0xFF050506))))) {
@@ -309,6 +313,9 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                     color = Color.White.copy(alpha = 0.6f),
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center,
+                    modifier = Modifier.pointerInput(Unit) {
+                        detectTapGestures(onLongPress = { eggMap = true })
+                    },
                 )
                 Spacer(Modifier.height(18.dp))
             }
@@ -381,6 +388,9 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
         }
         AnimatedVisibility(osEgg, enter = fadeIn(tween(500)), exit = fadeOut(tween(300))) {
             ClaudeOsVersionEgg { osEgg = false }
+        }
+        AnimatedVisibility(eggMap, enter = fadeIn(tween(300)), exit = fadeOut(tween(250))) {
+            EggMap { eggMap = false }
         }
         AnimatedVisibility(hearthEgg, enter = fadeIn(tween(400)), exit = fadeOut(tween(300))) {
             HearthVersionEgg(groups.first().specs.first().value, appName) { hearthEgg = false }
