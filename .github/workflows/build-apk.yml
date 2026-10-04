@@ -48,7 +48,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
-          if gh api "repos/$REPO/git/refs/tags/per-app-releases-done" >/dev/null 2>&1; then
+          # The marker is in the checkout (all tags come along); asking the API can fail now and
+          # then and must not start the whole backfill again.
+          if git rev-parse -q --verify refs/tags/per-app-releases-done >/dev/null || \
+             gh api "repos/$REPO/git/refs/tags/per-app-releases-done" >/dev/null 2>&1; then
             echo "Already done."
             exit 0
           fi
@@ -82,7 +85,7 @@ jobs:
             done
             rm -rf "$dir"
           done
-          gh api -X POST "repos/$REPO/git/refs" -f ref=refs/tags/per-app-releases-done -f sha="$GITHUB_SHA" >/dev/null
+          gh api -X POST "repos/$REPO/git/refs" -f ref=refs/tags/per-app-releases-done -f sha="$GITHUB_SHA" >/dev/null || true
 
       # Each app's own release for this version (updated if the version wasn't raised).
       - name: Per-app releases
