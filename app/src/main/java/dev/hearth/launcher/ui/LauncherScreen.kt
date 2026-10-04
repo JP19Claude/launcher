@@ -180,7 +180,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
     // Night mode: by night the whole of Hearth gets darker and calmer (Auto follows the clock).
     // (Derived, so the minute ticking by doesn't redraw the whole screen – only night changing.)
     val clock = rememberNow()
-    val night by remember { derivedStateOf { storedSettings.nightActive(clock.value.hour) } }
+    val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val night by remember(systemDark) { derivedStateOf { storedSettings.nightActive(clock.value.hour, systemDark) } }
     val settings = remember(storedSettings, night) { if (night) storedSettings.forNight() else storedSettings }
     val library by vm.library.collectAsStateWithLifecycle()
     val assistantOpen by vm.assistantOpen.collectAsStateWithLifecycle()
@@ -218,12 +219,11 @@ fun LauncherScreen(vm: LauncherViewModel) {
     // Night mode reaches Android too (with Shizuku): dark mode and eye comfort follow it.
     // Only a change of night is passed on, so switching them by hand in between stays.
     LaunchedEffect(night, storedSettings.nightSystem) {
-        if (!storedSettings.nightSystem || !dev.hearth.launcher.data.ShizukuBridge.isReady(context)) return@LaunchedEffect
+        if (!storedSettings.nightSystem || storedSettings.nightMode == NightMode.System) return@LaunchedEffect
+        if (!dev.hearth.launcher.data.ShizukuBridge.isReady(context)) return@LaunchedEffect
         val prefs = context.getSharedPreferences("hearth_night", Context.MODE_PRIVATE)
         if (prefs.getBoolean("applied", false) == night) return@LaunchedEffect
-        val v = if (night) 1 else 0
         dev.hearth.launcher.data.ShizukuBridge.setDarkMode(night)
-        dev.hearth.launcher.data.ShizukuBridge.run("settings put system blue_light_filter $v; settings put secure night_display_activated $v")
         prefs.edit().putBoolean("applied", night).apply()
     }
     val storagePermission = rememberLauncherForActivityResult(
@@ -1014,15 +1014,6 @@ fun LauncherScreen(vm: LauncherViewModel) {
 
             FluidWaveLayer(fluidWaves)
 
-            // Night mode: a warm, dim veil over everything of Hearth (it takes no touches).
-            if (night) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFF1A0C00).copy(alpha = 0.22f)),
-                )
-            }
-
             flyApp?.let { (app, shot, island) ->
                 GlimmerFlyIn(
                     app = app,
@@ -1142,8 +1133,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         HubTile(if (torch) "Licht aus" else "Taschen-\nlampe", Icons.Rounded.Star, Color(0xFFFFCC00)) {
                             vm.controls.setTorch(!torch)
                         },
-                        HubTile(if (storedSettings.nightMode == NightMode.Off) "Nachtmodus" else "Nachtmodus\naus", Icons.Rounded.DateRange, Color(0xFF8E6BFF)) {
-                            vm.updateSettings { it.copy(nightMode = if (it.nightMode == NightMode.Off) NightMode.On else NightMode.Off) }
+                        HubTile(if (night) "Dunkelmodus\naus" else "Dunkelmodus", Icons.Rounded.DateRange, Color(0xFF8E6BFF)) {
+                            vm.updateSettings { it.copy(nightMode = if (night) NightMode.Off else NightMode.On) }
                         },
                         HubTile("Apps\nauswählen", Icons.Rounded.CheckCircle, Color(0xFF64D2FF)) {
                             selecting = true

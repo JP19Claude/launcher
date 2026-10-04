@@ -40,10 +40,11 @@ enum class FluidRims(val label: String) {
     Vivid("Lebendig"),
 }
 
-/** Hearth UI's night mode: everything darker and warmer – always, never or by the clock. */
+/** Hearth UI's dark mode: darker glass – always, never, like Android or by the clock. */
 enum class NightMode(val label: String) {
     Off("Aus"),
     On("An"),
+    System("Wie Android"),
     Auto("Nach Uhrzeit"),
 }
 
@@ -515,6 +516,8 @@ data class LauncherSettings(
     val nightFrom: Int = 21,
     val nightTo: Int = 7,
     val nightSystem: Boolean = true,
+    /** Dark mode right now: the glass is tinted dark (set while running, never saved). */
+    val darkGlass: Boolean = false,
     /** A green or orange dot in Glimmer while an app uses the camera or the microphone. */
     val glimmerPrivacy: Boolean = true,
     /** 85 % of the size, and unfolded content kept below the camera so it never covers any. */
@@ -1123,17 +1126,12 @@ class SettingsRepository(context: Context) {
 }
 
 /** Is it night for Hearth at [hour]? */
-fun LauncherSettings.nightActive(hour: Int): Boolean = when (nightMode) {
+fun LauncherSettings.nightActive(hour: Int, systemDark: Boolean = false): Boolean = when (nightMode) {
     NightMode.Off -> false
     NightMode.On -> true
+    NightMode.System -> systemDark
     NightMode.Auto -> if (nightFrom <= nightTo) hour in nightFrom until nightTo else hour >= nightFrom || hour < nightTo
 }
 
-/** The look at night: a darker wallpaper, dark calm glass, quiet fluid rims. */
-fun LauncherSettings.forNight(): LauncherSettings = copy(
-    dimWallpaper = maxOf(dimWallpaper, 0.5f),
-    glassTint = GlassTint.Dark,
-    glassTintStrength = maxOf(glassTintStrength, 1.3f),
-    glassSpecular = glassSpecular * 0.6f,
-    fluidRims = FluidRims.Calm,
-)
+/** The dark mode look: only the glass gets darker – dock, widgets, menus, search bar. */
+fun LauncherSettings.forNight(): LauncherSettings = copy(darkGlass = true)

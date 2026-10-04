@@ -341,6 +341,7 @@ fun AppIconImage(app: AppInfo, size: Dp, modifier: Modifier = Modifier) {
             refraction = size * 0.2f,
             blur = 10.dp,
             modifier = modifier.size(size),
+            darkens = false,
         ) {
             Image(
                 bitmap = app.icon,

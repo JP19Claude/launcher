@@ -37,6 +37,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.FilterQuality
@@ -97,6 +98,8 @@ data class GlassStyle(
     val specular: Float = 1f,
     val tint: Color = Color.White.copy(alpha = 0.04f),
     val interactive: Boolean = true,
+    /** Dark mode: every glass surface is tinted dark, like a dark widget. */
+    val dark: Boolean = false,
     /** Smallest glass (dp) that gets the lens shader; "Glas-Qualität" in the settings. */
     val lensMinDp: Float = 40f,
 ) {
@@ -108,12 +111,16 @@ data class GlassStyle(
             specular = s.glassSpecular,
             tint = s.glassTint.color.copy(alpha = (s.glassTint.color.alpha * s.glassTintStrength).coerceIn(0f, 1f)),
             interactive = s.glassInteractive,
+            dark = s.darkGlass,
             lensMinDp = s.glassQuality.lensMinDp,
         )
     }
 }
 
 val LocalGlassStyle = compositionLocalOf { GlassStyle() }
+
+/** The glass in dark mode: a deep night blue that still lets the wallpaper through a little. */
+val DarkGlassTint = Color(0xFF15122B).copy(alpha = 0.68f)
 
 /** Light from the top left, slightly tilted, when the phone lies still or motion is off. */
 private val DefaultLight = Offset(-0.45f, -0.89f)
@@ -393,6 +400,8 @@ fun LiquidGlass(
     interactive: Boolean = false,
     /** One UI 10 Fluid: Claude's colors along the rim (off where the caller draws its own). */
     fluidEdge: Boolean = true,
+    /** Dark mode tints this glass dark (app icons stay as they are). */
+    darkens: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val fluid = LocalSettings.current.fluidDesign
@@ -450,7 +459,8 @@ fun LiquidGlass(
     val scope = rememberCoroutineScope()
     val maxPullPx = with(density) { 9.dp.toPx() }
 
-    val baseTint = tint ?: style.tint
+    // Dark mode: deep night-blue glass under whatever tint the caller asks for.
+    val baseTint = if (style.dark && darkens) tint?.compositeOver(DarkGlassTint) ?: DarkGlassTint else tint ?: style.tint
     val shaderActive = backdrop != null && glassEffect != null
     // Without the wallpaper the glass needs more body to read as a surface.
     val fill = if (backdrop != null) baseTint else baseTint.copy(alpha = (baseTint.alpha + 0.14f).coerceAtMost(1f))

@@ -424,9 +424,9 @@ fun SettingsScreen(
 
             if (shows("design")) item {
                 // Hearth UI 14.8: night mode for the whole of Hearth, and with Shizuku for Android.
-                Section("Nachtmodus") {
+                Section("Dunkelmodus") {
                     ChoiceRow(
-                        label = "Nachtmodus",
+                        label = "Dunkelmodus",
                         options = NightMode.entries,
                         selected = s.nightMode,
                         optionLabel = { it.label },
@@ -448,12 +448,14 @@ fun SettingsScreen(
                             onSelect = { h -> update { it.copy(nightTo = h) } },
                         )
                     }
-                    SwitchRow(
-                        label = "Auch Android dunkel",
-                        description = "Mit Shizuku schalten Dunkelmodus und Augenkomfort (Blaulichtfilter) im ganzen Handy mit",
-                        checked = s.nightSystem,
-                    ) { v -> update { it.copy(nightSystem = v) } }
-                    Note("Nachts wird Hearth dunkler und wärmer: dunkleres Hintergrundbild, dunkles ruhiges Glas, gedämpfte Farben – auf Startbildschirm, Drawer, Finder und in den Einstellungen.")
+                    if (s.nightMode != NightMode.System) {
+                        SwitchRow(
+                            label = "Android mitschalten",
+                            description = "Mit Shizuku schaltet Androids Dunkelmodus im ganzen Handy mit",
+                            checked = s.nightSystem,
+                        ) { v -> update { it.copy(nightSystem = v) } }
+                    }
+                    Note("Im Dunkelmodus wird das Glas dunkel – Dock, Widgets, Menüs, Suchleiste, Ordner und Glimmer. Hintergrundbild und App-Icons bleiben, wie sie sind.")
                 }
             }
 
@@ -708,7 +710,7 @@ fun SettingsScreen(
                         description = "Bildschirm aus, Neustart und Ausschalten – mit Shizuku",
                         onClick = { secret = SecretMenu.Power },
                     )
-                    Note("Das Hearth-Menü hat alles griffbereit: Finder, Widgets, Nachtmodus, Taschenlampe, Ein/Aus … Es öffnet sich per Doppeltippen (Startbildschirm → Doppeltippen → „Hearth-Menü“), über „Hearth-Menü“ in der Bearbeiten-Leiste oder lange drücken auf den Startbildschirm.")
+                    Note("Das Hearth-Menü hat alles griffbereit: Finder, Widgets, Dunkelmodus, Taschenlampe, Ein/Aus … Es öffnet sich per Doppeltippen (Startbildschirm → Doppeltippen → „Hearth-Menü“), über „Hearth-Menü“ in der Bearbeiten-Leiste oder lange drücken auf den Startbildschirm.")
                     if (HearthLabs.unlocked) {
                         RowDivider()
                         ActionRow(

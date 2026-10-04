@@ -17,7 +17,7 @@ import dev.hearth.launcher.data.nightActive
 import kotlinx.coroutines.delay
 import java.time.LocalTime
 
-/** Is it night mode right now? Looks at the clock once a minute. */
+/** Is dark mode on right now? Looks at the clock once a minute (and at Android's theme). */
 @Composable
 fun rememberNight(settings: LauncherSettings): Boolean {
     var hour by remember { mutableIntStateOf(LocalTime.now().hour) }
@@ -27,7 +27,7 @@ fun rememberNight(settings: LauncherSettings): Boolean {
             hour = LocalTime.now().hour
         }
     }
-    return settings.nightActive(hour)
+    return settings.nightActive(hour, androidx.compose.foundation.isSystemInDarkTheme())
 }
 
 /**

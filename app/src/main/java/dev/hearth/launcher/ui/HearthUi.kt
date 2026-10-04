@@ -169,6 +169,23 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "15.1",
+            name = "Dunkelmodus",
+            summary = "Der Nachtmodus wird zum Dunkelmodus: dunkles Glas überall.",
+            sections = listOf(
+                ChangeSection(
+                    "Dunkelmodus", Icons.Rounded.Star, Violet,
+                    listOf(
+                        "Der Nachtmodus heißt jetzt Dunkelmodus (Design → Dunkelmodus): An, Aus, wie Android oder nach Uhrzeit.",
+                        "Im Dunkelmodus wird das Glas dunkel wie ein dunkles Widget – Dock, Widgets, Menüs (auch die drei Punkte im Drawer), Suchleiste, Ordner, Knöpfe und Glimmer.",
+                        "Hintergrundbild und App-Icons bleiben, wie sie sind; kein warmer Schleier mehr über dem Bildschirm.",
+                        "„Android mitschalten“ schaltet mit Shizuku Androids Dunkelmodus mit.",
+                    ),
+                    withGlimmer,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "15.0",
             name = "Menüs & Geheimnisse",
             summary = "Viel mehr Menüs überall – und versteckte Menüs, die man erst finden muss.",
