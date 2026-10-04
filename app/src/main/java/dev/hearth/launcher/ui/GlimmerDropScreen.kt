@@ -6,6 +6,14 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.runtime.produceState
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.Image
+import android.graphics.Bitmap
 import android.provider.ContactsContract
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -285,15 +293,37 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
                     }
                     DropChip("Text", Modifier.weight(1f)) { writing = true }
                 }
-                files.forEach { f ->
-                    SharedRow(
-                        icon = if (f.mime.startsWith("image/")) "🖼" else if (f.mime.startsWith("video/")) "🎬" else "📄",
-                        title = f.name,
-                        detail = sizeText(f.size),
-                    ) { GlimmerDrop.removeFile(f) }
+                // A preview of everything that goes: pictures of photos and videos, link cards, text.
+                PreviewGrid(files.size) { i, mod ->
+                    val f = files[i]
+                    PreviewTile(rememberThumb(f.uri), f.mime, f.name, mod, onRemove = { GlimmerDrop.removeFile(f) })
                 }
                 texts.forEach { t ->
-                    SharedRow(icon = if (GlimmerDrop.isLink(t)) "🔗" else "💬", title = t, detail = null) { GlimmerDrop.removeText(t) }
+                    Box(Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+                        TextPreview(t, onRemove = { GlimmerDrop.removeText(t) })
+                    }
+                }
+                if (files.isNotEmpty() || texts.isNotEmpty()) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.White.copy(alpha = 0.06f))
+                            .clickable {
+                                onPicking()
+                                if (!GlimmerDrop.quickShare(context)) hint = "Quick Share ist nicht da"
+                            }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("⚡", fontSize = 18.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Über Quick Share senden", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Für Handys ohne Glimmer", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
+                        }
+                    }
                 }
                 if (linked) {
                     Text(
@@ -598,6 +628,18 @@ private fun ExchangeCard(ex: GlimmerDrop.Exchange) {
                 Text("${ex.peer} möchte teilen", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Text(offer.summary(), color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
                 offer.profile?.let { Spacer(Modifier.height(10.dp)); ContactCard(it, saveable = false) }
+                // What comes, before saying yes: their photos and videos small, links and text.
+                if (offer.files.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    PreviewGrid(offer.files.size, padding = 0.dp) { i, mod ->
+                        val f = offer.files[i]
+                        PreviewTile(ex.thumbs[i], f.mime, f.name, mod)
+                    }
+                }
+                offer.texts.forEach { t ->
+                    Spacer(Modifier.height(6.dp))
+                    TextPreview(t)
+                }
                 Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     DropButton("Ablehnen", Color.White.copy(alpha = 0.14f), Modifier.weight(1f)) { GlimmerDrop.answer(false) }
@@ -612,22 +654,19 @@ private fun ExchangeCard(ex: GlimmerDrop.Exchange) {
                 Text("Von ${ex.peer} empfangen", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 ex.received.profile?.let { Spacer(Modifier.height(10.dp)); ContactCard(it, saveable = true) }
                 ex.received.texts.forEach { t -> ReceivedText(t) }
-                ex.received.files.forEach { f ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Color.White.copy(alpha = 0.06f))
-                            .clickable(enabled = f.uri != null) { f.uri?.let { open(context, it, f.mime) } }
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(if (f.mime.startsWith("image/")) "🖼" else if (f.mime.startsWith("video/")) "🎬" else "📄", fontSize = 18.sp)
-                        Spacer(Modifier.width(10.dp))
-                        Text(f.name, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        if (f.uri != null) Text("Öffnen", color = DropBlue, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                if (ex.received.files.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    PreviewGrid(ex.received.files.size, padding = 0.dp) { i, mod ->
+                        val f = ex.received.files[i]
+                        PreviewTile(
+                            rememberThumb(f.uri) ?: ex.thumbs[f.index],
+                            f.mime,
+                            f.name,
+                            mod,
+                            onClick = f.uri?.let { uri -> { open(context, uri, f.mime) } },
+                        )
                     }
+                    Text("Tippen zum Öffnen", color = Color.White.copy(alpha = 0.45f), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                 }
             }
             GlimmerDrop.Step.Declined -> Text("Abgelehnt", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
@@ -714,7 +753,7 @@ private fun ReceivedText(text: String) {
             .background(Color.White.copy(alpha = 0.06f))
             .padding(12.dp),
     ) {
-        Text((if (link) "🔗  " else "💬  ") + text, color = Color.White, fontSize = 14.sp, maxLines = 6, overflow = TextOverflow.Ellipsis)
+        PreviewContent(text)
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             if (link) {
                 Text(
@@ -1041,4 +1080,141 @@ internal fun GlimmerDropSettings() {
         if (v && !GlimmerDrop.hasPermissions(context)) ask.launch(GlimmerDrop.neededPermissions())
     }
     Note("Funktioniert zwischen Handys mit Hearth UI oder nur der Glimmer-App. Auch aus jeder App: Teilen → „Glimmer Drop“. Empfangenes landet in der Galerie bzw. unter Downloads im Ordner „Glimmer Drop“.")
+}
+
+// ---------------------------------------------------------------------------------------------
+// Previews
+// ---------------------------------------------------------------------------------------------
+
+/** A photo's or video's small picture, loaded once. */
+@Composable
+private fun rememberThumb(uri: Uri?): Bitmap? {
+    val context = LocalContext.current
+    val bitmap by produceState<Bitmap?>(null, uri) {
+        value = uri?.let { withContext(Dispatchers.IO) { GlimmerDrop.thumbnail(context, it, 320) } }
+    }
+    return bitmap
+}
+
+@Composable
+private fun PreviewGrid(count: Int, padding: androidx.compose.ui.unit.Dp = 12.dp, tile: @Composable (Int, Modifier) -> Unit) {
+    (0 until count).chunked(3).forEach { row ->
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = padding, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            row.forEach { i -> tile(i, Modifier.weight(1f)) }
+            repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+        }
+    }
+}
+
+@Composable
+private fun PreviewTile(
+    bitmap: Bitmap?,
+    mime: String,
+    name: String,
+    modifier: Modifier,
+    onClick: (() -> Unit)? = null,
+    onRemove: (() -> Unit)? = null,
+) {
+    Box(
+        modifier
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White.copy(alpha = 0.07f))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+    ) {
+        if (bitmap != null) {
+            Image(
+                bitmap.asImageBitmap(),
+                contentDescription = name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            Column(
+                Modifier.fillMaxSize().padding(8.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(if (mime.startsWith("image/")) "🖼" else if (mime.startsWith("video/")) "🎬" else if (mime.startsWith("audio/")) "🎵" else "📄", fontSize = 26.sp)
+                Spacer(Modifier.height(4.dp))
+                Text(name, color = Color.White.copy(alpha = 0.75f), fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+            }
+        }
+        if (mime.startsWith("video/") && bitmap != null) {
+            Box(
+                Modifier.align(Alignment.Center).size(34.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("▶", color = Color.White, fontSize = 15.sp)
+            }
+        }
+        if (onRemove != null) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .clickable(onClick = onRemove),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.Close, contentDescription = "Entfernen", tint = Color.White, modifier = Modifier.size(16.dp))
+            }
+        }
+    }
+}
+
+/** A link as a card (its site big, the address small), or a text as a quote. */
+@Composable
+private fun PreviewContent(text: String) {
+    val t = text.trim()
+    if (GlimmerDrop.isLink(t)) {
+        val url = if (t.startsWith("www.")) "https://$t" else t
+        val host = runCatching { Uri.parse(url).host }.getOrNull()?.removePrefix("www.").orEmpty()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Brush.linearGradient(listOf(DropBlue, Color(0xFF8E6BFF)))),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(host.take(1).uppercase().ifBlank { "🔗" }, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(host.ifBlank { "Link" }, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(t, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    } else {
+        Row {
+            Box(Modifier.width(3.dp).height(40.dp).clip(RoundedCornerShape(2.dp)).background(DropBlue))
+            Spacer(Modifier.width(10.dp))
+            Text(t, color = Color.White, fontSize = 14.sp, maxLines = 6, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+private fun TextPreview(text: String, onRemove: (() -> Unit)? = null) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White.copy(alpha = 0.06f))
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.weight(1f)) { PreviewContent(text) }
+        if (onRemove != null) {
+            Box(
+                Modifier.size(30.dp).clip(CircleShape).clickable(onClick = onRemove),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.Close, contentDescription = "Entfernen", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
+            }
+        }
+    }
 }

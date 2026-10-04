@@ -1,6 +1,7 @@
-Hearth UI 15.8 auf ClaudeOS 3.1 · Glimmer 15.8
+Hearth UI 15.9 auf ClaudeOS 3.1 · Glimmer 15.9
 
-🛠 Glimmer Drop verbindet
-• Behoben: „konnte nicht suchen (8034)“ – Googles Nearby braucht zum Suchen den Standort; Glimmer Drop fragt jetzt danach (ungefähr reicht)
-• „App-Einstellungen“-Knopf, falls eine Erlaubnis abgelehnt wurde
-• Verständliche Meldungen statt Fehlercodes
+✨ Glimmer Drop mit Vorschau
+• Zuverlässiger: Spürt nur ein Handy die Berührung, ruft es das andere auf – beide gehen auf; Verbinden mit mehreren Versuchen von beiden Seiten
+• Vorschau von allem: Fotos/Videos als Bilder, Links als Karte, Text als Ausschnitt – schon vor „Annehmen“
+• Empfangenes als Bilder-Raster zum Antippen
+• Quick-Share-Technik (Nearby Connections) – plus „Über Quick Share senden“ für Handys ohne Glimmer

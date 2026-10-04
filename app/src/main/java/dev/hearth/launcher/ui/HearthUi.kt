@@ -169,6 +169,38 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "15.9",
+            name = "Glimmer Drop mit Vorschau",
+            summary = "Beide Handys reagieren zuverlässig – und du siehst immer, was geteilt wird.",
+            sections = listOf(
+                ChangeSection(
+                    "Zuverlässiger", Icons.Rounded.CheckCircle, Green,
+                    listOf(
+                        "Spürt nur eins der beiden Handys die Berührung, ruft es das andere über sein Glimmer-Signal auf – beide gehen auf.",
+                        "Der Verbindungsaufbau probiert es von beiden Seiten und bis zu dreimal neu, statt stehen zu bleiben.",
+                    ),
+                    withGlimmer,
+                ),
+                ChangeSection(
+                    "Vorschau", Icons.Rounded.Search, Blue,
+                    listOf(
+                        "Alles Geteilte mit Vorschau: Fotos und Videos als kleine Bilder, Links als Karte mit der Website, Text als Ausschnitt.",
+                        "Schon vor „Annehmen“ siehst du die Fotos und Videos, die kommen.",
+                        "Empfangenes als Bilder-Raster – tippen zum Öffnen.",
+                    ),
+                    withGlimmer,
+                ),
+                ChangeSection(
+                    "Quick Share", Icons.Rounded.Favorite, Violet,
+                    listOf(
+                        "Glimmer Drop überträgt mit derselben Google-Technik wie Quick Share (Nearby Connections) – direkt, schnell, ohne Internet.",
+                        "Neu: „Über Quick Share senden“ – für Handys ohne Glimmer, mit dem schon Ausgewählten.",
+                    ),
+                    withGlimmer,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "15.8",
             name = "Glimmer Drop verbindet",
             summary = "Die Handys erkennen sich – jetzt verbinden sie sich auch.",

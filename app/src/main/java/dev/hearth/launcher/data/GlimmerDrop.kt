@@ -129,7 +129,7 @@ object GlimmerDrop {
         }
     }
 
-    data class ReceivedFile(val name: String, val mime: String, val uri: Uri?)
+    data class ReceivedFile(val name: String, val mime: String, val uri: Uri?, val index: Int = -1)
 
     data class Received(
         val profile: Profile? = null,
@@ -151,6 +151,8 @@ object GlimmerDrop {
         val outgoing: Step = Step.None,
         val outProgress: Float = 0f,
         val received: Received = Received(),
+        /** Small pictures of their photos and videos (by place in the offer), before saying yes. */
+        val thumbs: Map<Int, android.graphics.Bitmap> = emptyMap(),
     )
 
     sealed interface Phase {
@@ -406,6 +408,10 @@ object GlimmerDrop {
         incomingMeta.clear()
         incomingDone.clear()
         incomingProgress.clear()
+        incomingIndex.clear()
+        fallback?.cancel()
+        fallback = null
+        tries = 0
     }
 
     private fun fail(message: String) {
@@ -427,12 +433,41 @@ object GlimmerDrop {
         }
     }
 
-    /** The phone held against this one is found: the one with the smaller token calls. */
+    private var fallback: kotlinx.coroutines.Job? = null
+    private var tries = 0
+
+    /**
+     * The phone held against this one is found: the one with the smaller token calls at once;
+     * the other one calls itself a moment later if nothing came (the first might not have felt
+     * the touch, or its call got lost).
+     */
     private fun tryTouchConnect() {
         val t = touchToken ?: return
-        if (_phase.value != Phase.Searching) return
+        if (_phase.value != Phase.Searching || connectedId != null) return
         val peer = _nearby.value.firstOrNull { it.token == t } ?: return
-        if (token < peer.token) connect(peer)
+        if (token < peer.token) {
+            connect(peer)
+        } else if (fallback?.isActive != true) {
+            fallback = scope.launch {
+                kotlinx.coroutines.delay(2_500)
+                if (_phase.value == Phase.Searching && connectedId == null && touchToken == t) {
+                    _nearby.value.firstOrNull { it.token == t }?.let { connect(it) }
+                }
+            }
+        }
+    }
+
+    /** A call that didn't go through: again, up to three times. */
+    private fun retryTouch() {
+        if (touchToken == null || tries >= 3) return
+        tries++
+        scope.launch {
+            kotlinx.coroutines.delay(800L * tries)
+            if (sessionOpen && connectedId == null) {
+                val t = touchToken ?: return@launch
+                _nearby.value.firstOrNull { it.token == t }?.let { connect(it) }
+            }
+        }
     }
 
     /** Connect to a phone nearby (a touch, or a tap in the list). */
@@ -446,6 +481,7 @@ object GlimmerDrop {
                 val code = (e as? com.google.android.gms.common.api.ApiException)?.statusCode
                 if (code != ConnectionsStatusCodes.STATUS_ALREADY_CONNECTED_TO_ENDPOINT && connectedId == null && sessionOpen) {
                     _phase.value = Phase.Searching
+                    retryTouch()
                 }
             }
     }
@@ -475,6 +511,7 @@ object GlimmerDrop {
             } else if (sessionOpen) {
                 _exchange.value = null
                 _phase.value = Phase.Searching
+                retryTouch()
             }
         }
 
@@ -518,6 +555,42 @@ object GlimmerDrop {
         })
         sendBytes(endpointId, o)
         _exchange.value = (_exchange.value ?: Exchange(peer = "")).copy(outgoing = if (offer.isEmpty) Step.None else Step.Asking)
+        // Then a small picture of each photo and video, so the other side sees what comes.
+        val list = files.value
+        scope.launch {
+            list.forEachIndexed { i, f ->
+                if (!f.mime.startsWith("image/") && !f.mime.startsWith("video/")) return@forEachIndexed
+                val bytes = withContext(Dispatchers.IO) { thumbnailBytes(context, f.uri) } ?: return@forEachIndexed
+                if (connectedId != endpointId) return@launch
+                sendBytes(
+                    endpointId,
+                    JSONObject().put("t", "thumb").put("i", i).put("d", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)),
+                )
+            }
+        }
+    }
+
+    /** A small picture of a photo or video (Android's own thumbnail, else the decoded image). */
+    fun thumbnail(context: Context, uri: Uri, size: Int): android.graphics.Bitmap? = runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            context.contentResolver.loadThumbnail(uri, android.util.Size(size, size), null)
+        } else {
+            android.graphics.ImageDecoder.decodeBitmap(android.graphics.ImageDecoder.createSource(context.contentResolver, uri)) { decoder, info, _ ->
+                val scale = size.toFloat() / maxOf(info.size.width, info.size.height).coerceAtLeast(1)
+                if (scale < 1f) decoder.setTargetSize((info.size.width * scale).toInt().coerceAtLeast(1), (info.size.height * scale).toInt().coerceAtLeast(1))
+            }
+        }
+    }.getOrNull()
+
+    /** The thumbnail as a small JPEG that fits into one message. */
+    private fun thumbnailBytes(context: Context, uri: Uri): ByteArray? {
+        val bitmap = thumbnail(context, uri, 220) ?: return null
+        for (quality in listOf(70, 50, 35)) {
+            val out = java.io.ByteArrayOutputStream()
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, out)
+            if (out.size() < 20_000) return out.toByteArray()
+        }
+        return null
     }
 
     /** My answer to what they share. */
@@ -588,6 +661,7 @@ object GlimmerDrop {
     private val outgoingIds = HashMap<Long, Pair<Long, Long>>()
     private val incomingFiles = HashMap<Long, Payload>()
     private val incomingMeta = HashMap<Long, FileInfo>()
+    private val incomingIndex = HashMap<Long, Int>()
     private val incomingDone = HashSet<Long>()
     private val incomingProgress = HashMap<Long, Pair<Long, Long>>()
     private var lastIslandProgress = -1
@@ -636,7 +710,14 @@ object GlimmerDrop {
             "file" -> {
                 val id = o.optLong("id")
                 incomingMeta[id] = FileInfo(o.optString("name"), o.optString("mime"), o.optLong("size"))
+                incomingIndex[id] = o.optInt("i", -1)
                 finishFile(id)
+            }
+            "thumb" -> {
+                val bytes = runCatching { android.util.Base64.decode(o.optString("d"), android.util.Base64.NO_WRAP) }.getOrNull() ?: return
+                val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return
+                val now = _exchange.value ?: return
+                _exchange.value = now.copy(thumbs = now.thumbs + (o.optInt("i") to bitmap))
             }
         }
     }
@@ -644,11 +725,11 @@ object GlimmerDrop {
     private fun sendFiles(endpointId: String, list: List<OutFile>) {
         val context = app ?: return
         val c = client ?: return
-        list.forEach { f ->
-            val pfd = runCatching { context.contentResolver.openFileDescriptor(f.uri, "r") }.getOrNull() ?: return@forEach
+        list.forEachIndexed { i, f ->
+            val pfd = runCatching { context.contentResolver.openFileDescriptor(f.uri, "r") }.getOrNull() ?: return@forEachIndexed
             val payload = Payload.fromFile(pfd)
             outgoingIds[payload.id] = 0L to f.size.coerceAtLeast(1L)
-            sendBytes(endpointId, JSONObject().put("t", "file").put("id", payload.id).put("name", f.name).put("mime", f.mime).put("size", f.size))
+            sendBytes(endpointId, JSONObject().put("t", "file").put("id", payload.id).put("i", i).put("name", f.name).put("mime", f.mime).put("size", f.size))
             c.sendPayload(endpointId, payload)
         }
         if (outgoingIds.isEmpty()) _exchange.value = _exchange.value?.copy(outgoing = Step.Done, outProgress = 1f)
@@ -663,7 +744,7 @@ object GlimmerDrop {
         scope.launch {
             val uri = withContext(Dispatchers.IO) { save(context, meta, payload) }
             val ex = _exchange.value ?: return@launch
-            val got = ex.received.files + ReceivedFile(meta.name, meta.mime, uri)
+            val got = ex.received.files + ReceivedFile(meta.name, meta.mime, uri, incomingIndex[id] ?: -1)
             val expected = ex.offer?.files?.size ?: got.size
             val finished = got.size >= expected
             _exchange.value = ex.copy(
@@ -737,6 +818,48 @@ object GlimmerDrop {
             }.getOrNull()
         }
         files.value = (files.value + added).distinctBy { it.uri }
+    }
+
+    /**
+     * Hands what's chosen to Quick Share (Samsung's or Google's) – for phones without Glimmer.
+     * Falls back to Android's share sheet where there's no Quick Share.
+     */
+    fun quickShare(context: Context): Boolean {
+        val list = files.value
+        val text = texts.value.joinToString("\n")
+        if (list.isEmpty() && text.isBlank()) return false
+        val intent = when {
+            list.isEmpty() -> Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+            list.size == 1 -> Intent(Intent.ACTION_SEND).setType(list[0].mime).putExtra(Intent.EXTRA_STREAM, list[0].uri)
+            else -> Intent(Intent.ACTION_SEND_MULTIPLE)
+                .setType(if (list.all { it.mime.startsWith("image/") }) "image/*" else "*/*")
+                .putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(list.map { it.uri }))
+        }
+        if (list.isNotEmpty()) {
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            intent.clipData = android.content.ClipData.newRawUri("", list[0].uri).apply {
+                list.drop(1).forEach { addItem(android.content.ClipData.Item(it.uri)) }
+            }
+            if (text.isNotBlank()) intent.putExtra(Intent.EXTRA_TEXT, text)
+        }
+        val pm = context.packageManager
+        @Suppress("DEPRECATION")
+        val handlers = runCatching { pm.queryIntentActivities(intent, 0) }.getOrDefault(emptyList())
+        val quick = handlers.firstOrNull { info ->
+            val label = runCatching { info.loadLabel(pm).toString() }.getOrDefault("")
+            info.activityInfo.packageName == "com.samsung.android.app.sharelive" ||
+                label.contains("Quick Share", ignoreCase = true) ||
+                label.contains("Nearby Share", ignoreCase = true)
+        }
+        val launch = if (quick != null) {
+            Intent(intent).setClassName(quick.activityInfo.packageName, quick.activityInfo.name)
+        } else {
+            Intent.createChooser(intent, "Teilen")
+        }
+        return runCatching {
+            context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            true
+        }.getOrDefault(false)
     }
 
     fun removeFile(file: OutFile) {
@@ -828,7 +951,6 @@ object GlimmerDrop {
             _signal.value = Signal(problem = "Dieses Handy kann kein Bluetooth-Signal senden")
             return
         }
-        val tokenBytes = ByteArray(4) { i -> token.substring(i * 2, i * 2 + 2).toInt(16).toByte() }
         _signal.value = Signal()
         val adCallback = object : AdvertiseCallback() {
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
@@ -839,22 +961,7 @@ object GlimmerDrop {
                 _signal.value = _signal.value.copy(sending = false, problem = "Senden geht nicht (Fehler $errorCode)")
             }
         }
-        runCatching {
-            advertiser.startAdvertising(
-                AdvertiseSettings.Builder()
-                    .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
-                    .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_ULTRA_LOW)
-                    .setConnectable(false)
-                    .build(),
-                AdvertiseData.Builder()
-                    .setIncludeDeviceName(false)
-                    .addServiceUuid(BEACON)
-                    .addServiceData(BEACON, tokenBytes)
-                    .build(),
-                adCallback,
-            )
-            advertising = adCallback
-        }
+        advertiseWith(advertiser, adCallback)
         val scanCallback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) = onBeacon(result)
             override fun onBatchScanResults(results: MutableList<ScanResult>) = results.forEach { onBeacon(it) }
@@ -877,6 +984,45 @@ object GlimmerDrop {
         }
     }
 
+    private fun tokenBytes(t: String): ByteArray = ByteArray(4) { i -> t.substring(i * 2, i * 2 + 2).toInt(16).toByte() }
+
+    /**
+     * The beacon: my token, and – while Glimmer Drop is open with a phone held against this
+     * one – that phone's token too. That calls it: it opens as well, even if it didn't feel
+     * the touch itself.
+     */
+    @SuppressLint("MissingPermission")
+    private fun advertiseWith(advertiser: android.bluetooth.le.BluetoothLeAdvertiser, callback: AdvertiseCallback) {
+        val target = touchToken?.takeIf { sessionOpen }
+        val data = tokenBytes(token) + (target?.let { tokenBytes(it) } ?: ByteArray(4))
+        runCatching {
+            advertiser.startAdvertising(
+                AdvertiseSettings.Builder()
+                    .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+                    .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_ULTRA_LOW)
+                    .setConnectable(false)
+                    .build(),
+                AdvertiseData.Builder()
+                    .setIncludeDeviceName(false)
+                    .addServiceUuid(BEACON)
+                    .addServiceData(BEACON, data)
+                    .build(),
+                callback,
+            )
+            advertising = callback
+        }
+    }
+
+    /** The phone to call changed: send the beacon anew. */
+    @SuppressLint("MissingPermission")
+    private fun refreshAdvert() {
+        val context = app ?: return
+        val advertiser = context.getSystemService(BluetoothManager::class.java)?.adapter?.bluetoothLeAdvertiser ?: return
+        val callback = advertising ?: return
+        runCatching { advertiser.stopAdvertising(callback) }
+        advertiseWith(advertiser, callback)
+    }
+
     @SuppressLint("MissingPermission")
     private fun stopBeacon() {
         val context = app ?: return
@@ -892,6 +1038,9 @@ object GlimmerDrop {
         if (data.size < 4) return
         val peer = data.take(4).joinToString("") { String.format(Locale.ROOT, "%02x", it.toInt() and 0xff) }
         if (peer == token) return
+        // The other phone calls this one (it felt the touch): answer even if this one didn't.
+        val target = if (data.size >= 8) data.drop(4).take(4).joinToString("") { String.format(Locale.ROOT, "%02x", it.toInt() and 0xff) } else null
+        val called = target == token && result.rssi > -85
         val list = rssi.getOrPut(peer) { ArrayDeque() }
         list.addLast(result.rssi)
         while (list.size > 3) list.removeFirst()
@@ -899,12 +1048,14 @@ object GlimmerDrop {
         _signal.value = _signal.value.copy(strongest = strongest.toInt())
         // -90 dBm (far) … TOUCH_RSSI (touching) as 0 … 1.
         _closeness.value = ((strongest + 90.0) / (TOUCH_RSSI + 90.0)).toFloat().coerceIn(0f, 1f)
-        val touching = list.size >= 2 && list.average() >= TOUCH_RSSI
+        val touching = called || (list.size >= 2 && list.average() >= TOUCH_RSSI)
         if (!touching) return
         if (sessionOpen) {
             if (touchToken != peer) {
                 touchToken = peer
+                tries = 0
                 _island.tryEmit(IslandMoment("Glimmer Drop", "Handy erkannt"))
+                refreshAdvert()
                 tryTouchConnect()
             }
         } else if (beaconBackground) {
