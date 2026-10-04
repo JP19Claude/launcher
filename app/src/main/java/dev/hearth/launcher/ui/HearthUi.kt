@@ -100,7 +100,7 @@ object HearthUi {
     const val NAME = "Hearth UI"
 
     /** The big version the welcome tour is about; it shows once after reaching it. */
-    const val INTRO_VERSION = 14
+    const val INTRO_VERSION = 16
 
     /** "14.0" → "14", "13.5" → "13.5": how the version is written big. */
     fun major(version: String): String {
@@ -168,6 +168,66 @@ internal object HearthChangelog {
     private val Slate = Color(0xFF5E6C84)
 
     val releases: List<ChangeRelease> = listOf(
+        ChangeRelease(
+            version = "16.0",
+            name = "Hearth UI 16",
+            summary = "Ein großes Update auf neuer Basis: ClaudeOS 4.0 „Aurora“ – mit Glimmer Drop, vielen neuen Menüs und dunklem Glas. Alles in Hearth UI, keine neue App.",
+            sections = listOf(
+                ChangeSection(
+                    "ClaudeOS 4.0 „Aurora“", Icons.Rounded.Star, Violet,
+                    listOf(
+                        "Neue Basis unter Hearth UI, Glimmer und Clawd: Handys, die sich finden, dunkles Glas und versteckte Menüs gehören jetzt zum Fundament.",
+                        "Willkommens-Tour beim ersten Start: alles Neue in Hearth UI 16 auf einen Blick.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Glimmer Drop", Icons.Rounded.Favorite, Blue,
+                    listOf(
+                        "Halte die Oberkanten zweier Handys mit Glimmer aneinander: Glimmers Insel leuchtet auf, Licht fließt hinüber – beide Handys gehen sofort auf.",
+                        "Teile deine Kontaktkarte, Fotos, Videos, Dateien, Links und Text – mit Vorschau von allem, schon bevor das andere Handy annimmt.",
+                        "Direkt über Bluetooth und Wi-Fi Direct, ohne Internet – dieselbe Technik wie Quick Share. Für Handys ohne Glimmer: „Über Quick Share senden“.",
+                        "Sofort bereit, wenn entsperrt; außerdem im Hearth-Menü, in den Einstellungen und in jeder App unter Teilen → „Glimmer Drop“.",
+                        "Empfangene Fotos und Videos in der Galerie, Dateien unter Downloads, Kontakte mit einem Tipp gespeichert.",
+                    ),
+                    withGlimmer,
+                ),
+                ChangeSection(
+                    "Viel mehr Menüs", Icons.Rounded.Menu, Terracotta,
+                    listOf(
+                        "Hearth-Menü: ein Glas-Blatt mit allem griffbereit – Einstellungen, Finder, alle Apps, Clawd, Glimmer Drop, Widgets, Hintergrund, Schnelleinstellungen, Mitteilungen, Taschenlampe, Dunkelmodus und Ein/Aus.",
+                        "Ein/Aus-Menü aus Glas: Bildschirm aus, Neustart, Ausschalten (mit Shizuku).",
+                        "Neuer Bereich „Menüs“ in den Einstellungen; Doppeltippen kann das Hearth- oder das Ein/Aus-Menü öffnen.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Versteckte Menüs", Icons.Rounded.Search, Slate,
+                    listOf(
+                        "Geheimcodes im Finder öffnen versteckte Menüs: Hardware-Test, Versionen, Akku-Status, Diagnose, Clawd-Studio und mehr.",
+                        "Hearth Labs: versteckte Experimente – Bildrate, Fingertipps, Layout-Grenzen, Zeitlupe. Wo? Das bleibt geheim … 🤫",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Dunkelmodus", Icons.Rounded.Star, Violet,
+                    listOf(
+                        "Dunkles Glas für Dock, Widgets, Menüs, Suchleiste, Ordner, Knöpfe und Glimmer – an, aus, wie Android oder nach Uhrzeit.",
+                        "Hintergrundbild und App-Icons bleiben, wie sie sind.",
+                    ),
+                    withGlimmer,
+                ),
+                ChangeSection(
+                    "Easter Eggs", Icons.Rounded.Face, Orange,
+                    listOf(
+                        "Hearth UI 16: „Glühwürmchen“ – Finger auflegen und sechzehn Glühwürmchen zu dir locken.",
+                        "ClaudeOS 4: „Aurora“ – Nordlichter an den Himmel malen.",
+                        "Jetzt 30 Easter Eggs – die versteckte Karte zeigt, wo.",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
         ChangeRelease(
             version = "15.9",
             name = "Glimmer Drop mit Vorschau",
@@ -1052,37 +1112,37 @@ fun HearthUiIntro(onDone: (newLook: Boolean) -> Unit) {
                     when (page) {
                         0 -> TourHero { appear.value }
                         1 -> TourPage(
-                            title = "Ein neuer Look",
-                            text = "Ruhiger, klarer und mit mehr Tiefe – vom Startbildschirm bis in die Einstellungen.",
+                            title = "Glimmer Drop",
+                            text = "Halte die Oberkanten zweier Handys mit Glimmer aneinander – und teile, was du willst.",
                             points = listOf(
-                                TourPoint(Icons.Rounded.Home, Color(0xFFD97757), "Neue Uhr", "Stunden über Minuten, groß und gestapelt. Datum und Akku als Glas-Chips darunter."),
-                                TourPoint(Icons.Rounded.Star, Color(0xFF8E6BFF), "Now Brief, neu gestaltet", "Große Begrüßung zur Tageszeit, Wecker, Akku und Datum auf einen Blick."),
-                                TourPoint(Icons.Rounded.Favorite, Color(0xFFFF6FB5), "Dezente Fluid-Ränder", "Ruhiges Glas mit einem Hauch von Claudes Farben – bunt wird es, wo etwas passiert."),
-                                TourPoint(Icons.Rounded.Settings, Color(0xFF5E6C84), "Einstellungen wie One UI 9", "Ein großer Titel, der beim Scrollen weggleitet, und die neue Hearth-UI-Karte."),
+                                TourPoint(Icons.Rounded.Favorite, Color(0xFF5E9BFF), "Aneinanderhalten", "Glimmers Insel leuchtet auf, Licht fließt hinüber – beide Handys gehen auf."),
+                                TourPoint(Icons.Rounded.Face, Color(0xFFFF6FB5), "Kontaktkarte, Fotos, Links …", "Kontaktkarte, Fotos, Videos, Dateien, Links und Text – mit Vorschau, bevor du annimmst."),
+                                TourPoint(Icons.Rounded.Refresh, Color(0xFF30C26B), "Schnell und direkt", "Über Bluetooth und Wi-Fi Direct, ohne Internet. Für Handys ohne Glimmer: über Quick Share."),
                             ),
                         ) {
                             TourSwitch(
-                                title = "Neuen Look verwenden",
-                                text = "Uhr und Fluid-Ränder auf Hearth UI 14 umstellen – jederzeit in den Einstellungen änderbar.",
+                                title = "Sofort bereit, wenn entsperrt",
+                                text = "Glimmer spürt ein anderes Handy und öffnet Glimmer Drop von selbst – danach fragt Android einmal nach „Geräte in der Nähe“.",
                                 checked = newLook,
                             ) { newLook = it }
                         }
                         2 -> TourPage(
-                            title = "Software-Update, neu gedacht",
-                            text = "Wie bei ColorOS: oben die Version groß, darunter alles, was sich verändert hat.",
+                            title = "Mehr Menüs, dunkles Glas",
+                            text = "Alles, was Hearth kann, ist jetzt einen Griff entfernt.",
                             points = listOf(
-                                TourPoint(Icons.Rounded.Refresh, Color(0xFF3E91FF), "Großes Versions-Artwork", "Mit Glanz und einem Farbschein, der sanft dahinter treibt."),
-                                TourPoint(Icons.Rounded.Menu, Color(0xFF8E6BFF), "Ausführliches Änderungsprotokoll", "Nach Bereichen sortiert und zum Aufklappen – dazu der Verlauf aller Versionen."),
-                                TourPoint(Icons.Rounded.Info, Color(0xFF5E6C84), "Versionsdetails", "Hearth UI, ClaudeOS, Build und letzte Prüfung auf einen Blick."),
+                                TourPoint(Icons.Rounded.Menu, Color(0xFF8E6BFF), "Hearth-Menü", "Lange auf den Startbildschirm drücken: Einstellungen, Finder, Widgets, Glimmer Drop, Taschenlampe, Dunkelmodus …"),
+                                TourPoint(Icons.Rounded.Settings, Color(0xFFFF453A), "Ein/Aus-Menü", "Bildschirm aus, Neustart und Ausschalten aus Glas."),
+                                TourPoint(Icons.Rounded.Star, Color(0xFF3E4A7A), "Dunkelmodus", "Dock, Widgets, Menüs und Suchleiste als dunkles Glas – an, aus, wie Android oder nach Uhrzeit."),
+                                TourPoint(Icons.Rounded.Search, Color(0xFFFF9F0A), "Versteckte Menüs", "Geheimcodes im Finder und Hearth Labs – wo genau? Das bleibt dein Geheimnis … 🤫"),
                             ),
                         )
                         else -> TourPage(
-                            title = "ClaudeOS 3.0 „Nova“",
+                            title = "ClaudeOS 4.0 „Aurora“",
                             text = "Eine neue Basis unter Hearth UI, Glimmer und Clawd.",
                             points = listOf(
-                                TourPoint(Icons.Rounded.Star, Color(0xFFFFB494), "Neue Basis", "ClaudeOS 3.0 „Nova“ – der neue Stern unter Hearth UI 14."),
-                                TourPoint(Icons.Rounded.Face, Color(0xFFFF9F0A), "Zwei neue Easter Eggs", "„Prisma“ und „Nova“: fünfmal auf die Version tippen – im Software-Update und in „Über das Telefon“."),
-                                TourPoint(Icons.Rounded.CheckCircle, Color(0xFF30C26B), "Behoben", "Keine bunten Punkte mehr in den Icons und kein oranger Schein am Dock."),
+                                TourPoint(Icons.Rounded.Star, Color(0xFF6CFFB0), "Neue Basis", "Handys, die sich finden, dunkles Glas und versteckte Menüs gehören jetzt zum Fundament."),
+                                TourPoint(Icons.Rounded.Face, Color(0xFFFF9F0A), "Zwei neue Easter Eggs", "„Glühwürmchen“ und „Aurora“: fünfmal auf die Version tippen – im Software-Update und in „Über das Telefon“."),
+                                TourPoint(Icons.Rounded.CheckCircle, Color(0xFF30C26B), "Ein Update, alles drin", "Alles aus Hearth UI 15 ist dabei – in einem großen Update."),
                             ),
                         )
                     }
@@ -1126,16 +1186,16 @@ private fun TourHero(appear: () -> Float) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(20.dp))
-        VersionArtwork("14", listOf(Color(0xFFFFB494), Color(0xFFFF6FB5), Color(0xFF8E6BFF), Color(0xFF3E91FF)), height = 230.dp)
+        VersionArtwork("16", listOf(Color(0xFF6CFFB0), Color(0xFF3E91FF), Color(0xFF8E6BFF), Color(0xFFFF6FB5)), height = 230.dp)
         val product = if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) HearthUi.NAME else "Hearth"
-        Text("$product 14", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+        Text("$product 16", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
         Text(
             "auf ${ClaudeOs.full} „${ClaudeOs.CODENAME}“",
             style = TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
         )
         Spacer(Modifier.height(18.dp))
         Text(
-            "Das größte Update bisher. Ein neuer Name, eine neue Basis und ein neuer Look – wisch weiter und sieh, was sich alles verändert hat.",
+            "Ein großes Update mit neuer Basis: Glimmer Drop, viele neue Menüs und dunkles Glas – wisch weiter und sieh, was alles neu ist.",
             color = Color.White.copy(alpha = 0.75f),
             fontSize = 16.sp,
             lineHeight = 22.sp,

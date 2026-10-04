@@ -220,7 +220,9 @@ private fun lookFor(packageName: String): UpdateLook = when (packageName) {
         tagline = "Galaxy × Claude",
         planet = listOf(Color(0xFFBFDDFF), Color(0xFF3E91FF), Color(0xFF5B3BC8)),
         tips = listOf(
-            "Hearth UI 14: die neue gestapelte Uhr findest du unter Design → Uhr.",
+            "Hearth UI 16: Halte zwei Handys mit Glimmer oben aneinander – Glimmer Drop geht auf.",
+            "Dunkles Glas für Dock, Widgets und Menüs: Design → Dunkelmodus.",
+            "Das Hearth-Menü: lange auf den Startbildschirm drücken → „Hearth-Menü“.",
             "Wisch auf dem Startbildschirm nach unten für den Finder, nach oben für den App-Drawer.",
             "Fluid-Ränder „Dezent“ oder „Lebendig“: unter Design → Animationen.",
             "Frag Clawd in der Suche: „Wie lange noch bis Weihnachten?“",
@@ -578,6 +580,7 @@ internal fun HearthVersionEgg(version: String, name: String, onClose: () -> Unit
     val look = remember { lookFor(context.packageName) }
     val number = versionNumber(version)
     when {
+        number >= 16f -> FireflyEgg(version, name, onClose)
         number >= 15.5f -> SparkEgg(version, name, onClose)
         number >= 15f -> VaultEgg(version, name, onClose)
         number >= 14.5f -> CometEgg(version, name, onClose)

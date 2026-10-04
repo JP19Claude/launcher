@@ -85,6 +85,7 @@ internal fun versionNumber(version: String): Float =
 internal fun ClaudeOsVersionEgg(onClose: () -> Unit) {
     val number = versionNumber(ClaudeOs.VERSION)
     when {
+        number >= 4f -> AuroraEgg(onClose)
         number >= 3f -> NovaEgg(onClose)
         number >= 2f -> BlazeEgg(onClose)
         else -> ClaudeOsEgg(onClose)

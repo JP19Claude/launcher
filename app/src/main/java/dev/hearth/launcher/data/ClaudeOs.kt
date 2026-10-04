@@ -10,14 +10,15 @@ package dev.hearth.launcher.data
  */
 object ClaudeOs {
     const val NAME = "ClaudeOS"
-    const val VERSION = "3.1"
+    const val VERSION = "4.0"
 
     /**
      * Like Android's desserts: each ClaudeOS has a codename. 1.0 was "Ember", the glow Hearth
-     * started from; 2.0 "Blaze": One UI 10 Fluid and liquid glass everywhere; 3.0 is "Nova",
-     * the new star under Hearth UI 14.
+     * started from; 2.0 "Blaze": One UI 10 Fluid and liquid glass everywhere; 3.0 "Nova", the
+     * new star under Hearth UI 14; 4.0 is "Aurora", under Hearth UI 16: phones that find each
+     * other (Glimmer Drop), dark glass and the hidden menus are part of the ground now.
      */
-    const val CODENAME = "Nova"
+    const val CODENAME = "Aurora"
 
     /** "ClaudeOS 1.0" */
     val full: String get() = "$NAME $VERSION"

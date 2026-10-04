@@ -1181,7 +1181,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
             if (showIntro) {
                 HearthUiIntro { newLook ->
                     HearthUi.markIntroSeen(context)
-                    if (newLook) vm.updateSettings { it.hearthUi14Look() }
+                    // Hearth UI 16's tour: "ready when unlocked" for Glimmer Drop.
+                    dev.hearth.launcher.data.GlimmerDrop.setReady(context, newLook)
                     showIntro = false
                 }
             }

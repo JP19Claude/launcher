@@ -187,7 +187,7 @@ private fun gatherSpecs(context: Context): List<SpecGroup> {
                 Spec("ClaudeOS-Version", "${ClaudeOs.VERSION} („${ClaudeOs.CODENAME}“)", claudeOs = true),
                 Spec("Ausgabe", edition),
                 Spec("Build-Nummer", build, labs = true),
-                Spec("Design", "Hearth UI 14 · One UI 10 Fluid · Liquid Glass"),
+                Spec("Design", "Hearth UI 16 · One UI 10 Fluid · Liquid Glass · Dunkles Glas"),
             ),
         ),
         SpecGroup(

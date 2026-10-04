@@ -44,8 +44,8 @@ private class EggSpot(val id: String, val name: String, val where: String)
 
 /** All of Hearth's easter eggs and how to find them. */
 private val EggSpots = listOf(
-    EggSpot("version", "Hearth UI-Version", "Software-Update oder Über das Telefon: fünfmal schnell auf die Hearth UI-Version tippen. Jede große Version hat ein eigenes Egg (15.5: Funken, 15: Tresor, 14.5: Kometen, 14: Prisma, 13.5: Tropfen, 13: Seide …)."),
-    EggSpot("claudeos", "ClaudeOS", "Software-Update oder Über das Telefon: fünfmal schnell auf die ClaudeOS-Version tippen und den Stern zur Supernova bringen (ClaudeOS 3 „Nova“)."),
+    EggSpot("version", "Hearth UI-Version", "Software-Update oder Über das Telefon: fünfmal schnell auf die Hearth UI-Version tippen. Jede große Version hat ein eigenes Egg (16: Glühwürmchen, 15.5: Funken, 15: Tresor, 14.5: Kometen, 14: Prisma, 13.5: Tropfen, 13: Seide …)."),
+    EggSpot("claudeos", "ClaudeOS", "Software-Update oder Über das Telefon: fünfmal schnell auf die ClaudeOS-Version tippen und dann: ClaudeOS 4 „Aurora“ – Nordlichter an den Himmel malen (ClaudeOS 3 „Nova“: den Stern zur Supernova bringen)."),
     EggSpot("footer", "Gebaut mit Claude", "Einstellungen ganz unten: siebenmal auf „Hearth · gebaut mit Claude“ tippen."),
     EggSpot("clock", "Uhr", "Startbildschirm: fünfmal schnell auf die Uhr tippen."),
     EggSpot("spin", "Glas-Uhr", "Das Glas-Uhr-Widget dreimal schnell antippen – es dreht sich."),
