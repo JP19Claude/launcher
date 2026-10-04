@@ -240,7 +240,7 @@ internal object HearthChangelog {
                     "Hotfix", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Glimmer Drop lässt sich jetzt ganz ausschalten (Einstellungen → Glimmer → Glimmer Drop): kein Bluetooth-Signal mehr, kein Eintrag im Teilen-Menü und keine Kachel im OMEGA-Menü.",
-                        "Der Rubin ist neu geschliffen – im Stil des großen roten Steins aus Omega Rubin: Brillantschliff von oben, Licht wandert über die Facetten, das Ω glüht wie Lava.",
+                        "Das Logo sieht jetzt aus wie der Stein aus Omega Rubin: oben spitz, ein breites Band in der Mitte, rosa-rotes Glas mit einem orange leuchtenden Ring innen, ein deutliches dunkles Ω und Lichtstrahlen dahinter.",
                         "Icons lassen sich jetzt bis 96 dp groß stellen (Design → Icons → Größe) und werden dafür schärfer geladen; das Dock bleibt passend.",
                         "OMEGA UI ist keine eigene Vorlage mehr, sondern Teil von Galaxy × Claude – was dort noch Galaxys Standard war, wird Rubin (selbst Gewähltes bleibt).",
                     ),

@@ -24,6 +24,6 @@ OMEGA UI 17 auf ClaudeOS 4.0 „Aurora“
 
 🛠 Hotfix
 • Glimmer Drop lässt sich ganz ausschalten (Einstellungen → Glimmer → Glimmer Drop)
-• Neu geschliffener Rubin im Stil von Omega Rubin – Facetten mit wanderndem Licht, das Ω glüht wie Lava
+• Neues Logo wie der Stein aus Omega Rubin – rosa-rotes Glas, orange leuchtender Ring, deutliches Ω, Lichtstrahlen
 • Icons bis 96 dp groß (Design → Icons → Größe), schärfer geladen
 • OMEGA UI ist Teil von Galaxy × Claude statt einer eigenen Vorlage (Rubin, OMEGA-Uhr, OMEGA-Insel)
