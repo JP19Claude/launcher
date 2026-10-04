@@ -178,6 +178,33 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "18.1",
+            name = "Always On",
+            summary = "Ein volles Always On Display wie beim Galaxy S24 Ultra und viele neue Einstellungen für den Sperrbildschirm – in den Clawd Illuminati.",
+            sections = listOf(
+                ChangeSection(
+                    "Always On Display", Icons.Rounded.Star, Violet,
+                    listOf(
+                        "Volles Always On Display: Das Hintergrundbild bleibt gedimmt sichtbar, davor eine große Uhr – wie beim Galaxy S24 Ultra.",
+                        "Uhr in vier Stilen (OMEGA, Groß, Dünn, In Worten), in Weiß, OMEGA oder Gold; Helligkeit des Hintergrunds in drei Stufen.",
+                        "Dazu wählbar: Datum, Akku, wartende Mitteilungen, ein schlafender Clawd und ein feiner OMEGA-Rand.",
+                        "Alles wandert jede Minute ein kleines Stück, damit nichts einbrennt.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Sperrbildschirm", Icons.Rounded.Face, Terracotta,
+                    listOf(
+                        "Clawd auf dem Sperrbildschirm (winkt, beim Laden tanzt er), ein leuchtender OMEGA-Rand, Lade-Licht mit großem Akkustand, Begrüßung nach Tageszeit, Akku-Chip und das Ω.",
+                        "Eigene Nachricht auf dem Sperrbildschirm.",
+                        "Die Atmosphäre-Vorteile (Schnee, Sterne, Glühwürmchen …) auf Wunsch auch auf dem Sperrbildschirm.",
+                        "Alles in den Clawd Illuminati; Glimmer zeichnet es über Sperrbildschirm und AOD, ohne eine Berührung abzufangen.",
+                    ),
+                    hearth,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "18.0",
             name = "Mythos",
             summary = "Das große Update auf neuer Basis: OMEGA UI 18 auf ClaudeOS 5.0 „Mythos“ – mit Claude Mythos, 25 neuen Vorteilen und einer Farbwelt, die jetzt wirklich alles färbt.",

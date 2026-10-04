@@ -58,6 +58,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.hearth.launcher.data.AodBrightness
+import dev.hearth.launcher.data.AodClock
+import dev.hearth.launcher.data.AodTint
 import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.ColorWorld
 import dev.hearth.launcher.data.EasterEggs
@@ -260,6 +263,40 @@ fun ClawdIlluminationScreen(
                     settings.giantClawd,
                 ) { v -> onChange { it.copy(giantClawd = v) } }
             }
+            // OMEGA UI 18.1: the full Always On Display and the lock screen.
+            IlluminationSection("Always On Display") {
+                IlluminationSwitch(
+                    "◼", "Volles Always On Display",
+                    "Wie beim Galaxy S24 Ultra: Das Hintergrundbild bleibt gedimmt sichtbar, davor eine große Uhr. Braucht Glimmer.",
+                    settings.fullAod,
+                ) { v -> onChange { it.copy(fullAod = v) } }
+                IlluminatiChoice("🕰", "Uhr", AodClock.entries, settings.aodClock, { it.label }) { v -> onChange { it.copy(aodClock = v) } }
+                IlluminatiChoice("🎨", "Farbe der Uhr", AodTint.entries, settings.aodTint, { it.label }) { v -> onChange { it.copy(aodTint = v) } }
+                IlluminatiChoice("☀", "Helligkeit des Hintergrunds", AodBrightness.entries, settings.aodBrightness, { it.label }) { v -> onChange { it.copy(aodBrightness = v) } }
+                IlluminationSwitch("📅", "Datum", "Der Tag unter der Uhr.", settings.aodDate) { v -> onChange { it.copy(aodDate = v) } }
+                IlluminationSwitch("🔋", "Akku", "Der Akkustand, beim Laden mit Blitz.", settings.aodBattery) { v -> onChange { it.copy(aodBattery = v) } }
+                IlluminationSwitch("🔔", "Mitteilungen", "Wie viele Mitteilungen warten.", settings.aodNotifications) { v -> onChange { it.copy(aodNotifications = v) } }
+                IlluminationSwitch("💤", "Schlafender Clawd", "Clawd schläft unten auf dem Always On Display.", settings.aodClawd) { v -> onChange { it.copy(aodClawd = v) } }
+                IlluminationSwitch("◯", "OMEGA-Rand", "Ein feiner Rand aus OMEGA Fluid um den Bildschirm.", settings.aodEdge) { v -> onChange { it.copy(aodEdge = v) } }
+            }
+            IlluminationSection("Sperrbildschirm") {
+                IlluminationSwitch("🦀", "Clawd auf dem Sperrbildschirm", "Clawd sitzt rechts und winkt – beim Laden tanzt er.", settings.lockClawd) { v -> onChange { it.copy(lockClawd = v) } }
+                IlluminationSwitch("◯", "OMEGA-Rand", "OMEGA Fluid leuchtet rund um den Sperrbildschirm.", settings.lockEdge) { v -> onChange { it.copy(lockEdge = v) } }
+                IlluminationSwitch("⚡", "Lade-Licht", "Beim Laden steigt OMEGA-Licht von unten auf, dazu der Akkustand groß.", settings.lockCharge) { v -> onChange { it.copy(lockCharge = v) } }
+                IlluminationSwitch("👋", "Begrüßung", "„Guten Morgen“ bis „Gute Nacht“ – je nach Tageszeit.", settings.lockGreeting) { v -> onChange { it.copy(lockGreeting = v) } }
+                IlluminationSwitch("✨", "Atmosphäre", "Die Vorteile aus „Atmosphäre“ (Schnee, Sterne …) auch auf dem Sperrbildschirm.", settings.lockAtmosphere) { v -> onChange { it.copy(lockAtmosphere = v) } }
+                IlluminationSwitch("🔋", "Akku", "Der Akkustand als kleiner Chip.", settings.lockBattery) { v -> onChange { it.copy(lockBattery = v) } }
+                IlluminationSwitch("Ω", "Ω-Zeichen", "Das Ω oben auf dem Sperrbildschirm.", settings.lockOmega) { v -> onChange { it.copy(lockOmega = v) } }
+                LockMessageField(settings.lockMessage) { v -> onChange { it.copy(lockMessage = v) } }
+                Text(
+                    "Alles hier zeichnet Glimmer über Sperrbildschirm und Always On Display – Glimmer muss dafür an sein.",
+                    color = Color.White.copy(alpha = 0.45f),
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+
             // OMEGA UI 18: the perks, by group.
             listOf("Atmosphäre", "Licht", "Bewegung", "Farbe", "Clawd").forEach { group ->
                 IlluminationSection("Vorteile · $group") {
@@ -485,6 +522,64 @@ private fun IlluminationSwitch(icon: String, title: String, text: String, on: Bo
                 uncheckedBorderColor = Color.White.copy(alpha = 0.3f),
             ),
         )
+    }
+}
+
+/** A choice in the Illuminati: chips in a row, the chosen one in gold. */
+@Composable
+private fun <T> IlluminatiChoice(icon: String, title: String, options: List<T>, selected: T, label: (T) -> String, onPick: (T) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(icon, fontSize = 18.sp, color = Color(0xFFFFE3A0), modifier = Modifier.width(30.dp))
+            Text(title, color = Color(0xFFF3E6C8), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif)
+        }
+        Row(
+            Modifier
+                .padding(top = 8.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            options.forEach { option ->
+                val on = option == selected
+                Box(
+                    Modifier
+                        .clip(CircleShape)
+                        .background(if (on) IlluminatiGold.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.06f))
+                        .border(1.dp, if (on) IlluminatiGold else Color.White.copy(alpha = 0.18f), CircleShape)
+                        .clickable { onPick(option) }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                ) {
+                    Text(label(option), color = Color.White, fontSize = 13.sp, fontWeight = if (on) FontWeight.Bold else FontWeight.Normal)
+                }
+            }
+        }
+    }
+}
+
+/** The lock screen's own message, typed in. */
+@Composable
+private fun LockMessageField(value: String, onChange: (String) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+        Text("✎  Nachricht auf dem Sperrbildschirm", color = Color(0xFFF3E6C8), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif)
+        Box(
+            Modifier
+                .padding(top = 8.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color.White.copy(alpha = 0.06f))
+                .border(1.dp, IlluminatiGold.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            if (value.isEmpty()) Text("z. B. „Gefunden? Bitte anrufen“", color = Color.White.copy(alpha = 0.35f), fontSize = 14.sp)
+            androidx.compose.foundation.text.BasicTextField(
+                value = value,
+                onValueChange = { onChange(it.take(80)) },
+                singleLine = true,
+                textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(IlluminatiGold),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 

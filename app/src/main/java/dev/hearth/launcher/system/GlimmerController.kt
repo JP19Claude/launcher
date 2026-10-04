@@ -84,6 +84,9 @@ class GlimmerController(private val service: GlimmerService) {
 
     private val windowManager = service.getSystemService(WindowManager::class.java)
     private val handler = Handler(Looper.getMainLooper())
+
+    /** OMEGA UI 18.1: the stage over the lock screen and the full Always On Display. */
+    private val stage = LockStage(service) { raiseWindow() }
     private val media = MediaRepository(service)
 
     private val expanded = MutableStateFlow(false)
@@ -734,6 +737,7 @@ class GlimmerController(private val service: GlimmerService) {
         updateDozing()
         ContextCompat.registerReceiver(service, systemReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         receiverRegistered = true
+        stage.start(settingsState, locked, dozing)
         scope = MainScope().also { s ->
             s.launch {
                 NotificationHub.incoming.collect { if (settings.glimmerMessages) flashMessage(it) }
@@ -828,6 +832,7 @@ class GlimmerController(private val service: GlimmerService) {
         media.stop()
         if (receiverRegistered) runCatching { service.unregisterReceiver(systemReceiver) }
         receiverRegistered = false
+        stage.stop()
         scope?.cancel()
         scope = null
         expanded.value = false
