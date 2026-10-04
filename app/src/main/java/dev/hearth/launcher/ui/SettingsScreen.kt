@@ -488,7 +488,7 @@ fun SettingsScreen(
                         onSelect = { shape -> update { it.copy(iconShape = shape) } },
                     )
                     RowDivider()
-                    IntSlider("Größe", s.iconSize, 40..72, unit = " dp") { v -> update { it.copy(iconSize = v) } }
+                    IntSlider("Größe", s.iconSize, 40..96, unit = " dp") { v -> update { it.copy(iconSize = v) } }
                     SwitchRow(label = "Beschriftung anzeigen", checked = s.showLabels) { v ->
                         update { it.copy(showLabels = v) }
                     }

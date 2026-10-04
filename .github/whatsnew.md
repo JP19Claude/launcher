@@ -24,3 +24,5 @@ OMEGA UI 17 auf ClaudeOS 4.0 „Aurora“
 
 🛠 Hotfix
 • Glimmer Drop lässt sich ganz ausschalten (Einstellungen → Glimmer → Glimmer Drop)
+• Neu geschliffener Rubin im Stil von Omega Rubin – Facetten mit wanderndem Licht, das Ω glüht wie Lava
+• Icons bis 96 dp groß (Design → Icons → Größe), schärfer geladen

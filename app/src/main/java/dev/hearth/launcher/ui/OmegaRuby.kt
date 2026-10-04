@@ -58,80 +58,123 @@ import kotlin.random.Random
 /** OMEGA UI's ruby: deep red through bright red to a pink light. */
 internal val RubyColors = listOf(Color(0xFF5A0012), Color(0xFFB0102C), Color(0xFFE5243F), Color(0xFFFF6B7D), Color(0xFFFFC2CA))
 
-/**
- * A ruby cut like a brilliant, of red glass you can see into, with the Ω inside it.
- * A facet corner (x, y) is given as parts of the gem's width and height.
- */
-private val Girdle = 0.38f
-private val GirdleX = listOf(0.06f, 0.28f, 0.5f, 0.72f, 0.94f)
-private val TableX = listOf(0.3f, 0.5f, 0.7f)
-private const val TableY = 0.12f
-private const val Culet = 0.96f
-
-private fun DrawScope.facet(points: List<Pair<Float, Float>>, color: Color) {
-    val path = Path().apply {
-        points.forEachIndexed { i, (x, y) ->
-            if (i == 0) moveTo(x * size.width, y * size.height) else lineTo(x * size.width, y * size.height)
-        }
-        close()
-    }
-    drawPath(path, color)
-    drawPath(path, Color(0xFFFFD6DC).copy(alpha = 0.35f), style = Stroke(1.2.dp.toPx()))
+/** A point on a ring of the cut: [i] of twelve, turned by [turn] steps, at [r] of the size. */
+private fun DrawScope.ring(i: Int, r: Float, turn: Float = 0f): Offset {
+    val a = (-90.0 + (i + turn) * 30.0) * PI / 180.0
+    // A cushion: a little taller than wide, like the game's stone.
+    return Offset(size.width / 2f + cos(a).toFloat() * size.width * 0.46f * r, size.height / 2f + sin(a).toFloat() * size.height * 0.48f * r)
 }
 
-/** The gem itself: crown and table above the girdle, the pavilion running down to its point. */
+private fun polygon(points: List<Offset>): Path = Path().apply {
+    points.forEachIndexed { i, p -> if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) }
+    close()
+}
+
+/** How bright a facet facing [angle] is with the light coming from [light] (both in radians). */
+private fun lit(angle: Double, light: Double): Float = (0.5 + 0.5 * cos(angle - light)).toFloat()
+
+private val RubyDeep = Color(0xFF3C000C)
+private val RubyDark = Color(0xFF7A0618)
+private val RubyMid = Color(0xFFC40F2E)
+private val RubyBright = Color(0xFFFF3A50)
+private val RubyLight = Color(0xFFFF9AA8)
+
+/**
+ * The ruby, seen from above like a cut brilliant (in the spirit of the great red stone of
+ * Omega Ruby): a table in the middle, star and bezel facets around it, girdle facets at the
+ * rim. Each facet catches the light by where it faces – and the light wanders, so the stone
+ * sparkles. Inside it glows like lava.
+ */
 private fun DrawScope.drawRuby(shine: Float, glow: Float) {
-    val r = RubyColors
-    // Its own red light around it.
+    val c = Offset(size.width / 2f, size.height / 2f)
+    val light = (-135.0 + 28.0 * sin(shine * 2.0 * PI)) * PI / 180.0
+    val edge = Color(0xFFFFC2CA).copy(alpha = 0.28f)
+    val hair = 0.8.dp.toPx()
+    // The red light it throws around itself, and its shadow.
     drawCircle(
-        Brush.radialGradient(listOf(r[2].copy(alpha = 0.45f * glow), Color.Transparent), center = Offset(size.width / 2f, size.height * 0.45f), radius = size.width * 0.8f),
-        radius = size.width * 0.8f,
-        center = Offset(size.width / 2f, size.height * 0.45f),
+        Brush.radialGradient(listOf(RubyBright.copy(alpha = 0.42f * glow), Color.Transparent), center = c, radius = size.width * 0.75f),
+        radius = size.width * 0.75f,
+        center = c,
     )
-    // Pavilion: four facets down to the culet, darker at the sides – red glass with depth.
-    val pavilion = listOf(r[0].copy(alpha = 0.85f), r[1].copy(alpha = 0.75f), r[2].copy(alpha = 0.7f), r[0].copy(alpha = 0.85f))
-    for (i in 0 until 4) {
-        facet(listOf(GirdleX[i] to Girdle, GirdleX[i + 1] to Girdle, 0.5f to Culet), pavilion[i])
-    }
-    // Inner fire: light caught inside the stone.
-    drawCircle(
-        Brush.radialGradient(listOf(r[4].copy(alpha = 0.35f), r[3].copy(alpha = 0.12f), Color.Transparent), center = Offset(size.width * 0.5f, size.height * 0.55f), radius = size.width * 0.3f),
-        radius = size.width * 0.3f,
-        center = Offset(size.width * 0.5f, size.height * 0.55f),
+    drawOval(
+        Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.45f), Color.Transparent), center = Offset(c.x, size.height * 0.98f), radius = size.width * 0.4f),
+        topLeft = Offset(size.width * 0.12f, size.height * 0.9f),
+        size = androidx.compose.ui.geometry.Size(size.width * 0.76f, size.height * 0.14f),
     )
-    // Crown: the slopes from the table out to the girdle.
-    facet(listOf(TableX[0] to TableY, GirdleX[0] to Girdle, GirdleX[1] to Girdle), r[1].copy(alpha = 0.7f))
-    facet(listOf(TableX[0] to TableY, GirdleX[1] to Girdle, GirdleX[2] to Girdle, TableX[1] to TableY), r[3].copy(alpha = 0.55f))
-    facet(listOf(TableX[1] to TableY, GirdleX[2] to Girdle, GirdleX[3] to Girdle, TableX[2] to TableY), r[2].copy(alpha = 0.6f))
-    facet(listOf(TableX[2] to TableY, GirdleX[3] to Girdle, GirdleX[4] to Girdle), r[1].copy(alpha = 0.75f))
-    // The light running across the facets (only on the stone).
-    val x = (-0.4f + 1.8f * shine) * size.width
-    val outline = Path().apply {
-        moveTo(TableX[0] * size.width, TableY * size.height)
-        lineTo(TableX[2] * size.width, TableY * size.height)
-        lineTo(GirdleX[4] * size.width, Girdle * size.height)
-        lineTo(0.5f * size.width, Culet * size.height)
-        lineTo(GirdleX[0] * size.width, Girdle * size.height)
-        close()
+    val outer = (0 until 12).map { ring(it, 1f) }
+    val middle = (0 until 12).map { ring(it, 0.74f, 0.5f) }
+    val table = (0 until 12).map { ring(it, 0.42f) }
+    // The body: deep red, darker at the rim.
+    drawPath(polygon(outer), Brush.radialGradient(listOf(RubyMid, RubyDark, RubyDeep), center = c, radius = size.width * 0.55f))
+    for (i in 0 until 12) {
+        val next = (i + 1) % 12
+        val prev = (i + 11) % 12
+        val at = (-90.0 + i * 30.0) * PI / 180.0
+        val between = (-90.0 + (i + 0.5) * 30.0) * PI / 180.0
+        // Girdle facets at the rim.
+        val g = lit(between, light)
+        drawPath(polygon(listOf(middle[i], outer[i], outer[next])), lerp(RubyDeep, RubyMid, g * 0.9f).copy(alpha = 0.95f))
+        // Bezel facets (kites) between table and rim.
+        val b = lit(at, light)
+        drawPath(polygon(listOf(table[i], middle[prev], outer[i], middle[i])), lerp(RubyDark, RubyBright, b).copy(alpha = 0.92f))
+        // Star facets around the table, the other way round – that's what makes it sparkle.
+        val st = lit(between + PI, light)
+        drawPath(polygon(listOf(table[i], table[next], middle[i])), lerp(RubyMid, RubyLight, st * 0.85f).copy(alpha = 0.9f))
     }
-    clipPath(outline) {
+    // The table: the window into the stone, with the lava glow deep inside.
+    drawPath(
+        polygon(table),
+        Brush.radialGradient(
+            listOf(Color(0xFFFF7A3A).copy(alpha = 0.9f), RubyBright, RubyMid, RubyDark),
+            center = Offset(c.x, c.y + size.height * 0.04f),
+            radius = size.width * 0.24f,
+        ),
+    )
+    // Fine lines along every facet edge.
+    for (i in 0 until 12) {
+        val next = (i + 1) % 12
+        drawLine(edge, table[i], table[next], hair)
+        drawLine(edge, table[i], middle[i], hair)
+        drawLine(edge, table[next], middle[i], hair)
+        drawLine(edge, middle[i], outer[i], hair)
+        drawLine(edge, middle[i], outer[next], hair)
+    }
+    drawPath(
+        polygon(outer),
+        Brush.linearGradient(listOf(RubyLight, RubyBright, RubyDark), start = Offset(0f, 0f), end = Offset(size.width, size.height)),
+        style = Stroke(1.6.dp.toPx()),
+    )
+    // A broad gleam across the upper left, following the light.
+    clipPath(polygon(outer)) {
+        val sweep = (-0.3f + 1.6f * shine) * size.width
         drawRect(
             Brush.linearGradient(
-                listOf(Color.Transparent, Color.White.copy(alpha = 0.45f), Color.Transparent),
-                start = Offset(x - size.width * 0.25f, 0f),
-                end = Offset(x + size.width * 0.25f, size.height * 0.6f),
+                listOf(Color.Transparent, Color.White.copy(alpha = 0.28f), Color.Transparent),
+                start = Offset(sweep - size.width * 0.3f, 0f),
+                end = Offset(sweep + size.width * 0.1f, size.height * 0.7f),
             ),
         )
+        drawCircle(
+            Brush.radialGradient(listOf(Color.White.copy(alpha = 0.35f), Color.Transparent), center = Offset(size.width * 0.32f, size.height * 0.24f), radius = size.width * 0.22f),
+            radius = size.width * 0.22f,
+            center = Offset(size.width * 0.32f, size.height * 0.24f),
+        )
     }
-    // A sparkle at the top right of the table.
-    val s = Offset(size.width * 0.68f, size.height * 0.15f)
-    val tw = 0.5f + 0.5f * sin(shine * 2f * PI.toFloat())
-    drawLine(Color.White.copy(alpha = 0.8f * tw), Offset(s.x - 9.dp.toPx(), s.y), Offset(s.x + 9.dp.toPx(), s.y), strokeWidth = 1.5.dp.toPx())
-    drawLine(Color.White.copy(alpha = 0.8f * tw), Offset(s.x, s.y - 9.dp.toPx()), Offset(s.x, s.y + 9.dp.toPx()), strokeWidth = 1.5.dp.toPx())
+    // Sparkles at two corners, twinkling in turn.
+    fun sparkle(at: Offset, strength: Float) {
+        val l = 11.dp.toPx() * strength
+        val a = (0.9f * strength).coerceIn(0f, 1f)
+        drawLine(Color.White.copy(alpha = a), Offset(at.x - l, at.y), Offset(at.x + l, at.y), 1.6.dp.toPx())
+        drawLine(Color.White.copy(alpha = a), Offset(at.x, at.y - l), Offset(at.x, at.y + l), 1.6.dp.toPx())
+        drawCircle(Color.White.copy(alpha = a), 2.2.dp.toPx() * strength, at)
+    }
+    val tw = sin(shine * 2f * PI.toFloat())
+    sparkle(table[10], (0.5f + 0.5f * tw).coerceAtLeast(0f))
+    sparkle(outer[2], (0.5f - 0.5f * tw).coerceAtLeast(0f))
 }
 
 /**
- * OMEGA UI's logo: the red glass ruby with the Ω set into it – and, if given, the system
+ * OMEGA UI's logo: the ruby with the Ω glowing in it like lava – and, if given, the system
  * version under it (as on a phone's "about" screen).
  */
 @Composable
@@ -140,37 +183,40 @@ fun OmegaRuby(modifier: Modifier = Modifier, size: Dp = 150.dp, version: String?
         rememberInfiniteTransition(label = "ruby").animateFloat(
             initialValue = 0f,
             targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(4200, easing = LinearEasing), RepeatMode.Restart),
+            animationSpec = infiniteRepeatable(tween(5200, easing = LinearEasing), RepeatMode.Restart),
             label = "shine",
         )
     } else {
-        remember { androidx.compose.runtime.mutableFloatStateOf(0.35f) }
+        remember { androidx.compose.runtime.mutableFloatStateOf(0.3f) }
     }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val glowPx = with(density) { (size * 0.16f).toPx() }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(width = size, height = size * 1.05f), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(width = size, height = size * 1.04f), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) { drawRuby(shine, 1f) }
-            // The Ω, set into the stone.
+            // The Ω inside, glowing like molten rock.
             Text(
                 "Ω",
                 style = TextStyle(
-                    brush = Brush.verticalGradient(listOf(Color.White, Color(0xFFFFD6DC), Color(0xFFFF8A98))),
-                    fontSize = (size.value * 0.34f).sp,
+                    brush = Brush.verticalGradient(listOf(Color(0xFFFFF4C2), Color(0xFFFFC04A), Color(0xFFFF6A1F), Color(0xFFE5243F))),
+                    fontSize = (size.value * 0.4f).sp,
                     fontWeight = FontWeight.Black,
+                    shadow = androidx.compose.ui.graphics.Shadow(Color(0xFFFF5A1A), Offset.Zero, glowPx),
                 ),
-                modifier = Modifier
-                    .padding(bottom = size * 0.12f)
-                    .graphicsLayer { alpha = 0.92f },
+                modifier = Modifier.padding(bottom = size * 0.03f),
             )
         }
         if (version != null) {
-            Spacer(Modifier.height(size * 0.06f))
+            Spacer(Modifier.height(size * 0.07f))
             Text(
                 version,
                 style = TextStyle(
-                    brush = Brush.linearGradient(listOf(Color.White, RubyColors[4], RubyColors[3])),
-                    fontSize = (size.value * 0.16f).sp,
-                    fontWeight = FontWeight.Bold,
+                    brush = Brush.verticalGradient(listOf(Color.White, Color(0xFFFFC2CA), RubyBright)),
+                    fontSize = (size.value * 0.15f).sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (size.value * 0.004f).sp,
                     textAlign = TextAlign.Center,
+                    shadow = androidx.compose.ui.graphics.Shadow(RubyMid.copy(alpha = 0.8f), Offset(0f, 2f), glowPx * 0.4f),
                 ),
             )
         }

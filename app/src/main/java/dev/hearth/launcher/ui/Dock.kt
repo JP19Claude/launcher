@@ -26,7 +26,10 @@ import androidx.compose.ui.graphics.Color
 fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier, draggingKey: String? = null) {
     if (apps.isEmpty()) return
     val style = LocalSettings.current.dockStyle
+    // Very big icons (up to 96 dp) on the home screen; the dock keeps them at a size that fits.
+    val dockLook = LocalSettings.current.let { it.copy(iconSize = it.iconSize.coerceAtMost(68)) }
     val icons: @Composable () -> Unit = {
+        androidx.compose.runtime.CompositionLocalProvider(LocalSettings provides dockLook) {
         apps.forEach { app ->
             key(app.key) {
                 AppIcon(
@@ -37,6 +40,7 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
                     modifier = Modifier.graphicsLayer { alpha = if (app.key == draggingKey) 0f else 1f },
                 )
             }
+        }
         }
     }
     when (style) {

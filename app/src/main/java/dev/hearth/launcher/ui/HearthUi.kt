@@ -238,7 +238,11 @@ internal object HearthChangelog {
                 ),
                 ChangeSection(
                     "Hotfix", Icons.Rounded.CheckCircle, Green,
-                    listOf("Glimmer Drop lässt sich jetzt ganz ausschalten (Einstellungen → Glimmer → Glimmer Drop): kein Bluetooth-Signal mehr, kein Eintrag im Teilen-Menü und keine Kachel im OMEGA-Menü."),
+                    listOf(
+                        "Glimmer Drop lässt sich jetzt ganz ausschalten (Einstellungen → Glimmer → Glimmer Drop): kein Bluetooth-Signal mehr, kein Eintrag im Teilen-Menü und keine Kachel im OMEGA-Menü.",
+                        "Der Rubin ist neu geschliffen – im Stil des großen roten Steins aus Omega Rubin: Brillantschliff von oben, Licht wandert über die Facetten, das Ω glüht wie Lava.",
+                        "Icons lassen sich jetzt bis 96 dp groß stellen (Design → Icons → Größe) und werden dafür schärfer geladen; das Dock bleibt passend.",
+                    ),
                     withGlimmer,
                 ),
             ),
