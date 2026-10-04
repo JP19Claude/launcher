@@ -1539,27 +1539,63 @@ private fun OneUIClock(settings: LauncherSettings, modifier: Modifier = Modifier
         now.format(DateTimeFormatter.ofPattern("EEE, d. MMMM", locale))
             .replaceFirstChar { it.titlecase(locale) }
     }
+    // OMEGA UI 17.4: with OMEGA Glass the digits are glass and the date sits on glass chips.
+    val glass = settings.omegaGlass
+    val context = LocalContext.current
     Column(modifier) {
-        RollingText(
-            text = time,
-            color = Color.White,
-            fontFamily = clockFamily(settings, null),
-            fontWeight = clockWeight(settings, FontWeight.SemiBold),
-            fontSize = 78.sp,
-            lineHeight = 80.sp,
-            letterSpacing = (-3).sp,
-            style = OnWallpaperText,
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = date, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Medium, style = OnWallpaperText)
-            val level = battery
-            if (settings.showBattery && level != null) {
-                Text(
-                    text = "   " + (if (level.charging) "⚡" else "") + "${level.percent} %",
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontSize = 17.sp,
-                    style = OnWallpaperText,
-                )
+        if (glass) {
+            GlassNumerals(
+                text = time,
+                fontFamily = clockFamily(settings, null),
+                fontWeight = clockWeight(settings, FontWeight.Bold),
+                fontSize = 82.sp,
+                lineHeight = 84.sp,
+                letterSpacing = (-3).sp,
+            )
+        } else {
+            RollingText(
+                text = time,
+                color = Color.White,
+                fontFamily = clockFamily(settings, null),
+                fontWeight = clockWeight(settings, FontWeight.SemiBold),
+                fontSize = 78.sp,
+                lineHeight = 80.sp,
+                letterSpacing = (-3).sp,
+                style = OnWallpaperText,
+            )
+        }
+        val level = battery
+        if (glass) {
+            Row(
+                Modifier.padding(top = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                GlassCapsule(onClick = { openCalendar(context) }, padding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
+                    Text(text = date, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                }
+                if (settings.showBattery && level != null) {
+                    GlassCapsule(onClick = { openBattery(context) }, padding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
+                        Text(
+                            text = (if (level.charging) "⚡ " else "") + "${level.percent} %",
+                            color = Color.White.copy(alpha = 0.9f),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
+            }
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = date, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Medium, style = OnWallpaperText)
+                if (settings.showBattery && level != null) {
+                    Text(
+                        text = "   " + (if (level.charging) "⚡" else "") + "${level.percent} %",
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 17.sp,
+                        style = OnWallpaperText,
+                    )
+                }
             }
         }
         if (settings.showGreeting && !settings.galaxyClaude) {
@@ -1706,15 +1742,34 @@ private fun NowBriefCard(onAsk: (String?) -> Unit, modifier: Modifier = Modifier
         battery?.let { add(((if (it.charging) "⚡ Lädt · " else "🔋 Akku ") + "${it.percent} %") to ::openBattery) }
         add(("📅 " + now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale)).replaceFirstChar { it.titlecase(locale) }) to ::openCalendar)
     }
+    // OMEGA UI 17.4: much more glass – OMEGA glass (an own tint would cover it), deeper lens,
+    // light along the top, OMEGA Fluid drifting inside and lying along the rim.
+    val omega = LocalSettings.current.omegaGlass
+    val fluidOn = LocalSettings.current.fluidDesign
     LiquidGlass(
         cornerRadius = 30.dp,
-        refraction = 20.dp,
+        refraction = 26.dp,
         interactive = true,
-        tint = Color(0xFF7C8CFF).copy(alpha = 0.12f),
+        tint = if (omega) null else Color(0xFF7C8CFF).copy(alpha = 0.12f),
+        fluidEdge = false,
         modifier = modifier
             .fillMaxWidth()
+            .aiFluidEdge(30.dp, strength = if (omega) 0.95f else 0.45f, width = 1.5.dp, enabled = fluidOn, flowing = false)
             .clip(RoundedCornerShape(30.dp)),
     ) {
+        if (fluidOn) {
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(30.dp))
+                    .fluidGlow(strength = if (omega) 1f else 0.6f),
+            )
+        }
+        Box(
+            Modifier
+                .matchParentSize()
+                .glassSheen(30.dp),
+        )
         Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -1755,7 +1810,7 @@ private fun NowBriefCard(onAsk: (String?) -> Unit, modifier: Modifier = Modifier
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 facts.forEach { (fact, open) ->
-                    GlassCapsule(onClick = { open(context) }, tint = Color.White.copy(alpha = 0.06f), padding = PaddingValues(horizontal = 12.dp, vertical = 7.dp)) {
+                    GlassCapsule(onClick = { open(context) }, tint = if (omega) null else Color.White.copy(alpha = 0.06f), padding = PaddingValues(horizontal = 12.dp, vertical = 7.dp)) {
                         Text(fact, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     }
                 }

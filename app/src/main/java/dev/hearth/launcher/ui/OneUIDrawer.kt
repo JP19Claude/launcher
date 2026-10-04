@@ -193,11 +193,14 @@ fun OneUIDrawer(
                 .matchParentSize()
                 .graphicsLayer { alpha = 1f - (pull.value / (dismissPx * 3f)).coerceIn(0f, 0.6f) },
         ) {
-            GlassBackdropFill(blur = 36.dp, modifier = Modifier.matchParentSize())
-            Box(
-                Modifier
-                    .matchParentSize()
-                    .background(Color.Black.copy(alpha = 0.38f)),
+            // OMEGA UI 17.4: lighter, tinted like OMEGA glass, with the fluid colors drifting.
+            OmegaScreenBackdrop(
+                modifier = Modifier.matchParentSize(),
+                blur = 36.dp,
+                dim = 0.32f,
+                omegaDim = 0.22f,
+                noGlassDim = 0.38f,
+                fluid = 0.6f,
             )
         }
         Column(
@@ -295,40 +298,57 @@ fun OneUIDrawer(
                         fontSize = 13.sp,
                         modifier = Modifier.padding(start = 22.dp, top = 4.dp, bottom = 2.dp),
                     )
-                    Row(
-                        Modifier
+                    // OMEGA UI 17.4: the suggestions on their own piece of glass, fluid inside.
+                    LiquidGlass(
+                        cornerRadius = 26.dp,
+                        refraction = 16.dp,
+                        modifier = Modifier
+                            .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 10.dp)
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp),
+                            .clip(RoundedCornerShape(26.dp)),
                     ) {
-                        for (c in 0 until columns) {
-                            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                                shownSuggestions.getOrNull(c)?.let { app ->
-                                    AppIcon(app, actions, onWallpaper = true, fillCell = true, onLaunch = onLaunch)
+                        if (settings.fluidDesign) {
+                            Box(
+                                Modifier
+                                    .matchParentSize()
+                                    .fluidGlow(strength = if (settings.omegaGlass) 0.9f else 0.55f),
+                            )
+                        }
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp),
+                        ) {
+                            for (c in 0 until columns) {
+                                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                    shownSuggestions.getOrNull(c)?.let { app ->
+                                        AppIcon(app, actions, onWallpaper = true, fillCell = true, onLaunch = onLaunch)
+                                    }
                                 }
                             }
                         }
                     }
-                    Box(
-                        Modifier
-                            .padding(horizontal = 22.dp, vertical = 8.dp)
-                            .fillMaxWidth()
-                            .height(0.6.dp)
-                            .background(Color.White.copy(alpha = 0.18f)),
-                    )
                 }
             }
+            // OMEGA UI 17.4: all apps on one big sheet of OMEGA glass that stays put while the
+            // pages swipe across it.
+            OmegaGlassSheet(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp)
+                    .rise({ appear.value }, 3),
+            ) {
             HorizontalPager(
                 state = pagerState,
                 beyondViewportPageCount = 1,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
             ) { page ->
                 val pageApps = pages[page]
                 Column(
                     Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 8.dp)
+                        .padding(horizontal = 2.dp, vertical = 8.dp)
                         // Depth while swiping: the page leaving shrinks and dims a little.
                         .graphicsLayer {
                             val off = abs((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction).coerceIn(0f, 1f)
@@ -343,7 +363,7 @@ fun OneUIDrawer(
                             Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
-                                .rise({ appear.value * resort.value }, r + 3),
+                                .rise({ appear.value * resort.value }, r + 4),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             for (c in 0 until columns) {
@@ -357,16 +377,24 @@ fun OneUIDrawer(
                     }
                 }
             }
+            }
             if (pages.size > 1) {
-                DrawerDots(
-                    state = pagerState,
-                    count = pages.size,
+                // The page dots on a little glass capsule.
+                LiquidGlass(
+                    cornerRadius = 100.dp,
+                    refraction = 6.dp,
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
-                        .padding(top = 6.dp, bottom = 18.dp),
-                )
+                        .padding(top = 10.dp, bottom = 14.dp),
+                ) {
+                    DrawerDots(
+                        state = pagerState,
+                        count = pages.size,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
+                }
             } else {
-                Spacer(Modifier.size(18.dp))
+                Spacer(Modifier.size(14.dp))
             }
         }
         if (menuShown) {

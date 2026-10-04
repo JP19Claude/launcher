@@ -178,6 +178,39 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "17.4",
+            name = "Glas-Uhr",
+            summary = "Viel mehr OMEGA Glass im App-Drawer und im Now Brief – und die One-UI-Uhr mit Ziffern aus Glas.",
+            sections = listOf(
+                ChangeSection(
+                    "Uhr aus Glas", Icons.Rounded.Star, Pink,
+                    listOf(
+                        "Mit OMEGA Glass sind die Ziffern der One-UI-Uhr aus Glas: Durch sie scheint das milchige Hintergrundbild, heller und in OMEGA getönt, oben fängt sich Licht.",
+                        "Um jede Ziffer läuft ein Rand aus OMEGA Fluid, ein weicher Schatten gibt ihnen Tiefe – und sie rollen weiter wie vorher.",
+                        "Datum und Akku stehen auf Glas-Chips; ein Tipp öffnet Kalender oder Akku.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "App-Drawer", Icons.Rounded.Menu, Blue,
+                    listOf(
+                        "Der Drawer ist jetzt OMEGA Glass: heller, in OMEGA getönt, mit OMEGA Fluid im Hintergrund.",
+                        "Alle Apps liegen auf einer großen Glasfläche mit Fluid darin und am Rand – die Seiten wischen über das Glas.",
+                        "Die vorgeschlagenen Apps bekommen ihr eigenes Glas, die Seitenpunkte eine Glas-Kapsel.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Now Brief", Icons.Rounded.Favorite, Terracotta,
+                    listOf(
+                        "Viel mehr Glas: OMEGA-Glas statt Blau, tiefere Linse, Licht an der Oberkante, OMEGA Fluid im Glas und am Rand.",
+                        "Die Chips für Wecker, Akku und Datum sind OMEGA Glass.",
+                    ),
+                    hearth,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "17.3",
             name = "Fluid Finder",
             summary = "Galaxy Omega in Blau und Rubin statt Lila, und der Finder und alle Suchleisten ganz aus OMEGA Glass und OMEGA Fluid.",

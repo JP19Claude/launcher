@@ -349,7 +349,12 @@ private fun frostFor(blurFactor: Float) = when {
     else -> Frost.Soft
 }
 
-private fun DrawScope.drawBackdrop(backdrop: WallpaperBackdrop, origin: Offset, frost: Frost = Frost.Soft) {
+private fun DrawScope.drawBackdrop(
+    backdrop: WallpaperBackdrop,
+    origin: Offset,
+    frost: Frost = Frost.Soft,
+    blendMode: BlendMode = BlendMode.SrcOver,
+) {
     val image = when (frost) {
         Frost.None -> backdrop.image
         Frost.Soft -> backdrop.soft
@@ -362,9 +367,17 @@ private fun DrawScope.drawBackdrop(backdrop: WallpaperBackdrop, origin: Offset, 
         dstOffset = IntOffset(-origin.x.roundToInt(), -origin.y.roundToInt()),
         dstSize = IntSize(backdrop.screenWidth, backdrop.screenHeight),
         colorFilter = Vibrancy,
+        blendMode = blendMode,
         filterQuality = FilterQuality.Low,
     )
 }
+
+/**
+ * OMEGA UI 17.4: the frosted wallpaper behind [origin], for glass of any shape – with
+ * [BlendMode.SrcIn] it fills only what was drawn before (the glass numerals).
+ */
+internal fun DrawScope.drawFrostedWallpaper(backdrop: WallpaperBackdrop, origin: Offset, blendMode: BlendMode) =
+    drawBackdrop(backdrop, origin, Frost.Strong, blendMode)
 
 /** Tracks the finger without consuming anything, so buttons inside still get their clicks. */
 private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.trackPress(

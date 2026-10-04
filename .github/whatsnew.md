@@ -1,13 +1,15 @@
-OMEGA UI 17.3 auf ClaudeOS 4.0 „Aurora“
+OMEGA UI 17.4 auf ClaudeOS 4.0 „Aurora“
 
-🔵 Galaxy Omega – jetzt Blau statt Lila
-• Galaxy-Blau mit OMEGA-Rubin: tiefblaues Glas, OMEGA Fluid in Blau, Rubin, Himmelblau und Eisweiß
-• Akzent und Glas-Tönung „Galaxy Omega“ ziehen automatisch mit
+🕒 Uhr aus Glas
+• Mit OMEGA Glass sind die Ziffern der One-UI-Uhr aus Glas – milchiges Hintergrundbild darin, OMEGA-Tönung, Licht oben
+• Rand aus OMEGA Fluid um jede Ziffer, weicher Schatten für Tiefe
+• Datum und Akku auf Glas-Chips
 
-🔎 Finder aus Glas und Fluid
-• Heller, mit OMEGA-Tönung und kräftigerem OMEGA Fluid im Hintergrund
-• Alle Ergebnisse auf einer großen Glasfläche mit OMEGA Fluid darin und am Rand
-• Suchleiste aus OMEGA Glass mit fließendem Fluid-Rand – beim Tippen noch heller
+📱 App-Drawer aus OMEGA Glass
+• Heller, OMEGA-getönt, OMEGA Fluid im Hintergrund
+• Alle Apps auf einer großen Glasfläche mit Fluid darin und am Rand
+• Vorschläge auf eigenem Glas, Seitenpunkte in einer Glas-Kapsel
 
-💎 Suchleisten
-• Homescreen, App-Drawer und App-Mediathek: OMEGA Glass mit fließendem OMEGA Fluid
+✨ Now Brief
+• Viel mehr Glas: OMEGA-Glas, tiefere Linse, Licht oben, OMEGA Fluid im Glas und am Rand
+• Wecker-, Akku- und Datums-Chips aus OMEGA Glass

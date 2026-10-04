@@ -47,9 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -114,46 +112,17 @@ fun SearchOverlay(
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    val hasGlass = LocalBackdrop.current != null
     // Comes down from the top like a sheet of liquid, and the results follow a moment later.
     val animate = LocalSettings.current.animations
     val appear = remember { Animatable(if (animate) 0f else 1f) }
     LaunchedEffect(Unit) { appear.animateTo(1f, spring(dampingRatio = 0.8f, stiffness = 260f)) }
 
-    val omega = LocalSettings.current.omegaGlass
-    val fluidOn = LocalSettings.current.fluidDesign
-    val palette = fluidPalette()
-    // The results' glass: OMEGA glass (or the glass tint), a little deeper so labels stay clear.
-    val sheetTint = LocalGlassStyle.current.tint.compositeOver(Color.Black.copy(alpha = 0.3f))
-
     // Always dark glass, whatever the system theme: light text on the frosted wallpaper.
     HearthTheme(dark = true) {
     Box(Modifier.fillMaxSize()) {
-        GlassBackdropFill(blur = 40.dp, modifier = Modifier.matchParentSize())
-        Box(
-            Modifier
-                .matchParentSize()
-                // OMEGA UI 17.3: lighter, so the glass and the fluid behind it really show.
-                .background(Color(0xFF06060C).copy(alpha = if (hasGlass) (if (omega) 0.24f else 0.34f) else 0.94f)),
-        )
-        // OMEGA Glass: the whole finder is tinted like OMEGA glass – deepest at the top, where
-        // you type, and once more at the bottom.
-        if (omega) {
-            Box(
-                Modifier
-                    .matchParentSize()
-                    .background(
-                        Brush.verticalGradient(
-                            0f to palette[0].copy(alpha = 0.28f),
-                            0.4f to palette[0].copy(alpha = 0.05f),
-                            1f to palette[1].copy(alpha = 0.2f),
-                        ),
-                    ),
-            )
-        }
-        // One UI 10 Fluid / OMEGA Fluid: the colors drift behind everything (and hold still
-        // while the results scroll).
-        FluidBackdrop(palette, modifier = Modifier.matchParentSize(), strength = if (omega) 0.85f else 0.7f)
+        // OMEGA UI 17.3: lighter, tinted like OMEGA glass, with OMEGA Fluid drifting behind
+        // everything (and holding still while the results scroll).
+        OmegaScreenBackdrop(modifier = Modifier.matchParentSize(), blur = 40.dp)
         Column(
             Modifier
                 .fillMaxSize()
@@ -205,11 +174,7 @@ fun SearchOverlay(
 
             // OMEGA UI 17.3: the results lie on one big sheet of glass, with the fluid colors
             // drifting inside it and flowing round its rim.
-            LiquidGlass(
-                cornerRadius = 30.dp,
-                refraction = 22.dp,
-                tint = sheetTint,
-                fluidEdge = false,
+            OmegaGlassSheet(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -219,22 +184,12 @@ fun SearchOverlay(
                         val p = appear.value
                         alpha = ((p - 0.15f) / 0.85f).coerceIn(0f, 1f)
                         translationY = (1f - p) * -40.dp.toPx()
-                    }
-                    .aiFluidEdge(30.dp, strength = if (omega) 0.85f else 0.5f, width = 1.5.dp, enabled = fluidOn, flowing = false),
+                    },
             ) {
-            if (fluidOn) {
-                Box(
-                    Modifier
-                        .matchParentSize()
-                        .clip(RoundedCornerShape(30.dp))
-                        .fluidGlow(strength = if (omega) 0.9f else 0.6f, flowing = omega),
-                )
-            }
             LazyVerticalGrid(
                 columns = GridCells.Fixed(columns),
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(30.dp))
                     .fadingEdges(top = 14.dp, bottom = 30.dp),
                 contentPadding = PaddingValues(start = 6.dp, end = 6.dp, top = 12.dp, bottom = 20.dp),
             ) {
