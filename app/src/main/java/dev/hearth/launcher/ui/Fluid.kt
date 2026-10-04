@@ -133,7 +133,9 @@ fun FluidBackdrop(colors: List<Color>, modifier: Modifier = Modifier, strength: 
     if (!LocalSettings.current.fluidDesign) return
     // OMEGA Glass: OMEGA Fluid drifts behind every screen instead.
     @Suppress("NAME_SHADOWING")
-    val colors = if (LocalSettings.current.omegaGlass) OmegaFluidColors.take(colors.size.coerceAtLeast(1)) else colors
+    val colors = if (LocalSettings.current.omegaGlass) omegaPalette(LocalSettings.current).take(colors.size.coerceAtLeast(3)) else colors
+    @Suppress("NAME_SHADOWING")
+    val strength = if (LocalSettings.current.omegaGlass) strength * 1.4f else strength
     val flow = flowPhase(24_000, LocalSettings.current.animations)
     Canvas(modifier.fillMaxSize()) {
         val t = flow?.invoke() ?: 1.2f
@@ -178,9 +180,23 @@ val OmegaCalmColors = listOf(
     Color(0xFFF4DCE3),
 )
 
+/** OMEGA Fluid in Galaxy Omega: ruby, violet and deep blue with a magenta light. */
+val GalaxyOmegaFluidColors = listOf(
+    Color(0xFFC8102E),
+    Color(0xFF8E3BFF),
+    Color(0xFF3E5BFF),
+    Color(0xFFFF4FA8),
+    Color(0xFFD9C2FF),
+)
+
+/** The OMEGA Fluid colors for these settings (Rubin or Galaxy Omega). */
+internal fun omegaPalette(s: dev.hearth.launcher.data.LauncherSettings): List<Color> =
+    if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.GalaxyOmega) GalaxyOmegaFluidColors else OmegaFluidColors
+
 /** The fluid colors in use: OMEGA Fluid with OMEGA Glass on, else Claude's. */
 @Composable
-internal fun fluidPalette(): List<Color> = if (LocalSettings.current.omegaGlass) OmegaFluidColors else AiFluidColors
+internal fun fluidPalette(): List<Color> =
+    LocalSettings.current.let { if (it.omegaGlass) omegaPalette(it) else AiFluidColors }
 
 /** The AI Fluid colors: Claude's terracotta flowing through violet, blue and pink. */
 val AiFluidColors = listOf(
@@ -208,15 +224,15 @@ fun Modifier.aiFluidEdge(
     val phase = flowPhase(4200, LocalSettings.current.animations && flowing)
     // Hearth UI 14 "Dezent": rims that stand still are calm glass with a hint of Claude's
     // colors; flowing ones (something running, something new) keep their full colors.
-    val calm = phase == null && LocalSettings.current.fluidRims == FluidRims.Calm
     val omega = LocalSettings.current.omegaGlass
+    // OMEGA Glass: OMEGA Fluid shows everywhere in full color, never the calm white.
+    val calm = !omega && phase == null && LocalSettings.current.fluidRims == FluidRims.Calm
     val colors = when {
-        omega && calm -> OmegaCalmColors
-        omega -> OmegaFluidColors
+        omega -> omegaPalette(LocalSettings.current)
         calm -> CalmFluidColors
         else -> AiFluidColors
     }
-    val fade = if (calm) 0.7f else 1f
+    val fade = if (calm) 0.7f else if (omega) 1.35f else 1f
     // Sizes, strokes and (when still) the gradient are made once per size, not every frame.
     this.drawWithCache {
         val w = width.toPx()
@@ -276,11 +292,12 @@ fun Modifier.fluidGlow(strength: Float = 1f, enabled: Boolean = true, flowing: B
     if (!enabled || !LocalSettings.current.fluidDesign) return@composed this
     val phase = flowPhase(14_000, LocalSettings.current.animations && flowing)
     val palette = fluidPalette()
+    val boost = if (LocalSettings.current.omegaGlass) 1.5f else 1f
     this.drawWithCache {
         fun blobs(t: Float) = palette.take(3).mapIndexed { i, c ->
             val p = i * 2.1f
             val at = Offset(size.width * (0.5f + 0.45f * cos(t + p)), size.height * (0.5f + 0.45f * sin(t * 0.8f + p)))
-            at to Brush.radialGradient(listOf(c.copy(alpha = 0.16f * strength), Color.Transparent), center = at, radius = size.maxDimension * 0.7f)
+            at to Brush.radialGradient(listOf(c.copy(alpha = (0.16f * strength * boost).coerceAtMost(0.5f)), Color.Transparent), center = at, radius = size.maxDimension * 0.7f)
         }
         // Standing still, the glow is painted from the same three brushes every time.
         val still = if (phase == null) blobs(1f) else null

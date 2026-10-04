@@ -178,6 +178,32 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "17.2",
+            name = "Galaxy Omega",
+            summary = "Mehr OMEGA Glass und OMEGA Fluid überall, die neue Farbe Galaxy Omega, ein größeres Ω und Clawd in Galaxy.",
+            sections = listOf(
+                ChangeSection(
+                    "OMEGA Glass", Icons.Rounded.Star, Pink,
+                    listOf(
+                        "OMEGA Glass ist jetzt von Anfang an an – und kräftiger: deutlich getöntes Glas, OMEGA Fluid auf jedem Rand in voller Farbe, stärkere Fluid-Hintergründe und Leuchten.",
+                        "Neue Systemfarbe „Galaxy Omega“: violettes Glas mit Rubinschein, OMEGA Fluid in Rubin, Violett, Tiefblau und Magenta. Unter Design → OMEGA → Farbe von OMEGA Glass – Akzent und Glas wechseln mit.",
+                        "„Galaxy Omega“ auch als Akzentfarbe und Glas-Tönung.",
+                    ),
+                    withGlimmer,
+                ),
+                ChangeSection(
+                    "Logo", Icons.Rounded.Favorite, Pink,
+                    listOf("Das Ω im Logo ist viel größer – fast so breit wie der Rubin."),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Clawd", Icons.Rounded.Face, Terracotta,
+                    listOf("Neue Farbe „Galaxy“: Indigo, Violett und Magenta fließen ineinander, dazu kleine Sterne auf Clawd."),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "17.1",
             name = "OMEGA Glass",
             summary = "OMEGA Glass im ganzen System, ein flüssigeres OMEGA UI, ein klares Logo und neue Kleidung für Clawd.",

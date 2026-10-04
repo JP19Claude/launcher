@@ -93,6 +93,7 @@ fun Clawd(
     // OMEGA UI 17.1: the color of his clothes and the Ω on his chest, for every Clawd drawn.
     ClawdWardrobe.cloth = LocalSettings.current.clawdCloth.color
     ClawdWardrobe.omega = LocalSettings.current.clawdOmega
+    ClawdWardrobe.stars = color == null && skin == ClawdSkin.Galaxy
     if (!animate) {
         val body = color ?: skin.color
         Canvas(modifier) { drawClawdPose(mood, body, hat, outfit) }
@@ -102,7 +103,11 @@ fun Clawd(
     // One clock for everything: 0..1 over 2.4 s.
     val clock by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2400, easing = LinearEasing), RepeatMode.Restart), label = "clawdClock")
     Canvas(modifier) {
-        val body = color ?: if (skin == ClawdSkin.Rainbow) rainbow(clock) else skin.color
+        val body = color ?: when (skin) {
+            ClawdSkin.Rainbow -> rainbow(clock)
+            ClawdSkin.Galaxy -> galaxy(clock)
+            else -> skin.color
+        }
         val phase = clock * 2f * Math.PI.toFloat()
         // A blink now and then: the eyes close for a moment near the end of each loop.
         val blink = mood != ClawdMood.Love && clock in 0.92f..0.97f
@@ -129,6 +134,16 @@ fun Clawd(
 object ClawdWardrobe {
     @Volatile var cloth: Color? = null
     @Volatile var omega: Boolean = false
+    /** The Galaxy skin: little stars on his body. */
+    @Volatile var stars: Boolean = false
+}
+
+/** The Galaxy skin's color at [t] (0..1): indigo, violet and magenta drifting into each other. */
+fun galaxy(t: Float): Color {
+    val stops = listOf(Color(0xFF3B3FC4), Color(0xFF6A4BE0), Color(0xFFB04CC8), Color(0xFF4B5FE8), Color(0xFF3B3FC4))
+    val x = (t.coerceIn(0f, 1f)) * (stops.size - 1)
+    val i = x.toInt().coerceAtMost(stops.size - 2)
+    return androidx.compose.ui.graphics.lerp(stops[i], stops[i + 1], x - i)
 }
 
 /** The rainbow skin's color at [t] (0..1): soft, so the eyes stay visible. */
@@ -260,6 +275,13 @@ internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawd(
             cell(5, 7, 1, 2, dy = -liftB)
             cell(8, 7, 1, 2, dy = -liftA)
             cell(10, 7, 1, 2, dy = -liftB)
+            // Galaxy: a few stars twinkling on him.
+            if (ClawdWardrobe.stars) {
+                val star = Color.White.copy(alpha = 0.9f)
+                listOf(4.2f to 4.4f, 8.6f to 3.6f, 6.4f to 5.9f, 10.5f to 5.4f, 2.8f to 6.2f, 5.6f to 0.5f, 9.4f to 1.0f).forEach { (x, y) ->
+                    drawRect(star, Offset(left + x * px, top + y * px), Size(px * 0.35f, px * 0.35f))
+                }
+            }
             if (outfit != ClawdOutfit.None) drawOutfit(outfit, color, left, top, px, armDy = -armLift.coerceIn(-1f, 1f) * 1.2f, face = false)
             if (ClawdWardrobe.omega) drawOmegaBadge(left, top, px)
         }

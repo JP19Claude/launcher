@@ -318,6 +318,26 @@ fun SettingsScreen(
                         description = "Rubin-Glas im ganzen System, und überall fließt OMEGA Fluid (Rubin, Rosé, Bernstein) statt Claudes Farben – Startbildschirm, Menüs, Einstellungen, Glimmer",
                         checked = s.omegaGlass,
                     ) { v -> update { it.copy(omegaGlass = v) } }
+                    ChoiceRow(
+                        label = "Farbe von OMEGA Glass",
+                        options = dev.hearth.launcher.data.OmegaColor.entries,
+                        selected = s.omegaColor,
+                        optionLabel = { it.label },
+                        swatch = {
+                            if (it == dev.hearth.launcher.data.OmegaColor.GalaxyOmega) AccentColor.GalaxyOmega.color else AccentColor.Ruby.color
+                        },
+                        onSelect = { v ->
+                            // The system's accent follows: ruby or Galaxy Omega.
+                            update {
+                                it.copy(
+                                    omegaColor = v,
+                                    omegaGlass = true,
+                                    accent = if (v == dev.hearth.launcher.data.OmegaColor.GalaxyOmega) AccentColor.GalaxyOmega else AccentColor.Ruby,
+                                    glassTint = if (v == dev.hearth.launcher.data.OmegaColor.GalaxyOmega) GlassTint.GalaxyOmega else GlassTint.Ruby,
+                                )
+                            }
+                        },
+                    )
                     RowDivider()
                     SwitchRow(
                         label = "Flüssig-Modus",

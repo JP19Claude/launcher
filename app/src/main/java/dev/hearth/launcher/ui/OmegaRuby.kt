@@ -141,16 +141,16 @@ fun OmegaRuby(modifier: Modifier = Modifier, size: Dp = 150.dp, version: String?
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.size(width = size, height = size * 1.18f), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) { drawRuby() }
-            // The Ω, big and clear.
+            // The Ω, big and clear – nearly as wide as the stone.
             Text(
                 "Ω",
                 style = TextStyle(
                     color = Color.White,
-                    fontSize = (size.value * 0.62f).sp,
+                    fontSize = (size.value * 0.84f).sp,
                     fontWeight = FontWeight.Black,
                     shadow = androidx.compose.ui.graphics.Shadow(GemDeep.copy(alpha = 0.55f), Offset(0f, size.value * 0.02f), 0f),
                 ),
-                modifier = Modifier.padding(top = size * 0.06f),
+                modifier = Modifier.padding(top = size * 0.04f),
             )
         }
         if (version != null) {

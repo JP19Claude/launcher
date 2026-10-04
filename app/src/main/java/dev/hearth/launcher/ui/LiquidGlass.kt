@@ -110,9 +110,12 @@ data class GlassStyle(
             refraction = s.glassRefraction,
             dispersion = s.glassDispersion,
             specular = s.glassSpecular,
-            // OMEGA Glass: ruby glass through the whole system.
-            tint = (if (s.omegaGlass) GlassTint.Ruby else s.glassTint).color.let { t ->
-                t.copy(alpha = (t.alpha * s.glassTintStrength).coerceIn(0f, 1f))
+            // OMEGA Glass: ruby (or Galaxy Omega) glass through the whole system, clearly tinted.
+            tint = if (s.omegaGlass) {
+                val t = if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.GalaxyOmega) GlassTint.GalaxyOmega.color else GlassTint.Ruby.color
+                t.copy(alpha = (t.alpha * 1.6f * s.glassTintStrength.coerceAtLeast(1f)).coerceIn(0f, 0.6f))
+            } else {
+                s.glassTint.color.copy(alpha = (s.glassTint.color.alpha * s.glassTintStrength).coerceIn(0f, 1f))
             },
             interactive = s.glassInteractive,
             dark = s.darkGlass,
@@ -494,7 +497,7 @@ fun LiquidGlass(
             // One UI 10 Fluid on every glass surface: Claude's colors along the rim, and a
             // touch spreading like liquid light where it can be pressed.
             // (The glass glows under the finger itself, so no second touch layer on top.)
-            .aiFluidEdge(cornerRadius, strength = 0.3f, width = 1.dp, enabled = fluid && fluidEdge, flowing = false)
+            .aiFluidEdge(cornerRadius, strength = if (LocalSettings.current.omegaGlass) 0.55f else 0.3f, width = 1.dp, enabled = fluid && fluidEdge, flowing = false)
             .then(
                 if (isInteractive) {
                     Modifier.pointerInput(Unit) {

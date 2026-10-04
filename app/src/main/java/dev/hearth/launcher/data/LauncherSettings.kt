@@ -68,6 +68,14 @@ enum class GlassTint(val label: String, val color: Color) {
     Blue("Blau", Color(0xFF6FA8FF).copy(alpha = 0.18f)),
     /** OMEGA UI: glass with a breath of ruby. */
     Ruby("Rubin", Color(0xFFB0102C).copy(alpha = 0.16f)),
+    /** OMEGA UI 17.2: deep violet glass with a ruby glow. */
+    GalaxyOmega("Galaxy Omega", Color(0xFF6A2BC9).copy(alpha = 0.2f)),
+}
+
+/** The color OMEGA Glass and OMEGA Fluid run in. */
+enum class OmegaColor(val label: String) {
+    Ruby("Rubin"),
+    GalaxyOmega("Galaxy Omega"),
 }
 
 /** Which glass gets the real lens (bending, color split); smaller glass gets the drawn edge. */
@@ -89,6 +97,8 @@ enum class AccentColor(val label: String, val color: Color) {
     Lilac("Flieder", Color(0xFFC6A8FF)),
     /** OMEGA UI's ruby red. */
     Ruby("Rubin", Color(0xFFE5243F)),
+    /** OMEGA UI 17.2: Galaxy's violet meeting OMEGA's ruby. */
+    GalaxyOmega("Galaxy Omega", Color(0xFFB04CE8)),
 }
 
 enum class SearchEngine(val label: String, val url: String?) {
@@ -320,6 +330,8 @@ enum class ClawdSkin(val label: String, val color: Color) {
     Snow("Schnee", Color(0xFFF2F0EA)),
     Midnight("Mitternacht", Color(0xFF5A6A8C)),
     Rainbow("Regenbogen", Color(0xFFD97757)),
+    /** OMEGA UI 17.2: deep space – indigo, violet and magenta drifting, with little stars. */
+    Galaxy("Galaxy", Color(0xFF6A4BE0)),
 }
 
 /** What Clawd wears on his head (or his eyes). */
@@ -434,7 +446,8 @@ data class LauncherSettings(
     val clawdCloth: ClawdCloth = ClawdCloth.Original,
     val clawdOmega: Boolean = false,
     /** OMEGA UI 17.1: ruby glass and OMEGA Fluid (ruby, rose, amber) all through the system. */
-    val omegaGlass: Boolean = false,
+    val omegaGlass: Boolean = true,
+    val omegaColor: OmegaColor = OmegaColor.Ruby,
     /** OMEGA UI 17.1: flowing effects at a calmer rate and lighter glass – smoother, less lag. */
     val smoothMode: Boolean = true,
     val clawdCompanion: Boolean = true,
@@ -875,6 +888,7 @@ class SettingsRepository(context: Context) {
             clawdCloth = enumOf("clawdCloth", d.clawdCloth),
             clawdOmega = prefs.getBoolean("clawdOmega", d.clawdOmega),
             omegaGlass = prefs.getBoolean("omegaGlass", d.omegaGlass),
+            omegaColor = enumOf("omegaColor", d.omegaColor),
             smoothMode = prefs.getBoolean("smoothMode", d.smoothMode),
             clawdCompanion = prefs.getBoolean("clawdCompanion", d.clawdCompanion),
             // Older installs had only "double tap locks" on or off.
@@ -1015,6 +1029,7 @@ class SettingsRepository(context: Context) {
             .putString("clawdCloth", s.clawdCloth.name)
             .putBoolean("clawdOmega", s.clawdOmega)
             .putBoolean("omegaGlass", s.omegaGlass)
+            .putString("omegaColor", s.omegaColor.name)
             .putBoolean("smoothMode", s.smoothMode)
             .putBoolean("clawdCompanion", s.clawdCompanion)
             .putString("doubleTapAction", s.doubleTapAction.name)
@@ -1168,7 +1183,7 @@ class SettingsRepository(context: Context) {
          * Only the switch itself and the look (black or glass, which changes the window) restart it.
          */
         val GLIMMER_LIVE_KEYS = setOf(
-            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "smoothMode", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
+            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "smoothMode", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
             "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerPrivacy", "accent", "animations",

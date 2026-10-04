@@ -1,17 +1,11 @@
-OMEGA UI 17.1 auf ClaudeOS 4.0 „Aurora“
+OMEGA UI 17.2 auf ClaudeOS 4.0 „Aurora“
 
-⚡ Flüssiger
-• Neuer Flüssig-Modus (an): ruhigere Farbflüsse, Glas-Linse nur auf großen Flächen – weniger Last, weniger Ruckeln
-• Logo als stilles Bild, OMEGA-Uhr zeichnet nur die Sekundenlinie neu, Icons nur so groß wie nötig
+💎 Mehr OMEGA Glass
+• OMEGA Glass von Anfang an an und kräftiger: getöntes Glas, OMEGA Fluid auf jedem Rand, stärkere Fluid-Hintergründe
+• Neue Systemfarbe „Galaxy Omega“ – violettes Glas mit Rubinschein, OMEGA Fluid in Rubin, Violett, Tiefblau und Magenta (Design → OMEGA)
 
-💎 OMEGA Glass
-• Rubin-Glas und OMEGA Fluid (Rubin, Rosé, Bernstein) im ganzen System – Design → OMEGA
-
-🔴 Klares Logo
-• Flacher Rubin in vier Rottönen mit großem weißem Ω
+🔴 Logo
+• Viel größeres Ω
 
 🦀 Clawd
-• Mantel, Hoodie, Regenjacke, Latzhose – Kleidungsfarbe wählbar – OMEGA-Abzeichen auf der Brust
-
-🥚 Easter Eggs
-• OMEGA-Logo am Ende der OMEGA-Eggs, eigene Claude-Logo-Varianten am Ende jedes ClaudeOS-Eggs
+• Neue Farbe „Galaxy“ mit kleinen Sternen

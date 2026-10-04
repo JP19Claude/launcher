@@ -62,7 +62,13 @@ internal fun ClawdSettings(
             options = ClawdSkin.entries,
             selected = s.clawdSkin,
             optionLabel = { it.label },
-            swatch = { if (it == ClawdSkin.Rainbow) rainbow(0.75f) else it.color },
+            swatch = {
+                when (it) {
+                    ClawdSkin.Rainbow -> rainbow(0.75f)
+                    ClawdSkin.Galaxy -> galaxy(0.45f)
+                    else -> it.color
+                }
+            },
             onSelect = { v ->
                 update { it.copy(clawdSkin = v) }
                 if (v == ClawdSkin.Rainbow) dev.hearth.launcher.data.EasterEggs.find(context, "rainbowskin")
