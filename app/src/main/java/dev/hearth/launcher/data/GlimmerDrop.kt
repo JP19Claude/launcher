@@ -236,8 +236,9 @@ object GlimmerDrop {
     /** True the first time only: Glimmer Drop asks for "devices nearby" by itself once. */
     fun askOnce(context: Context): Boolean {
         val p = prefs(context)
-        if (p.getBoolean("asked", false)) return false
-        p.edit().putBoolean("asked", true).apply()
+        // (Asked again once since location joined the permissions.)
+        if (p.getBoolean("asked_v2", false)) return false
+        p.edit().putBoolean("asked_v2", true).apply()
         return true
     }
 
@@ -262,22 +263,35 @@ object GlimmerDrop {
     // Permissions
     // -----------------------------------------------------------------------------------------
 
-    fun neededPermissions(): Array<String> = buildList {
+    /** For Glimmer's own beacon (feeling the other phone): Bluetooth only. */
+    private fun beaconPermissions(): List<String> = buildList {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             add(Manifest.permission.BLUETOOTH_SCAN)
             add(Manifest.permission.BLUETOOTH_ADVERTISE)
             add(Manifest.permission.BLUETOOTH_CONNECT)
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            add(Manifest.permission.NEARBY_WIFI_DEVICES)
         } else {
             add(Manifest.permission.ACCESS_FINE_LOCATION)
         }
-    }.toTypedArray()
-
-    fun hasPermissions(context: Context): Boolean = neededPermissions().all {
-        ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
     }
+
+    /** Everything Glimmer Drop asks for: Bluetooth, nearby Wi-Fi – and location, which Nearby needs to search. */
+    fun neededPermissions(): Array<String> = buildList {
+        addAll(beaconPermissions())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.NEARBY_WIFI_DEVICES)
+        add(Manifest.permission.ACCESS_FINE_LOCATION)
+        add(Manifest.permission.ACCESS_COARSE_LOCATION)
+    }.distinct().toTypedArray()
+
+    private fun granted(context: Context, permission: String): Boolean =
+        ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+
+    private fun hasBeaconPermissions(context: Context): Boolean = beaconPermissions().all { granted(context, it) }
+
+    /** All set: Bluetooth, nearby Wi-Fi and location (approximate is enough). */
+    fun hasPermissions(context: Context): Boolean =
+        hasBeaconPermissions(context) &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || granted(context, Manifest.permission.NEARBY_WIFI_DEVICES)) &&
+            (granted(context, Manifest.permission.ACCESS_COARSE_LOCATION) || granted(context, Manifest.permission.ACCESS_FINE_LOCATION))
 
     fun bluetoothOn(context: Context): Boolean =
         context.getSystemService(BluetoothManager::class.java)?.adapter?.isEnabled == true
@@ -310,7 +324,7 @@ object GlimmerDrop {
         touchToken = touched
         rssi.clear()
         if (!hasPermissions(c)) {
-            _phase.value = Phase.Failed("Glimmer Drop braucht die Erlaubnis für Geräte in der Nähe.")
+            _phase.value = Phase.Failed("Glimmer Drop braucht noch „Geräte in der Nähe“ und den Standort – der wird nur gebraucht, um das andere Handy zu finden.")
             return
         }
         _phase.value = Phase.Searching
@@ -358,11 +372,21 @@ object GlimmerDrop {
         c.startAdvertising(
             name, SERVICE_ID, lifecycle,
             AdvertisingOptions.Builder().setStrategy(Strategy.P2P_POINT_TO_POINT).build(),
-        ).addOnFailureListener { e -> if (!alreadyRunning(e)) fail("Glimmer Drop konnte nicht starten (${e.message}).") }
+        ).addOnFailureListener { e -> if (!alreadyRunning(e)) fail(problemText(e, "starten")) }
         c.startDiscovery(
             SERVICE_ID, discovery,
             DiscoveryOptions.Builder().setStrategy(Strategy.P2P_POINT_TO_POINT).build(),
-        ).addOnFailureListener { e -> if (!alreadyRunning(e)) fail("Glimmer Drop konnte nicht suchen (${e.message}).") }
+        ).addOnFailureListener { e -> if (!alreadyRunning(e)) fail(problemText(e, "suchen")) }
+    }
+
+    /** Nearby's errors in words – a missing permission says which one. */
+    private fun problemText(e: Exception, what: String): String {
+        val message = e.message.orEmpty()
+        return when {
+            "LOCATION" in message -> "Glimmer Drop braucht noch den Standort (nur um das andere Handy zu finden) – und der Standort muss eingeschaltet sein."
+            "MISSING_PERMISSION" in message -> "Glimmer Drop braucht noch eine Erlaubnis ($message)."
+            else -> "Glimmer Drop konnte nicht $what ($message)."
+        }
     }
 
     private fun alreadyRunning(e: Exception): Boolean {
@@ -787,7 +811,7 @@ object GlimmerDrop {
 
     @SuppressLint("MissingPermission")
     private fun startBeacon(context: Context, background: Boolean) {
-        if (!hasPermissions(context)) {
+        if (!hasBeaconPermissions(context)) {
             _signal.value = Signal(problem = "„Geräte in der Nähe“ ist nicht erlaubt")
             return
         }

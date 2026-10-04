@@ -1,7 +1,6 @@
-Hearth UI 15.7 auf ClaudeOS 3.1 · Glimmer 15.7
+Hearth UI 15.8 auf ClaudeOS 3.1 · Glimmer 15.8
 
-🛠 Glimmer Drop repariert
-• Beim Aneinanderhalten passierte nichts: Android 12+ gab Glimmer die Bluetooth-Signale des anderen Handys nicht weiter – behoben (ohne Standort-Erlaubnis)
-• Handys werden schon erkannt, wenn sie sich fast berühren
-• „Geräte in der Nähe“ wird einmal von selbst gefragt
-• Glimmer Drop zeigt an, ob Glimmer sendet/hört und wie stark das andere Handy ankommt
+🛠 Glimmer Drop verbindet
+• Behoben: „konnte nicht suchen (8034)“ – Googles Nearby braucht zum Suchen den Standort; Glimmer Drop fragt jetzt danach (ungefähr reicht)
+• „App-Einstellungen“-Knopf, falls eine Erlaubnis abgelehnt wurde
+• Verständliche Meldungen statt Fehlercodes

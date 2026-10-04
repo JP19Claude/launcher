@@ -65,7 +65,8 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Glimmer Drop: two phones held together find each other (Bluetooth beacon) and share
-         over a fast direct connection (Bluetooth and Wi-Fi Direct). -->
+         over a fast direct connection (Bluetooth and Wi-Fi Direct). Google's Nearby needs
+         location access to look for the other phone, on every Android version. -->
     <uses-permission
         android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
@@ -80,10 +81,10 @@
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
     <uses-permission
         android:name="android.permission.ACCESS_COARSE_LOCATION"
-        android:maxSdkVersion="32" />
+        tools:remove="android:maxSdkVersion" />
     <uses-permission
         android:name="android.permission.ACCESS_FINE_LOCATION"
-        android:maxSdkVersion="32" />
+        tools:remove="android:maxSdkVersion" />
 
     <application>
         <!-- Glimmer Drop: hold two phones together and share; also in Android's share sheet. -->

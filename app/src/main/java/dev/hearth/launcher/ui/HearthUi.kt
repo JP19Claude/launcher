@@ -169,6 +169,22 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "15.8",
+            name = "Glimmer Drop verbindet",
+            summary = "Die Handys erkennen sich – jetzt verbinden sie sich auch.",
+            sections = listOf(
+                ChangeSection(
+                    "Behoben", Icons.Rounded.CheckCircle, Green,
+                    listOf(
+                        "Glimmer Drop: „konnte nicht suchen (8034)“ – Googles Nearby braucht zum Suchen des anderen Handys den Standort, auch auf neuem Android. Glimmer Drop fragt jetzt danach (ungefähr reicht).",
+                        "Wurde eine Erlaubnis zweimal abgelehnt, führt „App-Einstellungen“ direkt dorthin; zurück in Glimmer Drop geht es sofort weiter.",
+                        "Verständliche Meldungen statt Fehlercodes.",
+                    ),
+                    withGlimmer,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "15.7",
             name = "Glimmer Drop repariert",
             summary = "Zwei Handys aneinanderhalten startet Glimmer Drop jetzt wirklich.",

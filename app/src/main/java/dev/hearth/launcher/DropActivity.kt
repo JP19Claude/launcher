@@ -54,7 +54,8 @@ class DropActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         picking = false
-        GlimmerDrop.open(this)
+        // Back from the app's settings (a permission given there): try again right away.
+        if (GlimmerDrop.phase.value is GlimmerDrop.Phase.Failed) GlimmerDrop.restart(this) else GlimmerDrop.open(this)
         GlimmerDrop.uiShown()
     }
 

@@ -204,6 +204,16 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
                             onPicking()
                             permissions.launch(GlimmerDrop.neededPermissions())
                         }
+                        // Once said no twice, Android doesn't ask again: then in the app's settings.
+                        DropButton("App-Einstellungen", Color.White.copy(alpha = 0.14f)) {
+                            onPicking()
+                            runCatching {
+                                context.startActivity(
+                                    Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }
+                        }
                     } else if (!GlimmerDrop.bluetoothOn(context)) {
                         DropButton("Bluetooth einschalten", DropBlue) {
                             onPicking()
