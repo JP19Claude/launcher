@@ -110,7 +110,8 @@ fun SearchOverlay(
 
     val hasGlass = LocalBackdrop.current != null
     // Comes down from the top like a sheet of liquid, and the results follow a moment later.
-    val appear = remember { Animatable(if (LocalSettings.current.animations) 0f else 1f) }
+    val animate = LocalSettings.current.animations
+    val appear = remember { Animatable(if (animate) 0f else 1f) }
     LaunchedEffect(Unit) { appear.animateTo(1f, spring(dampingRatio = 0.8f, stiffness = 260f)) }
 
     // Always dark glass, whatever the system theme: light text on the frosted wallpaper.
