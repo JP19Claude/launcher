@@ -175,11 +175,12 @@ fun SearchOverlay(
             // OMEGA UI 17.3: the results lie on one big sheet of glass, with the fluid colors
             // drifting inside it and flowing round its rim.
             OmegaGlassSheet(
+                perch = 22.dp,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 10.dp)
+                    .padding(start = 10.dp, end = 10.dp, top = if (LocalSettings.current.omegaGlass) 12.dp else 4.dp, bottom = 10.dp)
                     .graphicsLayer {
                         val p = appear.value
                         alpha = ((p - 0.15f) / 0.85f).coerceIn(0f, 1f)
@@ -314,7 +315,8 @@ fun SearchOverlay(
 @Composable
 private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
-        text,
+        // OMEGA UI 17.5: Ω in front.
+        (if (LocalSettings.current.omegaGlass) "Ω  " else "") + text,
         color = Color.White.copy(alpha = 0.62f),
         fontSize = 13.sp,
         fontWeight = FontWeight.SemiBold,

@@ -1,15 +1,20 @@
-OMEGA UI 17.4 auf ClaudeOS 4.0 „Aurora“
+OMEGA UI 17.5 „Illumination“ auf ClaudeOS 4.0 „Aurora“ – das große OMEGA-Update
 
-🕒 Uhr aus Glas
-• Mit OMEGA Glass sind die Ziffern der One-UI-Uhr aus Glas – milchiges Hintergrundbild darin, OMEGA-Tönung, Licht oben
-• Rand aus OMEGA Fluid um jede Ziffer, weicher Schatten für Tiefe
-• Datum und Akku auf Glas-Chips
+Ω überall
+• Ω vor den Seitenpunkten, am Ende der Suchleiste, im Now Brief
+• Ein großes Ω ins Glas von App-Drawer und Finder geätzt, Überschriften mit Ω
+• Einstellungen, App-Menü und OMEGA-Menü mit Ω und OMEGA Fluid
 
-📱 App-Drawer aus OMEGA Glass
-• Heller, OMEGA-getönt, OMEGA Fluid im Hintergrund
-• Alle Apps auf einer großen Glasfläche mit Fluid darin und am Rand
-• Vorschläge auf eigenem Glas, Seitenpunkte in einer Glas-Kapsel
+🦀 Clawd überall
+• Clawd sitzt auf dem Rand der Glasflächen in Drawer und Finder
+• Auf Wunsch mit leuchtendem Heiligenschein – überall
 
-✨ Now Brief
-• Viel mehr Glas: OMEGA-Glas, tiefere Linse, Licht oben, OMEGA Fluid im Glas und am Rand
-• Wecker-, Akku- und Datums-Chips aus OMEGA Glass
+💎 Ein Geheimnis im Ω-Kristall
+• Wer oft genug klopft, kommt in die Clawd Illumination – wie oft, verrät die Nummer von OMEGA UI 😉
+• Easter Egg Nr. 32
+
+🏮 Neues Easter Egg: die Laterne
+• Mit Clawds Licht im Dunkeln fünf versteckte Ω finden
+
+⚙️ System
+• Änderungen aus Software-Update und Telefoninfo kommen sofort auf dem Startbildschirm an

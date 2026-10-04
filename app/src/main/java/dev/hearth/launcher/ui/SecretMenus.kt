@@ -966,8 +966,8 @@ fun HearthMenu(tiles: List<HubTile>, onSecret: () -> Unit, onClose: () -> Unit) 
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "OMEGA-Menü",
-                        style = TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 22.sp, fontWeight = FontWeight.Bold),
+                        "Ω  OMEGA-Menü",
+                        style = TextStyle(brush = Brush.linearGradient(fluidPalette()), fontSize = 22.sp, fontWeight = FontWeight.Bold),
                         modifier = Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onSecret() }) },
                     )
                     Spacer(Modifier.weight(1f))

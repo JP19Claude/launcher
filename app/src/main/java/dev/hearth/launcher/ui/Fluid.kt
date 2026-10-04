@@ -135,7 +135,7 @@ fun FluidBackdrop(colors: List<Color>, modifier: Modifier = Modifier, strength: 
     @Suppress("NAME_SHADOWING")
     val colors = if (LocalSettings.current.omegaGlass) omegaPalette(LocalSettings.current).take(colors.size.coerceAtLeast(3)) else colors
     @Suppress("NAME_SHADOWING")
-    val strength = if (LocalSettings.current.omegaGlass) strength * 1.4f else strength
+    val strength = strength * (if (LocalSettings.current.omegaGlass) 1.4f else 1f) * (if (LocalSettings.current.omegaOverdrive) 1.35f else 1f)
     val flow = flowPhase(24_000, LocalSettings.current.animations)
     Canvas(modifier.fillMaxSize()) {
         val t = flow?.invoke() ?: 1.2f
@@ -221,7 +221,11 @@ fun Modifier.aiFluidEdge(
     flowing: Boolean = true,
 ): Modifier = composed {
     if (!enabled || strength <= 0.01f) return@composed this
-    val phase = flowPhase(4200, LocalSettings.current.animations && flowing)
+    // OMEGA UI 17.5, Ω-Overdrive: every rim flows, and brighter.
+    val overdrive = LocalSettings.current.omegaOverdrive
+    @Suppress("NAME_SHADOWING")
+    val strength = if (overdrive) strength * 1.3f else strength
+    val phase = flowPhase(4200, LocalSettings.current.animations && (flowing || overdrive))
     // Hearth UI 14 "Dezent": rims that stand still are calm glass with a hint of Claude's
     // colors; flowing ones (something running, something new) keep their full colors.
     val omega = LocalSettings.current.omegaGlass
@@ -290,7 +294,7 @@ fun Modifier.glassSheen(corner: androidx.compose.ui.unit.Dp, tint: Color = Color
  */
 fun Modifier.fluidGlow(strength: Float = 1f, enabled: Boolean = true, flowing: Boolean = false): Modifier = composed {
     if (!enabled || !LocalSettings.current.fluidDesign) return@composed this
-    val phase = flowPhase(14_000, LocalSettings.current.animations && flowing)
+    val phase = flowPhase(14_000, LocalSettings.current.animations && (flowing || LocalSettings.current.omegaOverdrive))
     val palette = fluidPalette()
     val boost = if (LocalSettings.current.omegaGlass) 1.5f else 1f
     this.drawWithCache {

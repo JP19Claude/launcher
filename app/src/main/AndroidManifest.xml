@@ -136,6 +136,12 @@
             android:label="Software-Update" />
 
 
+        <!-- OMEGA UI 17.5: the Clawd Illumination, hidden behind the Ω crystal. -->
+        <activity
+            android:name=".IlluminationActivity"
+            android:exported="false"
+            android:label="Clawd Illumination" />
+
         <!-- "Telefoninfo": the phone, its specs, Hearth and ClaudeOS. -->
         <activity
             android:name=".AboutPhoneActivity"

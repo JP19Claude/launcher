@@ -271,7 +271,8 @@ fun OneUIDrawer(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "${apps.size} Apps",
+                    // OMEGA UI 17.5: Ω in front.
+                    (if (settings.omegaGlass) "Ω  " else "") + "${apps.size} Apps",
                     color = Color.White.copy(alpha = 0.62f),
                     fontSize = 13.sp,
                     modifier = Modifier.weight(1f),
@@ -333,10 +334,11 @@ fun OneUIDrawer(
             // OMEGA UI 17.4: all apps on one big sheet of OMEGA glass that stays put while the
             // pages swipe across it.
             OmegaGlassSheet(
+                perch = 26.dp,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp)
+                    .padding(start = 10.dp, end = 10.dp, top = if (settings.omegaGlass) 14.dp else 0.dp)
                     .rise({ appear.value }, 3),
             ) {
             HorizontalPager(

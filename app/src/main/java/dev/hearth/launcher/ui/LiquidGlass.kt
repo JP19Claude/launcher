@@ -107,13 +107,17 @@ data class GlassStyle(
     companion object {
         fun from(s: LauncherSettings) = GlassStyle(
             blur = s.glassBlur,
-            refraction = s.glassRefraction,
-            dispersion = s.glassDispersion,
-            specular = s.glassSpecular,
-            // OMEGA Glass: ruby (or Galaxy Omega) glass through the whole system, clearly tinted.
+            // OMEGA UI 17.5, Clawd Illumination "Hyperglas": glass that bends, splits and shines
+            // far more than any setting allows.
+            refraction = s.glassRefraction * if (s.hyperGlass) 1.9f else 1f,
+            dispersion = if (s.hyperGlass) (s.glassDispersion * 2.4f).coerceAtLeast(1.4f) else s.glassDispersion,
+            specular = s.glassSpecular * if (s.hyperGlass) 1.5f else 1f,
+            // OMEGA Glass: ruby (or Galaxy Omega) glass through the whole system, clearly tinted
+            // (and deeper still with the Illumination's Ω-Overdrive).
             tint = if (s.omegaGlass) {
                 val t = if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.GalaxyOmega) GlassTint.GalaxyOmega.color else GlassTint.Ruby.color
-                t.copy(alpha = (t.alpha * 1.6f * s.glassTintStrength.coerceAtLeast(1f)).coerceIn(0f, 0.6f))
+                val boost = if (s.omegaOverdrive) 2.4f else 1.6f
+                t.copy(alpha = (t.alpha * boost * s.glassTintStrength.coerceAtLeast(1f)).coerceIn(0f, if (s.omegaOverdrive) 0.7f else 0.6f))
             } else {
                 s.glassTint.color.copy(alpha = (s.glassTint.color.alpha * s.glassTintStrength).coerceIn(0f, 1f))
             },

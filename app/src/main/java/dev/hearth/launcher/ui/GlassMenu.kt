@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -115,11 +116,17 @@ fun GlassMenuOverlay(request: GlassMenuRequest?, onDismiss: () -> Unit) {
                 }
                 // Child 1: the glass panel.
                 val oneUi = LocalSettings.current.galaxyClaude
+                // OMEGA UI 17.5: OMEGA glass, deepened like before.
+                val menuTint = if (LocalSettings.current.omegaGlass) {
+                    LocalGlassStyle.current.tint.compositeOver(Color.Black.copy(alpha = 0.18f))
+                } else {
+                    Color.Black.copy(alpha = 0.18f)
+                }
                 LiquidGlass(
                     cornerRadius = if (oneUi) 28.dp else 24.dp,
                     refraction = 20.dp,
                     blur = 22.dp,
-                    tint = Color.Black.copy(alpha = 0.18f),
+                    tint = menuTint,
                     modifier = Modifier
                         .width(if (oneUi) 284.dp else 250.dp)
                         .graphicsLayer {
@@ -171,6 +178,7 @@ private fun OneUIMenuContent(request: GlassMenuRequest, onDismiss: () -> Unit) {
     Column(Modifier.padding(top = 10.dp, bottom = 8.dp)) {
         val title = request.title ?: request.app?.label
         val accent = LocalSettings.current.accent.color
+        val omega = LocalSettings.current.omegaGlass
         if (title != null) {
             // OMEGA UI 17: a header with the app's icon, its name and a line of the accent.
             Row(
@@ -196,6 +204,8 @@ private fun OneUIMenuContent(request: GlassMenuRequest, onDismiss: () -> Unit) {
                         maxLines = 1,
                     )
                 }
+                // OMEGA UI 17.5: the Ω in the header.
+                if (omega) OmegaSign(20.sp, Modifier.padding(start = 8.dp))
             }
             Box(
                 Modifier
@@ -203,7 +213,13 @@ private fun OneUIMenuContent(request: GlassMenuRequest, onDismiss: () -> Unit) {
                     .fillMaxWidth()
                     .height(2.dp)
                     .clip(RoundedCornerShape(1.dp))
-                    .background(Brush.horizontalGradient(listOf(accent, accent.copy(alpha = 0f)))),
+                    .background(
+                        if (omega) {
+                            Brush.horizontalGradient(fluidPalette().take(3) + Color.Transparent)
+                        } else {
+                            Brush.horizontalGradient(listOf(accent, accent.copy(alpha = 0f)))
+                        },
+                    ),
             )
         }
         shortcuts.forEach { item ->

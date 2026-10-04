@@ -75,6 +75,7 @@ private val EggSpots = listOf(
     EggSpot("codes", "Codeknacker", "Im Finder *#0000# eintippen – die Liste aller Geheimcodes. (Oder lange auf den großen Titel „Einstellungen“ drücken.)"),
     EggSpot("omega", "Von Alpha bis Omega", "Im Finder nach „Omega“ (oder Ω) suchen und alle griechischen Buchstaben um das Ω kreisen lassen."),
     EggSpot("labs", "OMEGA Labs", "Über das Telefon: siebenmal auf die Build-Nummer tippen."),
+    EggSpot("illumination", "Clawd Illumination", "So oft auf den Ω-Kristall tippen, wie OMEGA UI Nummer hat."),
 )
 
 /**

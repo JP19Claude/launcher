@@ -292,6 +292,8 @@ fun SettingsScreen(
             if (oneUi && page == null) {
                 item { OneUISearchField(query, onClawd = { vm.askClaude() }) { query = it } }
                 if (query.isBlank()) item { HearthCard(s) }
+                // OMEGA UI 17.5: once found behind the Ω crystal, the Clawd Illumination stays here.
+                if (query.isBlank() && s.illumination) item { IlluminationCard() }
                 if (query.isBlank()) item { Section("Updates") { AppUpdateContent() } }
                 val found = SettingsCategories.filter { it.matches(query) }
                 if (found.isEmpty()) {
@@ -1370,13 +1372,16 @@ internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit)
         val oneUi = LocalSettings.current.galaxyClaude
         // One UI 10 Fluid: section names in Claude's flowing colors.
         val fluidTitle = LocalSettings.current.fluidDesign
+        // OMEGA UI 17.5: Ω in front, in OMEGA Fluid's colors.
+        val omega = LocalSettings.current.omegaGlass
+        val palette = fluidPalette()
         Text(
-            text = if (oneUi) title else title.uppercase(),
+            text = (if (omega) "Ω  " else "") + if (oneUi) title else title.uppercase(),
             color = if (fluidTitle) Color.Unspecified else if (oneUi) LocalSettings.current.accent.color else TextSecondary,
             fontSize = if (oneUi) 14.sp else 13.sp,
             fontWeight = if (oneUi || fluidTitle) FontWeight.SemiBold else FontWeight.Medium,
             letterSpacing = if (oneUi) 0.sp else 1.sp,
-            style = if (fluidTitle) OnWallpaperText.copy(brush = Brush.linearGradient(AiFluidColors)) else OnWallpaperText,
+            style = if (fluidTitle) OnWallpaperText.copy(brush = Brush.linearGradient(palette)) else OnWallpaperText,
             modifier = Modifier.padding(start = 10.dp, bottom = 8.dp),
         )
         LiquidGlass(
@@ -1708,6 +1713,35 @@ private fun OneUISearchField(query: String, onClawd: () -> Unit, onChange: (Stri
             // Clawd, as Galaxy AI sits in Samsung's settings search.
             Spacer(Modifier.width(8.dp))
             ClawdInBar(24.dp, onTap = onClawd)
+        }
+    }
+}
+
+/** OMEGA UI 17.5: the way back into the Clawd Illumination, once it has been found. */
+@Composable
+private fun IlluminationCard() {
+    val context = LocalContext.current
+    LiquidGlass(
+        cornerRadius = 24.dp,
+        refraction = 14.dp,
+        interactive = true,
+        tint = Color(0xFFFFD86B).copy(alpha = 0.12f),
+        modifier = Modifier
+            .padding(bottom = 8.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .clickable { openClawdIllumination(context) },
+    ) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Clawd(Modifier.size(width = 38.dp, height = 33.dp), mood = dev.hearth.launcher.data.ClawdMood.Love)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Clawd Illumination", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text("Große und krasse Sachen am System", color = TextSecondary, fontSize = 13.sp)
+            }
+            OmegaSign(26.sp)
+            Spacer(Modifier.width(6.dp))
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
         }
     }
 }

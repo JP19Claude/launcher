@@ -52,6 +52,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -729,6 +730,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             onSwipeDown = onSwipeDown,
                         ),
                 ) {
+                    // OMEGA UI 17.5, Clawd Illumination: Ω rising behind everything.
+                    if (settings.omegaRain) OmegaRain(Modifier.matchParentSize())
                     Column(Modifier.fillMaxSize().systemBarsPadding()) {
                         HorizontalPager(
                             state = pagerState,
@@ -913,6 +916,16 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             modifier = Modifier
                                 .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 10.dp)
                                 .onGloballyPositioned { dockBounds = it.boundsInRoot() },
+                        )
+                    }
+                    // OMEGA UI 17.5, Clawd Illumination: now and then a parade of Clawds marches
+                    // along the top of the dock.
+                    if (settings.clawdParade && dockBounds.height > 0f) {
+                        ClawdParade(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(34.dp)
+                                .graphicsLayer { translationY = dockBounds.top - 34.dp.toPx() + 3.dp.toPx() },
                         )
                     }
                 }
@@ -1136,6 +1149,13 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             if (settings.galaxyClaude) drawerOpen = true else searchOpen = true
                         },
                         HubTile("Clawd", Icons.Rounded.Face, Color(0xFFD97757)) { vm.askClaude() },
+                        // OMEGA UI 17.5: once found, the Clawd Illumination is one tap away.
+                        if (settings.illumination) {
+                            HubTile("Illumi-
+nation", Icons.Rounded.Star, Color(0xFFE5A50A)) { openClawdIllumination(context) }
+                        } else {
+                            null
+                        },
                         if (dropOn) {
                             HubTile("Glimmer\nDrop", Icons.Rounded.Share, Color(0xFF5E9BFF)) {
                                 runCatching { context.startActivity(Intent(context, dev.hearth.launcher.DropActivity::class.java)) }
@@ -1438,7 +1458,7 @@ private fun HomeHeaderContent(settings: LauncherSettings, modifier: Modifier = M
 private fun LargeClock(settings: LauncherSettings, modifier: Modifier = Modifier) {
     val now by rememberNow()
     val locale = Locale.getDefault()
-    val time = remember(now) { now.format(DateTimeFormatter.ofPattern("HH:mm", locale)) }
+    val time = remember(now, settings.omegaZeros) { omegaDigits(now.format(DateTimeFormatter.ofPattern("HH:mm", locale)), settings.omegaZeros) }
     val date = remember(now) {
         now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale))
             .replaceFirstChar { it.titlecase(locale) }
@@ -1479,7 +1499,7 @@ private fun ColorOSClock(settings: LauncherSettings, modifier: Modifier = Modifi
     val now by rememberNow()
     val battery by rememberBattery()
     val locale = Locale.getDefault()
-    val time = remember(now) { now.format(DateTimeFormatter.ofPattern("HH:mm", locale)) }
+    val time = remember(now, settings.omegaZeros) { omegaDigits(now.format(DateTimeFormatter.ofPattern("HH:mm", locale)), settings.omegaZeros) }
     val date = remember(now) {
         now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale))
             .replaceFirstChar { it.titlecase(locale) }
@@ -1534,7 +1554,7 @@ private fun OneUIClock(settings: LauncherSettings, modifier: Modifier = Modifier
     val now by rememberNow()
     val battery by rememberBattery()
     val locale = Locale.getDefault()
-    val time = remember(now) { now.format(DateTimeFormatter.ofPattern("HH:mm", locale)) }
+    val time = remember(now, settings.omegaZeros) { omegaDigits(now.format(DateTimeFormatter.ofPattern("HH:mm", locale)), settings.omegaZeros) }
     val date = remember(now) {
         now.format(DateTimeFormatter.ofPattern("EEE, d. MMMM", locale))
             .replaceFirstChar { it.titlecase(locale) }
@@ -1639,8 +1659,8 @@ private fun StackedClock(settings: LauncherSettings, modifier: Modifier = Modifi
     val now by rememberNow()
     val battery by rememberBattery()
     val locale = Locale.getDefault()
-    val hours = remember(now) { now.format(DateTimeFormatter.ofPattern("HH", locale)) }
-    val minutes = remember(now) { now.format(DateTimeFormatter.ofPattern("mm", locale)) }
+    val hours = remember(now, settings.omegaZeros) { omegaDigits(now.format(DateTimeFormatter.ofPattern("HH", locale)), settings.omegaZeros) }
+    val minutes = remember(now, settings.omegaZeros) { omegaDigits(now.format(DateTimeFormatter.ofPattern("mm", locale)), settings.omegaZeros) }
     val date = remember(now) {
         now.format(DateTimeFormatter.ofPattern("EEE, d. MMMM", locale))
             .replaceFirstChar { it.titlecase(locale) }
@@ -1782,6 +1802,10 @@ private fun NowBriefCard(onAsk: (String?) -> Unit, modifier: Modifier = Modifier
                 Text("NOW BRIEF", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.5.sp, style = OnWallpaperText)
                 Text("  ·  Claude", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, style = OnWallpaperText)
                 Spacer(Modifier.weight(1f))
+                if (omega) {
+                    OmegaSign(16.sp)
+                    Spacer(Modifier.width(4.dp))
+                }
                 Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = Color.White.copy(alpha = 0.8f))
             }
             // Hearth UI 14: the greeting big, then what Claude has to say.
@@ -1888,7 +1912,7 @@ private fun GlassClockCard(settings: LauncherSettings, modifier: Modifier = Modi
     val now by rememberNow()
     val battery by rememberBattery()
     val locale = Locale.getDefault()
-    val time = remember(now) { now.format(DateTimeFormatter.ofPattern("HH:mm", locale)) }
+    val time = remember(now, settings.omegaZeros) { omegaDigits(now.format(DateTimeFormatter.ofPattern("HH:mm", locale)), settings.omegaZeros) }
     val date = remember(now) {
         now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale))
             .replaceFirstChar { it.titlecase(locale) }
@@ -2002,10 +2026,14 @@ private fun PageDots(count: Int, position: () -> Float, modifier: Modifier = Mod
     val dot = 6.dp
     val wide = 18.dp
     val gap = 8.dp
+    val omega = LocalSettings.current.omegaGlass
     LiquidGlass(cornerRadius = 12.dp, refraction = 6.dp, blur = 10.dp, modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+        // OMEGA UI 17.5: the Ω leads the page dots.
+        if (omega) OmegaSign(12.sp, Modifier.padding(start = 10.dp))
         Canvas(
             Modifier
-                .padding(horizontal = 11.dp, vertical = 7.dp)
+                .padding(start = if (omega) 7.dp else 11.dp, end = 11.dp, top = 7.dp, bottom = 7.dp)
                 .size(width = wide + (dot + gap) * (count - 1), height = dot),
         ) {
             val at = position()
@@ -2022,6 +2050,7 @@ private fun PageDots(count: Int, position: () -> Float, modifier: Modifier = Mod
                 )
                 x += w + gap.toPx()
             }
+        }
         }
     }
 }
@@ -2059,6 +2088,11 @@ private fun SearchPill(onClick: () -> Unit) {
             }
             Spacer(Modifier.width(6.dp))
             Text(if (galaxy) "Frag Clawd oder suche" else "Suchen", color = Color.White, fontSize = 14.sp, style = OnWallpaperText)
+            // OMEGA UI 17.5: and the Ω at its end.
+            if (LocalSettings.current.omegaGlass) {
+                Spacer(Modifier.width(8.dp))
+                OmegaSign(15.sp)
+            }
         }
     }
 }

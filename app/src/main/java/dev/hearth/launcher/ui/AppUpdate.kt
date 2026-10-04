@@ -354,7 +354,16 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                 when (look.hero) {
                     // OMEGA UI 17: the ruby with the Ω, the system version under it.
                     UpdateHero.Number -> if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
-                        OmegaRuby(Modifier.padding(top = 20.dp, bottom = 6.dp), size = 170.dp, version = "OMEGA UI ${HearthUi.major(shown)}")
+                        // OMEGA UI 17.5: tapped as often as OMEGA UI's number, the crystal opens
+                        // the Clawd Illumination.
+                        val crystal = rememberCrystalTaps(current)
+                        OmegaRuby(
+                            Modifier
+                                .padding(top = 20.dp, bottom = 6.dp)
+                                .clickable(remember { MutableInteractionSource() }, indication = null, onClick = crystal),
+                            size = 170.dp,
+                            version = "OMEGA UI ${HearthUi.major(shown)}",
+                        )
                     } else {
                         VersionArtwork(HearthUi.major(shown), look.number, height = 220.dp)
                     }
@@ -585,6 +594,7 @@ internal fun HearthVersionEgg(version: String, name: String, onClose: () -> Unit
     val look = remember { lookFor(context.packageName) }
     val number = versionNumber(version)
     when {
+        number >= 17.5f -> LanternEgg(version, name, onClose)
         number >= 17f -> RubyEgg(version, name, onClose)
         number >= 16f -> FireflyEgg(version, name, onClose)
         number >= 15.5f -> SparkEgg(version, name, onClose)

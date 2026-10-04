@@ -72,6 +72,19 @@ enum class GlassTint(val label: String, val color: Color) {
     GalaxyOmega("Galaxy Omega", Color(0xFF1E46B4).copy(alpha = 0.2f)),
 }
 
+/**
+ * OMEGA UI 17.5, Clawd Illumination: the whole system in another color world (its hue turned
+ * by [degrees]); Spektrum runs through all of them.
+ */
+enum class ColorWorld(val label: String, val degrees: Float) {
+    Off("Aus", 0f),
+    Emerald("Smaragd", 135f),
+    Sapphire("Saphir", 215f),
+    Amethyst("Amethyst", 285f),
+    Gold("Gold", 40f),
+    Spectrum("Spektrum", 0f),
+}
+
 /** The color OMEGA Glass and OMEGA Fluid run in. */
 enum class OmegaColor(val label: String) {
     Ruby("Rubin"),
@@ -450,6 +463,20 @@ data class LauncherSettings(
     val omegaColor: OmegaColor = OmegaColor.Ruby,
     /** OMEGA UI 17.1: flowing effects at a calmer rate and lighter glass – smoother, less lag. */
     val smoothMode: Boolean = true,
+    /**
+     * OMEGA UI 17.5 – the Clawd Illumination, hidden behind the Ω crystal: big, wild changes
+     * to the whole system. [illumination] is set once it has been found (then it's in Settings).
+     */
+    val illumination: Boolean = false,
+    val omegaOverdrive: Boolean = false,
+    val hyperGlass: Boolean = false,
+    val colorWorld: ColorWorld = ColorWorld.Off,
+    val omegaRain: Boolean = false,
+    val weightless: Boolean = false,
+    val clawdParade: Boolean = false,
+    val omegaZeros: Boolean = false,
+    val clawdHalo: Boolean = false,
+    val giantClawd: Boolean = false,
     val clawdCompanion: Boolean = true,
     val clockFont: ClockFont = ClockFont.Default,
     val labelSize: LabelSize = LabelSize.Normal,
@@ -800,6 +827,17 @@ class SettingsRepository(context: Context) {
     private val _settings = MutableStateFlow(read())
     val settings: StateFlow<LauncherSettings> = _settings.asStateFlow()
 
+    // OMEGA UI 17.5: what another screen of the app changes (its own activity – the update
+    // screen with the Clawd Illumination, About phone) reaches this one at once.
+    private val onPrefsChanged = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        val now = read()
+        if (now != _settings.value) _settings.value = now
+    }
+
+    init {
+        prefs.registerOnSharedPreferenceChangeListener(onPrefsChanged)
+    }
+
     fun update(transform: (LauncherSettings) -> LauncherSettings) {
         _settings.update(transform)
         write(_settings.value)
@@ -890,6 +928,16 @@ class SettingsRepository(context: Context) {
             omegaGlass = prefs.getBoolean("omegaGlass", d.omegaGlass),
             omegaColor = enumOf("omegaColor", d.omegaColor),
             smoothMode = prefs.getBoolean("smoothMode", d.smoothMode),
+            illumination = prefs.getBoolean("illumination", d.illumination),
+            omegaOverdrive = prefs.getBoolean("omegaOverdrive", d.omegaOverdrive),
+            hyperGlass = prefs.getBoolean("hyperGlass", d.hyperGlass),
+            colorWorld = enumOf("colorWorld", d.colorWorld),
+            omegaRain = prefs.getBoolean("omegaRain", d.omegaRain),
+            weightless = prefs.getBoolean("weightless", d.weightless),
+            clawdParade = prefs.getBoolean("clawdParade", d.clawdParade),
+            omegaZeros = prefs.getBoolean("omegaZeros", d.omegaZeros),
+            clawdHalo = prefs.getBoolean("clawdHalo", d.clawdHalo),
+            giantClawd = prefs.getBoolean("giantClawd", d.giantClawd),
             clawdCompanion = prefs.getBoolean("clawdCompanion", d.clawdCompanion),
             // Older installs had only "double tap locks" on or off.
             doubleTapAction = enumOf(
@@ -1031,6 +1079,16 @@ class SettingsRepository(context: Context) {
             .putBoolean("omegaGlass", s.omegaGlass)
             .putString("omegaColor", s.omegaColor.name)
             .putBoolean("smoothMode", s.smoothMode)
+            .putBoolean("illumination", s.illumination)
+            .putBoolean("omegaOverdrive", s.omegaOverdrive)
+            .putBoolean("hyperGlass", s.hyperGlass)
+            .putString("colorWorld", s.colorWorld.name)
+            .putBoolean("omegaRain", s.omegaRain)
+            .putBoolean("weightless", s.weightless)
+            .putBoolean("clawdParade", s.clawdParade)
+            .putBoolean("omegaZeros", s.omegaZeros)
+            .putBoolean("clawdHalo", s.clawdHalo)
+            .putBoolean("giantClawd", s.giantClawd)
             .putBoolean("clawdCompanion", s.clawdCompanion)
             .putString("doubleTapAction", s.doubleTapAction.name)
             .putString("clockFont", s.clockFont.name)
@@ -1183,7 +1241,7 @@ class SettingsRepository(context: Context) {
          * Only the switch itself and the look (black or glass, which changes the window) restart it.
          */
         val GLIMMER_LIVE_KEYS = setOf(
-            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "smoothMode", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
+            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
             "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerPrivacy", "accent", "animations",

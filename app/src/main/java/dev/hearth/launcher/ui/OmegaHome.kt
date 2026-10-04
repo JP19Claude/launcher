@@ -63,7 +63,7 @@ internal fun OmegaHomeClock(settings: LauncherSettings, modifier: Modifier = Mod
     val accent = settings.accent.color
     Column(modifier) {
         Text(
-            now.format(DateTimeFormatter.ofPattern("HH:mm")),
+            omegaDigits(now.format(DateTimeFormatter.ofPattern("HH:mm")), LocalSettings.current.omegaZeros),
             style = TextStyle(brush = accentFace(accent), fontSize = 86.sp, fontWeight = FontWeight.Thin, lineHeight = 90.sp, shadow = OnWallpaperText.shadow),
         )
         SecondsLine(accent, settings.animations, Modifier.width(220.dp).height(6.dp))
@@ -159,7 +159,7 @@ internal fun SplitHomeClock(settings: LauncherSettings, modifier: Modifier = Mod
     val accent = settings.accent.color
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         Text(
-            now.format(DateTimeFormatter.ofPattern("HH")),
+            omegaDigits(now.format(DateTimeFormatter.ofPattern("HH")), LocalSettings.current.omegaZeros),
             color = Color.White,
             fontSize = 96.sp,
             fontWeight = FontWeight.Black,
@@ -169,7 +169,7 @@ internal fun SplitHomeClock(settings: LauncherSettings, modifier: Modifier = Mod
         Spacer(Modifier.width(10.dp))
         Column {
             Text(
-                now.format(DateTimeFormatter.ofPattern("mm")),
+                omegaDigits(now.format(DateTimeFormatter.ofPattern("mm")), LocalSettings.current.omegaZeros),
                 style = TextStyle(brush = accentFace(accent), fontSize = 48.sp, fontWeight = FontWeight.Bold, lineHeight = 50.sp, shadow = OnWallpaperText.shadow),
             )
             Text(
@@ -245,7 +245,7 @@ internal fun OmegaClockWidget(modifier: Modifier) {
                 Text(dateLine(now), color = Color.White.copy(alpha = 0.8f), fontSize = (big * 0.22f).sp)
             }
             Text(
-                now.format(DateTimeFormatter.ofPattern("HH:mm")),
+                omegaDigits(now.format(DateTimeFormatter.ofPattern("HH:mm")), LocalSettings.current.omegaZeros),
                 style = TextStyle(brush = accentFace(accent), fontSize = big.sp, fontWeight = FontWeight.Thin, lineHeight = (big * 1.05f).sp),
             )
             SecondsLine(accent, settings.animations, Modifier.fillMaxWidth().height(5.dp))

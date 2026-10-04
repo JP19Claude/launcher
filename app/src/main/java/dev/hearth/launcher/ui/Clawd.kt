@@ -94,9 +94,14 @@ fun Clawd(
     ClawdWardrobe.cloth = LocalSettings.current.clawdCloth.color
     ClawdWardrobe.omega = LocalSettings.current.clawdOmega
     ClawdWardrobe.stars = color == null && skin == ClawdSkin.Galaxy
+    // OMEGA UI 17.5, Clawd Illumination: a halo over every Clawd.
+    val halo = LocalSettings.current.clawdHalo
     if (!animate) {
         val body = color ?: skin.color
-        Canvas(modifier) { drawClawdPose(mood, body, hat, outfit) }
+        Canvas(modifier) {
+            drawClawdPose(mood, body, hat, outfit)
+            if (halo) drawClawdHalo(hat, outfit, 0f)
+        }
         return
     }
     val t = rememberInfiniteTransition(label = "clawd")
@@ -124,7 +129,36 @@ fun Clawd(
             ClawdMood.Dizzy -> drawClawd(body, blink = false, bob = sin(phase * 2f) * 0.3f, legPhase = 0f, armLift = sin(phase * 3f) * 0.6f, spin = sin(phase * 3f) * 14f, hearts = 0f, hat = hat, outfit = outfit, dizzy = true)
             ClawdMood.Surprised -> drawClawd(body, blink = false, bob = -abs(sin(phase * 4f)) * 0.6f, legPhase = 0f, armLift = 1f, spin = 0f, hearts = 0f, hat = hat, outfit = outfit, wide = true)
         }
+        if (halo) drawClawdHalo(hat, outfit, sin(phase) * 0.3f - 0.2f)
     }
+}
+
+/**
+ * OMEGA UI 17.5, Clawd Illumination: a glowing golden halo floating over Clawd's head (over
+ * his hat, if he wears one), [bob] in pixels of his grid.
+ */
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClawdHalo(hat: ClawdHat, outfit: ClawdOutfit, bob: Float) {
+    val headroom = if (hat.tall || outfit.tall) 2f else 0f
+    val px = minOf(size.width / COLS, size.height / (ROWS + 2 + headroom))
+    val left = (size.width - px * COLS) / 2f
+    val top = (size.height - px * (ROWS + headroom)) / 2f + px * (0.5f + headroom)
+    val cx = left + COLS * px / 2f
+    val cy = top - px * (1.1f + headroom) + bob * px
+    val w = px * 6.4f
+    val h = px * 1.4f
+    // A soft glow, then the ring itself.
+    drawOval(
+        Color(0xFFFFD86B).copy(alpha = 0.3f),
+        topLeft = Offset(cx - w / 2f - px * 0.4f, cy - h / 2f - px * 0.3f),
+        size = Size(w + px * 0.8f, h + px * 0.6f),
+        style = androidx.compose.ui.graphics.drawscope.Stroke(px * 1.2f),
+    )
+    drawOval(
+        Color(0xFFFFEDB0),
+        topLeft = Offset(cx - w / 2f, cy - h / 2f),
+        size = Size(w, h),
+        style = androidx.compose.ui.graphics.drawscope.Stroke(px * 0.5f),
+    )
 }
 
 /**

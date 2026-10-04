@@ -315,7 +315,15 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 // OMEGA UI 17: the ruby with the Ω and the system version, instead of the drawn phone.
                 if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
-                    OmegaRuby(Modifier.padding(top = 10.dp), size = 160.dp, version = "OMEGA UI ${HearthUi.major(groups.first().specs.first().value)}")
+                    // OMEGA UI 17.5: the crystal's secret – tapped as often as OMEGA UI's number.
+                    val crystal = rememberCrystalTaps(groups.first().specs.first().value)
+                    OmegaRuby(
+                        Modifier
+                            .padding(top = 10.dp)
+                            .clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, onClick = crystal),
+                        size = 160.dp,
+                        version = "OMEGA UI ${HearthUi.major(groups.first().specs.first().value)}",
+                    )
                 } else {
                     PhoneHero()
                 }

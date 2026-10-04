@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Thirty-one easter eggs hidden in Hearth, all with Clawd. Each one found is remembered. A new
+ * Thirty-two easter eggs hidden in Hearth, all with Clawd. Each one found is remembered. A new
  * find shows only a small hint; finding one again shows nothing; only the last one throws a
  * real party (confetti, Clawd dancing, a glass message).
  *
@@ -44,10 +44,11 @@ import kotlinx.coroutines.flow.asStateFlow
  * 29. Open the list of secret codes (*#0000# in the finder)
  * 30. Unlock OMEGA Labs (seven taps on the build number)
  * 31. Look for "Omega" in the finder and send all of Greek into orbit around the Ω
+ * 32. Tap the Ω crystal as often as OMEGA UI's number: the Clawd Illumination opens
  */
 object EasterEggs {
 
-    const val TOTAL = 31
+    const val TOTAL = 32
 
     private const val PREFS = "hearth_eggs"
     private const val KEY = "found"

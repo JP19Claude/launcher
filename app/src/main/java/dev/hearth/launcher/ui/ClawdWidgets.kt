@@ -755,8 +755,10 @@ fun ClawdCompanion(onTalk: () -> Unit, modifier: Modifier = Modifier) {
         else -> ClawdMood.Idle
     }
 
-    BoxWithConstraints(modifier.fillMaxWidth().height(40.dp).padding(horizontal = 22.dp)) {
-        val h = 34.dp
+    // OMEGA UI 17.5, Clawd Illumination "Riesen-Clawd": two and a half times as big.
+    val giant = settings.giantClawd
+    BoxWithConstraints(modifier.fillMaxWidth().height(if (giant) 92.dp else 40.dp).padding(horizontal = 22.dp)) {
+        val h = if (giant) 86.dp else 34.dp
         val w = h * (14f / 11f)
         val x = (maxWidth - w) * pos.value
         Clawd(

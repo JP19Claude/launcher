@@ -279,7 +279,9 @@ fun HomePageGrid(
                         .offset(x, y)
                         .size(cellW, cellH)
                         // The dragged icon follows the finger in an overlay; its cell stays empty.
-                        .graphicsLayer { alpha = if (beingDragged) 0f else 1f },
+                        .graphicsLayer { alpha = if (beingDragged) 0f else 1f }
+                        // OMEGA UI 17.5, Clawd Illumination "Schwerelos": the icons float.
+                        .weightless(cell.row * 7 + cell.col),
                     contentAlignment = Alignment.Center,
                 ) {
                     when (val item = cell.item) {

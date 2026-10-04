@@ -72,6 +72,7 @@ fun HearthTheme(
 ) {
     MaterialTheme(colorScheme = if (dark) DarkScheme else LightScheme) {
         // One clock for every flowing effect of the screen (see Fluid.kt).
-        dev.hearth.launcher.ui.ProvideFluidClock(content)
+        // OMEGA UI 17.5: and the Clawd Illumination's color world over all of it.
+        dev.hearth.launcher.ui.ProvideFluidClock { dev.hearth.launcher.ui.ProvideColorWorld(content) }
     }
 }

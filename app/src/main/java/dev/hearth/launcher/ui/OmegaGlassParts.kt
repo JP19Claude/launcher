@@ -4,6 +4,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.sp
+import dev.hearth.launcher.data.ClawdMood
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -86,6 +93,8 @@ internal fun OmegaScreenBackdrop(
 internal fun OmegaGlassSheet(
     modifier: Modifier = Modifier,
     corner: Dp = 30.dp,
+    /** OMEGA UI 17.5: Clawd sitting on the sheet's top rim (this big; 0 for none). */
+    perch: Dp = 0.dp,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val s = LocalSettings.current
@@ -112,13 +121,54 @@ internal fun OmegaGlassSheet(
                     .fluidGlow(strength = if (omega) 0.9f else 0.6f, flowing = omega),
             )
         }
+        // OMEGA UI 17.5: a big Ω etched into the glass, low in its corner.
+        if (omega) {
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(corner)),
+            ) {
+                Text(
+                    "Ω",
+                    color = Color.White.copy(alpha = 0.05f),
+                    fontSize = 190.sp,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .offset(x = 26.dp, y = 56.dp),
+                )
+            }
+        }
         Box(
             Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(corner)),
             content = content,
         )
+        if (perch > 0.dp) PerchedClawd(size = perch)
     }
+}
+
+/**
+ * OMEGA UI 17.5: Clawd sitting on the top rim of a panel, his legs over its edge – with OMEGA
+ * Glass on. The panel must not clip (he sits just outside it).
+ */
+@Composable
+internal fun BoxScope.PerchedClawd(
+    alignment: Alignment = Alignment.TopEnd,
+    size: Dp = 28.dp,
+    mood: ClawdMood = ClawdMood.Idle,
+    inset: Dp = 28.dp,
+) {
+    if (!LocalSettings.current.omegaGlass) return
+    Clawd(
+        Modifier
+            .align(alignment)
+            .padding(horizontal = inset)
+            .offset(y = -size * 0.8f)
+            .size(width = size * (14f / 11f), height = size),
+        mood = mood,
+    )
 }
 
 /**

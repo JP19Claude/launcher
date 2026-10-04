@@ -178,6 +178,51 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "17.5",
+            name = "Illumination",
+            summary = "Das große OMEGA-Update: Ω und Clawd überall im System, ein neues Easter Egg – und ein Geheimnis im Ω-Kristall.",
+            sections = listOf(
+                ChangeSection(
+                    "Ω überall", Icons.Rounded.Star, Pink,
+                    listOf(
+                        "Das Ω führt die Seitenpunkte auf dem Startbildschirm an und steht am Ende der Suchleiste.",
+                        "App-Drawer und Finder: ein großes Ω ist ins Glas geätzt, die Überschriften tragen ein Ω.",
+                        "Einstellungen: jede Gruppe mit Ω, die Überschriften in den Farben von OMEGA Fluid.",
+                        "App-Menü: OMEGA-Glas, ein Ω im Kopf und eine Linie aus OMEGA Fluid. Das OMEGA-Menü heißt „Ω OMEGA-Menü“.",
+                        "Now Brief mit Ω im Kopf.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Clawd überall", Icons.Rounded.Face, Terracotta,
+                    listOf(
+                        "Clawd sitzt jetzt auf dem Rand der großen Glasflächen im App-Drawer und im Finder und lässt die Beine baumeln.",
+                        "Clawd kann einen leuchtenden Heiligenschein tragen – überall, wo er auftaucht.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Ein Geheimnis", Icons.Rounded.Favorite, Violet,
+                    listOf(
+                        "Im Ω-Kristall wohnt etwas. Wer oft genug klopft, kommt in die Clawd Illumination – wie oft, verrät die Nummer von OMEGA UI. 😉",
+                        "Einmal gefunden, steht sie in den Einstellungen und im OMEGA-Menü.",
+                        "Neues Easter Egg Nr. 32.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Easter Egg", Icons.Rounded.Search, Blue,
+                    listOf("OMEGA UI 17.5 hat ein neues Versions-Easter-Egg: die Laterne. Mit Clawds Licht im Dunkeln fünf versteckte Ω finden."),
+                    hearth,
+                ),
+                ChangeSection(
+                    "System", Icons.Rounded.Settings, Slate,
+                    listOf("Änderungen aus anderen Bildschirmen der App (Software-Update, Telefoninfo) kommen jetzt sofort auf dem Startbildschirm an, ohne Neustart."),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "17.4",
             name = "Glas-Uhr",
             summary = "Viel mehr OMEGA Glass im App-Drawer und im Now Brief – und die One-UI-Uhr mit Ziffern aus Glas.",
