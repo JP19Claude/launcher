@@ -136,6 +136,52 @@ object AppUpdater {
     }
 
     /**
+     * Every published version of this app, newest first – for going back to an older one
+     * (Software-Update → Downgrade). Reads GitHub's release list page by page.
+     */
+    suspend fun allVersions(context: Context): Result<List<Release>> = withContext(Dispatchers.IO) {
+        val kind = kind(context)
+        runCatching {
+            val found = mutableListOf<Release>()
+            for (page in 1..5) {
+                val connection = open("https://api.github.com/repos/$REPO/releases?per_page=100&page=$page")
+                connection.setRequestProperty("Accept", "application/vnd.github+json")
+                val code = connection.responseCode
+                if (code != 200) {
+                    connection.disconnect()
+                    if (found.isNotEmpty()) break
+                    error(if (code == 403) "GitHub lässt gerade keine Abfrage zu – versuch es später nochmal" else "GitHub antwortet nicht (Fehler $code)")
+                }
+                val text = connection.inputStream.bufferedReader().use { it.readText() }
+                connection.disconnect()
+                val releases = JSONArray(text)
+                if (releases.length() == 0) break
+                for (i in 0 until releases.length()) {
+                    val release = releases.getJSONObject(i)
+                    val tag = release.optString("tag_name")
+                    if (!tag.startsWith("${kind.slug}-v")) continue
+                    val assets = release.optJSONArray("assets") ?: continue
+                    for (j in 0 until assets.length()) {
+                        val asset = assets.getJSONObject(j)
+                        if (asset.optString("name").endsWith(".apk")) {
+                            found += Release(tag.removePrefix("${kind.slug}-v"), asset.optString("browser_download_url"), asset.optLong("size"), releaseNotes(release.optString("body")))
+                            break
+                        }
+                    }
+                }
+                if (releases.length() < 100) break
+            }
+            found.distinctBy { it.version }.sortedWith { a, b ->
+                when {
+                    isNewer(a.version, b.version) -> -1
+                    isNewer(b.version, a.version) -> 1
+                    else -> 0
+                }
+            }
+        }
+    }
+
+    /**
      * The newest versions as the latest build lists them (versions.json): a plain download,
      * not GitHub's API, so it works however often phones ask. Null if it isn't there.
      */

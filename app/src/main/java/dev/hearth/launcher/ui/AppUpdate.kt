@@ -491,6 +491,9 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                 Spacer(Modifier.height(14.dp))
                 HearthOneCard(look.accent)
             }
+            // At the very bottom: going back to any earlier version.
+            UpdateSectionTitle("Downgrade")
+            DowngradeCard(name, current, look)
             Spacer(Modifier.height(160.dp))
         }
 
@@ -636,6 +639,152 @@ private fun NewVersionCard(name: String, release: AppUpdater.Release, look: Upda
             Text(release.notes, color = Color.White.copy(alpha = 0.78f), fontSize = 14.sp, lineHeight = 20.sp)
         }
     }
+}
+
+/** Where going back to an older version stands. */
+private sealed interface Downgrade {
+    data object Idle : Downgrade
+    data object Loading : Downgrade
+    class Pick(val releases: List<AppUpdater.Release>) : Downgrade
+    class Failed(val reason: String) : Downgrade
+    class Downloading(val release: AppUpdater.Release, val progress: Float) : Downgrade
+    class Installing(val release: AppUpdater.Release) : Downgrade
+    /** Without Shizuku Android won't install an older version over a newer one. */
+    class NeedsShizuku(val release: AppUpdater.Release) : Downgrade
+}
+
+/**
+ * Downgrade: every published version of the app, to go back to any of them. With Shizuku the
+ * older version installs right over the newer one and everything stays; without it Android
+ * refuses, so the card says how to do it by hand.
+ */
+@Composable
+private fun DowngradeCard(name: String, current: String, look: UpdateLook) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var state by remember { mutableStateOf<Downgrade>(Downgrade.Idle) }
+    var confirm by remember { mutableStateOf<String?>(null) }
+
+    fun goBack(release: AppUpdater.Release) {
+        if (!dev.hearth.launcher.data.ShizukuBridge.isReady(context)) {
+            state = Downgrade.NeedsShizuku(release)
+            return
+        }
+        state = Downgrade.Downloading(release, 0f)
+        scope.launch {
+            val apk = AppUpdater.download(context, release) { p ->
+                scope.launch { if (state is Downgrade.Downloading) state = Downgrade.Downloading(release, p) }
+            }
+            if (apk == null) {
+                state = Downgrade.Failed("Download fehlgeschlagen – bist du online?")
+                return@launch
+            }
+            state = Downgrade.Installing(release)
+            // Hearth closes while its older self is installed; it comes back on its own.
+            if (!dev.hearth.launcher.data.ShizukuBridge.installApk(apk, allowDowngrade = true)) {
+                state = Downgrade.Failed("Android hat die Version ${release.version} nicht installiert")
+            }
+        }
+    }
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(26.dp))
+            .background(look.card)
+            .glassSheen(26.dp)
+            .padding(vertical = 8.dp),
+    ) {
+        Text(
+            "Zurück zu einer früheren Version von $name – deine Einstellungen bleiben. Ältere Versionen können Funktionen nicht haben, die du jetzt nutzt.",
+            color = Color.White.copy(alpha = 0.7f),
+            fontSize = 14.sp,
+            lineHeight = 19.sp,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        )
+        when (val s = state) {
+            Downgrade.Idle -> DowngradeRow("Frühere Versionen anzeigen", look.accent) {
+                state = Downgrade.Loading
+                scope.launch {
+                    state = AppUpdater.allVersions(context).fold(
+                        onSuccess = { list -> Downgrade.Pick(list.filter { AppUpdater.isNewer(current, it.version) }) },
+                        onFailure = { Downgrade.Failed(it.message ?: "Keine Verbindung – bist du online?") },
+                    )
+                }
+            }
+            Downgrade.Loading -> DowngradeRow("Lade die Versionen …", look.accent) {}
+            is Downgrade.Pick -> {
+                if (s.releases.isEmpty()) {
+                    DowngradeRow("Keine älteren Versionen gefunden", look.accent) {}
+                }
+                s.releases.forEach { release ->
+                    val asked = confirm == release.version
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (asked) {
+                                    confirm = null
+                                    goBack(release)
+                                } else {
+                                    confirm = release.version
+                                }
+                            }
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("$name ${release.version}", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            Text(
+                                if (asked) "Nochmal tippen, um auf ${release.version} zu wechseln" else megabytes(release.size),
+                                color = if (asked) look.accent else Color.White.copy(alpha = 0.55f),
+                                fontSize = 13.sp,
+                            )
+                        }
+                        Icon(Icons.Rounded.Refresh, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
+            is Downgrade.Failed -> {
+                Text(s.reason, color = Color(0xFFFF9F0A), fontSize = 14.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
+                DowngradeRow("Nochmal versuchen", look.accent) { state = Downgrade.Idle }
+            }
+            is Downgrade.Downloading -> DowngradeRow("Lade ${s.release.version} … ${(s.progress * 100).toInt()} %", look.accent) {}
+            is Downgrade.Installing -> DowngradeRow("Installiere ${s.release.version} – $name startet gleich neu …", look.accent) {}
+            is Downgrade.NeedsShizuku -> {
+                Text(
+                    "Eine ältere Version über eine neuere installiert Android nur mit Shizuku (Einstellungen → System). " +
+                        "Ohne Shizuku: Version herunterladen, Hearth sichern (Einstellungen → Allgemein → Sichern), Hearth deinstallieren und die Datei installieren.",
+                    color = Color.White.copy(alpha = 0.75f),
+                    fontSize = 14.sp,
+                    lineHeight = 19.sp,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+                )
+                DowngradeRow("${s.release.version} herunterladen", look.accent) {
+                    runCatching {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, android.net.Uri.parse(s.release.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }
+                }
+                DowngradeRow("Zurück zur Liste", look.accent) { state = Downgrade.Idle }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DowngradeRow(text: String, accent: Color, onClick: () -> Unit) {
+    Text(
+        text,
+        color = accent,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+    )
 }
 
 @Composable

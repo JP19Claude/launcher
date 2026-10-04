@@ -190,6 +190,28 @@ object ShizukuBridge {
 
     suspend fun putSecure(key: String, value: String) = run("settings put secure $key $value")
 
+    /**
+     * Installs [apk] over the app that's there – also an older version (Hearth's builds allow
+     * going back). The file is handed to the installer through the shell's input.
+     */
+    suspend fun installApk(apk: java.io.File, allowDowngrade: Boolean): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val method = Shizuku::class.java.getDeclaredMethod(
+                "newProcess",
+                Array<String>::class.java,
+                Array<String>::class.java,
+                String::class.java,
+            )
+            method.isAccessible = true
+            val flags = if (allowDowngrade) "-r -d" else "-r"
+            val process = method.invoke(null, arrayOf("sh", "-c", "pm install $flags -S ${apk.length()}"), null, null) as Process
+            process.outputStream.use { out -> apk.inputStream().use { it.copyTo(out) } }
+            val result = process.inputStream.bufferedReader().use { it.readText() }
+            process.waitFor()
+            result.contains("Success")
+        }.getOrDefault(false)
+    }
+
     suspend fun screenOff() = run("input keyevent 223")
 
     suspend fun reboot() = run("svc power reboot")

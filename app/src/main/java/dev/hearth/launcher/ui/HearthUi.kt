@@ -164,6 +164,22 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "14.6",
+            name = "Downgrade",
+            summary = "Zurück zu jeder früheren Version – direkt im Software-Update.",
+            sections = listOf(
+                ChangeSection(
+                    "Downgrade", Icons.Rounded.Refresh, Blue,
+                    listOf(
+                        "Ganz unten im Software-Update: alle früheren Versionen, eine antippen (zweimal zur Sicherheit) und zurückwechseln.",
+                        "Mit Shizuku installiert Hearth die ältere Version direkt drüber – deine Einstellungen bleiben.",
+                        "Ohne Shizuku lässt Android das nicht zu; dann lädt Hearth die Datei und erklärt den Weg von Hand.",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "14.5",
             name = "Power-Update",
             summary = "15 Dinge, die One UI und ColorOS nicht können – damit sich Hearth UI lohnt.",
