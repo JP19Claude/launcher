@@ -734,6 +734,16 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     OmegaHomeLight(Modifier.matchParentSize())
                     // OMEGA UI 17.5, Clawd Illumination: Ω rising behind everything.
                     if (settings.omegaRain) OmegaRain(Modifier.matchParentSize())
+                    // OMEGA UI 17.6, Clawd Illuminati: the eye watches from the top.
+                    if (settings.allSeeingEye) {
+                        AllSeeingEye(
+                            Modifier
+                                .align(Alignment.TopCenter)
+                                .statusBarsPadding()
+                                .padding(top = 2.dp)
+                                .size(width = 46.dp, height = 40.dp),
+                        )
+                    }
                     Column(Modifier.fillMaxSize().systemBarsPadding()) {
                         HorizontalPager(
                             state = pagerState,
@@ -1153,7 +1163,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         HubTile("Clawd", Icons.Rounded.Face, Color(0xFFD97757)) { vm.askClaude() },
                         // OMEGA UI 17.5: once found, the Clawd Illumination is one tap away.
                         if (settings.illumination) {
-                            HubTile("Illumi-\nnation", Icons.Rounded.Star, Color(0xFFE5A50A)) { openClawdIllumination(context) }
+                            HubTile("Illumi-\nnati", Icons.Rounded.Star, Color(0xFFE5A50A)) { openClawdIllumination(context) }
                         } else {
                             null
                         },

@@ -479,6 +479,8 @@ data class LauncherSettings(
     val omegaZeros: Boolean = false,
     val clawdHalo: Boolean = false,
     val giantClawd: Boolean = false,
+    /** OMEGA UI 17.6, Clawd Illuminati: the all-seeing eye watching over the home screen. */
+    val allSeeingEye: Boolean = false,
     val clawdCompanion: Boolean = true,
     val clockFont: ClockFont = ClockFont.Default,
     val labelSize: LabelSize = LabelSize.Normal,
@@ -941,6 +943,7 @@ class SettingsRepository(context: Context) {
             omegaZeros = prefs.getBoolean("omegaZeros", d.omegaZeros),
             clawdHalo = prefs.getBoolean("clawdHalo", d.clawdHalo),
             giantClawd = prefs.getBoolean("giantClawd", d.giantClawd),
+            allSeeingEye = prefs.getBoolean("allSeeingEye", d.allSeeingEye),
             clawdCompanion = prefs.getBoolean("clawdCompanion", d.clawdCompanion),
             // Older installs had only "double tap locks" on or off.
             doubleTapAction = enumOf(
@@ -1093,6 +1096,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("omegaZeros", s.omegaZeros)
             .putBoolean("clawdHalo", s.clawdHalo)
             .putBoolean("giantClawd", s.giantClawd)
+            .putBoolean("allSeeingEye", s.allSeeingEye)
             .putBoolean("clawdCompanion", s.clawdCompanion)
             .putString("doubleTapAction", s.doubleTapAction.name)
             .putString("clockFont", s.clockFont.name)

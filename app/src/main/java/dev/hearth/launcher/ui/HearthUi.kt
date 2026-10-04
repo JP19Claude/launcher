@@ -178,6 +178,22 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "17.6",
+            name = "Illuminati",
+            summary = "Aus der Clawd Illumination werden die Clawd Illuminati: der geheime Rat der sechs Clawds – und das allsehende Auge.",
+            sections = listOf(
+                ChangeSection(
+                    "Clawd Illuminati", Icons.Rounded.Star, Orange,
+                    listOf(
+                        "Oben tagt jetzt der geheime Rat: sechs Clawds in Kapuzenroben an einem dreieckigen Tisch, nur von einer Kerze beleuchtet – darüber das Auge in der Pyramide, das blinzelt und sich umschaut.",
+                        "Das ganze Menü im versteckten Illuminati-Stil: dunkle Karten mit abgeschnittenen Ecken und Goldrand, vor jeder Überschrift ein Auge im Dreieck, jeder Schalter in seiner eigenen Pyramide, Augen-Pyramiden in der Wand.",
+                        "Neu: „Allsehendes Auge“ – oben auf dem Startbildschirm wacht das Auge in seiner Pyramide.",
+                    ),
+                    hearth,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "17.5",
             name = "Illumination",
             summary = "Das große OMEGA-Update: Ω und Clawd überall im System, ein neues Easter Egg – und ein Geheimnis im Ω-Kristall.",

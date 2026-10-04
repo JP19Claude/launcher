@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -98,7 +99,7 @@ fun rememberCrystalTaps(version: String): () -> Unit {
                 EasterEggs.find(context, "illumination")
                 openClawdIllumination(context)
             } else if (left <= 7) {
-                val text = if (left == 1) "Noch 1 Mal bis zur Clawd Illumination Ω" else "Noch $left Mal bis zur Clawd Illumination Ω"
+                val text = if (left == 1) "△ Noch 1 Mal bis zu den Clawd Illuminati" else "△ Noch $left Mal bis zu den Clawd Illuminati"
                 val shown = Toast.makeText(context, text, Toast.LENGTH_SHORT)
                 shown.show()
                 toast[0] = shown
@@ -145,15 +146,29 @@ fun ClawdIlluminationScreen(
     val turn = flowPhase(36_000, animate)
     val anyOn = settings.omegaOverdrive || settings.hyperGlass || settings.colorWorld != ColorWorld.Off ||
         settings.omegaRain || settings.weightless || settings.clawdParade || settings.omegaZeros ||
-        settings.clawdHalo || settings.giantClawd
+        settings.clawdHalo || settings.giantClawd || settings.allSeeingEye
     val glow by animateFloatAsState(if (anyOn) 1f else 0.6f, spring(stiffness = 120f), label = "illuminationGlow")
 
     Box(
         Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF0B0712), Color(0xFF1A0B1C), Color(0xFF07060C)))),
+            .background(Brush.verticalGradient(listOf(Color(0xFF050305), Color(0xFF0D0608), Color(0xFF030203)))),
     ) {
-        FluidBackdrop(omegaPalette(settings), strength = 0.9f)
+        // OMEGA UI 17.6: hidden symbols in the dark – faint eye-pyramids all over the wall.
+        Canvas(Modifier.fillMaxSize()) {
+            val step = 120.dp.toPx()
+            var row = 0
+            var y = -step / 3f
+            while (y < size.height) {
+                var x = if (row % 2 == 0) step / 4f else step * 0.75f
+                while (x < size.width + step) {
+                    drawEyePyramid(Offset(x, y), step * 0.5f, IlluminatiGold.copy(alpha = 0.06f), glow = 0.3f)
+                    x += step
+                }
+                y += step * 0.8f
+                row++
+            }
+        }
         Column(
             Modifier
                 .fillMaxSize()
@@ -163,54 +178,42 @@ fun ClawdIlluminationScreen(
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(28.dp))
-            // Clawd, illuminated: a halo, golden rays turning slowly behind him.
-            Box(Modifier.size(270.dp), contentAlignment = Alignment.Center) {
-                Canvas(Modifier.fillMaxSize()) {
-                    val c = Offset(size.width / 2f, size.height / 2f)
-                    val r = size.minDimension / 2f
-                    drawCircle(
-                        Brush.radialGradient(listOf(Color(0xFFFFD86B).copy(alpha = 0.45f * glow), Color(0xFFE5243F).copy(alpha = 0.16f * glow), Color.Transparent), center = c, radius = r),
-                        radius = r,
-                        center = c,
-                    )
-                    val spin = Math.toDegrees((turn?.invoke() ?: 0f).toDouble()).toFloat()
-                    rotate(spin, c) {
-                        for (i in 0 until 16) {
-                            val a = i * (2.0 * PI / 16)
-                            val len = r * if (i % 2 == 0) 0.98f else 0.74f
-                            val end = Offset(c.x + cos(a).toFloat() * len, c.y + sin(a).toFloat() * len)
-                            val start = Offset(c.x + cos(a).toFloat() * r * 0.3f, c.y + sin(a).toFloat() * r * 0.3f)
-                            drawLine(
-                                Brush.linearGradient(listOf(Color(0xFFFFE9A8).copy(alpha = 0.55f * glow), Color.Transparent), start, end),
-                                start,
-                                end,
-                                strokeWidth = r * 0.07f,
-                                cap = StrokeCap.Round,
-                            )
-                        }
-                    }
-                }
-                CompositionLocalProvider(LocalSettings provides settings.copy(clawdHalo = true, giantClawd = false)) {
-                    Clawd(Modifier.size(width = 150.dp, height = 132.dp), mood = if (anyOn) ClawdMood.Dance else ClawdMood.Love)
-                }
-                OmegaSign(44.sp, Modifier.align(Alignment.BottomEnd).padding(end = 34.dp, bottom = 34.dp))
-            }
+            Spacer(Modifier.height(16.dp))
+            // The secret council: six robed Clawds at a triangular table, under the eye.
+            IlluminatiCouncil(
+                Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .border(1.dp, IlluminatiGold.copy(alpha = 0.35f * glow + 0.1f), RoundedCornerShape(28.dp)),
+            )
+            Spacer(Modifier.height(16.dp))
             Text(
-                "Clawd Illumination",
+                "CLAWD ILLUMINATI",
                 style = TextStyle(
-                    brush = Brush.linearGradient(listOf(Color(0xFFFFEDB0), Color.White, Color(0xFFFF8A9A))),
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Black,
+                    brush = Brush.linearGradient(listOf(Color(0xFFFFEDB0), IlluminatiGold, Color(0xFF9C7A1E))),
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                    letterSpacing = 3.sp,
                 ),
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
-                "Hier dreht Clawd an den ganz großen Rädern von ${HearthUi.NAME}. Alles lässt sich hier wieder ausschalten.",
-                color = Color.White.copy(alpha = 0.7f),
+                "△  Novus Ordo Clawdorum  △",
+                color = IlluminatiGold.copy(alpha = 0.6f),
+                fontSize = 12.sp,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                letterSpacing = 2.sp,
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "Der geheime Rat der sechs Clawds hat getagt. Was er beschließt, verändert ${HearthUi.NAME} – und alles lässt sich hier wieder aufheben.",
+                color = Color.White.copy(alpha = 0.65f),
                 fontSize = 14.sp,
                 lineHeight = 19.sp,
                 textAlign = TextAlign.Center,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
                 modifier = Modifier.padding(horizontal = 12.dp),
             )
             Spacer(Modifier.height(20.dp))
@@ -261,6 +264,11 @@ fun ClawdIlluminationScreen(
                     "Jeder Clawd im System – auf dem Startbildschirm, in Suchleisten, in Glimmer – bekommt einen leuchtenden Heiligenschein.",
                     settings.clawdHalo,
                 ) { v -> onChange { it.copy(clawdHalo = v) } }
+                IlluminationSwitch(
+                    "👁", "Allsehendes Auge",
+                    "Oben auf dem Startbildschirm wacht das Auge in seiner Pyramide – es blinzelt und schaut sich um.",
+                    settings.allSeeingEye,
+                ) { v -> onChange { it.copy(allSeeingEye = v) } }
             }
 
             // Everything back to normal at once.
@@ -268,8 +276,8 @@ fun ClawdIlluminationScreen(
                 Modifier
                     .padding(top = 6.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = if (anyOn) 0.14f else 0.06f))
-                    .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+                    .background(Color(0xFF1A0B0E).copy(alpha = if (anyOn) 0.9f else 0.5f))
+                    .border(1.dp, IlluminatiGold.copy(alpha = if (anyOn) 0.7f else 0.25f), CircleShape)
                     .clickable(enabled = anyOn) {
                         onChange {
                             it.copy(
@@ -282,21 +290,22 @@ fun ClawdIlluminationScreen(
                                 omegaZeros = false,
                                 clawdHalo = false,
                                 giantClawd = false,
+                                allSeeingEye = false,
                             )
                         }
                     }
                     .padding(horizontal = 22.dp, vertical = 12.dp),
             ) {
                 Text(
-                    "Alles zurück auf normal",
-                    color = Color.White.copy(alpha = if (anyOn) 1f else 0.4f),
+                    "△  Den Rat auflösen – alles zurück",
+                    color = IlluminatiGold.copy(alpha = if (anyOn) 1f else 0.4f),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
             Spacer(Modifier.height(18.dp))
             Text(
-                "Ω · gefunden am Kristall · ${HearthUi.NAME}",
+                "MDCCLXXVI · Ω · gefunden am Kristall",
                 color = Color.White.copy(alpha = 0.35f),
                 fontSize = 12.sp,
             )
@@ -316,21 +325,25 @@ fun ClawdIlluminationScreen(
 @Composable
 private fun IlluminationSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
-        Text(
-            title,
-            color = Color(0xFFFFE3A0),
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.2.sp,
-            modifier = Modifier.padding(start = 10.dp, bottom = 6.dp),
-        )
+        // The Illuminati's way: an eye in its pyramid before every heading, in old gold.
+        Row(Modifier.padding(start = 8.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            EyeTriangle(Modifier.size(width = 22.dp, height = 20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                title.uppercase(),
+                color = IlluminatiGold,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                letterSpacing = 2.sp,
+            )
+        }
         Column(
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(26.dp))
-                .background(Color.White.copy(alpha = 0.07f))
-                .glassSheen(26.dp)
-                .aiFluidEdge(26.dp, strength = 0.7f, flowing = false)
+                .clip(CutCornerShape(18.dp))
+                .background(Brush.verticalGradient(listOf(Color(0xFF1C0D10).copy(alpha = 0.92f), Color(0xFF0B0507).copy(alpha = 0.92f))))
+                .border(1.dp, IlluminatiGold.copy(alpha = 0.4f), CutCornerShape(18.dp))
                 .padding(vertical = 4.dp),
             content = content,
         )
@@ -346,18 +359,32 @@ private fun IlluminationSwitch(icon: String, title: String, text: String, on: Bo
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(icon, fontSize = 24.sp, color = Color(0xFFFFE3A0), fontWeight = FontWeight.Black, modifier = Modifier.width(36.dp))
+        // Every switch in its own little pyramid.
+        Box(Modifier.size(width = 38.dp, height = 34.dp).padding(end = 4.dp), contentAlignment = Alignment.BottomCenter) {
+            Canvas(Modifier.matchParentSize()) {
+                val tri = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(size.width / 2f, 0f)
+                    lineTo(size.width, size.height)
+                    lineTo(0f, size.height)
+                    close()
+                }
+                drawPath(tri, IlluminatiGold.copy(alpha = if (on) 0.22f else 0.07f))
+                drawPath(tri, IlluminatiGold.copy(alpha = if (on) 0.9f else 0.4f), style = androidx.compose.ui.graphics.drawscope.Stroke(1.2.dp.toPx()))
+            }
+            Text(icon, fontSize = 13.sp, color = Color(0xFFFFE3A0), fontWeight = FontWeight.Black, modifier = Modifier.padding(bottom = 3.dp))
+        }
+        Spacer(Modifier.width(6.dp))
         Column(Modifier.weight(1f).padding(end = 10.dp)) {
-            Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Text(text, color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp, lineHeight = 17.sp)
+            Text(title, color = Color(0xFFF3E6C8), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif)
+            Text(text, color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, lineHeight = 17.sp)
         }
         Switch(
             checked = on,
             onCheckedChange = onToggle,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = Color(0xFFE5243F),
-                checkedBorderColor = Color(0xFFFFD86B),
+                checkedTrackColor = Color(0xFF8C1C13),
+                checkedBorderColor = IlluminatiGold,
                 uncheckedThumbColor = Color.White.copy(alpha = 0.7f),
                 uncheckedTrackColor = Color.White.copy(alpha = 0.1f),
                 uncheckedBorderColor = Color.White.copy(alpha = 0.3f),

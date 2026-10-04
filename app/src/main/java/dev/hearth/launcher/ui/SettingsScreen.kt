@@ -1742,10 +1742,10 @@ private fun IlluminationCard() {
             Clawd(Modifier.size(width = 38.dp, height = 33.dp), mood = dev.hearth.launcher.data.ClawdMood.Love)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("Clawd Illumination", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Text("Große und krasse Sachen am System", color = TextSecondary, fontSize = 13.sp)
+                Text("Clawd Illuminati", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text("Der geheime Rat der sechs Clawds", color = TextSecondary, fontSize = 13.sp)
             }
-            OmegaSign(26.sp)
+            EyeTriangle(Modifier.size(width = 28.dp, height = 25.dp))
             Spacer(Modifier.width(6.dp))
             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
         }
