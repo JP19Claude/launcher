@@ -248,10 +248,8 @@ enum class CcToggleShape(val label: String) {
 
 /** Ready-made looks that set many options at once. */
 enum class DesignPreset(val label: String) {
-    /** OMEGA UI 17: One UI's ways with ruby glass, the OMEGA clock and the floating island dock. */
-    Omega("OMEGA UI"),
     /** One UI's look with liquid glass, and Claude woven through the launcher. */
-    GalaxyClaude("Galaxy × Claude"),
+    GalaxyClaude("Galaxy × Claude (OMEGA UI)"),
     ColorOSClaude("ColorOS × Claude"),
     IOSGlass("iOS Liquid Glass"),
     Hearth("Hearth Klassik"),
@@ -639,28 +637,23 @@ data class LauncherSettings(
     }
 
     fun withPreset(preset: DesignPreset): LauncherSettings = when (preset) {
-        // OMEGA UI 17: One UI's ways (drawer, edit mode, settings pages), dressed in ruby.
-        DesignPreset.Omega -> withPreset(DesignPreset.GalaxyClaude).copy(
-            accent = AccentColor.Ruby,
-            glassTint = GlassTint.Ruby,
-            glassTintStrength = 1f,
-            clockStyle = ClockStyle.Omega,
-            dockStyle = DockStyle.Island,
-        )
         // One UI: squircle icons, its bold clock, blue, split panels, a plain slide between
         // pages, round toggles and wide sliders; the glass tinted cool; Claude in Galaxy AI's place.
         DesignPreset.GalaxyClaude -> copy(
             iconStyle = IconStyle.Original,
             iconShape = IconShape.Squircle,
             iconSize = 56,
-            accent = AccentColor.Galaxy,
-            glassTint = GlassTint.Galaxy,
+            // OMEGA UI is part of Galaxy × Claude: ruby accents and glass, the OMEGA clock, the
+            // OMEGA island as the dock.
+            accent = AccentColor.Ruby,
+            glassTint = GlassTint.Ruby,
             glassTintStrength = 1f,
             glassRefraction = 1.2f,
             glassBlur = 1f,
             glassDispersion = 0.5f,
             glassSpecular = 0.95f,
-            clockStyle = ClockStyle.OneUI,
+            clockStyle = ClockStyle.Omega,
+            dockStyle = DockStyle.Island,
             showGreeting = true,
             showClaudeCard = false,
             galaxyClaude = true,
@@ -757,7 +750,7 @@ data class LauncherSettings(
         const val MAX_DOCK = 6
 
         /** Current default look; installs with a lower [designVersion] get it once. */
-        const val DESIGN_VERSION = 7
+        const val DESIGN_VERSION = 8
     }
 }
 

@@ -1189,7 +1189,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 HearthUiIntro { newLook ->
                     HearthUi.markIntroSeen(context)
                     // OMEGA UI 17's tour: the OMEGA design, if wanted.
-                    if (newLook) vm.updateSettings { it.withPreset(dev.hearth.launcher.data.DesignPreset.Omega) }
+                    if (newLook) vm.updateSettings { it.withPreset(dev.hearth.launcher.data.DesignPreset.GalaxyClaude) }
                     showIntro = false
                 }
             }

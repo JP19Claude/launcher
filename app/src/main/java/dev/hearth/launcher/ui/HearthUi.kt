@@ -226,7 +226,7 @@ internal object HearthChangelog {
                 ChangeSection(
                     "Design", Icons.Rounded.Favorite, Orange,
                     listOf(
-                        "Neue Vorlage „OMEGA UI“: Rubin-Akzente, Rubin-Glas, OMEGA-Uhr und OMEGA-Insel – mit allem von One UI.",
+                        "OMEGA UI ist Teil von Galaxy × Claude: Rubin-Akzente, Rubin-Glas, OMEGA-Uhr und OMEGA-Insel – mit allem von One UI.",
                         "Neue Akzentfarbe und Glas-Tönung „Rubin“.",
                     ),
                     everyone,
@@ -242,6 +242,7 @@ internal object HearthChangelog {
                         "Glimmer Drop lässt sich jetzt ganz ausschalten (Einstellungen → Glimmer → Glimmer Drop): kein Bluetooth-Signal mehr, kein Eintrag im Teilen-Menü und keine Kachel im OMEGA-Menü.",
                         "Der Rubin ist neu geschliffen – im Stil des großen roten Steins aus Omega Rubin: Brillantschliff von oben, Licht wandert über die Facetten, das Ω glüht wie Lava.",
                         "Icons lassen sich jetzt bis 96 dp groß stellen (Design → Icons → Größe) und werden dafür schärfer geladen; das Dock bleibt passend.",
+                        "OMEGA UI ist keine eigene Vorlage mehr, sondern Teil von Galaxy × Claude – was dort noch Galaxys Standard war, wird Rubin (selbst Gewähltes bleibt).",
                     ),
                     withGlimmer,
                 ),
@@ -1229,7 +1230,7 @@ fun HearthUiIntro(onDone: (newLook: Boolean) -> Unit) {
                         ) {
                             TourSwitch(
                                 title = "OMEGA-Design verwenden",
-                                text = "Rubin-Akzente, die OMEGA-Uhr und die OMEGA-Insel als Dock – jederzeit unter Design → Vorlage änderbar.",
+                                text = "Galaxy × Claude mit Rubin-Akzenten, der OMEGA-Uhr und der OMEGA-Insel als Dock – jederzeit änderbar.",
                                 checked = newLook,
                             ) { newLook = it }
                         }
@@ -1239,7 +1240,7 @@ fun HearthUiIntro(onDone: (newLook: Boolean) -> Unit) {
                             points = listOf(
                                 TourPoint(Icons.Rounded.Menu, Color(0xFF8E6BFF), "Neue Menüs", "Lange auf eine App drücken: Kopfzeile mit Icon, Aktionen als Glas-Kacheln in deiner Akzentfarbe."),
                                 TourPoint(Icons.Rounded.Add, Color(0xFF3E91FF), "Apps im Fenster", "„Im Fenster öffnen“ – jede App als schwebendes Fenster (mit Shizuku)."),
-                                TourPoint(Icons.Rounded.Favorite, Color(0xFFE5243F), "Neue Designs", "Vorlage „OMEGA UI“, Akzentfarbe und Glas-Tönung „Rubin“."),
+                                TourPoint(Icons.Rounded.Favorite, Color(0xFFE5243F), "Neue Designs", "Galaxy × Claude ist jetzt OMEGA UI – mit Akzentfarbe und Glas-Tönung „Rubin“."),
                             ),
                         )
                         else -> TourPage(

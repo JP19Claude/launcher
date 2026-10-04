@@ -25,6 +25,10 @@ import dev.hearth.launcher.data.CcStyle
 import dev.hearth.launcher.data.AssistantHost
 import dev.hearth.launcher.data.ClaudeAssistant
 import dev.hearth.launcher.data.DesignPreset
+import dev.hearth.launcher.data.AccentColor
+import dev.hearth.launcher.data.GlassTint
+import dev.hearth.launcher.data.ClockStyle
+import dev.hearth.launcher.data.DockStyle
 import dev.hearth.launcher.data.IconConfig
 import dev.hearth.launcher.data.IconPackInfo
 import dev.hearth.launcher.data.IconPackRepository
@@ -220,6 +224,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
                 // 7: Galaxy × Claude gets One UI's Quick Panel instead of the ColorOS one.
                 if (s.designVersion < 7 && s.galaxyClaude && s.ccStyle == CcStyle.ColorOS) s = s.withCcStyle(CcStyle.OneUI)
+                // 8: OMEGA UI is part of Galaxy × Claude – what was still Galaxy's default turns ruby
+                // (whatever was chosen by hand stays).
+                if (s.designVersion < 8 && s.galaxyClaude) {
+                    s = s.copy(
+                        accent = if (s.accent == AccentColor.Galaxy) AccentColor.Ruby else s.accent,
+                        glassTint = if (s.glassTint == GlassTint.Galaxy) GlassTint.Ruby else s.glassTint,
+                        clockStyle = if (s.clockStyle == ClockStyle.OneUI) ClockStyle.Omega else s.clockStyle,
+                        dockStyle = if (s.dockStyle == DockStyle.Glass) DockStyle.Island else s.dockStyle,
+                    )
+                }
                 s.copy(designVersion = LauncherSettings.DESIGN_VERSION)
             }
         }
