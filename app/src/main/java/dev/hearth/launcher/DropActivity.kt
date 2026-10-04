@@ -55,6 +55,7 @@ class DropActivity : ComponentActivity() {
         super.onStart()
         picking = false
         GlimmerDrop.open(this)
+        GlimmerDrop.uiShown()
     }
 
     override fun onStop() {

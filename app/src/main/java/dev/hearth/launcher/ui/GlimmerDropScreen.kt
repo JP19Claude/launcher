@@ -177,7 +177,7 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
             Spacer(Modifier.height(4.dp))
             Text(
                 when (val p = phase) {
-                    GlimmerDrop.Phase.Off, GlimmerDrop.Phase.Searching -> "Halte die Oberkante deines Handys an ein anderes Handy mit Hearth UI – oder tippe unten auf ein Handy in der Nähe."
+                    GlimmerDrop.Phase.Off, GlimmerDrop.Phase.Searching -> "Halte die Oberkante deines Handys an ein anderes Handy mit Glimmer – oder tippe unten auf ein Handy in der Nähe."
                     is GlimmerDrop.Phase.Connecting -> "Verbinde mit ${p.peer} …"
                     GlimmerDrop.Phase.Connected -> "Verbunden mit ${exchange?.peer.orEmpty()}"
                     is GlimmerDrop.Phase.Failed -> p.message
@@ -322,7 +322,7 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
                     Column(Modifier.weight(1f)) {
                         Text("Bereit, wenn entsperrt", color = Color.White, fontSize = 15.sp)
                         Text(
-                            "Glimmer merkt im Hintergrund, wenn ein Handy mit Hearth UI an deins gehalten wird, und öffnet Glimmer Drop von selbst.",
+                            "Glimmer merkt im Hintergrund, wenn ein Handy mit Glimmer an deins gehalten wird, und öffnet Glimmer Drop sofort.",
                             color = Color.White.copy(alpha = 0.6f),
                             fontSize = 13.sp,
                             lineHeight = 17.sp,
@@ -337,7 +337,7 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
                 }
             }
             Text(
-                "Funktioniert zwischen Handys mit Hearth UI (Bluetooth an). Empfangenes landet in der Galerie bzw. unter Downloads im Ordner „Glimmer Drop“.",
+                "Funktioniert zwischen Handys mit Glimmer – mit Hearth UI oder nur der Glimmer-App (Bluetooth an). Empfangenes landet in der Galerie bzw. unter Downloads im Ordner „Glimmer Drop“.",
                 color = Color.White.copy(alpha = 0.45f),
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center,
@@ -943,4 +943,65 @@ private fun TextWriter(onDone: (String) -> Unit, onCancel: () -> Unit) {
             DropButton("Hinzufügen", DropBlue, Modifier.weight(1f)) { if (text.isNotBlank()) onDone(text) else onCancel() }
         }
     }
+}
+
+/**
+ * Glimmer Drop in the settings – of Hearth UI and of the Glimmer app: open it, allow
+ * "devices nearby" (so Glimmer can feel a phone right away), and "ready when unlocked".
+ */
+@Composable
+internal fun GlimmerDropSettings() {
+    val context = LocalContext.current
+    var allowed by remember { mutableStateOf(GlimmerDrop.hasPermissions(context)) }
+    var bluetoothOn by remember { mutableStateOf(GlimmerDrop.bluetoothOn(context)) }
+    val ready by GlimmerDrop.ready.collectAsState()
+    LaunchedEffect(Unit) {
+        GlimmerDrop.loadReady(context)
+        while (true) {
+            allowed = GlimmerDrop.hasPermissions(context)
+            bluetoothOn = GlimmerDrop.bluetoothOn(context)
+            kotlinx.coroutines.delay(1500)
+        }
+    }
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        allowed = GlimmerDrop.hasPermissions(context)
+        // Glimmer starts listening right away once it may.
+        GlimmerDrop.setReady(context, GlimmerDrop.ready.value)
+    }
+    ActionRow(
+        label = "Glimmer Drop öffnen",
+        description = "Zwei Handys mit Glimmer aneinanderhalten und Kontaktkarte, Fotos, Videos, Dateien, Links und Text teilen",
+        onClick = {
+            runCatching {
+                context.startActivity(Intent(context, dev.hearth.launcher.DropActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        },
+    )
+    if (!allowed) {
+        ActionRow(
+            label = "Geräte in der Nähe erlauben",
+            description = "Nötig, damit Glimmer ein anderes Handy sofort spürt",
+            onClick = { ask.launch(GlimmerDrop.neededPermissions()) },
+        )
+    }
+    if (!bluetoothOn) {
+        ActionRow(
+            label = "Bluetooth einschalten",
+            description = "Glimmer Drop findet das andere Handy über Bluetooth",
+            onClick = {
+                runCatching {
+                    context.startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+            },
+        )
+    }
+    SwitchRow(
+        label = "Sofort bereit, wenn entsperrt",
+        description = "Handys aneinanderhalten – Glimmer Drop geht sofort auf, ohne etwas zu öffnen",
+        checked = ready,
+    ) { v ->
+        GlimmerDrop.setReady(context, v)
+        if (v && !GlimmerDrop.hasPermissions(context)) ask.launch(GlimmerDrop.neededPermissions())
+    }
+    Note("Funktioniert zwischen Handys mit Hearth UI oder nur der Glimmer-App. Auch aus jeder App: Teilen → „Glimmer Drop“. Empfangenes landet in der Galerie bzw. unter Downloads im Ordner „Glimmer Drop“.")
 }

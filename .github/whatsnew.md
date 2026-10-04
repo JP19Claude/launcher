@@ -1,12 +1,6 @@
-Hearth UI 15.5 „Glimmer Drop“ auf ClaudeOS 3.1
+Hearth UI 15.6 auf ClaudeOS 3.1 · Glimmer 15.6
 
-✨ Glimmer Drop – wie NameDrop und AirDrop
-• Zwei Handys mit Hearth UI oben aneinanderhalten: Glimmers Insel leuchtet auf und das Teilen beginnt
-• Kontaktkarte, Fotos, Videos, Dateien, Links und Text teilen
-• Das andere Handy entscheidet: Annehmen oder Ablehnen
-• Schnelle direkte Verbindung (Bluetooth + Wi-Fi Direct), ohne Internet
-• „Bereit, wenn entsperrt“: Glimmer erkennt das andere Handy im Hintergrund
-• Auch aus jeder App: Teilen → „Glimmer Drop“, im Hearth-Menü und in den Einstellungen
-
-🥚 Easter Egg
-• Hearth UI 15.5: „Funken“
+✨ Glimmer Drop sofort
+• Zwei Handys mit Glimmer aneinanderhalten – Glimmer Drop geht sofort auf und verbindet sich gleich mit dem anderen Handy
+• Jetzt auch in der Glimmer-App, ohne Hearth UI (beide verstehen sich)
+• Glimmer-Einstellungen: Glimmer Drop öffnen, „Geräte in der Nähe“ erlauben, „Sofort bereit, wenn entsperrt“

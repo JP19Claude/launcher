@@ -169,6 +169,23 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "15.6",
+            name = "Glimmer Drop sofort",
+            summary = "Handys aneinanderhalten – Glimmer Drop geht sofort auf. Jetzt auch in der Glimmer-App.",
+            sections = listOf(
+                ChangeSection(
+                    "Glimmer Drop", Icons.Rounded.Favorite, Blue,
+                    listOf(
+                        "Sofort: Glimmer spürt ein Handy, das an deins gehalten wird, viel schneller und öffnet Glimmer Drop gleich mit der Verbindung zum anderen Handy – ohne nochmal suchen.",
+                        "Auch nur mit der Glimmer-App: Glimmer Drop gibt es jetzt auf jedem Handy mit Glimmer, auch ohne Hearth UI – beide verstehen sich.",
+                        "In den Glimmer-Einstellungen: Glimmer Drop öffnen, „Geräte in der Nähe“ erlauben und „Sofort bereit, wenn entsperrt“.",
+                        "Glimmer hört wieder hin, sobald Bluetooth eingeschaltet wird.",
+                    ),
+                    withGlimmer,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "15.5",
             name = "Glimmer Drop",
             summary = "Zwei Handys aneinanderhalten und teilen – wie NameDrop und AirDrop.",

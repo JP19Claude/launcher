@@ -619,23 +619,7 @@ fun SettingsScreen(
             }
 
             if (shows("glimmer")) item {
-                Section("Glimmer Drop") {
-                    ActionRow(
-                        label = "Glimmer Drop öffnen",
-                        description = "Zwei Handys aneinanderhalten und Kontaktkarte, Fotos, Videos, Dateien, Links und Text teilen",
-                        onClick = {
-                            runCatching { context.startActivity(Intent(context, dev.hearth.launcher.DropActivity::class.java)) }
-                        },
-                    )
-                    val dropReady by dev.hearth.launcher.data.GlimmerDrop.ready.collectAsState()
-                    LaunchedEffect(Unit) { dev.hearth.launcher.data.GlimmerDrop.loadReady(context) }
-                    SwitchRow(
-                        label = "Bereit, wenn entsperrt",
-                        description = "Glimmer merkt, wenn ein Handy mit Hearth UI an deins gehalten wird, und öffnet Glimmer Drop von selbst",
-                        checked = dropReady,
-                    ) { v -> dev.hearth.launcher.data.GlimmerDrop.setReady(context, v) }
-                    Note("Auch aus jeder App: Teilen → „Glimmer Drop“. Empfangenes landet in der Galerie bzw. unter Downloads im Ordner „Glimmer Drop“.")
-                }
+                Section("Glimmer Drop") { GlimmerDropSettings() }
             }
 
             if (shows("home")) item {

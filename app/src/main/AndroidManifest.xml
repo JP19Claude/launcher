@@ -33,22 +33,6 @@
         android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
 
-    <!-- Glimmer Drop: two phones held together find each other (Bluetooth beacon) and share
-         over a fast direct connection (Bluetooth and Wi-Fi Direct). -->
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_ADMIN"
-        android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
-    <uses-permission
-        android:name="android.permission.ACCESS_COARSE_LOCATION"
-        android:maxSdkVersion="32" />
-    <uses-permission
-        android:name="android.permission.ACCESS_FINE_LOCATION"
-        android:maxSdkVersion="32" />
 
     <!-- Hearth and Glimmer talk to each other (the app flying into the island, global
          actions); only apps signed with the same key get this. -->
@@ -151,25 +135,6 @@
             android:exported="false"
             android:label="Software-Update" />
 
-        <!-- Glimmer Drop: hold two phones together and share; also in Android's share sheet. -->
-        <activity
-            android:name=".DropActivity"
-            android:exported="true"
-            android:excludeFromRecents="true"
-            android:label="Glimmer Drop"
-            android:launchMode="singleTask"
-            android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="*/*" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND_MULTIPLE" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="*/*" />
-            </intent-filter>
-        </activity>
 
         <!-- "Telefoninfo": the phone, its specs, Hearth and ClaudeOS. -->
         <activity

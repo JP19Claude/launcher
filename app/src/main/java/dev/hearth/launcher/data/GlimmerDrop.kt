@@ -54,7 +54,8 @@ import java.util.Locale
 import kotlin.random.Random
 
 /**
- * Glimmer Drop – like NameDrop and AirDrop: hold the tops of two phones with Hearth UI together
+ * Glimmer Drop – like NameDrop and AirDrop: hold the tops of two phones with Glimmer together
+ * (Hearth UI, or just the Glimmer app)
  * and share your contact card, photos, videos, files, links and text.
  *
  * How the phones find each other: each one sends a tiny Bluetooth beacon (at the lowest power,
@@ -279,16 +280,20 @@ object GlimmerDrop {
     private var touchToken: String? = null
     private val rssi = HashMap<String, ArrayDeque<Int>>()
 
-    /** Opens Glimmer Drop: findable for others, and looking for a phone to touch. */
-    fun open(context: Context) {
+    /**
+     * Opens Glimmer Drop: findable for others, and looking for a phone to touch. [touched] is
+     * the phone already held against this one (Glimmer felt it): it's called right away.
+     */
+    fun open(context: Context, touched: String? = null) {
         val c = context.applicationContext
         app = c
         if (sessionOpen) return
         sessionOpen = true
+        uiShown = false
         stopBeacon()
         _nearby.value = emptyList()
         _exchange.value = null
-        touchToken = null
+        touchToken = touched
         rssi.clear()
         if (!hasPermissions(c)) {
             _phase.value = Phase.Failed("Glimmer Drop braucht die Erlaubnis für Geräte in der Nähe.")
@@ -312,6 +317,8 @@ object GlimmerDrop {
         files.value = emptyList()
         texts.value = emptyList()
         lastClosed = SystemClock.elapsedRealtime()
+        closedWith = touchToken
+        uiShown = false
         app?.let { if (backgroundWanted) startBeacon(it, background = true) }
     }
 
@@ -718,18 +725,50 @@ object GlimmerDrop {
     /** Whether Glimmer asks to listen (the phone is unlocked); [ready] decides if it does. */
     private var backgroundRequested = false
     private var lastClosed = 0L
+    /** The phone of the last Glimmer Drop: not opened again right away while still held together. */
+    private var closedWith: String? = null
+    /** The Glimmer Drop screen is up (a session Glimmer started without it ends by itself). */
+    private var uiShown = false
+
+    fun uiShown() {
+        uiShown = true
+    }
     private var lastTouchOpen = 0L
 
     /** Glimmer, while the phone is unlocked: listen for a phone held against it. */
     fun setBackground(context: Context, on: Boolean) {
         app = context.applicationContext
         loadReady(context)
+        watchBluetooth(context.applicationContext)
         backgroundRequested = on
         val want = on && _ready.value
         if (want == backgroundWanted && (scanning != null || !want)) return
         backgroundWanted = want
         if (sessionOpen) return
         if (want) startBeacon(context.applicationContext, background = true) else stopBeacon()
+    }
+
+    private var bluetoothWatched = false
+
+    /** Bluetooth switched on later: Glimmer starts listening then. */
+    private fun watchBluetooth(context: Context) {
+        if (bluetoothWatched) return
+        bluetoothWatched = true
+        runCatching {
+            ContextCompat.registerReceiver(
+                context,
+                object : android.content.BroadcastReceiver() {
+                    override fun onReceive(c: Context, intent: Intent) {
+                        val state = intent.getIntExtra(android.bluetooth.BluetoothAdapter.EXTRA_STATE, -1)
+                        if (state == android.bluetooth.BluetoothAdapter.STATE_ON && backgroundWanted && !sessionOpen) {
+                            startBeacon(c.applicationContext, background = true)
+                        }
+                    }
+                },
+                android.content.IntentFilter(android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED),
+                ContextCompat.RECEIVER_EXPORTED,
+            )
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -747,7 +786,7 @@ object GlimmerDrop {
         runCatching {
             advertiser.startAdvertising(
                 AdvertiseSettings.Builder()
-                    .setAdvertiseMode(if (background) AdvertiseSettings.ADVERTISE_MODE_BALANCED else AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+                    .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
                     .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_ULTRA_LOW)
                     .setConnectable(false)
                     .build(),
@@ -768,7 +807,7 @@ object GlimmerDrop {
             scanner.startScan(
                 listOf(ScanFilter.Builder().setServiceUuid(BEACON).build()),
                 ScanSettings.Builder()
-                    .setScanMode(if (background) ScanSettings.SCAN_MODE_BALANCED else ScanSettings.SCAN_MODE_LOW_LATENCY)
+                    .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
                     .build(),
                 scanCallback,
             )
@@ -806,24 +845,34 @@ object GlimmerDrop {
                 tryTouchConnect()
             }
         } else if (beaconBackground) {
-            touchedInBackground()
+            touchedInBackground(peer)
         }
     }
 
-    /** In the background: a phone touches this one – Glimmer Drop opens. */
-    private fun touchedInBackground() {
+    /**
+     * In the background: a phone touches this one – Glimmer Drop starts at once (the
+     * connection to that phone already on its way) and its screen opens.
+     */
+    private fun touchedInBackground(peer: String) {
         val context = app ?: return
         val now = SystemClock.elapsedRealtime()
-        // Not right after closing (the phones are probably still together), and not twice.
-        if (now - lastClosed < 20_000 || now - lastTouchOpen < 8_000) return
+        // Not again with the same phone right after closing (they're probably still together).
+        if (peer == closedWith && now - lastClosed < 12_000) return
+        if (now - lastTouchOpen < 4_000) return
         if (context.getSystemService(PowerManager::class.java)?.isInteractive == false) return
         lastTouchOpen = now
         _island.tryEmit(IslandMoment("Glimmer Drop", "Handy erkannt"))
+        open(context, touched = peer)
         runCatching {
             context.startActivity(
                 Intent(context, dev.hearth.launcher.DropActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             )
+        }
+        // If the screen couldn't open, don't keep searching in the background.
+        scope.launch {
+            kotlinx.coroutines.delay(10_000)
+            if (sessionOpen && !uiShown) close()
         }
     }
 }

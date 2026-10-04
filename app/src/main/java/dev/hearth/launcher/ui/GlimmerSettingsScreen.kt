@@ -268,6 +268,11 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
                 // Looks for a newer version of this app and installs it right here.
                 item { Section("Updates") { AppUpdateContent() } }
 
+                // Glimmer Drop: hold two phones together and share – also without Hearth UI.
+                if (app == FamilyApp.Glimmer) {
+                    item { Section("Glimmer Drop") { GlimmerDropSettings() } }
+                }
+
                 if (app == FamilyApp.Glimmer) {
                     item { GlimmerPreview(s, media) }
                     item { GlimmerSections(s, update) }
