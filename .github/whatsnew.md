@@ -18,3 +18,7 @@ OMEGA UI 17.5 „Illumination“ auf ClaudeOS 4.0 „Aurora“ – das große OM
 
 ⚙️ System
 • Änderungen aus Software-Update und Telefoninfo kommen sofort auf dem Startbildschirm an
+
+🛠 Hotfix
+• OMEGA-Beleuchtung: OMEGA Fluid leuchtet auf dem Startbildschirm zwischen Hintergrundbild und Apps/Widgets (Design → OMEGA)
+• Dark Mode jetzt auch im Finder und App-Drawer

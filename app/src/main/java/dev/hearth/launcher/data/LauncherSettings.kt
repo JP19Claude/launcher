@@ -463,6 +463,8 @@ data class LauncherSettings(
     val omegaColor: OmegaColor = OmegaColor.Ruby,
     /** OMEGA UI 17.1: flowing effects at a calmer rate and lighter glass – smoother, less lag. */
     val smoothMode: Boolean = true,
+    /** OMEGA UI 17.5: OMEGA light between the wallpaper and the home screen's apps and widgets. */
+    val omegaLight: Boolean = true,
     /**
      * OMEGA UI 17.5 – the Clawd Illumination, hidden behind the Ω crystal: big, wild changes
      * to the whole system. [illumination] is set once it has been found (then it's in Settings).
@@ -928,6 +930,7 @@ class SettingsRepository(context: Context) {
             omegaGlass = prefs.getBoolean("omegaGlass", d.omegaGlass),
             omegaColor = enumOf("omegaColor", d.omegaColor),
             smoothMode = prefs.getBoolean("smoothMode", d.smoothMode),
+            omegaLight = prefs.getBoolean("omegaLight", d.omegaLight),
             illumination = prefs.getBoolean("illumination", d.illumination),
             omegaOverdrive = prefs.getBoolean("omegaOverdrive", d.omegaOverdrive),
             hyperGlass = prefs.getBoolean("hyperGlass", d.hyperGlass),
@@ -1079,6 +1082,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("omegaGlass", s.omegaGlass)
             .putString("omegaColor", s.omegaColor.name)
             .putBoolean("smoothMode", s.smoothMode)
+            .putBoolean("omegaLight", s.omegaLight)
             .putBoolean("illumination", s.illumination)
             .putBoolean("omegaOverdrive", s.omegaOverdrive)
             .putBoolean("hyperGlass", s.hyperGlass)

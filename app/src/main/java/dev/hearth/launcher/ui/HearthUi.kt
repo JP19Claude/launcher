@@ -220,6 +220,14 @@ internal object HearthChangelog {
                     listOf("Änderungen aus anderen Bildschirmen der App (Software-Update, Telefoninfo) kommen jetzt sofort auf dem Startbildschirm an, ohne Neustart."),
                     everyone,
                 ),
+                ChangeSection(
+                    "Hotfix", Icons.Rounded.CheckCircle, Green,
+                    listOf(
+                        "OMEGA-Beleuchtung: Auf dem Startbildschirm leuchtet OMEGA Fluid jetzt zwischen Hintergrundbild und Apps und Widgets – aus der Ecke hinter der Uhr, durch die Mitte und unten hinter dem Dock. Schalter unter Design → OMEGA.",
+                        "Der Dark Mode greift jetzt auch im Finder und im App-Drawer: viel dunkler, die Farben glühen nur noch, die großen Glasflächen werden tiefer.",
+                    ),
+                    hearth,
+                ),
             ),
         ),
         ChangeRelease(

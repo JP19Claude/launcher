@@ -1,5 +1,6 @@
 package dev.hearth.launcher.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -39,6 +40,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * OMEGA UI 17.4: behind a whole screen of glass (finder, drawer) – the frosted wallpaper,
@@ -58,12 +61,21 @@ internal fun OmegaScreenBackdrop(
     val omega = s.omegaGlass
     val hasGlass = LocalBackdrop.current != null
     val palette = fluidPalette()
+    // OMEGA UI 17.5 hotfix: dark mode reaches here too – much darker, the colors only glowing.
+    val dark = LocalGlassStyle.current.dark
+    val shade = when {
+        !hasGlass -> noGlassDim
+        dark -> maxOf(if (omega) omegaDim else dim, 0.6f)
+        omega -> omegaDim
+        else -> dim
+    }
+    val colorDepth = if (dark) 0.45f else 1f
     Box(modifier) {
         GlassBackdropFill(blur = blur, modifier = Modifier.matchParentSize())
         Box(
             Modifier
                 .matchParentSize()
-                .background(Color(0xFF06060C).copy(alpha = if (!hasGlass) noGlassDim else if (omega) omegaDim else dim)),
+                .background(Color(if (dark) 0xFF05040C else 0xFF06060C).copy(alpha = shade)),
         )
         // OMEGA Glass: tinted like OMEGA glass – deepest at the top and once more at the bottom.
         if (omega) {
@@ -72,15 +84,55 @@ internal fun OmegaScreenBackdrop(
                     .matchParentSize()
                     .background(
                         Brush.verticalGradient(
-                            0f to palette[0].copy(alpha = 0.28f),
-                            0.4f to palette[0].copy(alpha = 0.05f),
-                            1f to palette[1].copy(alpha = 0.2f),
+                            0f to palette[0].copy(alpha = 0.28f * colorDepth),
+                            0.4f to palette[0].copy(alpha = 0.05f * colorDepth),
+                            1f to palette[1].copy(alpha = 0.2f * colorDepth),
                         ),
                     ),
             )
         }
         // The colors drift behind everything (and hold still while something scrolls).
-        FluidBackdrop(palette, modifier = Modifier.matchParentSize(), strength = if (omega) fluid * 1.2f else fluid)
+        FluidBackdrop(palette, modifier = Modifier.matchParentSize(), strength = (if (omega) fluid * 1.2f else fluid) * (if (dark) 0.6f else 1f))
+    }
+}
+
+/**
+ * OMEGA UI 17.5: the home screen's OMEGA light, between the wallpaper and the apps and
+ * widgets – OMEGA Fluid glowing from the top corner behind the clock, pooling at the bottom
+ * behind the dock and drifting softly through the middle. Dimmer in dark mode.
+ */
+@Composable
+internal fun OmegaHomeLight(modifier: Modifier = Modifier) {
+    val s = LocalSettings.current
+    if (!s.omegaGlass || !s.omegaLight || !s.fluidDesign) return
+    val palette = fluidPalette()
+    val dark = LocalGlassStyle.current.dark
+    val power = (if (dark) 0.6f else 1f) * (if (s.omegaOverdrive) 1.3f else 1f)
+    val flow = flowPhase(30_000, s.animations)
+    Canvas(modifier) {
+        val t = flow?.invoke() ?: 1f
+        val w = size.width
+        val h = size.height
+        fun glow(color: Color, at: Offset, radius: Float, alpha: Float) {
+            drawCircle(
+                Brush.radialGradient(listOf(color.copy(alpha = (alpha * power).coerceIn(0f, 1f)), Color.Transparent), center = at, radius = radius),
+                radius = radius,
+                center = at,
+            )
+        }
+        // From the top corner, behind the clock.
+        glow(palette[0], Offset(w * (0.12f + 0.08f * sin(t)), h * (0.08f + 0.04f * cos(t * 1.3f))), w * 0.95f, 0.3f)
+        // Drifting through the middle, behind the apps and widgets.
+        glow(palette[2], Offset(w * (0.5f + 0.32f * cos(t + 1.7f)), h * (0.46f + 0.12f * sin(t * 0.8f))), w * 0.7f, 0.2f)
+        glow(palette[3 % palette.size], Offset(w * (0.5f + 0.3f * cos(t * 0.7f + 4f)), h * (0.6f + 0.1f * sin(t + 2f))), w * 0.6f, 0.16f)
+        // Pooling at the bottom, behind the dock.
+        glow(palette[1], Offset(w * (0.75f - 0.15f * sin(t * 0.9f)), h * 1.02f), w * 0.9f, 0.34f)
+        drawRect(
+            Brush.verticalGradient(
+                0.78f to Color.Transparent,
+                1f to palette[1].copy(alpha = (0.22f * power).coerceIn(0f, 1f)),
+            ),
+        )
     }
 }
 
@@ -99,7 +151,9 @@ internal fun OmegaGlassSheet(
 ) {
     val s = LocalSettings.current
     val omega = s.omegaGlass
-    val tint = LocalGlassStyle.current.tint.compositeOver(Color.Black.copy(alpha = 0.3f))
+    // Dark mode: a deeper sheet (and LiquidGlass lays its night tint over it as well).
+    val dark = LocalGlassStyle.current.dark
+    val tint = LocalGlassStyle.current.tint.compositeOver(Color.Black.copy(alpha = if (dark) 0.5f else 0.3f))
     LiquidGlass(
         cornerRadius = corner,
         refraction = 22.dp,

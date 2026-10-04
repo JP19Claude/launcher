@@ -342,6 +342,12 @@ fun SettingsScreen(
                     )
                     RowDivider()
                     SwitchRow(
+                        label = "OMEGA-Beleuchtung",
+                        description = "Auf dem Startbildschirm leuchtet OMEGA Fluid zwischen Hintergrundbild und Apps und Widgets – im Dark Mode gedämpft",
+                        checked = s.omegaLight,
+                    ) { v -> update { it.copy(omegaLight = v, omegaGlass = if (v) true else it.omegaGlass) } }
+                    RowDivider()
+                    SwitchRow(
                         label = "Flüssig-Modus",
                         description = "Weniger Last, weniger Ruckeln: Farbflüsse laufen ruhiger, die Glas-Linse nur auf großen Flächen. Empfohlen.",
                         checked = s.smoothMode,
