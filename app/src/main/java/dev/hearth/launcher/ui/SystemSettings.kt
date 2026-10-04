@@ -413,6 +413,116 @@ private fun ShizukuSection(state: ControlState, onChanged: () -> Unit) {
             }
         }
     }
+    if (status == ShizukuBridge.Status.Ready) ShizukuTools()
+}
+
+private fun toast(context: Context, text: String) {
+    runCatching { android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show() }
+}
+
+/** System animation speeds, as the developer options offer them. */
+private val AnimationScales = listOf(0f, 0.5f, 1f, 1.5f)
+
+private fun scaleLabel(scale: Float): String = when (scale) {
+    0f -> "Aus"
+    0.5f -> "Schnell (0,5×)"
+    1f -> "Normal"
+    else -> "Langsam (1,5×)"
+}
+
+/** What else Shizuku makes possible: tempo, ad blocking, memory, frozen apps, power. */
+@Composable
+private fun ShizukuTools() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var scale by remember { mutableFloatStateOf(ShizukuBridge.animationScale(context)) }
+    var dns by remember { mutableStateOf(ShizukuBridge.dns(context)) }
+    var frozen by remember { mutableStateOf<List<String>>(emptyList()) }
+    var confirm by remember { mutableStateOf<String?>(null) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { frozen = ShizukuBridge.frozenApps() }
+
+    fun label(pkg: String): String = runCatching {
+        val pm = context.packageManager
+        pm.getApplicationLabel(pm.getApplicationInfo(pkg, android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS)).toString()
+    }.getOrDefault(pkg)
+
+    Section("Shizuku · Tempo & Werbeblocker") {
+        ChoiceRow(
+            label = "System-Animationen",
+            options = AnimationScales,
+            selected = AnimationScales.minByOrNull { abs(it - scale) },
+            optionLabel = ::scaleLabel,
+        ) { v ->
+            scope.launch {
+                if (ShizukuBridge.setAnimationScale(v)) scale = v else toast(context, "Ging nicht")
+            }
+        }
+        Note("„Schnell“ lässt das ganze Handy flotter wirken – Apps öffnen und schließen in halber Zeit.")
+        ChoiceRow(
+            label = "Werbeblocker fürs ganze Handy (Privates DNS)",
+            options = ShizukuBridge.Dns.entries,
+            selected = dns,
+            optionLabel = { it.label },
+        ) { d ->
+            scope.launch {
+                if (ShizukuBridge.setDns(d)) dns = d else toast(context, "Ging nicht")
+            }
+        }
+        Note("AdGuard blockt Werbung und Tracker in allen Apps und im Browser, ohne zusätzliche App.")
+    }
+
+    Section("Shizuku · Speicher & Apps") {
+        SystemPageRow(SystemPage("Hintergrund-Apps beenden", "Gibt Arbeitsspeicher frei", Color(0xFF34C759), emptyList(), icon = Icons.Rounded.Refresh)) {
+            scope.launch {
+                toast(context, if (ShizukuBridge.killBackgroundApps()) "Hintergrund-Apps beendet" else "Ging nicht")
+            }
+        }
+        Note("Lange auf eine App drücken: „App stoppen“ und „Einfrieren“ (die App bleibt installiert, startet aber nicht mehr, bis du sie hier auftaust).")
+        if (frozen.isNotEmpty()) {
+            frozen.forEach { pkg ->
+                RowDivider()
+                SystemPageRow(SystemPage(label(pkg), "Eingefroren · tippen zum Auftauen", Color(0xFF30B0C7), emptyList(), icon = Icons.Rounded.Star)) {
+                    scope.launch {
+                        if (ShizukuBridge.thaw(pkg)) {
+                            toast(context, "${label(pkg)} aufgetaut")
+                            frozen = ShizukuBridge.frozenApps()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Section("Shizuku · Ein/Aus") {
+        SystemPageRow(SystemPage("Bildschirm aus", "Sofort sperren", Color(0xFF8E8E93), emptyList(), glyph = Glyph.Lock)) {
+            scope.launch { ShizukuBridge.screenOff() }
+        }
+        RowDivider()
+        // Restarting and switching off ask twice, so a slip of the finger doesn't do it.
+        SystemPageRow(
+            SystemPage(
+                if (confirm == "reboot") "Nochmal tippen zum Neustarten" else "Neu starten",
+                "Startet das Handy neu",
+                Color(0xFFFF9F0A),
+                emptyList(),
+                glyph = Glyph.Power,
+            ),
+        ) {
+            if (confirm == "reboot") scope.launch { ShizukuBridge.reboot() } else confirm = "reboot"
+        }
+        RowDivider()
+        SystemPageRow(
+            SystemPage(
+                if (confirm == "off") "Nochmal tippen zum Ausschalten" else "Ausschalten",
+                "Schaltet das Handy aus",
+                Color(0xFFFF453A),
+                emptyList(),
+                glyph = Glyph.Power,
+            ),
+        ) {
+            if (confirm == "off") scope.launch { ShizukuBridge.shutdown() } else confirm = "off"
+        }
+    }
 }
 
 /** Whether mobile data is switched on (not whether it's in use right now). */

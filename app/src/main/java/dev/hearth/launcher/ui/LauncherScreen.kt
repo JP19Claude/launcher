@@ -1123,6 +1123,17 @@ private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Un
     add(GlassMenuItem(if (vm.isLocked(app)) "Entsperren" else "Sperren", Icons.Rounded.Lock) { vm.toggleLock(app) })
     add(GlassMenuItem("Teilen", Icons.Rounded.Share) { vm.shareApp(app) })
     add(GlassMenuItem("App-Info", Icons.Rounded.Info) { vm.openAppInfo(app) })
+    // With Shizuku: stop an app at once, or freeze it (thawed again under Einstellungen → System).
+    if (app.packageName != vm.getApplication<android.app.Application>().packageName &&
+        dev.hearth.launcher.data.ShizukuBridge.isReady(vm.getApplication<android.app.Application>())
+    ) {
+        add(GlassMenuItem("App stoppen", Icons.Rounded.Close) {
+            vm.shizukuAction("${app.label} gestoppt") { dev.hearth.launcher.data.ShizukuBridge.forceStop(app.packageName) }
+        })
+        add(GlassMenuItem("Einfrieren", Icons.Rounded.Lock) {
+            vm.shizukuAction("${app.label} eingefroren") { dev.hearth.launcher.data.ShizukuBridge.freeze(app.packageName) }
+        })
+    }
     if (vm.isInDock(app)) {
         val dockKeys = vm.dock.value.map { it.key }
         val index = dockKeys.indexOf(app.key)

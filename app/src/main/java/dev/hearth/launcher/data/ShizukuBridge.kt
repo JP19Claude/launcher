@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.provider.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
@@ -88,4 +89,79 @@ object ShizukuBridge {
 
     suspend fun setBatterySaver(on: Boolean) =
         run("cmd power set-mode ${if (on) 1 else 0} || settings put global low_power ${if (on) 1 else 0}")
+
+    /** Like [run], but hands back what the command printed (null if it failed). */
+    suspend fun output(command: String): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            val method = Shizuku::class.java.getDeclaredMethod(
+                "newProcess",
+                Array<String>::class.java,
+                Array<String>::class.java,
+                String::class.java,
+            )
+            method.isAccessible = true
+            val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
+            val text = process.inputStream.bufferedReader().use { it.readText() }
+            process.waitFor()
+            text
+        }.getOrNull()
+    }
+
+    fun isReady(context: Context): Boolean = status(context) == Status.Ready
+
+    /** Stops an app at once (it starts again when it's opened). */
+    suspend fun forceStop(packageName: String) = run("am force-stop $packageName")
+
+    /** Freezes an app: it stays installed but can't start until it's thawed. */
+    suspend fun freeze(packageName: String) = run("pm disable-user --user 0 $packageName")
+
+    suspend fun thaw(packageName: String) = run("pm enable $packageName")
+
+    /** The apps that are frozen (disabled) right now. */
+    suspend fun frozenApps(): List<String> =
+        output("pm list packages -d")?.lines().orEmpty()
+            .map { it.trim() }
+            .filter { it.startsWith("package:") }
+            .map { it.removePrefix("package:") }
+
+    /** Ends apps waiting in the background, to free memory. */
+    suspend fun killBackgroundApps() = run("am kill-all")
+
+    /** System animations (windows, transitions, animators): 0 = off, 1 = normal. */
+    suspend fun setAnimationScale(scale: Float): Boolean {
+        val v = if (scale == 0f) "0" else scale.toString()
+        return run(
+            "settings put global window_animation_scale $v && settings put global transition_animation_scale $v && " +
+                "settings put global animator_duration_scale $v",
+        )
+    }
+
+    fun animationScale(context: Context): Float =
+        runCatching { Settings.Global.getFloat(context.contentResolver, "animator_duration_scale", 1f) }.getOrDefault(1f)
+
+    /** Private DNS: a blocker of ads and trackers for the whole phone, or the system's default. */
+    enum class Dns(val label: String, val host: String?) {
+        Off("Aus", null),
+        AdGuard("AdGuard (Werbung blocken)", "dns.adguard-dns.com"),
+        Cloudflare("Cloudflare (schnell)", "one.one.one.one"),
+        Quad9("Quad9 (Schutz vor Schadseiten)", "dns.quad9.net"),
+    }
+
+    fun dns(context: Context): Dns {
+        val mode = runCatching { Settings.Global.getString(context.contentResolver, "private_dns_mode") }.getOrNull()
+        val host = runCatching { Settings.Global.getString(context.contentResolver, "private_dns_specifier") }.getOrNull()
+        return if (mode == "hostname") Dns.entries.firstOrNull { it.host == host } ?: Dns.Off else Dns.Off
+    }
+
+    suspend fun setDns(dns: Dns): Boolean = if (dns.host == null) {
+        run("settings put global private_dns_mode opportunistic")
+    } else {
+        run("settings put global private_dns_specifier ${dns.host} && settings put global private_dns_mode hostname")
+    }
+
+    suspend fun screenOff() = run("input keyevent 223")
+
+    suspend fun reboot() = run("svc power reboot")
+
+    suspend fun shutdown() = run("svc power shutdown")
 }

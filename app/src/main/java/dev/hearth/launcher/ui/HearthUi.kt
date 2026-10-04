@@ -164,6 +164,31 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "14.3",
+            name = "Mehr mit Shizuku",
+            summary = "Tempo, Werbeblocker, Apps stoppen und einfrieren, Neustart – und Clawd schaltet für dich.",
+            sections = listOf(
+                ChangeSection(
+                    "Shizuku", Icons.Rounded.Settings, Blue,
+                    listOf(
+                        "System-Animationen: Aus, Schnell (0,5×), Normal oder Langsam – „Schnell“ lässt das ganze Handy flotter wirken.",
+                        "Werbeblocker fürs ganze Handy über Privates DNS: AdGuard, Cloudflare oder Quad9.",
+                        "Hintergrund-Apps mit einem Tipp beenden.",
+                        "Lange auf eine App drücken: „App stoppen“ und „Einfrieren“; eingefrorene Apps unter Einstellungen → System wieder auftauen.",
+                        "Bildschirm aus, Neu starten und Ausschalten (mit Nachfrage).",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Clawd", Icons.Rounded.Face, Terracotta,
+                    listOf(
+                        "Clawd schaltet jetzt WLAN, Bluetooth, mobile Daten, Flugmodus, Standort, NFC, Dunkelmodus und Energiesparen selbst – „Clawd, mach das WLAN aus“ (mit Shizuku direkt, sonst öffnet er den Schalter).",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "14.2",
             name = "Shizuku",
             summary = "Hearth schaltet jetzt selbst, was Android normalen Apps verbietet.",

@@ -118,6 +118,11 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
                 props("action" to str("Aktion", listOf("play_pause", "play", "pause", "next", "previous"))), "action"))
             put(tool("system_action", "Systemaktion: Bildschirm sperren, Bildschirmfoto, Benachrichtigungen, Schnelleinstellungen, Ausschaltmenü, Zurück, Startbildschirm, Letzte Apps, Geteilter Bildschirm.",
                 props("action" to str("Aktion", listOf("lock_screen", "screenshot", "notifications", "quick_settings", "power_menu", "back", "home", "recents", "split_screen"))), "action"))
+            put(tool("system_switch", "Schaltet WLAN, Bluetooth, mobile Daten, Flugmodus, Standort, NFC, Dunkelmodus oder Energiesparmodus an oder aus – direkt, wenn Shizuku aktiv ist, sonst öffnet sich der passende Schalter.",
+                props(
+                    "setting" to str("Was", listOf("wifi", "bluetooth", "mobile_data", "airplane", "location", "nfc", "dark_mode", "battery_saver")),
+                    "on" to bool("an (true) oder aus (false)"),
+                ), "setting", "on"))
             put(tool("open_settings", "Öffnet eine Seite der Systemeinstellungen.",
                 props("page" to str("Seite", SettingsPages.keys.toList())), "page"))
             put(tool("copy_text", "Kopiert Text in die Zwischenablage.", props("text" to str("Text")), "text"))
@@ -193,6 +198,7 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
         "media" -> media(a.optString("action"))
         "system_action" -> systemAction(a.optString("action"))
         "open_settings" -> openSettings(a.optString("page"))
+        "system_switch" -> systemSwitch(a.optString("setting"), a.optBoolean("on", true))
         "copy_text" -> copyText(a.optString("text"))
         "device_status" -> ToolResult(true, deviceStatus())
         "launcher" -> launcher(a.optString("action"), a.optString("design"))
@@ -684,6 +690,30 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
             "quick_settings" -> ToolResult(controls.expandQuickSettings(), "Schnelleinstellungen.", label = "Schnelleinstellungen", opensScreen = true)
             else -> ToolResult(false, "Unbekannte Aktion $action.")
         }
+    }
+
+    /** Switches with Shizuku's rights; without Shizuku the system's own switch opens. */
+    private suspend fun systemSwitch(setting: String, on: Boolean): ToolResult {
+        val names = mapOf(
+            "wifi" to "WLAN", "bluetooth" to "Bluetooth", "mobile_data" to "Mobile Daten", "airplane" to "Flugmodus",
+            "location" to "Standort", "nfc" to "NFC", "dark_mode" to "Dunkelmodus", "battery_saver" to "Energiesparmodus",
+        )
+        val name = names[setting] ?: return ToolResult(false, "Unbekannte Einstellung $setting")
+        if (ShizukuBridge.isReady(context)) {
+            val ok = when (setting) {
+                "wifi" -> ShizukuBridge.setWifi(on)
+                "bluetooth" -> ShizukuBridge.setBluetooth(on)
+                "mobile_data" -> ShizukuBridge.setMobileData(on)
+                "airplane" -> ShizukuBridge.setAirplane(on)
+                "location" -> ShizukuBridge.setLocation(on)
+                "nfc" -> ShizukuBridge.setNfc(on)
+                "dark_mode" -> ShizukuBridge.setDarkMode(on)
+                else -> ShizukuBridge.setBatterySaver(on)
+            }
+            val text = "$name ${if (on) "an" else "aus"}"
+            return if (ok) ToolResult(true, "$text.", label = text, say = "$text.") else ToolResult(false, "$name ließ sich nicht schalten.", label = "$name fehlgeschlagen")
+        }
+        return openSettings(if (setting == "dark_mode") "display" else setting)
     }
 
     private fun openSettings(page: String): ToolResult {

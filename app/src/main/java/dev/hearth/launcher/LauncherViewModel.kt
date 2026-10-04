@@ -513,6 +513,20 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
     fun openAppInfo(app: AppInfo) = repo.openAppInfo(app)
 
+    /** Runs something through Shizuku and says how it went. */
+    fun shizukuAction(done: String, action: suspend () -> Boolean) {
+        viewModelScope.launch {
+            val ok = action()
+            runCatching {
+                android.widget.Toast.makeText(
+                    getApplication(),
+                    if (ok) done else "Ging nicht – läuft Shizuku?",
+                    android.widget.Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
+    }
+
     /** Shares an app: its name and the Play Store link, through Android's share sheet. */
     fun shareApp(app: AppInfo) {
         val text = "${app.label}: https://play.google.com/store/apps/details?id=${app.packageName}"
