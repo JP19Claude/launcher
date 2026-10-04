@@ -746,6 +746,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     OmegaHomeLight(Modifier.matchParentSize())
                     // OMEGA UI 18: the perks behind the apps and widgets (and Claude Mythos's Clawd).
                     PerkBackLayers(settings, Modifier.matchParentSize())
+                    // Claude Mythos: giant Clawds behind everything.
+                    MythosGiants()
                     // OMEGA UI 17.5, Clawd Illumination: Ω rising behind everything.
                     if (settings.omegaRain) OmegaRain(Modifier.matchParentSize())
                     // OMEGA UI 17.6, Clawd Illuminati: the eye watches from the top.
@@ -953,6 +955,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     // along the top of the dock.
                     // OMEGA UI 18: the perks over the home screen – and Claude Mythos's banner.
                     PerkFrontLayers(settings, sparkField, if (dockBounds.height > 0f) dockBounds.top else 0f)
+                    // Claude Mythos: Clawds peeking in from the edges and sitting on the dock.
+                    MythosCrowd(if (dockBounds.height > 0f) dockBounds.top else 0f)
                     if (settings.clawdParade && dockBounds.height > 0f) {
                         ClawdParade(
                             Modifier

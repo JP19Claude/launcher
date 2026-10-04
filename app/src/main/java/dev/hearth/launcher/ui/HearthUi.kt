@@ -201,6 +201,14 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix", Icons.Rounded.CheckCircle, Green,
+                    listOf(
+                        "Claude Mythos: viel mehr Clawds, überall – riesige hinter dem Startbildschirm, kleine, die vom Rand hereinschauen und auf dem Dock sitzen.",
+                        "Die Clawds übernehmen auch Widgets und Menüs: auf jedem Widget sitzt eine kleine Gruppe, im App-Menü, im OMEGA-Menü und über jeder Gruppe der Einstellungen ebenfalls, auf den Glasflächen von Drawer und Finder noch mehr.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "25 neue Vorteile", Icons.Rounded.Favorite, Pink,
                     listOf(
                         "Atmosphäre: Schneefall, Glühwürmchen, Seifenblasen, Herbstlaub, Sternenhimmel, Matrix-Regen, Rubin-Regen, Sternschnuppen.",

@@ -204,6 +204,8 @@ private fun OneUIMenuContent(request: GlassMenuRequest, onDismiss: () -> Unit) {
                         maxLines = 1,
                     )
                 }
+                // Claude Mythos: the Clawds sit in the header too.
+                MythosRow(22.dp)
                 // OMEGA UI 17.5: the Ω in the header.
                 if (omega) OmegaSign(20.sp, Modifier.padding(start = 8.dp))
             }

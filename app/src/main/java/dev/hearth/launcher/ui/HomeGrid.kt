@@ -357,6 +357,8 @@ private fun HomeWidgetView(
                 scaleY = lift
             },
     ) {
+        // Claude Mythos: a little crowd of Clawds sits on every widget.
+        MythosPerch(seed = widget.id.hashCode(), biggest = 34.dp)
         LiquidGlass(
             cornerRadius = 24.dp,
             refraction = 16.dp,

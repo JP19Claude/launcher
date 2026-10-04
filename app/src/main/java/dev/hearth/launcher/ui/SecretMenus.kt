@@ -971,6 +971,8 @@ fun HearthMenu(tiles: List<HubTile>, onSecret: () -> Unit, onClose: () -> Unit) 
                         modifier = Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onSecret() }) },
                     )
                     Spacer(Modifier.weight(1f))
+                    // Claude Mythos: the Clawds have taken over this menu too.
+                    MythosRow(30.dp)
                     Clawd(Modifier.size(width = 40.dp, height = 34.dp), mood = ClawdMood.Wave)
                 }
                 Spacer(Modifier.height(12.dp))

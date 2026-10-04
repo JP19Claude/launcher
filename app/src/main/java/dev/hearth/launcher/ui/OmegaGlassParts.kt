@@ -209,6 +209,8 @@ internal fun OmegaGlassSheet(
             content = content,
         )
         if (perch > 0.dp) PerchedClawd(size = perch)
+        // Claude Mythos: more Clawds on the rim, big and small.
+        if (perch > 0.dp) MythosPerch(seed = 18, biggest = perch + 8.dp)
     }
 }
 

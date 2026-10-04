@@ -1376,6 +1376,8 @@ internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit)
         val oneUi = LocalSettings.current.galaxyClaude
         // One UI 10 Fluid: section names in Claude's flowing colors.
         val fluidTitle = LocalSettings.current.fluidDesign
+        // Claude Mythos: Clawds over every group.
+        Box(Modifier.padding(start = 10.dp, bottom = 2.dp)) { MythosRow(20.dp) }
         // OMEGA UI 17.5: Ω in front, in OMEGA Fluid's colors.
         val omega = LocalSettings.current.omegaGlass
         val palette = fluidPalette()

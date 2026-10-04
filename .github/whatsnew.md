@@ -19,3 +19,7 @@ OMEGA UI 18 „Mythos“ auf ClaudeOS 5.0 „Mythos“ – das große Update
 • Färbt jetzt auch auf dem Startbildschirm alles – OMEGA Glass, Fluid, Widgets, Icons
 
 🔨 Neues Easter Egg: die Schmiede
+
+🛠 Hotfix
+• Claude Mythos: viel mehr Clawds überall – riesige und kleine
+• Die Clawds übernehmen Widgets, Menüs, Einstellungen, Drawer und Finder
