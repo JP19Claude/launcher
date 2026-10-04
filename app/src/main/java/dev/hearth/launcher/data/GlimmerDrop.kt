@@ -70,7 +70,7 @@ object GlimmerDrop {
     private val BEACON: ParcelUuid = ParcelUuid.fromString("00004854-0000-1000-8000-00805f9b34fb")
 
     /** Beacons this strong (dBm, at the lowest sending power) mean: the phones touch. */
-    private const val TOUCH_RSSI = -52
+    private const val TOUCH_RSSI = -58
 
     /** Who this phone is for the other ones; new every start of the app. */
     private val token: String = String.format(Locale.ROOT, "%08x", Random.nextInt())
@@ -177,6 +177,12 @@ object GlimmerDrop {
     private val _closeness = MutableStateFlow(0f)
     val closeness: StateFlow<Float> = _closeness.asStateFlow()
 
+    /** How Glimmer's own Bluetooth signal is doing – shown in Glimmer Drop to see what's wrong. */
+    data class Signal(val sending: Boolean? = null, val listening: Boolean? = null, val strongest: Int? = null, val problem: String? = null)
+
+    private val _signal = MutableStateFlow(Signal())
+    val signal: StateFlow<Signal> = _signal.asStateFlow()
+
     /** What I'm about to share. */
     val files = MutableStateFlow<List<OutFile>>(emptyList())
     val texts = MutableStateFlow<List<String>>(emptyList())
@@ -225,6 +231,14 @@ object GlimmerDrop {
         if (readyLoaded) return
         readyLoaded = true
         _ready.value = prefs(context).getBoolean("ready", true)
+    }
+
+    /** True the first time only: Glimmer Drop asks for "devices nearby" by itself once. */
+    fun askOnce(context: Context): Boolean {
+        val p = prefs(context)
+        if (p.getBoolean("asked", false)) return false
+        p.edit().putBoolean("asked", true).apply()
+        return true
     }
 
     fun setReady(context: Context, on: Boolean) {
@@ -773,16 +787,34 @@ object GlimmerDrop {
 
     @SuppressLint("MissingPermission")
     private fun startBeacon(context: Context, background: Boolean) {
-        if (!hasPermissions(context)) return
+        if (!hasPermissions(context)) {
+            _signal.value = Signal(problem = "„Geräte in der Nähe“ ist nicht erlaubt")
+            return
+        }
         val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter ?: return
-        if (!adapter.isEnabled) return
+        if (!adapter.isEnabled) {
+            _signal.value = Signal(problem = "Bluetooth ist aus")
+            return
+        }
         stopBeacon()
         beaconBackground = background
         val advertiser = adapter.bluetoothLeAdvertiser
         val scanner = adapter.bluetoothLeScanner
-        if (advertiser == null || scanner == null) return
+        if (advertiser == null || scanner == null) {
+            _signal.value = Signal(problem = "Dieses Handy kann kein Bluetooth-Signal senden")
+            return
+        }
         val tokenBytes = ByteArray(4) { i -> token.substring(i * 2, i * 2 + 2).toInt(16).toByte() }
-        val adCallback = object : AdvertiseCallback() {}
+        _signal.value = Signal()
+        val adCallback = object : AdvertiseCallback() {
+            override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
+                _signal.value = _signal.value.copy(sending = true)
+            }
+
+            override fun onStartFailure(errorCode: Int) {
+                _signal.value = _signal.value.copy(sending = false, problem = "Senden geht nicht (Fehler $errorCode)")
+            }
+        }
         runCatching {
             advertiser.startAdvertising(
                 AdvertiseSettings.Builder()
@@ -802,6 +834,9 @@ object GlimmerDrop {
         val scanCallback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) = onBeacon(result)
             override fun onBatchScanResults(results: MutableList<ScanResult>) = results.forEach { onBeacon(it) }
+            override fun onScanFailed(errorCode: Int) {
+                _signal.value = _signal.value.copy(listening = false, problem = "Hören geht nicht (Fehler $errorCode)")
+            }
         }
         runCatching {
             scanner.startScan(
@@ -812,6 +847,9 @@ object GlimmerDrop {
                 scanCallback,
             )
             scanning = scanCallback
+            if (_signal.value.listening == null) _signal.value = _signal.value.copy(listening = true)
+        }.onFailure { e ->
+            _signal.value = _signal.value.copy(listening = false, problem = "Hören geht nicht (${e.message})")
         }
     }
 
@@ -834,6 +872,7 @@ object GlimmerDrop {
         list.addLast(result.rssi)
         while (list.size > 3) list.removeFirst()
         val strongest = rssi.values.maxOfOrNull { it.average() } ?: -100.0
+        _signal.value = _signal.value.copy(strongest = strongest.toInt())
         // -90 dBm (far) … TOUCH_RSSI (touching) as 0 … 1.
         _closeness.value = ((strongest + 90.0) / (TOUCH_RSSI + 90.0)).toFloat().coerceIn(0f, 1f)
         val touching = list.size >= 2 && list.average() >= TOUCH_RSSI

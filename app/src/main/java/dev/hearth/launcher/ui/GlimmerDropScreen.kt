@@ -107,6 +107,7 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
     val texts by GlimmerDrop.texts.collectAsState()
     val shareProfile by GlimmerDrop.shareProfile.collectAsState()
     val ready by GlimmerDrop.ready.collectAsState()
+    val signal by GlimmerDrop.signal.collectAsState()
     var profile by remember { mutableStateOf(GlimmerDrop.profile(context)) }
     var editing by remember { mutableStateOf(false) }
     var writing by remember { mutableStateOf(false) }
@@ -192,6 +193,8 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
                 TouchPhones(closeness)
                 Spacer(Modifier.height(8.dp))
                 ClosenessBar(closeness)
+                Spacer(Modifier.height(6.dp))
+                SignalLine(signal)
             }
             (phase as? GlimmerDrop.Phase.Failed)?.let {
                 Spacer(Modifier.height(14.dp))
@@ -511,6 +514,24 @@ private fun TouchPhones(closeness: Float) {
             )
         }
     }
+}
+
+/** What Glimmer's Bluetooth signal does right now – so a problem shows instead of nothing. */
+@Composable
+private fun SignalLine(signal: GlimmerDrop.Signal) {
+    val text = signal.problem ?: buildString {
+        append(if (signal.sending == true) "Sendet ✓" else "Sendet …")
+        append("  ·  ")
+        append(if (signal.listening == true) "Hört ✓" else "Hört …")
+        append("  ·  ")
+        append(signal.strongest?.let { "anderes Handy: $it dBm" } ?: "noch kein Handy gehört")
+    }
+    Text(
+        text,
+        color = if (signal.problem != null) Color(0xFFFF8A80) else Color.White.copy(alpha = 0.45f),
+        fontSize = 12.sp,
+        textAlign = TextAlign.Center,
+    )
 }
 
 @Composable
@@ -967,6 +988,12 @@ internal fun GlimmerDropSettings() {
         allowed = GlimmerDrop.hasPermissions(context)
         // Glimmer starts listening right away once it may.
         GlimmerDrop.setReady(context, GlimmerDrop.ready.value)
+    }
+    // Ready but not allowed yet: ask once by itself, so holding two phones together just works.
+    LaunchedEffect(Unit) {
+        if (GlimmerDrop.ready.value && !GlimmerDrop.hasPermissions(context) && GlimmerDrop.askOnce(context)) {
+            ask.launch(GlimmerDrop.neededPermissions())
+        }
     }
     ActionRow(
         label = "Glimmer Drop öffnen",

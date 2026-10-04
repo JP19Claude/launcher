@@ -169,6 +169,23 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "15.7",
+            name = "Glimmer Drop repariert",
+            summary = "Zwei Handys aneinanderhalten startet Glimmer Drop jetzt wirklich.",
+            sections = listOf(
+                ChangeSection(
+                    "Behoben", Icons.Rounded.CheckCircle, Green,
+                    listOf(
+                        "Glimmer Drop: Android 12 und neuer gab Glimmer die Bluetooth-Signale des anderen Handys nicht weiter – deshalb passierte beim Aneinanderhalten nichts. Glimmer hört jetzt (ohne Standort-Erlaubnis).",
+                        "Die Handys werden schon erkannt, wenn sie sich fast berühren.",
+                        "„Geräte in der Nähe“ wird einmal von selbst gefragt.",
+                        "Glimmer Drop zeigt jetzt, ob Glimmer sendet und hört und wie stark das andere Handy ankommt – und was fehlt, falls etwas nicht geht.",
+                    ),
+                    withGlimmer,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "15.6",
             name = "Glimmer Drop sofort",
             summary = "Handys aneinanderhalten – Glimmer Drop geht sofort auf. Jetzt auch in der Glimmer-App.",

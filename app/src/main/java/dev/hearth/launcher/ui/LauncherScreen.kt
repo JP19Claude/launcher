@@ -216,6 +216,18 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val scope = rememberCoroutineScope()
     // Hearth UI 14: the tour of what's new, once after the big update.
     var showIntro by remember { mutableStateOf(!HearthUi.introSeen(context)) }
+    // Glimmer Drop: "devices nearby" asked once, so two phones held together just work.
+    val dropPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        dev.hearth.launcher.data.GlimmerDrop.setReady(context, dev.hearth.launcher.data.GlimmerDrop.ready.value)
+    }
+    LaunchedEffect(showIntro) {
+        if (showIntro || !dev.hearth.launcher.BuildConfig.ALL_IN_ONE) return@LaunchedEffect
+        val drop = dev.hearth.launcher.data.GlimmerDrop
+        drop.loadReady(context)
+        if (drop.ready.value && !drop.hasPermissions(context) && drop.askOnce(context)) {
+            dropPermissions.launch(drop.neededPermissions())
+        }
+    }
     // Night mode reaches Android too (with Shizuku): dark mode and eye comfort follow it.
     // Only a change of night is passed on, so switching them by hand in between stays.
     LaunchedEffect(night, storedSettings.nightSystem) {
