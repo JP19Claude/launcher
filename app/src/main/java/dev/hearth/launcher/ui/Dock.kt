@@ -13,6 +13,14 @@ import androidx.compose.ui.unit.dp
 import dev.hearth.launcher.data.AppInfo
 import dev.hearth.launcher.data.DockStyle
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier, draggingKey: String? = null) {
@@ -64,6 +72,57 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
                     verticalAlignment = Alignment.CenterVertically,
                 ) { icons() }
             }
+        }
+        // OMEGA UI 17: a dark glass island just around the icons, a ruby glow along its rim.
+        DockStyle.Island -> Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            val accent = LocalSettings.current.accent.color
+            LiquidGlass(
+                cornerRadius = 32.dp,
+                refraction = 20.dp,
+                interactive = true,
+                tint = Color(0xFF120A12).copy(alpha = 0.55f),
+                modifier = Modifier
+                    .drawBehind {
+                        // The glow underneath, as if the island floated on red light.
+                        drawRoundRect(
+                            Brush.radialGradient(
+                                listOf(accent.copy(alpha = 0.35f), Color.Transparent),
+                                center = Offset(size.width / 2f, size.height),
+                                radius = size.width * 0.6f,
+                            ),
+                            topLeft = Offset(-12.dp.toPx(), 0f),
+                            size = Size(size.width + 24.dp.toPx(), size.height + 18.dp.toPx()),
+                            cornerRadius = CornerRadius(40.dp.toPx()),
+                        )
+                    }
+                    .border(1.dp, Brush.horizontalGradient(listOf(accent.copy(alpha = 0.2f), accent.copy(alpha = 0.8f), accent.copy(alpha = 0.2f))), RoundedCornerShape(32.dp)),
+                fluidEdge = false,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) { icons() }
+            }
+        }
+        // OMEGA UI 17: the full bar, tinted ruby.
+        DockStyle.Ruby -> LiquidGlass(
+            cornerRadius = 36.dp,
+            refraction = 22.dp,
+            interactive = true,
+            tint = Color(0xFFB0102C).copy(alpha = 0.28f),
+            modifier = modifier
+                .fillMaxWidth()
+                .border(1.dp, Brush.verticalGradient(listOf(Color(0xFFFF8A98).copy(alpha = 0.7f), Color(0xFFB0102C).copy(alpha = 0.2f))), RoundedCornerShape(36.dp)),
+            fluidEdge = false,
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) { icons() }
         }
         // Just the icons, as One UI does it.
         DockStyle.Clear -> Row(

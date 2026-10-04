@@ -1,5 +1,6 @@
 package dev.hearth.launcher.ui
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.Animatable
@@ -169,14 +170,40 @@ private fun OneUIMenuContent(request: GlassMenuRequest, onDismiss: () -> Unit) {
     val actions = request.items.filter { it.image == null }
     Column(Modifier.padding(top = 10.dp, bottom = 8.dp)) {
         val title = request.title ?: request.app?.label
+        val accent = LocalSettings.current.accent.color
         if (title != null) {
-            Text(
-                text = title,
-                color = Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp),
+            // OMEGA UI 17: a header with the app's icon, its name and a line of the accent.
+            Row(
+                Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                request.app?.let { app ->
+                    AppIconImage(app, 34.dp)
+                    Spacer(Modifier.width(10.dp))
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                    )
+                    Text(
+                        if (request.app != null) "App · ${request.items.size} Aktionen" else "${request.items.size} Aktionen",
+                        color = Color.White.copy(alpha = 0.55f),
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                    )
+                }
+            }
+            Box(
+                Modifier
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .clip(RoundedCornerShape(1.dp))
+                    .background(Brush.horizontalGradient(listOf(accent, accent.copy(alpha = 0f)))),
             )
         }
         shortcuts.forEach { item ->
@@ -216,14 +243,15 @@ private fun OneUIAction(item: GlassMenuItem, modifier: Modifier, onClick: () -> 
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // A drop of liquid glass for each action.
+        // OMEGA UI 17: a tile of glass for each action, tinted with the accent.
+        val accent = LocalSettings.current.accent.color
         LiquidGlass(
-            cornerRadius = 20.dp,
+            cornerRadius = 14.dp,
             refraction = 9.dp,
-            tint = Color.White.copy(alpha = 0.08f),
+            tint = if (item.destructive) Color(0xFFFF453A).copy(alpha = 0.18f) else accent.copy(alpha = 0.16f),
             modifier = Modifier
-                .size(40.dp)
-                .clip(androidx.compose.foundation.shape.CircleShape),
+                .size(44.dp)
+                .clip(RoundedCornerShape(14.dp)),
         ) {
             Icon(item.icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp).align(Alignment.Center))
         }

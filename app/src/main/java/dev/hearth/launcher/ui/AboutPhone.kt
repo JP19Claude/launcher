@@ -313,7 +313,12 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Zurück", tint = Color.White)
             }
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                PhoneHero()
+                // OMEGA UI 17: the ruby with the Ω and the system version, instead of the drawn phone.
+                if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
+                    OmegaRuby(Modifier.padding(top = 10.dp), size = 160.dp, version = "OMEGA UI ${HearthUi.major(groups.first().specs.first().value)}")
+                } else {
+                    PhoneHero()
+                }
                 Spacer(Modifier.height(14.dp))
                 Text(name, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                 Text(

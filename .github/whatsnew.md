@@ -1,7 +1,23 @@
-OMEGA UI 16.1 auf ClaudeOS 4.0 „Aurora“
+OMEGA UI 17 auf ClaudeOS 4.0 „Aurora“
 
-Ω Hearth UI heißt jetzt OMEGA UI
-• Gleiches System, neuer Name – Einstellungen, Widgets, Apps und Easter Eggs bleiben
-• Einmalige Begrüßung nach dem Update, das Ω groß im Software-Update
-• OMEGA-Menü und OMEGA Labs
-• Ein neues Ω-Easter-Egg (jetzt 31)
+💎 Aus Hearth UI wird OMEGA UI
+• Neues Logo: ein roter Glas-Rubin mit dem Ω, darunter die Systemversion
+• Übergangsanimation beim Wechsel – Hearth UI zerfällt in Licht, der Rubin entsteht, OMEGA UI 17 steigt auf
+• Neue Willkommens-Tour
+
+🏠 Startbildschirm
+• Vier neue Uhren: OMEGA, Analog-Glas, In Worten, Geteilt
+• Neue Uhr-Widgets: OMEGA-Uhr, Rubin-Analoguhr, Weltuhr
+• Neue Docks: OMEGA-Insel und Rubin-Glas
+
+🧭 Menüs & Fenster
+• Neue Menüs mit App-Kopfzeile und Glas-Kacheln
+• „Im Fenster öffnen“: Apps als schwebendes Fenster (Shizuku)
+
+☁️ OMEGA Cloud
+• Sicherung über dein Google-Konto (mit Shizuku sofort) und als Datei
+
+🎨 Design
+• Vorlage „OMEGA UI“, Akzentfarbe und Glas-Tönung „Rubin“
+
+🥚 Easter Egg „Rubin“ zur 17

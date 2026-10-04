@@ -23,6 +23,14 @@ enum class IconShape(val label: String) {
 }
 
 enum class ClockStyle(val label: String) {
+    /** OMEGA UI 17: thin numerals in the accent's light, the seconds as a line under them. */
+    Omega("OMEGA"),
+    /** OMEGA UI 17: a glass dial with a ruby at twelve, the date beside it. */
+    Analog("Analog-Glas"),
+    /** OMEGA UI 17: "Viertel nach drei". */
+    Words("In Worten"),
+    /** OMEGA UI 17: hours big, minutes in the accent over the date. */
+    Split("Geteilt"),
     /** Hearth UI 14: hours over minutes, big and stacked, with glass chips for date and battery. */
     Stacked("OMEGA UI (gestapelt)"),
     ColorOS("ColorOS"),
@@ -58,6 +66,8 @@ enum class GlassTint(val label: String, val color: Color) {
     Dark("Dunkel", Color.Black.copy(alpha = 0.26f)),
     Warm("Warm", Color(0xFFC8952E).copy(alpha = 0.18f)),
     Blue("Blau", Color(0xFF6FA8FF).copy(alpha = 0.18f)),
+    /** OMEGA UI: glass with a breath of ruby. */
+    Ruby("Rubin", Color(0xFFB0102C).copy(alpha = 0.16f)),
 }
 
 /** Which glass gets the real lens (bending, color split); smaller glass gets the drawn edge. */
@@ -77,6 +87,8 @@ enum class AccentColor(val label: String, val color: Color) {
     Mint("Mint", Color(0xFF8FE3C0)),
     Rose("Rosé", Color(0xFFFFA8C0)),
     Lilac("Flieder", Color(0xFFC6A8FF)),
+    /** OMEGA UI's ruby red. */
+    Ruby("Rubin", Color(0xFFE5243F)),
 }
 
 enum class SearchEngine(val label: String, val url: String?) {
@@ -236,6 +248,8 @@ enum class CcToggleShape(val label: String) {
 
 /** Ready-made looks that set many options at once. */
 enum class DesignPreset(val label: String) {
+    /** OMEGA UI 17: One UI's ways with ruby glass, the OMEGA clock and the floating island dock. */
+    Omega("OMEGA UI"),
     /** One UI's look with liquid glass, and Claude woven through the launcher. */
     GalaxyClaude("Galaxy × Claude"),
     ColorOSClaude("ColorOS × Claude"),
@@ -278,6 +292,10 @@ enum class DockStyle(val label: String) {
     Glass("Glasleiste"),
     Floating("Schwebende Glas-Kapsel"),
     Clear("Ohne Hintergrund"),
+    /** OMEGA UI 17: a dark glass island just around the icons, a ruby glow along its rim. */
+    Island("OMEGA-Insel"),
+    /** OMEGA UI 17: the full bar, tinted ruby. */
+    Ruby("Rubin-Glas"),
 }
 
 /** Clawd's color; the rainbow one changes color as he moves. */
@@ -621,6 +639,14 @@ data class LauncherSettings(
     }
 
     fun withPreset(preset: DesignPreset): LauncherSettings = when (preset) {
+        // OMEGA UI 17: One UI's ways (drawer, edit mode, settings pages), dressed in ruby.
+        DesignPreset.Omega -> withPreset(DesignPreset.GalaxyClaude).copy(
+            accent = AccentColor.Ruby,
+            glassTint = GlassTint.Ruby,
+            glassTintStrength = 1f,
+            clockStyle = ClockStyle.Omega,
+            dockStyle = DockStyle.Island,
+        )
         // One UI: squircle icons, its bold clock, blue, split panels, a plain slide between
         // pages, round toggles and wide sliders; the glass tinted cool; Claude in Galaxy AI's place.
         DesignPreset.GalaxyClaude -> copy(

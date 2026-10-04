@@ -92,6 +92,9 @@ fun InternalWidget(repo: WidgetRepository, id: Int, modifier: Modifier = Modifie
         HearthWidget.ClawdCountdown -> ClawdCountdownWidget(id, modifier)
         HearthWidget.ClawdRiddle -> ClawdRiddleWidget(id, modifier)
         HearthWidget.ClawdRps -> ClawdRpsWidget(modifier)
+        HearthWidget.OmegaClock -> OmegaClockWidget(modifier)
+        HearthWidget.RubyAnalog -> RubyAnalogWidget(modifier)
+        HearthWidget.WorldClock -> WorldClockWidget(modifier)
     }
 }
 

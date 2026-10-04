@@ -407,7 +407,7 @@ fun WidgetPicker(
                                 subtitle = "Hearth-Widget: ${kind.description}",
                                 glyph = when (kind) {
                                     HearthWidget.Battery -> Glyph.Battery
-                                    HearthWidget.Clock -> Glyph.Alarm
+                                    HearthWidget.Clock, HearthWidget.OmegaClock, HearthWidget.RubyAnalog, HearthWidget.WorldClock -> Glyph.Alarm
                                     HearthWidget.Toggles -> Glyph.Torch
                                     else -> Glyph.Tiles
                                 },

@@ -69,6 +69,9 @@ enum class HearthWidget(val label: String, val description: String, val spanX: I
     ClawdCountdown("Clawd-Countdown", "Wie lange noch bis Weihnachten, Silvester, Ostern … – antippen für den nächsten großen Tag", 2, 2, 180),
     ClawdRiddle("Clawd-Rätsel", "Clawd stellt dir Rätsel: antippen für die Lösung, nochmal für das nächste", 4, 2, 170),
     ClawdRps("Clawd: Schnick-Schnack-Schnuck", "Schere, Stein, Papier gegen Clawd – mit Punktestand", 4, 2, 180),
+    OmegaClock("OMEGA-Uhr", "Dünne Ziffern im Rubinlicht, das Datum und die Sekunden als Linie", 4, 2, 170),
+    RubyAnalog("Rubin-Analoguhr", "Ein Zifferblatt aus Glas mit einem Rubin bei zwölf", 2, 2, 200),
+    WorldClock("Weltuhr", "Hier, New York, London und Tokio – mit Tag und Nacht", 4, 2, 160),
     ;
 
     /** One of Clawd's widgets (shown with him in the picker). */

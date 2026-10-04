@@ -214,6 +214,9 @@ object ShizukuBridge {
 
     suspend fun screenOff() = run("input keyevent 223")
 
+    /** OMEGA UI 17: an app as a floating window (Android's freeform window mode). */
+    suspend fun openInWindow(component: String): Boolean = run("am start --windowingMode 5 -n $component")
+
     suspend fun reboot() = run("svc power reboot")
 
     suspend fun shutdown() = run("svc power shutdown")

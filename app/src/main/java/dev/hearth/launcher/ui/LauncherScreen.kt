@@ -1180,21 +1180,24 @@ fun LauncherScreen(vm: LauncherViewModel) {
             // Easter eggs: confetti and a glass message when one is found.
             CelebrationOverlay()
 
-            if (showOmega && !showIntro) {
-                OmegaWelcome {
-                    HearthUi.markOmegaSeen(context)
-                    showOmega = false
+            if (showIntro && !showOmega) {
+                HearthUiIntro { newLook ->
+                    HearthUi.markIntroSeen(context)
+                    // OMEGA UI 17's tour: the OMEGA design, if wanted.
+                    if (newLook) vm.updateSettings { it.withPreset(dev.hearth.launcher.data.DesignPreset.Omega) }
+                    showIntro = false
                 }
             }
 
-            if (showIntro) {
-                HearthUiIntro { newLook ->
-                    HearthUi.markIntroSeen(context)
+            // OMEGA UI 17: the move from Hearth UI – Hearth UI comes apart into light and the
+            // ruby forms; the tour follows.
+            if (showOmega) {
+                val version = remember {
+                    runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
+                }
+                OmegaUpgrade(version = HearthUi.major(version)) {
                     HearthUi.markOmegaSeen(context)
                     showOmega = false
-                    // Hearth UI 16's tour: "ready when unlocked" for Glimmer Drop.
-                    dev.hearth.launcher.data.GlimmerDrop.setReady(context, newLook)
-                    showIntro = false
                 }
             }
 
@@ -1242,6 +1245,10 @@ private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Un
     if (app.packageName != vm.getApplication<android.app.Application>().packageName &&
         dev.hearth.launcher.data.ShizukuBridge.isReady(vm.getApplication<android.app.Application>())
     ) {
+        // OMEGA UI 17: the app as a floating window over everything.
+        add(GlassMenuItem("Im Fenster öffnen", Icons.Rounded.Add) {
+            vm.shizukuAction("${app.label} im Fenster") { dev.hearth.launcher.data.ShizukuBridge.openInWindow(app.component.flattenToShortString()) }
+        })
         add(GlassMenuItem("App stoppen", Icons.Rounded.Close) {
             vm.shizukuAction("${app.label} gestoppt") { dev.hearth.launcher.data.ShizukuBridge.forceStop(app.packageName) }
         })
@@ -1415,6 +1422,10 @@ private fun HomeHeaderContent(settings: LauncherSettings, modifier: Modifier = M
         ClockStyle.OneUI -> OneUIClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Large -> LargeClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Glass -> GlassClockCard(settings, modifier)
+        ClockStyle.Omega -> OmegaHomeClock(settings, modifier.padding(start = 8.dp))
+        ClockStyle.Analog -> AnalogHomeClock(settings, modifier.padding(start = 8.dp))
+        ClockStyle.Words -> WordsHomeClock(settings, modifier.padding(start = 8.dp))
+        ClockStyle.Split -> SplitHomeClock(settings, modifier.padding(start = 8.dp))
     }
 }
 

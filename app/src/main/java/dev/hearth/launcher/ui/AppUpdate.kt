@@ -352,7 +352,12 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
             ) {
                 val shown = release?.version ?: current
                 when (look.hero) {
-                    UpdateHero.Number -> VersionArtwork(HearthUi.major(shown), look.number, height = 220.dp)
+                    // OMEGA UI 17: the ruby with the Ω, the system version under it.
+                    UpdateHero.Number -> if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
+                        OmegaRuby(Modifier.padding(top = 20.dp, bottom = 6.dp), size = 170.dp, version = "OMEGA UI ${HearthUi.major(shown)}")
+                    } else {
+                        VersionArtwork(HearthUi.major(shown), look.number, height = 220.dp)
+                    }
                     UpdateHero.Island -> Box(Modifier.padding(top = 36.dp, bottom = 10.dp)) {
                         IslandHero(shown, look.accent, newer = release != null)
                     }
@@ -580,6 +585,7 @@ internal fun HearthVersionEgg(version: String, name: String, onClose: () -> Unit
     val look = remember { lookFor(context.packageName) }
     val number = versionNumber(version)
     when {
+        number >= 17f -> RubyEgg(version, name, onClose)
         number >= 16f -> FireflyEgg(version, name, onClose)
         number >= 15.5f -> SparkEgg(version, name, onClose)
         number >= 15f -> VaultEgg(version, name, onClose)

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -707,6 +708,7 @@ fun SettingsScreen(
             }
 
             if (shows("general")) item { BackupSection(vm) }
+            if (shows("cloud")) item { OmegaCloudSection(vm) }
 
             if (shows("general")) item {
                 Section("Menüs") {
@@ -1619,6 +1621,9 @@ internal val SettingsCategories = listOf(
         "sperre pin fingerabdruck biometrie ausblenden versteckt privat"),
     SettingsCategory("general", "Allgemein", "Suche, Vibration, Sichern & Wiederherstellen", Icons.Rounded.Settings, Color(0xFF8E8E93),
         "suche suchmaschine vibration standard launcher sichern backup wiederherstellen export import"),
+    // OMEGA UI 17: OMEGA Cloud – backup with the Google account and as a file.
+    SettingsCategory("cloud", "OMEGA Cloud", "Sicherung über dein Google-Konto und als Datei", Icons.Rounded.Share, Color(0xFFE5243F),
+        "cloud omega sicherung backup google drive konto wiederherstellen datei export import"),
     // Hearth UI 14.5: what Hearth UI does that One UI and ColorOS don't.
     SettingsCategory("vorteile", "Warum OMEGA UI", "15 Dinge, die One UI und ColorOS nicht können", Icons.Rounded.Star, Color(0xFF34C759),
         "vorteile warum hearth ui one ui coloros vergleich werbeblocker entrümpeln turbo datenschutz"),
@@ -1634,7 +1639,7 @@ internal val SettingsCategories = listOf(
 private val SettingsGroups: List<List<SettingsCategory>> = listOf(
     SettingsCategories.filter { it.id == "design" || it.id == "home" },
     SettingsCategories.filter { it.id == "claude" || it.id == "clawd" || it.id == "glimmer" },
-    SettingsCategories.filter { it.id == "privacy" || it.id == "general" },
+    SettingsCategories.filter { it.id == "cloud" || it.id == "privacy" || it.id == "general" },
     SettingsCategories.filter { it.id == "system" || it.id == "vorteile" },
 )
 
@@ -1705,16 +1710,20 @@ private fun HearthCard(s: LauncherSettings) {
         fluidEdge = false,
     ) {
         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Hearth UI 14: the version as a glossy mark on Claude's colors.
-            Box(
-                Modifier
-                    .size(58.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Brush.linearGradient(listOf(Color(0xFFFFB494), Color(0xFFFF6FB5), Color(0xFF8E6BFF), Color(0xFF3E91FF))))
-                    .glassSheen(18.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(HearthUi.major(version), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+            // OMEGA UI 17: the ruby with the Ω, the version under it.
+            if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
+                OmegaRuby(size = 52.dp, version = HearthUi.major(version))
+            } else {
+                Box(
+                    Modifier
+                        .size(58.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Brush.linearGradient(listOf(Color(0xFFFFB494), Color(0xFFFF6FB5), Color(0xFF8E6BFF), Color(0xFF3E91FF))))
+                        .glassSheen(18.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(HearthUi.major(version), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                }
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {

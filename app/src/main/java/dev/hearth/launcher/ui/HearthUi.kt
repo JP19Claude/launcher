@@ -31,7 +31,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material.icons.rounded.Favorite
@@ -100,7 +102,7 @@ object HearthUi {
     const val NAME = "OMEGA UI"
 
     /** The big version the welcome tour is about; it shows once after reaching it. */
-    const val INTRO_VERSION = 16
+    const val INTRO_VERSION = 17
 
     /** "14.0" → "14", "13.5" → "13.5": how the version is written big. */
     fun major(version: String): String {
@@ -119,10 +121,10 @@ object HearthUi {
     }
 
     /** Once: "Hearth UI is now OMEGA UI". */
-    fun omegaSeen(context: Context): Boolean = prefs(context).getBoolean("omegaSeen", false)
+    fun omegaSeen(context: Context): Boolean = prefs(context).getBoolean("omega17Seen", false)
 
     fun markOmegaSeen(context: Context) {
-        prefs(context).edit().putBoolean("omegaSeen", true).apply()
+        prefs(context).edit().putBoolean("omega17Seen", true).apply()
     }
 
     /** OMEGA Labs: show the welcome tour again next time. */
@@ -175,6 +177,67 @@ internal object HearthChangelog {
     private val Slate = Color(0xFF5E6C84)
 
     val releases: List<ChangeRelease> = listOf(
+        ChangeRelease(
+            version = "17.0",
+            name = "OMEGA UI 17",
+            summary = "Aus Hearth UI wird OMEGA UI: ein neues Logo, ein neuer Startbildschirm, neue Uhren, Docks, Menüs und Fenster, OMEGA Cloud und viele neue Designs.",
+            sections = listOf(
+                ChangeSection(
+                    "OMEGA UI", Icons.Rounded.Star, Pink,
+                    listOf(
+                        "Neues Logo: ein roter Rubin aus Glas mit dem Ω darin, darunter die Systemversion – im Software-Update, in den Einstellungen und in „Über das Telefon“.",
+                        "Übergangsanimation beim Wechsel: Hearth UI zerfällt in Licht, das Licht wirbelt zum Rubin zusammen, eine rote Welle läuft über den Bildschirm – und OMEGA UI 17 steigt auf.",
+                        "Die Versionsnummer springt auf 17. Neue Willkommens-Tour.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Startbildschirm & Uhren", Icons.Rounded.Home, Terracotta,
+                    listOf(
+                        "Vier neue Uhren: „OMEGA“ (dünne Ziffern im Rubinlicht, Sekunden als Linie), „Analog-Glas“ (Zifferblatt mit Rubin bei zwölf), „In Worten“ („Viertel nach drei“) und „Geteilt“.",
+                        "Neue Uhr-Widgets: OMEGA-Uhr, Rubin-Analoguhr und eine Weltuhr (hier, New York, London, Tokio – mit Tag und Nacht).",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Docks", Icons.Rounded.Favorite, Pink,
+                    listOf(
+                        "„OMEGA-Insel“: dunkles Glas nur um die Icons, schwebend auf rotem Licht mit leuchtendem Rand.",
+                        "„Rubin-Glas“: die ganze Leiste in Rubin getönt.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Menüs & Fenster", Icons.Rounded.Menu, Violet,
+                    listOf(
+                        "Neue Menüs beim langen Drücken: Kopfzeile mit App-Icon, Name und Akzentlinie; Aktionen als Glas-Kacheln in deiner Akzentfarbe.",
+                        "Apps im Fenster: „Im Fenster öffnen“ startet jede App als schwebendes Fenster (mit Shizuku).",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "OMEGA Cloud", Icons.Rounded.Share, Blue,
+                    listOf(
+                        "Neue Kategorie „OMEGA Cloud“: Einstellungen, Startbildschirm, Widgets, Clawd, Glimmer und Easter Eggs über dein Google-Konto sichern – verschlüsselt, mit Shizuku sofort.",
+                        "Status der Sicherung, Wiederherstellen auf neuen Handys und Sichern als Datei.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Design", Icons.Rounded.Favorite, Orange,
+                    listOf(
+                        "Neue Vorlage „OMEGA UI“: Rubin-Akzente, Rubin-Glas, OMEGA-Uhr und OMEGA-Insel – mit allem von One UI.",
+                        "Neue Akzentfarbe und Glas-Tönung „Rubin“.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Easter Egg", Icons.Rounded.Face, Orange,
+                    listOf("OMEGA UI 17: „Rubin“ – fünfmal auf die Version tippen und den Rubin in 17 Schnitten schleifen."),
+                    everyone,
+                ),
+            ),
+        ),
         ChangeRelease(
             version = "16.1",
             name = "OMEGA UI",
@@ -1147,37 +1210,36 @@ fun HearthUiIntro(onDone: (newLook: Boolean) -> Unit) {
                     when (page) {
                         0 -> TourHero { appear.value }
                         1 -> TourPage(
-                            title = "Glimmer Drop",
-                            text = "Halte die Oberkanten zweier Handys mit Glimmer aneinander – und teile, was du willst.",
+                            title = "Ein neuer Startbildschirm",
+                            text = "Neue Uhren, neue Docks und neue Uhr-Widgets – alles im Licht des Rubins.",
                             points = listOf(
-                                TourPoint(Icons.Rounded.Favorite, Color(0xFF5E9BFF), "Aneinanderhalten", "Glimmers Insel leuchtet auf, Licht fließt hinüber – beide Handys gehen auf."),
-                                TourPoint(Icons.Rounded.Face, Color(0xFFFF6FB5), "Kontaktkarte, Fotos, Links …", "Kontaktkarte, Fotos, Videos, Dateien, Links und Text – mit Vorschau, bevor du annimmst."),
-                                TourPoint(Icons.Rounded.Refresh, Color(0xFF30C26B), "Schnell und direkt", "Über Bluetooth und Wi-Fi Direct, ohne Internet. Für Handys ohne Glimmer: über Quick Share."),
+                                TourPoint(Icons.Rounded.Home, Color(0xFFE5243F), "Vier neue Uhren", "OMEGA, Analog-Glas, In Worten („Viertel nach drei“) und Geteilt – unter Startbildschirm → Uhr."),
+                                TourPoint(Icons.Rounded.Star, Color(0xFFFF6B7D), "Neue Docks", "Die OMEGA-Insel schwebt in rotem Licht, das Rubin-Glas zieht sich über die ganze Breite."),
+                                TourPoint(Icons.Rounded.Refresh, Color(0xFFB0102C), "Neue Uhr-Widgets", "OMEGA-Uhr, Rubin-Analoguhr und eine Weltuhr mit Tag und Nacht."),
                             ),
                         ) {
                             TourSwitch(
-                                title = "Sofort bereit, wenn entsperrt",
-                                text = "Glimmer spürt ein anderes Handy und öffnet Glimmer Drop von selbst – danach fragt Android einmal nach „Geräte in der Nähe“.",
+                                title = "OMEGA-Design verwenden",
+                                text = "Rubin-Akzente, die OMEGA-Uhr und die OMEGA-Insel als Dock – jederzeit unter Design → Vorlage änderbar.",
                                 checked = newLook,
                             ) { newLook = it }
                         }
                         2 -> TourPage(
-                            title = "Mehr Menüs, dunkles Glas",
-                            text = "Alles, was Hearth kann, ist jetzt einen Griff entfernt.",
+                            title = "Menüs, Fenster, Design",
+                            text = "Überall neu gemacht.",
                             points = listOf(
-                                TourPoint(Icons.Rounded.Menu, Color(0xFF8E6BFF), "OMEGA-Menü", "Lange auf den Startbildschirm drücken: Einstellungen, Finder, Widgets, Glimmer Drop, Taschenlampe, Dunkelmodus …"),
-                                TourPoint(Icons.Rounded.Settings, Color(0xFFFF453A), "Ein/Aus-Menü", "Bildschirm aus, Neustart und Ausschalten aus Glas."),
-                                TourPoint(Icons.Rounded.Star, Color(0xFF3E4A7A), "Dunkelmodus", "Dock, Widgets, Menüs und Suchleiste als dunkles Glas – an, aus, wie Android oder nach Uhrzeit."),
-                                TourPoint(Icons.Rounded.Search, Color(0xFFFF9F0A), "Versteckte Menüs", "Geheimcodes im Finder und OMEGA Labs – wo genau? Das bleibt dein Geheimnis … 🤫"),
+                                TourPoint(Icons.Rounded.Menu, Color(0xFF8E6BFF), "Neue Menüs", "Lange auf eine App drücken: Kopfzeile mit Icon, Aktionen als Glas-Kacheln in deiner Akzentfarbe."),
+                                TourPoint(Icons.Rounded.Add, Color(0xFF3E91FF), "Apps im Fenster", "„Im Fenster öffnen“ – jede App als schwebendes Fenster (mit Shizuku)."),
+                                TourPoint(Icons.Rounded.Favorite, Color(0xFFE5243F), "Neue Designs", "Vorlage „OMEGA UI“, Akzentfarbe und Glas-Tönung „Rubin“."),
                             ),
                         )
                         else -> TourPage(
-                            title = "ClaudeOS 4.0 „Aurora“",
-                            text = "Eine neue Basis unter OMEGA UI, Glimmer und Clawd.",
+                            title = "OMEGA Cloud",
+                            text = "Deine Einstellungen sicher in der Cloud – über dein Google-Konto.",
                             points = listOf(
-                                TourPoint(Icons.Rounded.Star, Color(0xFF6CFFB0), "Neue Basis", "Handys, die sich finden, dunkles Glas und versteckte Menüs gehören jetzt zum Fundament."),
-                                TourPoint(Icons.Rounded.Face, Color(0xFFFF9F0A), "Zwei neue Easter Eggs", "„Glühwürmchen“ und „Aurora“: fünfmal auf die Version tippen – im Software-Update und in „Über das Telefon“."),
-                                TourPoint(Icons.Rounded.CheckCircle, Color(0xFF30C26B), "Ein Update, alles drin", "Alles aus Version 15 ist dabei – in einem großen Update."),
+                                TourPoint(Icons.Rounded.Share, Color(0xFFE5243F), "Sichern", "Einstellungen, Widgets, Clawd und Eggs – verschlüsselt, mit Shizuku sofort."),
+                                TourPoint(Icons.Rounded.Refresh, Color(0xFF30C26B), "Wiederherstellen", "Auf einem neuen Handy holt Android alles zurück – oder du nimmst die Datei mit."),
+                                TourPoint(Icons.Rounded.Face, Color(0xFFFF9F0A), "Ein neues Easter Egg", "Zur 17: fünfmal auf die Version tippen und einen Rubin schleifen."),
                             ),
                         )
                     }
@@ -1221,16 +1283,16 @@ private fun TourHero(appear: () -> Float) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(20.dp))
-        VersionArtwork("16", listOf(Color(0xFF6CFFB0), Color(0xFF3E91FF), Color(0xFF8E6BFF), Color(0xFFFF6FB5)), height = 230.dp)
-        val product = if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) HearthUi.NAME else "Hearth"
-        Text("$product 16", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+        // OMEGA UI 17: the ruby with the Ω, the system version under it.
+        OmegaRuby(size = 170.dp, version = "OMEGA UI 17")
+        Spacer(Modifier.height(8.dp))
         Text(
             "auf ${ClaudeOs.full} „${ClaudeOs.CODENAME}“",
             style = TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
         )
         Spacer(Modifier.height(18.dp))
         Text(
-            "Ein großes Update mit neuer Basis: Glimmer Drop, viele neue Menüs und dunkles Glas – wisch weiter und sieh, was alles neu ist.",
+            "Willkommen bei OMEGA UI. Ein neuer Startbildschirm, neue Uhren, Docks, Menüs und Fenster, OMEGA Cloud und viele neue Designs – wisch weiter.",
             color = Color.White.copy(alpha = 0.75f),
             fontSize = 16.sp,
             lineHeight = 22.sp,
