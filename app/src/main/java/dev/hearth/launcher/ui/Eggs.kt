@@ -72,8 +72,8 @@ import kotlin.math.pow
 /*
  * The easter eggs behind the versions change with every big version, like Android's do:
  * Hearth up to 12.0 had its planet, 12.5 the fluid ocean, 13 silk, 13.5 drops of liquid
- * glass; ClaudeOS 1 had "Ember" (the
- * spinning star), ClaudeOS 2 has "Blaze" (the fire). New big versions bring new ones.
+ * glass, Hearth UI 14 the prism; ClaudeOS 1 had "Ember" (the spinning star), ClaudeOS 2
+ * "Blaze" (the fire), ClaudeOS 3 has "Nova" (the supernova). New big versions bring new ones.
  */
 
 /** "12.5" → 12.5 (only the first two numbers count). */
@@ -83,7 +83,12 @@ internal fun versionNumber(version: String): Float =
 /** ClaudeOS's egg for the ClaudeOS that's running. */
 @Composable
 internal fun ClaudeOsVersionEgg(onClose: () -> Unit) {
-    if (versionNumber(ClaudeOs.VERSION) >= 2f) BlazeEgg(onClose) else ClaudeOsEgg(onClose)
+    val number = versionNumber(ClaudeOs.VERSION)
+    when {
+        number >= 3f -> NovaEgg(onClose)
+        number >= 2f -> BlazeEgg(onClose)
+        else -> ClaudeOsEgg(onClose)
+    }
 }
 
 /** A ring spreading on the water where a finger touched. */
@@ -664,5 +669,427 @@ private fun androidx.compose.foundation.layout.BoxScope.EggClose(onClose: () -> 
         contentAlignment = Alignment.Center,
     ) {
         Icon(Icons.Rounded.Close, contentDescription = "Schließen", tint = Color.White)
+    }
+}
+
+/** Where the light comes from and what the prism makes of it, worked out once per frame. */
+private class PrismScene {
+    var area = Size.Zero
+    /** The finger's (or last finger's) spot; unspecified until the first touch. */
+    var finger = Offset.Unspecified
+    var source = Offset.Zero
+    var center = Offset.Zero
+    var entry = Offset.Zero
+    var exit = Offset.Zero
+    val rays = FloatArray(5)
+    var reach = 0f
+}
+
+/** Where the five glass orbs hang, as fractions of the screen. */
+private val PrismOrbs = listOf(
+    Offset(0.18f, 0.13f),
+    Offset(0.52f, 0.08f),
+    Offset(0.86f, 0.17f),
+    Offset(0.9f, 0.5f),
+    Offset(0.78f, 0.8f),
+)
+
+/**
+ * Hearth UI 14's egg, "Prisma": a beam of light runs from your finger into a glass prism and
+ * comes out fanned into Claude's colors. Drag to aim, tap the prism to turn it – light up all
+ * five glass orbs for the full spectrum.
+ */
+@Composable
+internal fun PrismEgg(version: String, name: String, onClose: () -> Unit) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { EasterEggs.find(context, "version") }
+    BackHandler(onBack = onClose)
+    val scope = rememberCoroutineScope()
+    val scene = remember { PrismScene() }
+    val turn = remember { Animatable(0f) }
+    val lit = remember { mutableStateListOf<Color?>().apply { repeat(PrismOrbs.size) { add(null) } } }
+    var now by remember { mutableLongStateOf(0L) }
+    val full = lit.all { it != null }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            withFrameMillis { t ->
+                val w = scene.area.width
+                val h = scene.area.height
+                if (w > 0f) {
+                    val sec = t / 1000f
+                    val c = Offset(w / 2f, h * 0.46f)
+                    val inner = w * 0.36f / (2f * kotlin.math.sqrt(3f))
+                    // Before the first touch the light wanders along the left edge.
+                    val s = if (scene.finger.isSpecified) scene.finger else Offset(w * 0.06f, h * 0.46f + sin(sec * 0.6f) * h * 0.2f)
+                    val dx = c.x - s.x
+                    val dy = c.y - s.y
+                    val len = kotlin.math.sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+                    val inAngle = kotlin.math.atan2(dy, dx)
+                    // How far the light bends depends on how the prism stands to it.
+                    val bend = 0.42f + 0.22f * sin(3f * (turn.value - inAngle))
+                    val out = inAngle + bend
+                    scene.center = c
+                    scene.source = s
+                    scene.entry = c - Offset(dx / len, dy / len) * (inner * 0.6f)
+                    scene.exit = c + Offset(cos(out), sin(out)) * (inner * 0.6f)
+                    for (i in 0 until 5) scene.rays[i] = out + (i - 2) * 0.075f
+                    scene.reach = kotlin.math.hypot(w, h) * 1.2f
+                    // Which orbs the colored beams hit.
+                    val orbR = 26.dp.toPx(context)
+                    PrismOrbs.forEachIndexed { o, frac ->
+                        val at = Offset(frac.x * w, frac.y * h)
+                        // The first color that reaches an orb lights it (and it keeps glowing).
+                        var hit: Color? = null
+                        for (i in 0 until 5) {
+                            val dir = Offset(cos(scene.rays[i]), sin(scene.rays[i]))
+                            val v = at - scene.exit
+                            val along = v.x * dir.x + v.y * dir.y
+                            val across = kotlin.math.abs(v.x * dir.y - v.y * dir.x)
+                            if (hit == null && along > 0f && across < orbR) hit = AiFluidColors[i]
+                        }
+                        if (hit != null && lit[o] != hit) lit[o] = hit
+                    }
+                }
+                now = t
+            }
+        }
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF070A1A), Color(0xFF110A26), Color(0xFF050508))))
+            .onSizeChanged { scene.area = Size(it.width.toFloat(), it.height.toFloat()) }
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    val r = size.width * 0.36f / kotlin.math.sqrt(3f)
+                    if ((down.position - scene.center).getDistance() < r) {
+                        // A tap on the prism turns it by a sixth.
+                        scope.launch { turn.animateTo(turn.targetValue + (Math.PI / 3).toFloat(), spring(dampingRatio = 0.55f, stiffness = 260f)) }
+                    } else {
+                        scene.finger = down.position
+                    }
+                    do {
+                        val event = awaitPointerEvent()
+                        event.changes.firstOrNull()?.let { change ->
+                            if (change.pressed && (change.position - scene.center).getDistance() >= r) scene.finger = change.position
+                        }
+                    } while (event.changes.any { it.pressed })
+                }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        // The version, faint behind everything.
+        Text(
+            HearthUi.major(version),
+            color = Color.White.copy(alpha = 0.06f),
+            fontSize = 220.sp,
+            fontWeight = FontWeight.Black,
+        )
+        Canvas(Modifier.fillMaxSize()) {
+            if (now < 0L || scene.area.width <= 0f) return@Canvas
+            val beam = 6.dp.toPx()
+            // The white light coming in.
+            drawLine(Color.White.copy(alpha = 0.16f), scene.source, scene.entry, strokeWidth = beam * 3.2f, cap = StrokeCap.Round)
+            drawLine(Color.White.copy(alpha = 0.92f), scene.source, scene.entry, strokeWidth = beam, cap = StrokeCap.Round)
+            drawCircle(
+                Brush.radialGradient(listOf(Color.White.copy(alpha = 0.8f), Color.Transparent), center = scene.source, radius = 30.dp.toPx()),
+                radius = 30.dp.toPx(),
+                center = scene.source,
+            )
+            // The colors going out, fading with the distance.
+            for (i in 0 until 5) {
+                val c = AiFluidColors[i]
+                val end = scene.exit + Offset(cos(scene.rays[i]), sin(scene.rays[i])) * scene.reach
+                drawLine(
+                    Brush.linearGradient(listOf(c.copy(alpha = 0.22f), c.copy(alpha = 0.04f)), start = scene.exit, end = end),
+                    scene.exit,
+                    end,
+                    strokeWidth = beam * 3f,
+                )
+                drawLine(
+                    Brush.linearGradient(listOf(c.copy(alpha = 0.95f), c.copy(alpha = 0.3f)), start = scene.exit, end = end),
+                    scene.exit,
+                    end,
+                    strokeWidth = beam,
+                )
+            }
+            // The prism: a triangle of glass with a bright rim.
+            val circum = size.width * 0.36f / kotlin.math.sqrt(3f)
+            val path = androidx.compose.ui.graphics.Path()
+            for (k in 0 until 3) {
+                val a = turn.value - (Math.PI / 2).toFloat() + k * (2 * Math.PI / 3).toFloat()
+                val p = scene.center + Offset(cos(a), sin(a)) * circum
+                if (k == 0) path.moveTo(p.x, p.y) else path.lineTo(p.x, p.y)
+            }
+            path.close()
+            drawPath(
+                path,
+                Brush.linearGradient(
+                    listOf(Color.White.copy(alpha = 0.26f), Color(0xFF8E6BFF).copy(alpha = 0.12f), Color.White.copy(alpha = 0.06f)),
+                    start = scene.center - Offset(circum, circum),
+                    end = scene.center + Offset(circum, circum),
+                ),
+            )
+            drawPath(path, Color.White.copy(alpha = 0.75f), style = Stroke(2.dp.toPx()))
+            // The orbs, glowing in the color that reached them.
+            PrismOrbs.forEachIndexed { o, frac ->
+                val at = Offset(frac.x * size.width, frac.y * size.height)
+                val r = 22.dp.toPx()
+                val color = lit[o]
+                if (color != null) {
+                    drawCircle(Brush.radialGradient(listOf(color.copy(alpha = 0.6f), Color.Transparent), center = at, radius = r * 2.6f), radius = r * 2.6f, center = at)
+                }
+                drawCircle(
+                    Brush.radialGradient(listOf(Color.White.copy(alpha = 0.06f), (color ?: Color.White).copy(alpha = if (color != null) 0.55f else 0.14f)), center = at, radius = r),
+                    radius = r,
+                    center = at,
+                )
+                drawCircle(Color.White.copy(alpha = 0.6f), radius = r, center = at, style = Stroke(1.5.dp.toPx()))
+                drawCircle(Color.White.copy(alpha = 0.8f), radius = r * 0.18f, center = at + Offset(-r * 0.35f, -r * 0.4f))
+            }
+        }
+        if (full) {
+            Clawd(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 130.dp)
+                    .size(width = 80.dp, height = 68.dp),
+                mood = ClawdMood.Love,
+            )
+        }
+        Column(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 36.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("$name $version · Prisma", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                if (full) "Volles Spektrum! 🌈" else "Zieh das Licht · tippe aufs Prisma, um es zu drehen · ${lit.count { it != null }}/${PrismOrbs.size}",
+                color = Color.White.copy(alpha = 0.55f),
+                fontSize = 13.sp,
+            )
+        }
+        EggClose(onClose)
+    }
+}
+
+/** dp → px outside a draw scope. */
+private fun androidx.compose.ui.unit.Dp.toPx(context: android.content.Context): Float = value * context.resources.displayMetrics.density
+
+/** One spark of the supernova: where it is, where it flies, and where it settles in the star. */
+private class NovaBit(var x: Float, var y: Float, var vx: Float, var vy: Float, val tx: Float, val ty: Float, val color: Color)
+
+/** A little flare off the star when it's tapped. */
+private class NovaFlare(val x: Float, val y: Float, val vx: Float, val vy: Float, val born: Long, val color: Color)
+
+/** The state of the star between frames. */
+private class NovaSky {
+    var area = Size.Zero
+    var boom = -1L
+    var pressed = false
+    val bits = ArrayList<NovaBit>()
+    val flares = ArrayList<NovaFlare>()
+}
+
+/**
+ * ClaudeOS 3.0's egg, "Nova": a young star in the dark. Tap it to feed it, hold to charge it –
+ * at full energy it goes supernova: a flash, a shock wave, sparks in all of Claude's colors,
+ * which then come back together as Claude's own star.
+ */
+@Composable
+internal fun NovaEgg(onClose: () -> Unit) {
+    val context = LocalContext.current
+    BackHandler(onBack = onClose)
+    val scope = rememberCoroutineScope()
+    val sky = remember { NovaSky() }
+    val energy = remember { Animatable(0.12f) }
+    var now by remember { mutableLongStateOf(0L) }
+    var formed by remember { mutableStateOf(false) }
+    var boomed by remember { mutableStateOf(false) }
+    val stars = remember { List(90) { Triple(Math.random().toFloat(), Math.random().toFloat(), Math.random().toFloat() * 6f) } }
+
+    fun explode(t: Long) {
+        val w = sky.area.width
+        val h = sky.area.height
+        val cx = w / 2f
+        val cy = h * 0.45f
+        sky.boom = t
+        boomed = true
+        sky.bits.clear()
+        val rays = 10
+        val count = 180
+        val logo = w * 0.3f
+        for (k in 0 until count) {
+            val angle = (Math.random() * 2 * Math.PI).toFloat()
+            val speed = 260f + Math.random().toFloat() * 900f
+            // Where it settles: along one of the star's rays, the rays a little uneven like Claude's.
+            val ray = k % rays
+            val along = (k / rays + 1).toFloat() / (count / rays)
+            val rayAngle = ray * (2 * Math.PI / rays).toFloat() - (Math.PI / 2).toFloat()
+            val rayLength = logo * (0.75f + 0.25f * ((ray * 7) % 4) / 3f)
+            val color = if (k % 5 == 0) Color.White else AiFluidColors[k % AiFluidColors.size]
+            sky.bits += NovaBit(cx, cy, cos(angle) * speed, sin(angle) * speed, cx + cos(rayAngle) * rayLength * along, cy + sin(rayAngle) * rayLength * along, color)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        var last = -1L
+        while (true) {
+            withFrameMillis { t ->
+                val dt = if (last < 0) 0.016f else (t - last).coerceIn(1L, 40L) / 1000f
+                last = t
+                if (sky.area.width > 0f) {
+                    if (sky.boom < 0) {
+                        // Holding charges it; left alone it cools down a little.
+                        if (sky.pressed) {
+                            scope.launch { energy.snapTo((energy.value + 0.35f * dt).coerceAtMost(1f)) }
+                        } else if (!energy.isRunning) {
+                            scope.launch { energy.snapTo((energy.value - 0.03f * dt).coerceAtLeast(0.12f)) }
+                        }
+                        if (energy.value >= 0.995f) explode(t)
+                    } else {
+                        val age = (t - sky.boom) / 1000f
+                        val drag = kotlin.math.exp(-1.8f * dt)
+                        val pull = 1f - kotlin.math.exp(-3.6f * dt)
+                        sky.bits.forEach { b ->
+                            if (age < 1.2f) {
+                                b.vx *= drag
+                                b.vy *= drag
+                                b.x += b.vx * dt
+                                b.y += b.vy * dt
+                            } else {
+                                b.x += (b.tx - b.x) * pull
+                                b.y += (b.ty - b.y) * pull
+                            }
+                        }
+                        if (!formed && age > 3.2f) {
+                            formed = true
+                            EasterEggs.find(context, "claudeos")
+                        }
+                    }
+                    sky.flares.removeAll { t - it.born > 800 }
+                }
+                now = t
+            }
+        }
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF02020A), Color(0xFF0A0618), Color(0xFF000000))))
+            .onSizeChanged { sky.area = Size(it.width.toFloat(), it.height.toFloat()) }
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    val t = now
+                    if (sky.boom >= 0 && formed) {
+                        // A new star.
+                        sky.boom = -1L
+                        sky.bits.clear()
+                        formed = false
+                        boomed = false
+                        scope.launch { energy.snapTo(0.12f) }
+                    } else if (sky.boom < 0) {
+                        val cx = size.width / 2f
+                        val cy = size.height * 0.45f
+                        repeat(10) {
+                            val a = (Math.random() * 2 * Math.PI).toFloat()
+                            val v = 120f + Math.random().toFloat() * 260f
+                            sky.flares += NovaFlare(cx, cy, cos(a) * v, sin(a) * v, t, AiFluidColors[(Math.random() * AiFluidColors.size).toInt().coerceIn(0, AiFluidColors.size - 1)])
+                        }
+                        scope.launch { energy.animateTo((energy.value + 0.14f).coerceAtMost(1f), spring(dampingRatio = 0.5f, stiffness = 300f)) }
+                    }
+                    sky.pressed = true
+                    do {
+                        val event = awaitPointerEvent()
+                    } while (event.changes.any { it.pressed })
+                    sky.pressed = false
+                }
+            },
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            val t = now
+            // Twinkling stars.
+            val px = 2.5.dp.toPx()
+            stars.forEach { (x, y, phase) ->
+                val a = 0.2f + 0.7f * ((sin(t / 700f + phase) + 1f) / 2f)
+                drawRect(Color.White.copy(alpha = a), Offset(x * size.width, y * size.height), Size(px, px))
+            }
+            val c = Offset(size.width / 2f, size.height * 0.45f)
+            if (sky.boom < 0) {
+                // The young star: from Claude's orange through gold to blue-white as it fills.
+                val e = energy.value.coerceIn(0f, 1f)
+                val color = if (e < 0.5f) {
+                    androidx.compose.ui.graphics.lerp(Color(0xFFD97757), Color(0xFFFFD27A), e * 2f)
+                } else {
+                    androidx.compose.ui.graphics.lerp(Color(0xFFFFD27A), Color(0xFFE8F1FF), (e - 0.5f) * 2f)
+                }
+                val pulse = 1f + 0.06f * sin(t / (260f - 150f * e))
+                val r = size.width * (0.06f + 0.1f * e) * pulse
+                drawCircle(Brush.radialGradient(listOf(color.copy(alpha = 0.45f), Color.Transparent), center = c, radius = r * 3.4f), radius = r * 3.4f, center = c)
+                drawCircle(Brush.radialGradient(listOf(Color.White, color), center = c, radius = r), radius = r, center = c)
+                // A four-pointed sparkle turning slowly.
+                val spin = t / 2400f
+                for (k in 0 until 4) {
+                    val a = spin + k * (Math.PI / 2).toFloat()
+                    drawLine(
+                        Brush.linearGradient(listOf(Color.White.copy(alpha = 0.9f), Color.Transparent), start = c, end = c + Offset(cos(a), sin(a)) * r * 2.6f),
+                        c,
+                        c + Offset(cos(a), sin(a)) * r * 2.6f,
+                        strokeWidth = 2.dp.toPx(),
+                        cap = StrokeCap.Round,
+                    )
+                }
+                // The flares from taps.
+                sky.flares.forEach { f ->
+                    val age = (t - f.born) / 1000f
+                    if (age >= 0f) {
+                        val at = Offset(f.x + f.vx * age, f.y + f.vy * age)
+                        drawCircle(f.color.copy(alpha = (1f - age / 0.8f).coerceIn(0f, 1f)), radius = 3.dp.toPx(), center = at)
+                    }
+                }
+            } else {
+                val age = (t - sky.boom) / 1000f
+                // The flash and the shock wave.
+                if (age < 0.35f) drawRect(Color.White.copy(alpha = (1f - age / 0.35f).coerceIn(0f, 1f) * 0.9f))
+                if (age < 1.1f) {
+                    val p = age / 1.1f
+                    drawCircle(
+                        Color(0xFFFFE3D3).copy(alpha = (1f - p) * 0.7f),
+                        radius = kotlin.math.hypot(size.width, size.height) * p,
+                        center = c,
+                        style = Stroke((14.dp.toPx() * (1f - p)).coerceAtLeast(1f)),
+                    )
+                }
+                // The sparks, and once they've settled, the glow of the new star.
+                if (formed) {
+                    drawCircle(Brush.radialGradient(listOf(Color(0xFFD97757).copy(alpha = 0.35f), Color.Transparent), center = c, radius = size.width * 0.42f), radius = size.width * 0.42f, center = c)
+                }
+                val dot = 3.dp.toPx()
+                sky.bits.forEach { b -> drawCircle(b.color, radius = dot, center = Offset(b.x, b.y)) }
+            }
+        }
+        if (formed) {
+            Clawd(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 130.dp)
+                    .size(width = 80.dp, height = 68.dp),
+                mood = ClawdMood.Jump,
+            )
+        }
+        Column(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 36.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("${ClaudeOs.full} · ${ClaudeOs.CODENAME}", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                when {
+                    formed -> "Ein neuer Stern: Claudes Stern ✨ · Tippen für eine neue Nova"
+                    boomed -> "Supernova!"
+                    else -> "Tippe den Stern an oder halte ihn, bis er zur Supernova wird"
+                },
+                color = Color.White.copy(alpha = 0.55f),
+                fontSize = 13.sp,
+            )
+        }
+        EggClose(onClose)
     }
 }

@@ -23,14 +23,14 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build debug APKs (Hearth, Glimmer, Clawd, Hearth One)
+      - name: Build debug APKs (Hearth, Glimmer, Clawd, Hearth UI)
         run: |
           chmod +x gradlew
           ./gradlew assembleHearthDebug assembleGlimmerDebug assembleClawdDebug assembleOneDebug
           cp app/build/outputs/apk/hearth/debug/app-hearth-debug.apk Hearth.apk
           cp app/build/outputs/apk/glimmer/debug/app-glimmer-debug.apk Glimmer.apk
           cp app/build/outputs/apk/clawd/debug/app-clawd-debug.apk Clawd.apk
-          cp app/build/outputs/apk/one/debug/app-one-debug.apk HearthOne.apk
+          cp app/build/outputs/apk/one/debug/app-one-debug.apk HearthUI.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -39,7 +39,7 @@ jobs:
             Hearth.apk
             Glimmer.apk
             Clawd.apk
-            HearthOne.apk
+            HearthUI.apk
 
       # Once: every earlier version of every app as its own release (oldest first, so they
       # line up in order). A marker tag remembers it's done.
@@ -93,24 +93,26 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           v=$(grep -o 'versionName = "[^"]*"' app/build.gradle.kts | cut -d'"' -f2)
-          for entry in "Hearth.apk|hearth|Hearth|der Launcher" \
-                       "Glimmer.apk|glimmer|Glimmer|die Insel um die Kamera" \
-                       "Clawd.apk|clawd|Clawd|Clawds Widgets für jeden Launcher, sein Tamagotchi und Chat" \
-                       "HearthOne.apk|hearthone|HearthOne|Hearth mit Glimmer und Clawd in einer App"; do
-            IFS='|' read -r file slug name what <<< "$entry"
+          # file|slug (tag and update check, never changes)|file name|title|what it is
+          # (Hearth One is called Hearth UI now; its slug stays, so installed apps keep finding it.)
+          for entry in "Hearth.apk|hearth|Hearth|Hearth|der Launcher" \
+                       "Glimmer.apk|glimmer|Glimmer|Glimmer|die Insel um die Kamera" \
+                       "Clawd.apk|clawd|Clawd|Clawd|Clawds Widgets für jeden Launcher, sein Tamagotchi und Chat" \
+                       "HearthUI.apk|hearthone|HearthUI|Hearth UI|Hearth mit Glimmer und Clawd in einer App"; do
+            IFS='|' read -r file slug name title what <<< "$entry"
             tag="$slug-v$v"
             cp "$file" "$name-$v.apk"
             # What's new (German, shown in each app's software update screen), then the build.
             whatsnew=""
             if [ -f .github/whatsnew.md ]; then whatsnew="$(cat .github/whatsnew.md)"; fi
-            notes="$(printf '%s\n\n%s\n\nDebug-APK aus Build %s (Commit %s).' "$name $v – $what." "$whatsnew" "${{ github.run_number }}" "${{ github.sha }}")"
+            notes="$(printf '%s\n\n%s\n\nDebug-APK aus Build %s (Commit %s).' "$title $v – $what." "$whatsnew" "${{ github.run_number }}" "${{ github.sha }}")"
             if gh release view "$tag" >/dev/null 2>&1; then
               gh release upload "$tag" "$name-$v.apk" --clobber
               gh release edit "$tag" --notes "$notes" --latest=false
             else
               gh release create "$tag" "$name-$v.apk" \
                 --target "${{ github.sha }}" \
-                --title "$name $v" \
+                --title "$title $v" \
                 --notes "$notes" \
                 --latest=false
             fi
@@ -131,12 +133,12 @@ jobs:
           notes = open(".github/whatsnew.md").read().strip() if os.path.exists(".github/whatsnew.md") else ""
           base = f"https://github.com/{repo}/releases/download/{tag}/"
           out = {"version": v, "notes": notes}
-          for slug, file in [("hearth", "Hearth.apk"), ("glimmer", "Glimmer.apk"), ("clawd", "Clawd.apk"), ("hearthone", "HearthOne.apk")]:
+          for slug, file in [("hearth", "Hearth.apk"), ("glimmer", "Glimmer.apk"), ("clawd", "Clawd.apk"), ("hearthone", "HearthUI.apk")]:
               out[slug] = {"version": v, "url": base + file, "size": os.path.getsize(file)}
           json.dump(out, open("versions.json", "w"), ensure_ascii=False, indent=1)
           PY
-          gh release create "build-${{ github.run_number }}" Hearth.apk Glimmer.apk Clawd.apk HearthOne.apk versions.json \
+          gh release create "build-${{ github.run_number }}" Hearth.apk Glimmer.apk Clawd.apk HearthUI.apk versions.json \
             --target "${{ github.sha }}" \
             --title "Hearth Build ${{ github.run_number }}" \
-            --notes "HearthOne.apk (alles in einer App), Hearth.apk (Launcher), Glimmer.apk (Insel) und Clawd.apk (Clawds Widgets für jeden Launcher). Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
+            --notes "HearthUI.apk (Hearth UI: alles in einer App), Hearth.apk (Launcher), Glimmer.apk (Insel) und Clawd.apk (Clawds Widgets für jeden Launcher). Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
             --latest

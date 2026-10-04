@@ -43,6 +43,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -213,11 +217,12 @@ private fun lookFor(packageName: String): UpdateLook = when (packageName) {
         accent = Color(0xFF3E91FF),
         card = Color(0xFF1C1C1E),
         hero = UpdateHero.Number,
-        tagline = "One UI 10 Fluid · Galaxy × Claude",
+        tagline = "Galaxy × Claude",
         planet = listOf(Color(0xFFBFDDFF), Color(0xFF3E91FF), Color(0xFF5B3BC8)),
         tips = listOf(
-            "One UI 10 Fluid: Berührungen breiten sich wie Licht aus – unter Design → Animationen.",
-            "Wisch auf dem Startbildschirm nach unten für das Kontrollzentrum.",
+            "Hearth UI 14: die neue gestapelte Uhr findest du unter Design → Uhr.",
+            "Wisch auf dem Startbildschirm nach unten für den Finder, nach oben für den App-Drawer.",
+            "Fluid-Ränder „Dezent“ oder „Lebendig“: unter Design → Animationen.",
             "Frag Clawd in der Suche: „Wie lange noch bis Weihnachten?“",
             "Tipp Clawd auf dem Startbildschirm sechsmal schnell an …",
             "Hearth, Glimmer und Clawd aktualisieren sich jetzt selbst.",
@@ -226,11 +231,11 @@ private fun lookFor(packageName: String): UpdateLook = when (packageName) {
 }
 
 /**
- * The software update screen, each app with its own (One UI 10 Fluid): Hearth's version big
- * in blue and violet, Glimmer's living island, Clawd himself. What's new, a tip from Clawd,
- * and one button at the bottom that looks, downloads and installs – while Clawd runs along
- * the download. Tapping "Version" often enough opens an easter egg, like Android's in
- * Samsung's settings.
+ * The software update screen, as ColorOS has it: the version written big with a glow behind
+ * it (Glimmer: its living island, Clawd: himself), the status in a pill, and underneath all
+ * that changed – this version's changelog in full, the versions before it as a history, the
+ * details (where "Version" hides the easter eggs) and a tip from Clawd. One button at the
+ * bottom looks, downloads and installs, while Clawd runs along the download.
  */
 @Composable
 fun SoftwareUpdateScreen(onClose: () -> Unit) {
@@ -239,6 +244,9 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     val look = remember { lookFor(context.packageName) }
     val name = remember { AppUpdater.appName(context) }
     val current = remember { AppUpdater.currentVersion(context) }
+    val app = remember { HearthChangelog.appOf(context.packageName) }
+    val notes = remember(current) { HearthChangelog.forVersion(current) }
+    val history = remember(current) { HearthChangelog.before(current) }
     var state by remember { mutableStateOf<UpdateState>(UpdateState.Checking) }
     var lastCheck by remember { mutableLongStateOf(AppUpdater.lastChecked(context)) }
     var egg by remember { mutableStateOf(false) }
@@ -302,55 +310,54 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
         is UpdateState.Ready -> s.release
         else -> null
     }
-    val glow by rememberInfiniteTransition(label = "updateGlow").animateFloat(
-        initialValue = 0.7f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(2600), RepeatMode.Reverse),
-        label = "glow",
-    )
+    val animate = LocalSettings.current.animations
+    // The page settles in from below, as ColorOS's does.
+    val appear = remember { Animatable(if (animate) 0f else 1f) }
+    LaunchedEffect(Unit) { appear.animateTo(1f, spring(dampingRatio = 0.8f, stiffness = 220f)) }
 
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(look.background))) {
-        // One UI 10 Fluid: the app's colors drifting, and a glow behind the hero.
-        FluidBackdrop(look.fluid, strength = 0.7f)
-        Canvas(Modifier.fillMaxSize()) {
-            drawCircle(
-                Brush.radialGradient(
-                    listOf(look.accent.copy(alpha = 0.30f * glow), Color.Transparent),
-                    center = Offset(size.width / 2f, size.height * 0.28f),
-                    radius = size.width * 0.7f,
-                ),
-                radius = size.width * 0.7f,
-                center = Offset(size.width / 2f, size.height * 0.28f),
-            )
-        }
+        FluidBackdrop(look.fluid, strength = 0.45f)
         Column(
             Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 16.dp),
         ) {
-            Box(
-                Modifier.padding(top = 8.dp).size(44.dp).clip(CircleShape).clickable(onClick = onClose),
-                contentAlignment = Alignment.Center,
+            // ColorOS: a slim bar – back, and the title next to it.
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Zurück", tint = Color.White)
+                GlassCircle(onClick = onClose, size = 42.dp) {
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Zurück", tint = Color.White)
+                }
+                Spacer(Modifier.width(12.dp))
+                Text("Software-Update", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             }
-            // One UI's big title.
-            Text(
-                "Software-Update",
-                color = Color.White,
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Normal,
-                modifier = Modifier.padding(start = 6.dp, top = 24.dp, bottom = 22.dp),
-            )
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        val p = appear.value
+                        alpha = p.coerceIn(0f, 1f)
+                        translationY = (1f - p) * 40.dp.toPx()
+                    },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 val shown = release?.version ?: current
                 when (look.hero) {
-                    UpdateHero.Number -> Unit
-                    UpdateHero.Island -> IslandHero(shown, look.accent, newer = release != null)
+                    UpdateHero.Number -> VersionArtwork(HearthUi.major(shown), look.number, height = 220.dp)
+                    UpdateHero.Island -> Box(Modifier.padding(top = 36.dp, bottom = 10.dp)) {
+                        IslandHero(shown, look.accent, newer = release != null)
+                    }
                     UpdateHero.Clawd -> Clawd(
-                        Modifier.size(width = 150.dp, height = 128.dp),
+                        Modifier
+                            .padding(top = 24.dp, bottom = 8.dp)
+                            .size(width = 150.dp, height = 128.dp),
                         mood = when (s) {
                             is UpdateState.Newer, is UpdateState.Ready -> ClawdMood.Jump
                             is UpdateState.Downloading -> ClawdMood.Dance
@@ -360,48 +367,62 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                         },
                     )
                 }
-                Text(
-                    shown,
-                    style = TextStyle(
-                        brush = Brush.linearGradient(look.number),
-                        fontSize = if (look.hero == UpdateHero.Number) 96.sp else 64.sp,
-                        fontWeight = if (look.hero == UpdateHero.Clawd) FontWeight.Bold else FontWeight.Light,
-                    ),
-                )
-                Text(name, color = Color.White.copy(alpha = 0.9f), fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                Text("$name $shown", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 // Like "One UI 8 · Android 16": the app on its ground.
-                Text("auf ${dev.hearth.launcher.data.ClaudeOs.full}", color = look.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                Text(look.tagline, color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
-                Spacer(Modifier.height(16.dp))
                 Text(
-                    when (s) {
-                        UpdateState.Checking -> "Nach Updates suchen …"
-                        UpdateState.UpToDate -> "Deine Software ist auf dem neuesten Stand."
-                        is UpdateState.Newer -> "Ein Software-Update ist verfügbar."
-                        is UpdateState.Downloading -> "Update wird heruntergeladen …"
-                        is UpdateState.Ready -> if (AppUpdater.canInstall(context)) {
-                            "Bereit zur Installation. Android fragt gleich, ob du aktualisieren willst."
-                        } else {
-                            "Erlaube $name einmal „Unbekannte Apps installieren“ und tippe dann auf „Installieren“."
-                        }
-                        is UpdateState.Failed -> s.reason
-                    },
-                    color = Color.White.copy(alpha = 0.75f),
-                    fontSize = 15.sp,
+                    "${dev.hearth.launcher.data.ClaudeOs.full} „${dev.hearth.launcher.data.ClaudeOs.CODENAME}“ · ${look.tagline}",
+                    color = Color.White.copy(alpha = 0.55f),
+                    fontSize = 13.sp,
                     textAlign = TextAlign.Center,
-                    lineHeight = 20.sp,
+                )
+                Spacer(Modifier.height(16.dp))
+                StatusPill(s, look.accent)
+                val detail = when (s) {
+                    is UpdateState.Ready -> if (AppUpdater.canInstall(context)) {
+                        "Bereit zur Installation. Android fragt gleich, ob du aktualisieren willst."
+                    } else {
+                        "Erlaube $name einmal „Unbekannte Apps installieren“ und tippe dann auf „Installieren“."
+                    }
+                    is UpdateState.Failed -> s.reason
+                    else -> null
+                }
+                if (detail != null) {
+                    Text(
+                        detail,
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 14.sp,
+                        lineHeight = 19.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 10.dp, start = 12.dp, end = 12.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(22.dp))
+
+            // A newer version: what it brings, first.
+            if (release != null) {
+                NewVersionCard(name, release, look)
+                Spacer(Modifier.height(14.dp))
+            }
+
+            // This version's changelog, all of it.
+            notes?.let { log ->
+                ChangelogCard(
+                    release = log,
+                    app = app,
+                    title = "Was ist neu in $name ${log.version}",
+                    accent = look.accent,
+                    card = look.card,
                 )
             }
-            Spacer(Modifier.height(24.dp))
 
-            // About this version; "Version" hides the easter egg.
+            UpdateSectionTitle("Versionsdetails")
             Column(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(26.dp))
                     .background(look.card)
                     .glassSheen(26.dp)
-                    .aiFluidEdge(26.dp, strength = 0.35f, enabled = LocalSettings.current.fluidDesign)
                     .padding(vertical = 6.dp),
             ) {
                 // Tapping the version quickly, like Android's in Samsung's settings, opens the egg.
@@ -437,24 +458,19 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                 InfoRow("Quelle", "GitHub · JP19Claude/launcher")
             }
 
-            if (release != null && release.notes.isNotBlank()) {
-                Spacer(Modifier.height(14.dp))
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(look.card).glassSheen(26.dp).padding(20.dp)) {
-                    Text("Was ist neu", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(8.dp))
-                    Text(release.notes, color = Color.White.copy(alpha = 0.75f), fontSize = 14.sp, lineHeight = 20.sp)
-                }
+            if (history.isNotEmpty()) {
+                UpdateSectionTitle("Update-Verlauf")
+                UpdateHistoryCard(history, app, look.accent, look.card)
             }
 
             // A tip from Clawd; a tap shows the next one.
-            Spacer(Modifier.height(14.dp))
+            UpdateSectionTitle("Tipp von Clawd")
             Row(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(26.dp))
                     .background(look.card)
                     .glassSheen(26.dp)
-                    .aiFluidEdge(26.dp, strength = 0.5f, enabled = LocalSettings.current.fluidDesign)
                     .fluidTouch(look.accent)
                     .clickable { tip++ }
                     .padding(16.dp),
@@ -462,12 +478,15 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
             ) {
                 Clawd(Modifier.size(width = 52.dp, height = 44.dp), mood = ClawdMood.Wave)
                 Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Tipp von Clawd", color = look.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    Text(look.tips[Math.floorMod(tip, look.tips.size)], color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp, lineHeight = 19.sp)
-                }
+                Text(
+                    look.tips[Math.floorMod(tip, look.tips.size)],
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 14.sp,
+                    lineHeight = 19.sp,
+                    modifier = Modifier.weight(1f),
+                )
             }
-            // Hearth (on its own) can move to Hearth One: everything in one app.
+            // Hearth (on its own) can move to Hearth UI: everything in one app.
             if (!dev.hearth.launcher.BuildConfig.ALL_IN_ONE && context.packageName == "dev.hearth.launcher") {
                 Spacer(Modifier.height(14.dp))
                 HearthOneCard(look.accent)
@@ -475,7 +494,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
             Spacer(Modifier.height(160.dp))
         }
 
-        // The one button at the bottom, like One UI's "Herunterladen und installieren".
+        // The one button at the bottom, a wide pill like ColorOS's.
         Column(
             Modifier
                 .align(Alignment.BottomCenter)
@@ -521,11 +540,13 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
-                        .clip(RoundedCornerShape(26.dp))
-                        .background(if (strong) look.accent else Color.White.copy(alpha = 0.14f))
-                        .glassSheen(26.dp)
-                        .aiFluidEdge(26.dp, strength = if (strong) 1f else 0.45f, width = 2.dp, enabled = LocalSettings.current.fluidDesign)
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(27.dp))
+                        .background(
+                            if (strong) Brush.horizontalGradient(look.number.drop(1)) else Brush.horizontalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.White.copy(alpha = 0.10f))),
+                        )
+                        .glassSheen(27.dp)
+                        .aiFluidEdge(27.dp, strength = if (strong) 0.9f else 0.35f, width = 1.5.dp, enabled = LocalSettings.current.fluidDesign, flowing = strong)
                         .fluidTouch()
                         .clickable(enabled = s !is UpdateState.Checking, onClick = action),
                     contentAlignment = Alignment.Center,
@@ -536,19 +557,95 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
         }
 
         AnimatedVisibility(egg, enter = fadeIn(tween(400)), exit = fadeOut(tween(300))) {
-            // Each big Hearth version has its own egg: drops from 13.5 on, silk in 13, the fluid ocean in 12.5,
-            // before it the planet.
-            when {
-                versionNumber(current) >= 13.5f -> DropsEgg(current, name) { egg = false }
-                versionNumber(current) >= 13f -> SilkEgg(current, name) { egg = false }
-                versionNumber(current) >= 12.5f -> FluidOceanEgg(current, name) { egg = false }
-                else -> VersionEgg(current, name, look) { egg = false }
-            }
+            HearthVersionEgg(current, name) { egg = false }
         }
         AnimatedVisibility(osEgg, enter = fadeIn(tween(500)), exit = fadeOut(tween(300))) {
             ClaudeOsVersionEgg { osEgg = false }
         }
     }
+}
+
+/**
+ * The app's own easter egg for [version] – a new one with every big version: Hearth UI 14
+ * has the prism, 13.5 the drops, 13 silk, 12.5 the fluid ocean, before that the planet.
+ */
+@Composable
+internal fun HearthVersionEgg(version: String, name: String, onClose: () -> Unit) {
+    val context = LocalContext.current
+    val look = remember { lookFor(context.packageName) }
+    val number = versionNumber(version)
+    when {
+        number >= 14f -> PrismEgg(version, name, onClose)
+        number >= 13.5f -> DropsEgg(version, name, onClose)
+        number >= 13f -> SilkEgg(version, name, onClose)
+        number >= 12.5f -> FluidOceanEgg(version, name, onClose)
+        else -> VersionEgg(version, name, look, onClose)
+    }
+}
+
+/** Where the check stands, in a pill under the version (a spinner while it looks). */
+@Composable
+private fun StatusPill(state: UpdateState, accent: Color) {
+    val (text, ok) = when (state) {
+        UpdateState.Checking -> "Suche nach Updates …" to false
+        UpdateState.UpToDate -> "Dein System ist auf dem neuesten Stand" to true
+        is UpdateState.Newer -> "Neue Version ${state.release.version} verfügbar" to false
+        is UpdateState.Downloading -> "Update wird heruntergeladen …" to false
+        is UpdateState.Ready -> "Bereit zur Installation" to true
+        is UpdateState.Failed -> "Suche fehlgeschlagen" to false
+    }
+    Row(
+        Modifier
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.08f))
+            .padding(horizontal = 16.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        when {
+            state is UpdateState.Checking || state is UpdateState.Downloading -> CircularProgressIndicator(
+                modifier = Modifier.size(15.dp),
+                color = accent,
+                strokeWidth = 2.dp,
+            )
+            ok -> Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = Color(0xFF30C26B), modifier = Modifier.size(18.dp))
+            state is UpdateState.Failed -> Icon(Icons.Rounded.Warning, contentDescription = null, tint = Color(0xFFFF9F0A), modifier = Modifier.size(18.dp))
+            else -> Icon(Icons.Rounded.Refresh, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(text, color = Color.White.copy(alpha = 0.88f), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+/** A newer version found: its name, size and what it brings, as ColorOS lists "Update-Details". */
+@Composable
+private fun NewVersionCard(name: String, release: AppUpdater.Release, look: UpdateLook) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(26.dp))
+            .background(look.card)
+            .glassSheen(26.dp)
+            .aiFluidEdge(26.dp, strength = 0.8f, width = 1.5.dp, enabled = LocalSettings.current.fluidDesign)
+            .padding(20.dp),
+    ) {
+        Text("$name ${release.version}", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
+        Text("Größe: ${megabytes(release.size)}", color = look.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        if (release.notes.isNotBlank()) {
+            Spacer(Modifier.height(10.dp))
+            Text(release.notes, color = Color.White.copy(alpha = 0.78f), fontSize = 14.sp, lineHeight = 20.sp)
+        }
+    }
+}
+
+@Composable
+private fun UpdateSectionTitle(text: String) {
+    Text(
+        text,
+        color = Color.White.copy(alpha = 0.6f),
+        fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(start = 12.dp, top = 20.dp, bottom = 8.dp),
+    )
 }
 
 /** Glimmer's hero: a living island (it breathes and glows), Clawd riding in it with the version. */

@@ -67,6 +67,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -86,6 +89,7 @@ import dev.hearth.launcher.data.CcSliderStyle
 import dev.hearth.launcher.data.CcStyle
 import dev.hearth.launcher.data.CcToggleShape
 import dev.hearth.launcher.data.ClockStyle
+import dev.hearth.launcher.data.FluidRims
 import dev.hearth.launcher.data.DesignPreset
 import dev.hearth.launcher.data.GlimmerMusicStyle
 import dev.hearth.launcher.data.GlimmerStyle
@@ -155,6 +159,10 @@ fun SettingsScreen(
 
     var pickerOpen by remember { mutableStateOf(false) }
     var lockPickerOpen by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val appVersion = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
+    }
 
     // Galaxy × Claude: Samsung's settings – a start page of categories, each opening its own page.
     val oneUi = s.galaxyClaude
@@ -175,12 +183,45 @@ fun SettingsScreen(
         FluidBackdrop(listOf(Color(0xFF3E91FF), Color(0xFF8E6BFF), s.accent.color), strength = 0.6f)
 
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .systemBarsPadding(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            item {
+            // Hearth UI 14, like One UI 9: on the start page a big title in the upper part of
+            // the screen that slides and fades away as the list comes up.
+            if (oneUiPage == null) item(key = "bigTitle") {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(190.dp),
+                ) {
+                    Column(
+                        Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = 8.dp, bottom = 14.dp)
+                            .graphicsLayer {
+                                val off = if (listState.firstVisibleItemIndex == 0) listState.firstVisibleItemScrollOffset.toFloat() else 1000f
+                                alpha = (1f - off / 240f).coerceIn(0f, 1f)
+                                translationY = off * 0.45f
+                            },
+                    ) {
+                        Text(
+                            "Einstellungen",
+                            color = TextPrimary,
+                            fontSize = 40.sp,
+                            fontWeight = FontWeight.Bold,
+                            style = OnWallpaperText,
+                        )
+                        Text(
+                            "${if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) HearthUi.NAME else "Hearth"} ${HearthUi.major(appVersion)} · ${dev.hearth.launcher.data.ClaudeOs.full} „${dev.hearth.launcher.data.ClaudeOs.CODENAME}“",
+                            style = androidx.compose.ui.text.TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
+                        )
+                    }
+                }
+            }
+            if (oneUiPage != null) item {
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -354,6 +395,14 @@ fun SettingsScreen(
                         description = "Berührungen breiten sich wie flüssiges Licht aus, Zeilen geben unter dem Finger nach, hinter Einstellungen und Software-Update fließen Farben",
                         checked = s.fluidDesign,
                     ) { v -> update { it.copy(fluidDesign = v) } }
+                    // Hearth UI 14: calm or colorful rims on glass that stands still.
+                    ChoiceRow(
+                        label = "Fluid-Ränder",
+                        options = FluidRims.entries,
+                        selected = s.fluidRims,
+                        optionLabel = { it.label },
+                        onSelect = { r -> update { it.copy(fluidRims = r) } },
+                    )
                     ChoiceRow(
                         label = "Seitenwechsel",
                         options = PageTransition.entries,
@@ -685,6 +734,42 @@ fun SettingsScreen(
                         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                         fontSize = 14.sp,
                     )
+                }
+            }
+        }
+
+        // One UI 9: once the big title has slid away, a slim bar with the small one takes its
+        // place; the close button stays in reach all the time.
+        if (oneUiPage == null) {
+            val collapsed: () -> Float = {
+                if (listState.firstVisibleItemIndex > 0) 1f else (listState.firstVisibleItemScrollOffset / 220f).coerceIn(0f, 1f)
+            }
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { alpha = collapsed() }
+                    .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent)))
+                    .statusBarsPadding()
+                    .height(64.dp),
+            )
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(start = 24.dp, end = 16.dp, top = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Einstellungen",
+                    color = TextPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .weight(1f)
+                        .graphicsLayer { alpha = collapsed() },
+                )
+                GlassCircle(onClick = onClose, size = 44.dp) {
+                    Icon(Icons.Rounded.Close, contentDescription = "Schließen", tint = TextPrimary)
                 }
             }
         }
@@ -1505,15 +1590,21 @@ private fun HearthCard(s: LauncherSettings) {
     val version = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
     }
+    val phone = remember {
+        runCatching {
+            android.provider.Settings.Global.getString(context.contentResolver, android.provider.Settings.Global.DEVICE_NAME)
+        }.getOrNull()?.takeIf { it.isNotBlank() } ?: Build.MODEL
+    }
+    val product = if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) HearthUi.NAME else "Hearth"
     LiquidGlass(
-        cornerRadius = 26.dp,
+        cornerRadius = 28.dp,
         refraction = 16.dp,
         blur = 20.dp,
         modifier = Modifier
             .padding(vertical = 8.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp))
-            .aiFluidEdge(26.dp, strength = 0.8f, enabled = s.fluidDesign)
+            .clip(RoundedCornerShape(28.dp))
+            .aiFluidEdge(28.dp, strength = 0.8f, enabled = s.fluidDesign, flowing = false)
             .fluidTouch(s.accent.color)
             // Like Samsung's account card: a tap shows the phone, its specs and the versions.
             .clickable {
@@ -1527,20 +1618,27 @@ private fun HearthCard(s: LauncherSettings) {
         fluidEdge = false,
     ) {
         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Hearth UI 14: the version as a glossy mark on Claude's colors.
             Box(
                 Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(s.accent.color.copy(alpha = 0.9f)),
+                    .size(58.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Brush.linearGradient(listOf(Color(0xFFFFB494), Color(0xFFFF6FB5), Color(0xFF8E6BFF), Color(0xFF3E91FF))))
+                    .glassSheen(18.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                ClaudeSpark(Color.White, Modifier.size(26.dp))
+                Text(HearthUi.major(version), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text("Hearth", color = TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-                Text("Version $version · ${dev.hearth.launcher.data.ClaudeOs.full}", color = TextSecondary, fontSize = 13.sp)
+                Text(phone, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text("$product $version", color = TextSecondary, fontSize = 13.sp)
+                Text(
+                    "${dev.hearth.launcher.data.ClaudeOs.full} „${dev.hearth.launcher.data.ClaudeOs.CODENAME}“",
+                    style = androidx.compose.ui.text.TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+                )
             }
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
         }
     }
 }

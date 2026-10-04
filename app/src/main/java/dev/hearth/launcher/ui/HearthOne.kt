@@ -97,7 +97,7 @@ fun HearthOneCard(accent: Color) {
                     if (!AppUpdater.install(context, apk)) step = OneStep.Failed("Die Installation ließ sich nicht starten")
                 }
                 is AppUpdater.Check.Failed -> step = OneStep.Failed(found.reason)
-                AppUpdater.Check.UpToDate -> step = OneStep.Failed("Hearth One ist noch nicht veröffentlicht")
+                AppUpdater.Check.UpToDate -> step = OneStep.Failed("Hearth UI ist noch nicht veröffentlicht")
             }
         }
     }
@@ -140,7 +140,7 @@ fun HearthOneCard(accent: Color) {
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(
-                    "Hearth One",
+                    "Hearth UI",
                     style = TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 22.sp, fontWeight = FontWeight.Bold),
                 )
                 Text("Alles in einer App · ${ClaudeOs.full}", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
@@ -162,7 +162,7 @@ fun HearthOneCard(accent: Color) {
                 OneStep.TakingOver -> "Übernehme Daten von Glimmer und Clawd …"
                 is OneStep.OldTooOld -> "${s.apps.joinToString(" und ") { it.name }} ist zu alt, um die Daten zu übergeben – erst aktualisieren, dann nochmal „Upgraden“."
                 is OneStep.Updating -> "Aktualisiere ${s.name} … ${(s.progress * 100).toInt()} %"
-                is OneStep.Downloading -> "Lade Hearth One … ${(s.progress * 100).toInt()} %"
+                is OneStep.Downloading -> "Lade Hearth UI … ${(s.progress * 100).toInt()} %"
                 OneStep.Installing -> "Android fragt gleich, ob du Hearth aktualisieren willst."
                 is OneStep.Failed -> s.reason
             },
@@ -174,7 +174,7 @@ fun HearthOneCard(accent: Color) {
         val busy = s is OneStep.TakingOver || s is OneStep.Downloading || s is OneStep.Updating
         val (label, action) = when (s) {
             is OneStep.OldTooOld -> "${s.apps.first().name} aktualisieren" to { updateOld(s.apps.first()) }
-            else -> "Auf Hearth One upgraden" to { upgrade() }
+            else -> "Auf Hearth UI upgraden" to { upgrade() }
         }
         Box(
             Modifier
@@ -224,7 +224,7 @@ fun HearthOneWelcome(onDone: () -> Unit) {
             Spacer(Modifier.height(24.dp))
             Clawd(Modifier.size(width = 130.dp, height = 112.dp), mood = ClawdMood.Dance)
             Text(
-                "Willkommen bei Hearth One",
+                "Willkommen bei Hearth UI",
                 style = TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 28.sp, fontWeight = FontWeight.Bold),
                 textAlign = TextAlign.Center,
             )

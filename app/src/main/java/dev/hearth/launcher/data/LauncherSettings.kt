@@ -23,12 +23,21 @@ enum class IconShape(val label: String) {
 }
 
 enum class ClockStyle(val label: String) {
+    /** Hearth UI 14: hours over minutes, big and stacked, with glass chips for date and battery. */
+    Stacked("Hearth UI (gestapelt)"),
     ColorOS("ColorOS"),
     /** Samsung's home clock: big, bold, tight digits over the date. */
     OneUI("One UI"),
     Glass("Glas-Karte"),
     Large("Groß"),
     Hidden("Aus"),
+}
+
+/** How strongly Claude's colors show round glass that stands still (flowing rims stay vivid). */
+enum class FluidRims(val label: String) {
+    /** Hearth UI 14: calm glass with only a hint of Claude's colors. */
+    Calm("Dezent"),
+    Vivid("Lebendig"),
 }
 
 /** Base color the glass is tinted with. */
@@ -393,6 +402,8 @@ data class LauncherSettings(
     val animations: Boolean = true,
     /** One UI 10 "Fluid": touches spread like liquid light, colors drift behind the screens. */
     val fluidDesign: Boolean = true,
+    /** Hearth UI 14: how colorful the still rims are. */
+    val fluidRims: FluidRims = FluidRims.Calm,
     val pageTransition: PageTransition = PageTransition.Depth,
     /** Hearth's own control center; off = only the system's (One UI) panel. */
     val ccEnabled: Boolean = true,
@@ -816,6 +827,7 @@ class SettingsRepository(context: Context) {
             iconGloss = prefs.getBoolean("iconGloss", d.iconGloss),
             animations = prefs.getBoolean("animations", d.animations),
             fluidDesign = prefs.getBoolean("fluidDesign", d.fluidDesign),
+            fluidRims = enumOf("fluidRims", FluidRims.Vivid),
             pageTransition = enumOf("pageTransition", d.pageTransition),
             ccEnabled = prefs.getBoolean(KEY_CC_ENABLED, d.ccEnabled),
             ccStyle = enumOf("ccStyle", d.ccStyle),
@@ -943,6 +955,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("iconGloss", s.iconGloss)
             .putBoolean("animations", s.animations)
             .putBoolean("fluidDesign", s.fluidDesign)
+            .putString("fluidRims", s.fluidRims.name)
             .putString("pageTransition", s.pageTransition.name)
             .putBoolean(KEY_CC_ENABLED, s.ccEnabled)
             .putString("ccStyle", s.ccStyle.name)

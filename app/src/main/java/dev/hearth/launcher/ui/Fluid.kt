@@ -22,6 +22,8 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -54,6 +56,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import dev.hearth.launcher.data.FluidRims
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
@@ -145,6 +148,15 @@ fun FluidBackdrop(colors: List<Color>, modifier: Modifier = Modifier, strength: 
     }
 }
 
+/** Hearth UI 14 "Dezent": the AI Fluid colors, mostly glass-white with a hint of each. */
+val CalmFluidColors = listOf(
+    Color(0xFFF3DCD3),
+    Color(0xFFF4E0EC),
+    Color(0xFFE2DBF7),
+    Color(0xFFD9E6F7),
+    Color(0xFFF6E7DE),
+)
+
 /** The AI Fluid colors: Claude's terracotta flowing through violet, blue and pink. */
 val AiFluidColors = listOf(
     Color(0xFFD97757),
@@ -169,6 +181,11 @@ fun Modifier.aiFluidEdge(
 ): Modifier = composed {
     if (!enabled || strength <= 0.01f) return@composed this
     val phase = flowPhase(4200, LocalSettings.current.animations && flowing)
+    // Hearth UI 14 "Dezent": rims that stand still are calm glass with a hint of Claude's
+    // colors; flowing ones (something running, something new) keep their full colors.
+    val calm = phase == null && LocalSettings.current.fluidRims == FluidRims.Calm
+    val colors = if (calm) CalmFluidColors else AiFluidColors
+    val fade = if (calm) 0.7f else 1f
     // Sizes, strokes and (when still) the gradient are made once per size, not every frame.
     this.drawWithCache {
         val w = width.toPx()
@@ -178,19 +195,19 @@ fun Modifier.aiFluidEdge(
         fun brushAt(a: Float): Brush {
             val start = Offset(c.x + cos(a) * half, c.y + sin(a) * half)
             val end = Offset(2 * c.x - start.x, 2 * c.y - start.y)
-            return Brush.linearGradient(AiFluidColors, start, end, TileMode.Mirror)
+            return Brush.linearGradient(colors, start, end, TileMode.Mirror)
         }
         val still = if (phase == null) brushAt(0.8f) else null
         val glowAt = Offset(w * 1.5f, w * 1.5f)
         val glowSize = Size(size.width - w * 3f, size.height - w * 3f)
         val glowCorner = CornerRadius((r - w * 1.5f).coerceAtLeast(0f))
         val glowStroke = Stroke(w * 3f)
-        val glowAlpha = (0.16f * strength).coerceIn(0f, 0.5f)
+        val glowAlpha = (0.16f * strength * fade).coerceIn(0f, 0.5f)
         val lineAt = Offset(w / 2f, w / 2f)
         val lineSize = Size(size.width - w, size.height - w)
         val lineCorner = CornerRadius((r - w / 2f).coerceAtLeast(0f))
         val lineStroke = Stroke(w)
-        val lineAlpha = (0.85f * strength).coerceIn(0f, 1f)
+        val lineAlpha = (0.85f * strength * fade).coerceIn(0f, 1f)
         onDrawWithContent {
             drawContent()
             val brush = still ?: brushAt(phase?.invoke() ?: 0.8f)
@@ -281,12 +298,30 @@ fun rememberFluidWaves(): FluidWaves = remember { FluidWaves() }
 /** Draws the waves (never takes a touch); nothing at all while there are none. */
 @Composable
 fun FluidWaveLayer(state: FluidWaves) {
-    if (!LocalSettings.current.fluidDesign || !LocalSettings.current.animations) return
+    val on = LocalSettings.current.fluidDesign && LocalSettings.current.animations
+    // A wave belongs to its moment: leaving the screen (an app opening) drops them all, so
+    // none can wait half-drawn for the way back.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) state.waves.clear()
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    if (!on) {
+        if (state.waves.isNotEmpty()) SideEffect { state.waves.clear() }
+        return
+    }
     if (state.waves.isEmpty()) return
-    var now by remember { mutableStateOf(android.os.SystemClock.uptimeMillis()) }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        while (state.waves.isNotEmpty()) {
-            androidx.compose.runtime.withFrameMillis { }
+    var now by remember { mutableLongStateOf(android.os.SystemClock.uptimeMillis()) }
+    LaunchedEffect(Unit) {
+        // Runs for as long as the layer is there (it leaves by itself once no wave is left).
+        // The old loop stopped as soon as the list was empty – a wave added just before the
+        // layer went then stood still forever: the colored dots in the icons and the orange
+        // glow at the dock.
+        while (true) {
+            withFrameMillis { }
             now = android.os.SystemClock.uptimeMillis()
             state.waves.removeAll { now - it.start > (if (it.bloom) 620 else 560) }
         }
@@ -301,8 +336,8 @@ fun FluidWaveLayer(state: FluidWaves) {
                 drawCircle(
                     Brush.radialGradient(
                         listOf(
-                            AiFluidColors[2].copy(alpha = 0.32f * (1f - p)),
-                            AiFluidColors[0].copy(alpha = 0.18f * (1f - p)),
+                            AiFluidColors[2].copy(alpha = 0.22f * (1f - p)),
+                            AiFluidColors[0].copy(alpha = 0.12f * (1f - p)),
                             Color.Transparent,
                         ),
                         center = c,
@@ -322,7 +357,7 @@ fun FluidWaveLayer(state: FluidWaves) {
                     Brush.sweepGradient(AiFluidColors + AiFluidColors.first(), center = w.at),
                     radius = r,
                     center = w.at,
-                    alpha = 0.55f * fade,
+                    alpha = 0.45f * fade,
                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = (18.dp.toPx() * fade).coerceAtLeast(1f)),
                 )
             }

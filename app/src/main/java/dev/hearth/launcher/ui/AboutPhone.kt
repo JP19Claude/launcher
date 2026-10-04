@@ -76,7 +76,14 @@ import java.util.Date
 import java.util.Locale
 
 /** One line of the phone's info: what it is and its value; [share] 0..1 draws a bar under it. */
-private class Spec(val label: String, val value: String, val share: Float? = null, val claudeOs: Boolean = false)
+private class Spec(
+    val label: String,
+    val value: String,
+    val share: Float? = null,
+    val claudeOs: Boolean = false,
+    /** Hearth UI's own version: five taps open its easter egg. */
+    val hearthEgg: Boolean = false,
+)
 
 private class SpecGroup(val title: String, val specs: List<Spec>)
 
@@ -122,7 +129,7 @@ private fun gatherSpecs(context: Context): List<SpecGroup> {
     val pm = context.packageManager
     val info = runCatching { pm.getPackageInfo(context.packageName, 0) }.getOrNull()
     val hearth = info?.versionName.orEmpty()
-    val edition = if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "Hearth One (Hearth, Glimmer und Clawd in einer App)" else "Hearth"
+    val edition = if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "Hearth UI (Hearth, Glimmer und Clawd in einer App)" else "Hearth"
     val build = info?.let { androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(it) }?.toString().orEmpty()
 
     val memory = ActivityManager.MemoryInfo().also { context.getSystemService(ActivityManager::class.java)?.getMemoryInfo(it) }
@@ -170,13 +177,13 @@ private fun gatherSpecs(context: Context): List<SpecGroup> {
 
     return listOf(
         SpecGroup(
-            "Hearth & ClaudeOS",
+            if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "Hearth UI & ClaudeOS" else "Hearth & ClaudeOS",
             listOf(
-                Spec("Hearth-Version", hearth),
+                Spec(if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "Hearth UI-Version" else "Hearth-Version", hearth, hearthEgg = true),
                 Spec("ClaudeOS-Version", "${ClaudeOs.VERSION} („${ClaudeOs.CODENAME}“)", claudeOs = true),
                 Spec("Ausgabe", edition),
                 Spec("Build-Nummer", build),
-                Spec("Design", "One UI 10 Fluid · Liquid Glass"),
+                Spec("Design", "Hearth UI 14 · One UI 10 Fluid · Liquid Glass"),
             ),
         ),
         SpecGroup(
@@ -257,6 +264,11 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
     var osEgg by remember { mutableStateOf(false) }
     var taps by remember { mutableIntStateOf(0) }
     var lastTap by remember { mutableLongStateOf(0L) }
+    // Hearth UI's own easter egg, five taps on its version – next to ClaudeOS's.
+    var hearthEgg by remember { mutableStateOf(false) }
+    var hearthTaps by remember { mutableIntStateOf(0) }
+    var hearthLastTap by remember { mutableLongStateOf(0L) }
+    val appName = remember { dev.hearth.launcher.data.AppUpdater.appName(context) }
     // Battery, memory and uptime change: read again now and then.
     LaunchedEffect(Unit) {
         while (true) {
@@ -264,7 +276,7 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
             groups = gatherSpecs(context)
         }
     }
-    BackHandler(enabled = !osEgg, onBack = onClose)
+    BackHandler(enabled = !osEgg && !hearthEgg, onBack = onClose)
     val name = remember { phoneName(context) }
 
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF070912), Color(0xFF050506))))) {
@@ -288,7 +300,7 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                 Spacer(Modifier.height(14.dp))
                 Text(name, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                 Text(
-                    "Hearth ${groups.first().specs.first().value} · ${ClaudeOs.full}",
+                    "$appName ${groups.first().specs.first().value} · ${ClaudeOs.full} „${ClaudeOs.CODENAME}“",
                     style = TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
                 )
                 Spacer(Modifier.height(4.dp))
@@ -322,8 +334,8 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                             Modifier
                                 .fillMaxWidth()
                                 .then(
-                                    if (spec.claudeOs) {
-                                        Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
+                                    when {
+                                        spec.claudeOs -> Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
                                             val now = System.currentTimeMillis()
                                             taps = if (now - lastTap < 1500) taps + 1 else 1
                                             lastTap = now
@@ -332,8 +344,16 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                                                 osEgg = true
                                             }
                                         }
-                                    } else {
-                                        Modifier
+                                        spec.hearthEgg -> Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
+                                            val now = System.currentTimeMillis()
+                                            hearthTaps = if (now - hearthLastTap < 1500) hearthTaps + 1 else 1
+                                            hearthLastTap = now
+                                            if (hearthTaps >= 5) {
+                                                hearthTaps = 0
+                                                hearthEgg = true
+                                            }
+                                        }
+                                        else -> Modifier
                                     },
                                 )
                                 .fluidTouch()
@@ -361,6 +381,9 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
         }
         AnimatedVisibility(osEgg, enter = fadeIn(tween(500)), exit = fadeOut(tween(300))) {
             ClaudeOsVersionEgg { osEgg = false }
+        }
+        AnimatedVisibility(hearthEgg, enter = fadeIn(tween(400)), exit = fadeOut(tween(300))) {
+            HearthVersionEgg(groups.first().specs.first().value, appName) { hearthEgg = false }
         }
     }
 }

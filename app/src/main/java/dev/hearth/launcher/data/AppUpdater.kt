@@ -15,7 +15,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Updates for every app of the family (Hearth, Glimmer, Kontrollzentrum, Clawd), straight from
+ * Updates for every app of the family (Hearth UI, Hearth, Glimmer, Clawd), straight from
  * the app: it asks GitHub for the newest release of itself, downloads the APK and hands it
  * to Android's installer (which asks once more before anything changes).
  */
@@ -26,7 +26,8 @@ object AppUpdater {
     /** An app of the family as the releases name it (tag "glimmer-v9.5", file "Glimmer-9.5.apk"). */
     class Kind(val slug: String, val name: String, val packageName: String)
 
-    val HearthOne = Kind("hearthone", "Hearth One", "dev.hearth.launcher")
+    /** Hearth UI (once Hearth One): Hearth with Glimmer and Clawd built in. Its slug stays. */
+    val HearthOne = Kind("hearthone", "Hearth UI", "dev.hearth.launcher")
     val GlimmerApp = Kind("glimmer", "Glimmer", "dev.hearth.glimmer")
     val ClawdApp = Kind("clawd", "Clawd", "dev.hearth.clawd")
 

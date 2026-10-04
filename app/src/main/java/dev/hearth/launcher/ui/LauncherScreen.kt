@@ -79,6 +79,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Face
+import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material3.Icon
@@ -199,6 +200,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // Hearth UI 14: the tour of what's new, once after the big update.
+    var showIntro by remember { mutableStateOf(!HearthUi.introSeen(context)) }
     val storagePermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { vm.refreshWallpaper() }
@@ -849,7 +852,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             if (widgetPages + pages.size + libraryPages > 1) {
                                 PageDots(
                                     count = widgetPages + pages.size + libraryPages,
-                                    current = pagerState.currentPage,
+                                    position = { pagerState.currentPage + pagerState.currentPageOffsetFraction },
                                     modifier = Modifier.padding(bottom = 10.dp),
                                 )
                             }
@@ -1072,6 +1075,14 @@ fun LauncherScreen(vm: LauncherViewModel) {
             // Easter eggs: confetti and a glass message when one is found.
             CelebrationOverlay()
 
+            if (showIntro) {
+                HearthUiIntro { newLook ->
+                    HearthUi.markIntroSeen(context)
+                    if (newLook) vm.updateSettings { it.hearthUi14Look() }
+                    showIntro = false
+                }
+            }
+
             drag?.let { d ->
                 DragOverlay(
                     drag = d,
@@ -1262,6 +1273,7 @@ private fun HomeHeader(settings: LauncherSettings, modifier: Modifier = Modifier
 private fun HomeHeaderContent(settings: LauncherSettings, modifier: Modifier = Modifier) {
     when (settings.clockStyle) {
         ClockStyle.Hidden -> Spacer(modifier)
+        ClockStyle.Stacked -> StackedClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.ColorOS -> ColorOSClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.OneUI -> OneUIClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Large -> LargeClock(settings, modifier.padding(start = 8.dp))
@@ -1409,6 +1421,96 @@ private fun OneUIClock(settings: LauncherSettings, modifier: Modifier = Modifier
     }
 }
 
+/** Opens the calendar app (the date chips). */
+private fun openCalendar(context: Context) {
+    runCatching {
+        context.startActivity(
+            Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_CALENDAR).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }
+}
+
+/** Opens the battery page (the battery chips). */
+private fun openBattery(context: Context) {
+    runCatching { context.startActivity(Intent(Intent.ACTION_POWER_USAGE_SUMMARY).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
+/** Opens the alarms of the clock app (the alarm chip). */
+private fun openAlarms(context: Context) {
+    runCatching { context.startActivity(Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
+/**
+ * Hearth UI 14's clock: hours over minutes, big and stacked, and under them the date and the
+ * battery as little glass chips (a tap opens the calendar or the battery page).
+ */
+@Composable
+private fun StackedClock(settings: LauncherSettings, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val now by rememberNow()
+    val battery by rememberBattery()
+    val locale = Locale.getDefault()
+    val hours = remember(now) { now.format(DateTimeFormatter.ofPattern("HH", locale)) }
+    val minutes = remember(now) { now.format(DateTimeFormatter.ofPattern("mm", locale)) }
+    val date = remember(now) {
+        now.format(DateTimeFormatter.ofPattern("EEE, d. MMMM", locale))
+            .replaceFirstChar { it.titlecase(locale) }
+    }
+    Column(modifier) {
+        RollingText(
+            text = hours,
+            color = Color.White,
+            fontFamily = clockFamily(settings, null),
+            fontWeight = clockWeight(settings, FontWeight.Bold),
+            fontSize = 84.sp,
+            lineHeight = 76.sp,
+            letterSpacing = (-4).sp,
+            style = OnWallpaperText,
+        )
+        RollingText(
+            text = minutes,
+            color = Color.White.copy(alpha = 0.78f),
+            fontFamily = clockFamily(settings, null),
+            fontWeight = clockWeight(settings, FontWeight.Bold),
+            fontSize = 84.sp,
+            lineHeight = 76.sp,
+            letterSpacing = (-4).sp,
+            style = OnWallpaperText,
+        )
+        Row(
+            Modifier.padding(top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            GlassCapsule(onClick = { openCalendar(context) }, padding = PaddingValues(horizontal = 12.dp, vertical = 7.dp)) {
+                Icon(Icons.Rounded.DateRange, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(date, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            }
+            val level = battery
+            if (settings.showBattery && level != null) {
+                GlassCapsule(onClick = { openBattery(context) }, padding = PaddingValues(horizontal = 12.dp, vertical = 7.dp)) {
+                    Text(
+                        (if (level.charging) "⚡ " else "") + "${level.percent} %",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+        }
+        if (settings.showGreeting && !settings.galaxyClaude) {
+            Text(
+                text = greetingFor(now.hour),
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = 15.sp,
+                modifier = Modifier.padding(top = 6.dp),
+                style = OnWallpaperText,
+            )
+        }
+    }
+}
+
 /** Things to start with Claude straight away, like Galaxy AI's suggestions. */
 internal val ClaudePrompts = listOf(
     "Plane meinen Tag" to "Hilf mir, meinen Tag heute zu planen. Frag mich kurz, was ansteht.",
@@ -1420,10 +1522,10 @@ internal val ClaudePrompts = listOf(
 
 /** What Claude says in the Now Brief, by the time of day. */
 private fun briefLine(hour: Int): String = when (hour) {
-    in 5..10 -> "Guten Morgen! Wenn du willst, planen wir zusammen deinen Tag."
+    in 5..10 -> "Wenn du willst, planen wir zusammen deinen Tag."
     in 11..13 -> "Mittagszeit. Brauchst du schnell Hilfe bei etwas?"
     in 14..17 -> "Schönen Nachmittag. Ich bin da, wenn du etwas fragen willst."
-    in 18..22 -> "Guten Abend. Soll ich dir helfen, den Tag abzuschließen?"
+    in 18..22 -> "Soll ich dir helfen, den Tag abzuschließen?"
     else -> "Spät geworden. Noch kurz etwas fragen, bevor du schläfst?"
 }
 
@@ -1442,60 +1544,70 @@ private fun NowBriefCard(onAsk: (String?) -> Unit, modifier: Modifier = Modifier
             java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault())
         }
     }
-    val facts = buildList {
+    // What's worth a glance, each with what a tap on it opens.
+    val facts: List<Pair<String, (Context) -> Unit>> = buildList {
         nextAlarm?.let { alarm ->
             val day = if (alarm.toLocalDate() == now.toLocalDate()) "" else if (alarm.toLocalDate() == now.toLocalDate().plusDays(1)) "morgen " else alarm.format(DateTimeFormatter.ofPattern("EEE ", locale))
-            add("Wecker $day" + alarm.format(DateTimeFormatter.ofPattern("HH:mm", locale)))
+            add(("⏰ Wecker $day" + alarm.format(DateTimeFormatter.ofPattern("HH:mm", locale))) to ::openAlarms)
         }
-        battery?.let { add((if (it.charging) "Lädt · " else "Akku ") + "${it.percent} %") }
+        battery?.let { add(((if (it.charging) "⚡ Lädt · " else "🔋 Akku ") + "${it.percent} %") to ::openBattery) }
+        add(("📅 " + now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale)).replaceFirstChar { it.titlecase(locale) }) to ::openCalendar)
     }
     LiquidGlass(
-        cornerRadius = 28.dp,
+        cornerRadius = 30.dp,
         refraction = 20.dp,
         interactive = true,
-        tint = Color(0xFF7C8CFF).copy(alpha = 0.14f),
+        tint = Color(0xFF7C8CFF).copy(alpha = 0.12f),
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp)),
+            .clip(RoundedCornerShape(30.dp)),
     ) {
-        Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+        Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onAsk(null) },
             ) {
-                Clawd(Modifier.size(28.dp))
-                Spacer(Modifier.width(9.dp))
-                Text("Now Brief", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, style = OnWallpaperText)
-                Text("  ·  Claude", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp, style = OnWallpaperText)
+                Clawd(Modifier.size(24.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("NOW BRIEF", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.5.sp, style = OnWallpaperText)
+                Text("  ·  Claude", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, style = OnWallpaperText)
                 Spacer(Modifier.weight(1f))
                 Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = Color.White.copy(alpha = 0.8f))
             }
+            // Hearth UI 14: the greeting big, then what Claude has to say.
             Text(
-                text = briefLine(now.hour),
-                color = Color.White.copy(alpha = 0.92f),
-                fontSize = 15.sp,
+                text = greetingFor(now.hour),
+                color = Color.White,
+                fontSize = 23.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 6.dp),
                 style = OnWallpaperText,
             )
-            if (facts.isNotEmpty()) {
-                Text(
-                    text = facts.joinToString("   ·   "),
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 13.sp,
-                    modifier = Modifier.padding(top = 4.dp),
-                    style = OnWallpaperText,
-                )
-            }
+            Text(
+                text = briefLine(now.hour),
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = 15.sp,
+                lineHeight = 20.sp,
+                modifier = Modifier.padding(top = 2.dp),
+                style = OnWallpaperText,
+            )
+            // One row of glass chips: at a glance (the next alarm, the battery, today), then
+            // things to ask Claude in his colors.
             Row(
                 Modifier
-                    .padding(top = 10.dp)
+                    .padding(top = 12.dp)
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                facts.forEach { (fact, open) ->
+                    GlassCapsule(onClick = { open(context) }, tint = Color.White.copy(alpha = 0.06f), padding = PaddingValues(horizontal = 12.dp, vertical = 7.dp)) {
+                        Text(fact, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
                 ClaudePrompts.forEach { (label, prompt) ->
-                    GlassCapsule(onClick = { onAsk(prompt) }, padding = PaddingValues(horizontal = 13.dp, vertical = 7.dp)) {
+                    GlassCapsule(onClick = { onAsk(prompt) }, tint = Color(0xFFD97757).copy(alpha = 0.16f), padding = PaddingValues(horizontal = 13.dp, vertical = 7.dp)) {
                         Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     }
                 }
@@ -1676,29 +1788,31 @@ private fun BatteryRing(battery: BatteryState) {
 
 /** Page indicator on a small glass capsule. */
 @Composable
-private fun PageDots(count: Int, current: Int, modifier: Modifier = Modifier) {
-    // One UI: round dots that only light up; elsewhere the current one stretches.
-    val oneUi = LocalSettings.current.galaxyClaude
+private fun PageDots(count: Int, position: () -> Float, modifier: Modifier = Modifier) {
+    // Hearth UI 14: the current page's dot stretches to a pill and flows along with the swipe
+    // (drawn from the pager's position, so swiping never recomposes it).
+    val dot = 6.dp
+    val wide = 18.dp
+    val gap = 8.dp
     LiquidGlass(cornerRadius = 12.dp, refraction = 6.dp, blur = 10.dp, modifier = modifier) {
-        Row(
-            Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-            horizontalArrangement = Arrangement.spacedBy(if (oneUi) 9.dp else 7.dp),
+        Canvas(
+            Modifier
+                .padding(horizontal = 11.dp, vertical = 7.dp)
+                .size(width = wide + (dot + gap) * (count - 1), height = dot),
         ) {
-            repeat(count) { index ->
-                // The current page's dot stretches into a little capsule.
-                val active = index == current
-                val width by animateDpAsState(
-                    targetValue = if (oneUi) 6.dp else if (active) 18.dp else 6.dp,
-                    animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium),
-                    label = "dotWidth",
+            val at = position()
+            val h = size.height
+            var x = 0f
+            for (i in 0 until count) {
+                val near = (1f - kotlin.math.abs(at - i)).coerceIn(0f, 1f)
+                val w = dot.toPx() + (wide - dot).toPx() * near
+                drawRoundRect(
+                    Color.White.copy(alpha = 0.4f + 0.55f * near),
+                    topLeft = Offset(x, 0f),
+                    size = Size(w, h),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2f),
                 )
-                val alpha by animateFloatAsState(if (active) 0.95f else 0.4f, tween(220), label = "dotAlpha")
-                Box(
-                    Modifier
-                        .size(width = width, height = 6.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = alpha)),
-                )
+                x += w + gap.toPx()
             }
         }
     }
