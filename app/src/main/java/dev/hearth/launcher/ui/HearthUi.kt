@@ -121,10 +121,10 @@ object HearthUi {
     }
 
     /** Once: "Hearth UI is now OMEGA UI". */
-    fun omegaSeen(context: Context): Boolean = prefs(context).getBoolean("omega17Seen", false)
+    fun omegaSeen(context: Context): Boolean = prefs(context).getBoolean("omega18Seen", false)
 
     fun markOmegaSeen(context: Context) {
-        prefs(context).edit().putBoolean("omega17Seen", true).apply()
+        prefs(context).edit().putBoolean("omega18Seen", true).apply()
     }
 
     /** OMEGA Labs: show the welcome tour again next time. */
@@ -177,6 +177,56 @@ internal object HearthChangelog {
     private val Slate = Color(0xFF5E6C84)
 
     val releases: List<ChangeRelease> = listOf(
+        ChangeRelease(
+            version = "18.0",
+            name = "Mythos",
+            summary = "Das große Update auf neuer Basis: OMEGA UI 18 auf ClaudeOS 5.0 „Mythos“ – mit Claude Mythos, 25 neuen Vorteilen und einer Farbwelt, die jetzt wirklich alles färbt.",
+            sections = listOf(
+                ChangeSection(
+                    "ClaudeOS 5.0 „Mythos“", Icons.Rounded.Star, Orange,
+                    listOf(
+                        "Neue Basis: ClaudeOS 5.0 mit dem Codenamen „Mythos“ – die Clawd Illuminati, die Vorteile und Claude Mythos gehören jetzt zum Fundament.",
+                        "Neues ClaudeOS-Easter-Egg: den Finger auf das Dunkel halten, bis das goldene Claude-Zeichen erwacht und der Rat der sechs Clawds erscheint.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Claude Mythos", Icons.Rounded.Face, Terracotta,
+                    listOf(
+                        "Der große Schalter ganz oben in den Clawd Illuminati: Solange Mythos an ist, übernehmen die Clawds das ganze System.",
+                        "Alles auf Höchststufe: OMEGA Glass und Fluid im Overdrive, Hyperglas, Heiligenscheine, Parade, allsehendes Auge, Sternenhimmel, Aurora, Glühwürmchen, Sternschnuppen, Parallax, Funkenspur, Leuchtfarben, Riesen-Uhr, Clawd-Schwarm und -Gruß.",
+                        "Ein riesiger goldener Clawd wacht über dem Startbildschirm, oben meldet ein goldenes Banner: „Die Clawds haben übernommen“.",
+                        "Ausgeschaltet ist alles wieder so wie vorher.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "25 neue Vorteile", Icons.Rounded.Favorite, Pink,
+                    listOf(
+                        "Atmosphäre: Schneefall, Glühwürmchen, Seifenblasen, Herbstlaub, Sternenhimmel, Matrix-Regen, Rubin-Regen, Sternschnuppen.",
+                        "Licht: Vignette, Filmkorn, Augenschutz (warmes Licht im ganzen System), Nachtruhe, Aurora-Himmel, Tageszeit-Licht, Akku-Aura, Ω-Wasserzeichen.",
+                        "Bewegung: Parallax beim Neigen, Riesen-Uhr, Icon-Puls, Funkenspur unter dem Finger.",
+                        "Farbe: Noir (Schwarz-Weiß), Sepia, Leuchtfarben – im ganzen System.",
+                        "Clawd: Clawd-Schwarm und Clawd-Gruß.",
+                        "Alle einzeln an- und ausschaltbar in den Clawd Illuminati; „Den Rat auflösen“ schaltet alles auf einmal aus.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Farbwelt", Icons.Rounded.Settings, Violet,
+                    listOf("Die Farbwelt färbt jetzt auch auf dem Startbildschirm alles – OMEGA Glass, OMEGA Fluid, Widgets, Dock, Icons und Menüs. Vorher griff sie dort nicht."),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Easter Eggs", Icons.Rounded.Search, Blue,
+                    listOf(
+                        "OMEGA UI 18: die Schmiede – mit 18 Hammerschlägen wird aus dem Stein der Ω-Rubin.",
+                        "Beim ersten Start zeigt OMEGA UI 18 wieder die große Übergangsanimation.",
+                    ),
+                    hearth,
+                ),
+            ),
+        ),
         ChangeRelease(
             version = "17.6",
             name = "Illuminati",

@@ -162,6 +162,9 @@ import dev.hearth.launcher.data.HearthWidget
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.nightActive
 import dev.hearth.launcher.data.forNight
+import dev.hearth.launcher.data.mythic
+import dev.hearth.launcher.data.Perk
+import dev.hearth.launcher.data.has
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.SwipeDownAction
 import kotlinx.coroutines.delay
@@ -183,7 +186,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val clock = rememberNow()
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
     val night by remember(systemDark) { derivedStateOf { storedSettings.nightActive(clock.value.hour, systemDark) } }
-    val settings = remember(storedSettings, night) { if (night) storedSettings.forNight() else storedSettings }
+    // OMEGA UI 18: Claude Mythos lays its takeover over everything chosen.
+    val settings = remember(storedSettings, night) { (if (night) storedSettings.forNight() else storedSettings).mythic() }
     val library by vm.library.collectAsStateWithLifecycle()
     val assistantOpen by vm.assistantOpen.collectAsStateWithLifecycle()
     val appUsage by vm.appUsage.collectAsStateWithLifecycle()
@@ -670,6 +674,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
         LocalGlassLight provides light,
         LocalPhotoPicker provides requestPhotos,
         LocalBadges provides badges,
+        // OMEGA UI 18: the color world is laid over the root below, with these settings.
+        LocalColorWorldApplied provides true,
         // Remembered, so icons don't all recompose whenever the home screen does.
         LocalSelection provides remember(selecting, selected) {
             SelectionState(selecting, selected) { app ->
@@ -680,6 +686,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
         Box(
             Modifier
                 .fillMaxSize()
+                // OMEGA UI 18: Farbwelt, Noir, Sepia, Leuchtfarben, Augenschutz – now really on
+                // the home screen (the theme above doesn't know these settings yet).
+                .colorWorld()
                 .onSizeChanged { rootWidth = it.width }
                 // While an app is dragged, this follows the finger everywhere and keeps the touch
                 // away from pages and icons below.
@@ -708,9 +717,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         }
                     },
             ) {
+                // OMEGA UI 18, Funkenspur: every touch on the home screen throws sparks.
+                val sparkField = remember(settings.has(Perk.Sparks)) { if (settings.has(Perk.Sparks)) SparkField() else null }
                 Box(
                     Modifier
                         .fillMaxSize()
+                        .sparkSource(sparkField)
                         .background(Color.Black.copy(alpha = settings.dimWallpaper.coerceIn(0f, 0.9f)))
                         .background(
                             Brush.verticalGradient(
@@ -732,6 +744,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 ) {
                     // OMEGA UI 17.5: OMEGA light between the wallpaper and the apps and widgets.
                     OmegaHomeLight(Modifier.matchParentSize())
+                    // OMEGA UI 18: the perks behind the apps and widgets (and Claude Mythos's Clawd).
+                    PerkBackLayers(settings, Modifier.matchParentSize())
                     // OMEGA UI 17.5, Clawd Illumination: Ω rising behind everything.
                     if (settings.omegaRain) OmegaRain(Modifier.matchParentSize())
                     // OMEGA UI 17.6, Clawd Illuminati: the eye watches from the top.
@@ -744,7 +758,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                 .size(width = 46.dp, height = 40.dp),
                         )
                     }
-                    Column(Modifier.fillMaxSize().systemBarsPadding()) {
+                    Column(Modifier.fillMaxSize().parallax(settings.has(Perk.Parallax)).systemBarsPadding()) {
                         HorizontalPager(
                             state = pagerState,
                             beyondViewportPageCount = 1,
@@ -811,7 +825,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                 )
                                 Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
                                     if (page == 0) {
-                                        HomeHeader(settings, Modifier.padding(start = 4.dp, end = 4.dp, top = 20.dp, bottom = 12.dp))
+                                        HomeHeader(
+                                            settings,
+                                            Modifier
+                                                .padding(start = 4.dp, end = 4.dp, top = 20.dp, bottom = 12.dp)
+                                                .then(if (settings.has(Perk.GiantClock)) Modifier.grow(1.3f) else Modifier),
+                                        )
                                         if (settings.galaxyClaude) {
                                             NowBriefCard(
                                                 onAsk = { vm.askClaude(it) },
@@ -932,6 +951,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     }
                     // OMEGA UI 17.5, Clawd Illumination: now and then a parade of Clawds marches
                     // along the top of the dock.
+                    // OMEGA UI 18: the perks over the home screen – and Claude Mythos's banner.
+                    PerkFrontLayers(settings, sparkField, if (dockBounds.height > 0f) dockBounds.top else 0f)
                     if (settings.clawdParade && dockBounds.height > 0f) {
                         ClawdParade(
                             Modifier

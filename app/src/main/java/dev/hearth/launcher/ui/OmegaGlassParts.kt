@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.ClawdMood
+import dev.hearth.launcher.data.has
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -105,7 +106,15 @@ internal fun OmegaScreenBackdrop(
 internal fun OmegaHomeLight(modifier: Modifier = Modifier) {
     val s = LocalSettings.current
     if (!s.omegaGlass || !s.omegaLight || !s.fluidDesign) return
-    val palette = fluidPalette()
+    // OMEGA UI 18, Tageszeit-Licht: the light follows the day.
+    val hour = if (s.has(dev.hearth.launcher.data.Perk.DayLight)) java.time.LocalTime.now().hour else -1
+    val palette = when (hour) {
+        -1 -> fluidPalette()
+        in 5..10 -> listOf(Color(0xFFFFC46B), Color(0xFFFF9F45), Color(0xFFFFE0A3), Color(0xFFFFB86B), Color(0xFFFFF1D0))
+        in 11..16 -> listOf(Color(0xFF9CD8FF), Color(0xFFFFF2B3), Color(0xFFBDE8FF), Color(0xFFFFFFFF), Color(0xFFE6F6FF))
+        in 17..20 -> listOf(Color(0xFFFF5A3C), Color(0xFFC8102E), Color(0xFFFF8A5C), Color(0xFFFF4F7A), Color(0xFFFFC2A8))
+        else -> listOf(Color(0xFF2F4BFF), Color(0xFF14206B), Color(0xFF5C7CFF), Color(0xFF8E6BFF), Color(0xFFBFD0FF))
+    }
     val dark = LocalGlassStyle.current.dark
     val power = (if (dark) 0.6f else 1f) * (if (s.omegaOverdrive) 1.3f else 1f)
     val flow = flowPhase(30_000, s.animations)

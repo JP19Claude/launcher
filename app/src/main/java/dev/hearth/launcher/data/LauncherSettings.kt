@@ -481,6 +481,10 @@ data class LauncherSettings(
     val giantClawd: Boolean = false,
     /** OMEGA UI 17.6, Clawd Illuminati: the all-seeing eye watching over the home screen. */
     val allSeeingEye: Boolean = false,
+    /** OMEGA UI 18, Clawd Illuminati: the perks switched on (names of [Perk]). */
+    val perks: Set<String> = emptySet(),
+    /** OMEGA UI 18: Claude Mythos – while on, the Clawds take over the whole system. */
+    val mythos: Boolean = false,
     val clawdCompanion: Boolean = true,
     val clockFont: ClockFont = ClockFont.Default,
     val labelSize: LabelSize = LabelSize.Normal,
@@ -944,6 +948,8 @@ class SettingsRepository(context: Context) {
             clawdHalo = prefs.getBoolean("clawdHalo", d.clawdHalo),
             giantClawd = prefs.getBoolean("giantClawd", d.giantClawd),
             allSeeingEye = prefs.getBoolean("allSeeingEye", d.allSeeingEye),
+            perks = prefs.getStringSet("perks", null)?.toSet() ?: d.perks,
+            mythos = prefs.getBoolean("mythos", d.mythos),
             clawdCompanion = prefs.getBoolean("clawdCompanion", d.clawdCompanion),
             // Older installs had only "double tap locks" on or off.
             doubleTapAction = enumOf(
@@ -1097,6 +1103,8 @@ class SettingsRepository(context: Context) {
             .putBoolean("clawdHalo", s.clawdHalo)
             .putBoolean("giantClawd", s.giantClawd)
             .putBoolean("allSeeingEye", s.allSeeingEye)
+            .putStringSet("perks", s.perks)
+            .putBoolean("mythos", s.mythos)
             .putBoolean("clawdCompanion", s.clawdCompanion)
             .putString("doubleTapAction", s.doubleTapAction.name)
             .putString("clockFont", s.clockFont.name)
@@ -1268,3 +1276,63 @@ fun LauncherSettings.nightActive(hour: Int, systemDark: Boolean = false): Boolea
 
 /** The dark mode look: only the glass gets darker – dock, widgets, menus, search bar. */
 fun LauncherSettings.forNight(): LauncherSettings = copy(darkGlass = true)
+
+/**
+ * OMEGA UI 18, Clawd Illuminati: the perks – small and big things to switch on all over the
+ * system. Stored by name in [LauncherSettings.perks].
+ */
+enum class Perk(val title: String, val emoji: String, val text: String, val group: String) {
+    Snow("Schneefall", "❄", "Leise Flocken fallen über den Startbildschirm.", "Atmosphäre"),
+    Fireflies("Glühwürmchen", "✨", "Kleine Lichter schweben und glimmen hinter Apps und Widgets.", "Atmosphäre"),
+    Bubbles("Seifenblasen", "○", "Schillernde Blasen steigen langsam auf.", "Atmosphäre"),
+    Leaves("Herbstlaub", "🍂", "Blätter in Rot und Gold segeln herab.", "Atmosphäre"),
+    Stars("Sternenhimmel", "⭐", "Funkelnde Sterne hinter allem.", "Atmosphäre"),
+    Matrix("Matrix-Regen", "▦", "Grüne Zeichen rieseln wie im Film.", "Atmosphäre"),
+    Rubies("Rubin-Regen", "♦", "Kleine Rubine glitzern im Fallen.", "Atmosphäre"),
+    Comets("Sternschnuppen", "☄", "Ab und zu zieht eine Sternschnuppe über den Himmel.", "Atmosphäre"),
+    Vignette("Vignette", "◐", "Dunkle, weiche Ecken wie im Kino.", "Licht"),
+    Grain("Filmkorn", "▒", "Feines Korn über dem Startbildschirm, wie auf echtem Film.", "Licht"),
+    EyeCare("Augenschutz", "🌙", "Warmes Licht im ganzen System – schont abends die Augen.", "Licht"),
+    NightRest("Nachtruhe", "💤", "Zwischen 23 und 6 Uhr wird der Startbildschirm sanft dunkler.", "Licht"),
+    Aurora("Aurora-Himmel", "🌌", "Nordlichter wehen oben über den Startbildschirm.", "Licht"),
+    DayLight("Tageszeit-Licht", "🌅", "Die OMEGA-Beleuchtung folgt dem Tag: morgens Gold, mittags hell, abends Rot, nachts Blau.", "Licht"),
+    BatteryAura("Akku-Aura", "🔋", "Unten leuchtet der Akku: grün voll, rot fast leer, beim Laden pulsierend.", "Licht"),
+    OmegaMark("Ω-Wasserzeichen", "Ω", "Ein großes, leises Ω mitten im Hintergrund.", "Licht"),
+    Parallax("Parallax", "◇", "Der Startbildschirm bewegt sich mit, wenn du das Handy neigst – echte Tiefe.", "Bewegung"),
+    GiantClock("Riesen-Uhr", "🕰", "Die Uhr auf dem Startbildschirm ein gutes Stück größer.", "Bewegung"),
+    Pulse("Icon-Puls", "♥", "Die Apps atmen sanft, jede in ihrem Takt.", "Bewegung"),
+    Sparks("Funkenspur", "✦", "Wo dein Finger den Startbildschirm berührt, sprühen OMEGA-Funken.", "Bewegung"),
+    Noir("Noir", "◑", "Das ganze System in Schwarz-Weiß.", "Farbe"),
+    Sepia("Sepia", "📜", "Das ganze System in warmen, alten Farben.", "Farbe"),
+    Vivid("Leuchtfarben", "🌈", "Alle Farben im ganzen System viel kräftiger.", "Farbe"),
+    Swarm("Clawd-Schwarm", "🦀", "Drei weitere Clawds wandern über den Startbildschirm.", "Clawd"),
+    Greeting("Clawd-Gruß", "👋", "Ab und zu schaut ein Clawd vom Rand herein und winkt.", "Clawd"),
+}
+
+/** Is this perk on? */
+fun LauncherSettings.has(perk: Perk): Boolean = perk.name in perks
+
+/** What Claude Mythos switches on (besides its own takeover). */
+val MythosPerks: Set<String> = setOf(
+    Perk.Stars, Perk.Fireflies, Perk.Aurora, Perk.Comets, Perk.Parallax, Perk.Sparks,
+    Perk.Vignette, Perk.Swarm, Perk.Greeting, Perk.Vivid, Perk.GiantClock,
+).map { it.name }.toSet()
+
+/**
+ * OMEGA UI 18, Claude Mythos: while it is on, the Clawds take over – everything at its
+ * strongest (OMEGA Glass and Fluid in Overdrive, Hyperglas, halos, the parade, the eye, the
+ * best perks), on top of what was chosen. Switched off, everything is as it was.
+ */
+fun LauncherSettings.mythic(): LauncherSettings = if (!mythos) this else copy(
+    omegaGlass = true,
+    omegaLight = true,
+    fluidDesign = true,
+    animations = true,
+    omegaOverdrive = true,
+    hyperGlass = true,
+    clawdHalo = true,
+    clawdParade = true,
+    clawdCompanion = true,
+    allSeeingEye = true,
+    perks = perks + MythosPerks,
+)

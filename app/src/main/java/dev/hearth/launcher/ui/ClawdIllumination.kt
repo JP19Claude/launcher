@@ -61,6 +61,8 @@ import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.ColorWorld
 import dev.hearth.launcher.data.EasterEggs
 import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.data.Perk
+import dev.hearth.launcher.data.has
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -146,7 +148,7 @@ fun ClawdIlluminationScreen(
     val turn = flowPhase(36_000, animate)
     val anyOn = settings.omegaOverdrive || settings.hyperGlass || settings.colorWorld != ColorWorld.Off ||
         settings.omegaRain || settings.weightless || settings.clawdParade || settings.omegaZeros ||
-        settings.clawdHalo || settings.giantClawd || settings.allSeeingEye
+        settings.clawdHalo || settings.giantClawd || settings.allSeeingEye || settings.perks.isNotEmpty() || settings.mythos
     val glow by animateFloatAsState(if (anyOn) 1f else 0.6f, spring(stiffness = 120f), label = "illuminationGlow")
 
     Box(
@@ -218,6 +220,10 @@ fun ClawdIlluminationScreen(
             )
             Spacer(Modifier.height(20.dp))
 
+            // OMEGA UI 18: Claude Mythos – the Clawds take over the whole system.
+            MythosCard(settings.mythos) { v -> onChange { it.copy(mythos = v) } }
+            Spacer(Modifier.height(18.dp))
+
             IlluminationSection("Ω System") {
                 IlluminationSwitch(
                     "⚡", "Ω-Overdrive",
@@ -252,6 +258,16 @@ fun ClawdIlluminationScreen(
                     "Clawd auf dem Startbildschirm, zweieinhalbmal so groß.",
                     settings.giantClawd,
                 ) { v -> onChange { it.copy(giantClawd = v) } }
+            }
+            // OMEGA UI 18: the perks, by group.
+            listOf("Atmosphäre", "Licht", "Bewegung", "Farbe", "Clawd").forEach { group ->
+                IlluminationSection("Vorteile · $group") {
+                    Perk.entries.filter { it.group == group }.forEach { perk ->
+                        IlluminationSwitch(perk.emoji, perk.title, perk.text, settings.has(perk)) { v ->
+                            onChange { it.copy(perks = if (v) it.perks + perk.name else it.perks - perk.name) }
+                        }
+                    }
+                }
             }
             IlluminationSection("Uhr & Clawd") {
                 IlluminationSwitch(
@@ -291,6 +307,8 @@ fun ClawdIlluminationScreen(
                                 clawdHalo = false,
                                 giantClawd = false,
                                 allSeeingEye = false,
+                                perks = emptySet(),
+                                mythos = false,
                             )
                         }
                     }
@@ -318,6 +336,82 @@ fun ClawdIlluminationScreen(
         ) {
             Icon(Icons.Rounded.Close, contentDescription = "Schließen", tint = Color.White)
         }
+    }
+}
+
+/**
+ * OMEGA UI 18: Claude Mythos – the big switch. While it's on, the Clawds take over: everything
+ * at its strongest, a giant golden Clawd over the home screen, Clawds everywhere.
+ */
+@Composable
+private fun MythosCard(on: Boolean, onToggle: (Boolean) -> Unit) {
+    val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "mythos")
+    val shine by t.animateFloat(
+        0f,
+        1f,
+        androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(3200, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "mythosShine",
+    )
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(CutCornerShape(22.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(Color(0xFF2A1206), Color(0xFF5A2A08), Color(0xFF2A1206)),
+                    start = Offset(shine * 1200f - 400f, 0f),
+                    end = Offset(shine * 1200f + 200f, 400f),
+                ),
+            )
+            .border(if (on) 2.dp else 1.dp, IlluminatiGold.copy(alpha = if (on) 1f else 0.6f), CutCornerShape(22.dp))
+            .clickable { onToggle(!on) }
+            .padding(18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Clawd(Modifier.size(width = 46.dp, height = 40.dp), mood = if (on) ClawdMood.Dance else ClawdMood.Idle, color = IlluminatiGold)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "CLAUDE MYTHOS",
+                    style = TextStyle(
+                        brush = Brush.linearGradient(listOf(Color(0xFFFFF1C2), IlluminatiGold)),
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                        letterSpacing = 2.sp,
+                    ),
+                )
+                Text(
+                    if (on) "Die Clawds haben übernommen." else "Lass die Clawds das System übernehmen.",
+                    color = Color(0xFFFFE08A).copy(alpha = 0.8f),
+                    fontSize = 13.sp,
+                )
+            }
+            Switch(
+                checked = on,
+                onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = Color(0xFFB8860B),
+                    checkedBorderColor = Color(0xFFFFF1C2),
+                    uncheckedThumbColor = Color.White.copy(alpha = 0.7f),
+                    uncheckedTrackColor = Color.White.copy(alpha = 0.1f),
+                    uncheckedBorderColor = IlluminatiGold.copy(alpha = 0.5f),
+                ),
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "Solange Mythos an ist, läuft alles auf Höchststufe: OMEGA Glass und Fluid im Overdrive, Hyperglas, Heiligenscheine, " +
+                "die Parade, das allsehende Auge, Sternenhimmel, Aurora, Glühwürmchen, Sternschnuppen, Parallax, Funkenspur, " +
+                "Leuchtfarben, Riesen-Uhr, Clawd-Schwarm und -Gruß – und ein riesiger goldener Clawd wacht über dem Startbildschirm. " +
+                "Aus: alles wie vorher.",
+            color = Color.White.copy(alpha = 0.65f),
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

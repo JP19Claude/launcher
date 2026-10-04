@@ -28,6 +28,9 @@ import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.ClawdHat
 import dev.hearth.launcher.data.ClawdOutfit
 import dev.hearth.launcher.data.ColorWorld
+import dev.hearth.launcher.data.Perk
+import dev.hearth.launcher.data.has
+import androidx.compose.ui.draw.drawWithContent
 import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos
@@ -38,7 +41,7 @@ import kotlin.math.sin
  * Ω rain behind the home screen, weightless icons, a Clawd parade on the dock, Ω for zeros.
  */
 
-private val LocalColorWorldApplied = staticCompositionLocalOf { false }
+internal val LocalColorWorldApplied = staticCompositionLocalOf { false }
 
 /** The hue of everything turned by [degrees] (luminance kept), as a 4×5 color matrix. */
 private fun hueMatrix(degrees: Float): FloatArray {
@@ -71,24 +74,71 @@ private fun hueEffect(degrees: Float): androidx.compose.ui.graphics.RenderEffect
  */
 @Composable
 internal fun ProvideColorWorld(content: @Composable () -> Unit) {
-    val world = LocalSettings.current.colorWorld
     val nested = LocalColorWorldApplied.current
-    val on = !nested && world != ColorWorld.Off && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    val spectrum = on && world == ColorWorld.Spectrum
-    val turn = flowPhase(40_000, spectrum && LocalSettings.current.animations)
-    val still = remember(world, on) { if (on && !spectrum) hueEffect(world.degrees) else null }
-    CompositionLocalProvider(LocalColorWorldApplied provides (nested || on)) {
+    CompositionLocalProvider(LocalColorWorldApplied provides true) {
         Box(
-            Modifier.graphicsLayer {
-                renderEffect = when {
-                    !on -> null
-                    spectrum -> hueEffect(Math.toDegrees((turn?.invoke() ?: 1f).toDouble()).toFloat())
-                    else -> still
-                }
-            },
+            if (nested) Modifier else Modifier.colorWorld(),
             propagateMinConstraints = true,
         ) { content() }
     }
+}
+
+/**
+ * The color world on whatever it's put on (the root of a screen): Farbwelt's hue (or Spektrum),
+ * Noir, Sepia, Leuchtfarben – and Augenschutz's warm light over it. Put it on once per window
+ * and provide [LocalColorWorldApplied] below it, so nested themes don't apply it twice.
+ */
+internal fun Modifier.colorWorld(): Modifier = composed {
+    val settings = LocalSettings.current
+    val world = settings.colorWorld
+    val canFilter = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    // OMEGA UI 18: Noir, Sepia and Leuchtfarben join the color world.
+    val noir = settings.has(Perk.Noir)
+    val sepia = settings.has(Perk.Sepia)
+    val vivid = settings.has(Perk.Vivid)
+    val on = canFilter && (world != ColorWorld.Off || noir || sepia || vivid)
+    val warm = settings.has(Perk.EyeCare)
+    val spectrum = on && world == ColorWorld.Spectrum
+    val turn = flowPhase(40_000, spectrum && settings.animations)
+    val hue: Float? = if (world == ColorWorld.Off || world == ColorWorld.Spectrum) null else world.degrees
+    val still = remember(world, on, noir, sepia, vivid) { if (on && !spectrum) worldEffect(hue, noir, sepia, vivid) else null }
+    this
+        .graphicsLayer {
+            renderEffect = when {
+                !on -> null
+                spectrum -> worldEffect(Math.toDegrees((turn?.invoke() ?: 1f).toDouble()).toFloat(), noir, sepia, vivid)
+                else -> still
+            }
+        }
+        // Augenschutz: warm light over everything.
+        .then(if (warm) Modifier.drawWithContent { drawContent(); drawRect(Color(0x2EFF8A2A)) } else Modifier)
+}
+
+/** The color world's filter: the hue turned by [hue] (if any), then black-and-white, sepia or vivid. */
+private fun worldEffect(hue: Float?, noir: Boolean, sepia: Boolean, vivid: Boolean): androidx.compose.ui.graphics.RenderEffect? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
+    val m = android.graphics.ColorMatrix()
+    if (hue != null) m.postConcat(android.graphics.ColorMatrix(hueMatrix(hue)))
+    if (noir) {
+        m.postConcat(android.graphics.ColorMatrix().apply { setSaturation(0f) })
+    } else if (vivid) {
+        m.postConcat(android.graphics.ColorMatrix().apply { setSaturation(1.65f) })
+    }
+    if (sepia) {
+        m.postConcat(
+            android.graphics.ColorMatrix(
+                floatArrayOf(
+                    0.393f, 0.769f, 0.189f, 0f, 0f,
+                    0.349f, 0.686f, 0.168f, 0f, 0f,
+                    0.272f, 0.534f, 0.131f, 0f, 0f,
+                    0f, 0f, 0f, 1f, 0f,
+                ),
+            ),
+        )
+    }
+    return android.graphics.RenderEffect
+        .createColorFilterEffect(android.graphics.ColorMatrixColorFilter(m))
+        .asComposeRenderEffect()
 }
 
 /** One Ω of the rain: where it rises, how fast (whole rounds per cycle), how big, which color. */
