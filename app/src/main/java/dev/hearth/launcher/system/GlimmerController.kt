@@ -741,6 +741,18 @@ class GlimmerController(private val service: GlimmerService) {
             s.launch {
                 NotificationHub.codes.collect { if (settings.glimmerCodes) showCode(it) }
             }
+            // Glimmer Drop: the island tells what's happening between the two phones.
+            s.launch {
+                dev.hearth.launcher.data.GlimmerDrop.island.collect { m ->
+                    flash(IslandContent.Alert(Glyph.Spark, m.title, m.value, Color(0xFF5E9BFF), m.level))
+                }
+            }
+            // While unlocked, Glimmer feels a phone held against this one.
+            s.launch {
+                kotlinx.coroutines.flow.combine(locked, dozing) { l, d -> !l && !d }.collect { awake ->
+                    dev.hearth.launcher.data.GlimmerDrop.setBackground(service, awake)
+                }
+            }
             s.launch {
                 media.nowPlaying.collect { now ->
                     handler.removeCallbacks(dropMedia)
@@ -783,6 +795,7 @@ class GlimmerController(private val service: GlimmerService) {
     }
 
     fun stop() {
+        dev.hearth.launcher.data.GlimmerDrop.setBackground(service, false)
         runCatching { service.getSystemService(DisplayManager::class.java)?.unregisterDisplayListener(displayListener) }
         runCatching { camera?.unregisterTorchCallback(torchCallback) }
         runCatching { camera?.unregisterAvailabilityCallback(cameraUse) }

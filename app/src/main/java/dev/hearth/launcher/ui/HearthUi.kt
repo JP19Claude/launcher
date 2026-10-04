@@ -169,6 +169,41 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "15.5",
+            name = "Glimmer Drop",
+            summary = "Zwei Handys aneinanderhalten und teilen – wie NameDrop und AirDrop.",
+            sections = listOf(
+                ChangeSection(
+                    "Glimmer Drop", Icons.Rounded.Favorite, Blue,
+                    listOf(
+                        "Halte die Oberkanten zweier Handys mit Hearth UI aneinander: Glimmers Insel leuchtet auf, wächst zum anderen Handy hin, und Licht fließt über den Bildschirm.",
+                        "Teilen lässt sich alles Mögliche: deine Kontaktkarte (Name, Telefon, E-Mail, Instagram, Website), Fotos, Videos, Dateien, Links und Text.",
+                        "Das andere Handy sieht, was kommt, und tippt auf „Annehmen“ oder „Ablehnen“ – vorher wird nichts gespeichert.",
+                        "Schnell über eine direkte Verbindung (Bluetooth und Wi-Fi Direct), ganz ohne Internet.",
+                        "Empfangene Fotos und Videos landen in der Galerie, Dateien unter Downloads (Ordner „Glimmer Drop“); Kontakte mit einem Tipp in die Kontakte, Links öffnen oder kopieren.",
+                    ),
+                    withGlimmer,
+                ),
+                ChangeSection(
+                    "Überall erreichbar", Icons.Rounded.Menu, Violet,
+                    listOf(
+                        "Bereit, wenn entsperrt: Glimmer merkt im Hintergrund, wenn ein Handy an deins gehalten wird, und öffnet Glimmer Drop von selbst.",
+                        "Aus jeder App: Teilen → „Glimmer Drop“.",
+                        "Im Hearth-Menü und unter Einstellungen → Glimmer → Glimmer Drop.",
+                        "Die Insel zeigt mit, was passiert: erkannt, senden, empfangen.",
+                    ),
+                    withGlimmer,
+                ),
+                ChangeSection(
+                    "Easter Eggs", Icons.Rounded.Star, Orange,
+                    listOf(
+                        "Hearth UI 15.5: „Funken“ – zieh zwei Glimmer-Inseln zusammen und lass es fünfmal funken.",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "15.1",
             name = "Dunkelmodus",
             summary = "Der Nachtmodus wird zum Dunkelmodus: dunkles Glas überall.",

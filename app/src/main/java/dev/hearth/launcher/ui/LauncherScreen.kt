@@ -1121,6 +1121,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             if (settings.galaxyClaude) drawerOpen = true else searchOpen = true
                         },
                         HubTile("Clawd", Icons.Rounded.Face, Color(0xFFD97757)) { vm.askClaude() },
+                        HubTile("Glimmer\nDrop", Icons.Rounded.Share, Color(0xFF5E9BFF)) {
+                            runCatching { context.startActivity(Intent(context, dev.hearth.launcher.DropActivity::class.java)) }
+                        },
                         HubTile("Widgets", Icons.Rounded.Add, Color(0xFF34C759)) {
                             widgetTarget = (pagerState.currentPage - widgetPages).coerceAtLeast(0)
                             widgetPickerOpen = true

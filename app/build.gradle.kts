@@ -12,9 +12,9 @@ android {
         applicationId = "dev.hearth.launcher"
         minSdk = 28
         targetSdk = 35
-        versionCode = 112
+        versionCode = 113
         // Small updates (fixes, little things) +0.1, big ones (many features, redesign) +0.5.
-        versionName = "15.1"
+        versionName = "15.5"
         // Hearth One (everything in one app) says so; the separate apps don't.
         buildConfigField("boolean", "ALL_IN_ONE", "false")
     }
@@ -104,6 +104,8 @@ dependencies {
     // Shizuku: system switches (Wi-Fi, Bluetooth, mobile data …) with ADB rights, no root.
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
+    // Glimmer Drop: the fast direct connection between two phones held together.
+    implementation("com.google.android.gms:play-services-nearby:19.3.0")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
