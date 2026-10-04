@@ -168,5 +168,14 @@
             </intent-filter>
         </service>
 
+
+        <!-- Shizuku hands Hearth its binder through this (system switches with ADB rights). -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
     </application>
 </manifest>

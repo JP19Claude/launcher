@@ -164,6 +164,21 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "14.2",
+            name = "Shizuku",
+            summary = "Hearth schaltet jetzt selbst, was Android normalen Apps verbietet.",
+            sections = listOf(
+                ChangeSection(
+                    "Erweiterte Schalter mit Shizuku", Icons.Rounded.Settings, Blue,
+                    listOf(
+                        "Unter Einstellungen → System: mit der kostenlosen App Shizuku schaltet Hearth WLAN, Bluetooth, mobile Daten, Flugmodus, Standort, NFC, Dunkelmodus und Energiesparen selbst – ohne Root.",
+                        "Hearth führt dich Schritt für Schritt hin: Shizuku installieren, starten (kabelloses Debugging), Hearth erlauben.",
+                    ),
+                    hearth,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "14.1",
             name = "Systemeinstellungen",
             summary = "Die Einstellungen deines Handys jetzt auch in Hearth.",

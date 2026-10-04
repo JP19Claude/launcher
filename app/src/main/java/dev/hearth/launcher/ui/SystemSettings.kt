@@ -56,7 +56,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import dev.hearth.launcher.data.ControlState
+import dev.hearth.launcher.data.ShizukuBridge
 import dev.hearth.launcher.data.SystemControls
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import rikka.shizuku.Shizuku
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -209,6 +215,7 @@ internal fun SystemSettingsContent(controls: SystemControls) {
     }
 
     Column {
+        ShizukuSection(state) { state = controls.state() }
         Section("Schnell einstellen") {
             if (!state.canWriteSettings) {
                 Note("Für Helligkeit, automatisches Drehen und den Bildschirm-Timeout braucht Hearth einmal die Erlaubnis „Systemeinstellungen ändern“.")
@@ -316,3 +323,98 @@ private fun SystemPageRow(page: SystemPage, onClick: () -> Unit) {
         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = Color.White.copy(alpha = 0.5f))
     }
 }
+
+/**
+ * Shizuku: switches Android keeps from normal apps (Wi-Fi, Bluetooth, mobile data …), switched
+ * by Hearth with ADB rights. Until Shizuku is ready, the steps to get there.
+ */
+@Composable
+private fun ShizukuSection(state: ControlState, onChanged: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var status by remember { mutableStateOf(ShizukuBridge.status(context)) }
+    // What was just switched shows at once; the real state is read again a moment later.
+    var pending by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    var mobileData by remember { mutableStateOf(readMobileData(context)) }
+    val hasNfc = remember { runCatching { android.nfc.NfcAdapter.getDefaultAdapter(context) != null }.getOrDefault(false) }
+
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val refresh = {
+            status = ShizukuBridge.status(context)
+            mobileData = readMobileData(context)
+        }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) refresh() }
+        val received = Shizuku.OnBinderReceivedListener { refresh() }
+        val dead = Shizuku.OnBinderDeadListener { refresh() }
+        val result = Shizuku.OnRequestPermissionResultListener { _, _ -> refresh() }
+        lifecycle.addObserver(observer)
+        runCatching {
+            Shizuku.addBinderReceivedListenerSticky(received)
+            Shizuku.addBinderDeadListener(dead)
+            Shizuku.addRequestPermissionResultListener(result)
+        }
+        onDispose {
+            lifecycle.removeObserver(observer)
+            runCatching {
+                Shizuku.removeBinderReceivedListener(received)
+                Shizuku.removeBinderDeadListener(dead)
+                Shizuku.removeRequestPermissionResultListener(result)
+            }
+        }
+    }
+
+    fun switch(key: String, on: Boolean, action: suspend (Boolean) -> Boolean) {
+        pending = pending + (key to on)
+        scope.launch {
+            action(on)
+            delay(900)
+            mobileData = readMobileData(context)
+            onChanged()
+            pending = pending - key
+        }
+    }
+
+    Section("Shizuku · Erweiterte Schalter") {
+        when (status) {
+            ShizukuBridge.Status.NotInstalled -> {
+                Note("Mit der kostenlosen App Shizuku kann Hearth WLAN, Bluetooth, mobile Daten, Flugmodus, Standort, NFC, Dunkelmodus und Energiesparen selbst schalten – ohne Root und ohne neue ROM.")
+                SystemPageRow(SystemPage("Shizuku installieren", "Kostenlos, aus dem Play Store", Color(0xFF3E91FF), emptyList(), icon = Icons.Rounded.Refresh)) {
+                    ShizukuBridge.openApp(context)
+                }
+            }
+            ShizukuBridge.Status.NotRunning -> {
+                Note("Shizuku ist installiert, läuft aber noch nicht. Öffne Shizuku, schalte unter Entwickleroptionen „Kabelloses Debugging“ ein und tippe in Shizuku auf „Starten“. Nach jedem Neustart einmal.")
+                SystemPageRow(SystemPage("Shizuku öffnen", "Und dort starten", Color(0xFF3E91FF), emptyList(), icon = Icons.Rounded.Refresh)) {
+                    ShizukuBridge.openApp(context)
+                }
+                SystemPageRow(SystemPage("Entwickleroptionen", "Kabelloses Debugging", Color(0xFFFF453A), emptyList(), icon = Icons.Rounded.Build)) {
+                    runCatching {
+                        context.startActivity(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                }
+            }
+            ShizukuBridge.Status.NoPermission -> {
+                Note("Shizuku läuft. Erlaube Hearth einmal, es zu benutzen.")
+                SystemPageRow(SystemPage("Hearth erlauben", "Zugriff auf Shizuku", Color(0xFF34C759), emptyList(), icon = Icons.Rounded.Settings)) {
+                    ShizukuBridge.requestPermission()
+                }
+            }
+            ShizukuBridge.Status.Ready -> {
+                SwitchRow("WLAN", pending["wifi"] ?: state.wifi) { v -> switch("wifi", v, ShizukuBridge::setWifi) }
+                SwitchRow("Bluetooth", pending["bt"] ?: state.bluetooth) { v -> switch("bt", v, ShizukuBridge::setBluetooth) }
+                SwitchRow("Mobile Daten", pending["data"] ?: mobileData) { v -> switch("data", v, ShizukuBridge::setMobileData) }
+                SwitchRow("Flugmodus", pending["air"] ?: state.airplane) { v -> switch("air", v, ShizukuBridge::setAirplane) }
+                SwitchRow("Standort", pending["loc"] ?: state.location) { v -> switch("loc", v, ShizukuBridge::setLocation) }
+                if (hasNfc) SwitchRow("NFC", pending["nfc"] ?: state.nfc) { v -> switch("nfc", v, ShizukuBridge::setNfc) }
+                SwitchRow("Dunkelmodus", pending["dark"] ?: state.darkMode) { v -> switch("dark", v, ShizukuBridge::setDarkMode) }
+                SwitchRow("Energiesparmodus", pending["saver"] ?: state.batterySaver) { v -> switch("saver", v, ShizukuBridge::setBatterySaver) }
+                Note("Über Shizuku verbunden – Hearth schaltet mit ADB-Rechten.")
+            }
+        }
+    }
+}
+
+/** Whether mobile data is switched on (not whether it's in use right now). */
+private fun readMobileData(context: Context): Boolean =
+    runCatching { Settings.Global.getInt(context.contentResolver, "mobile_data", 1) == 1 }.getOrDefault(true)

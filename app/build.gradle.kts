@@ -12,9 +12,9 @@ android {
         applicationId = "dev.hearth.launcher"
         minSdk = 28
         targetSdk = 35
-        versionCode = 103
+        versionCode = 104
         // Small updates (fixes, little things) +0.1, big ones (many features, redesign) +0.5.
-        versionName = "14.1"
+        versionName = "14.2"
         // Hearth One (everything in one app) says so; the separate apps don't.
         buildConfigField("boolean", "ALL_IN_ONE", "false")
     }
@@ -101,6 +101,9 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-core")
+    // Shizuku: system switches (Wi-Fi, Bluetooth, mobile data …) with ADB rights, no root.
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
