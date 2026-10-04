@@ -1040,10 +1040,20 @@ internal fun GlimmerDropSettings() {
     }
     // Ready but not allowed yet: ask once by itself, so holding two phones together just works.
     LaunchedEffect(Unit) {
-        if (GlimmerDrop.ready.value && !GlimmerDrop.hasPermissions(context) && GlimmerDrop.askOnce(context)) {
+        GlimmerDrop.loadReady(context)
+        if (GlimmerDrop.enabled.value && GlimmerDrop.ready.value && !GlimmerDrop.hasPermissions(context) && GlimmerDrop.askOnce(context)) {
             ask.launch(GlimmerDrop.neededPermissions())
         }
     }
+    // The main switch: off is off – no Bluetooth signal, not in the share sheet, nowhere.
+    val dropOn by GlimmerDrop.enabled.collectAsState()
+    SwitchRow(
+        label = "Glimmer Drop",
+        description = if (dropOn) "An" else "Ganz aus: kein Bluetooth-Signal, nicht im Teilen-Menü, nicht im OMEGA-Menü",
+        checked = dropOn,
+    ) { v -> GlimmerDrop.setEnabled(context, v) }
+    if (!dropOn) return
+    RowDivider()
     ActionRow(
         label = "Glimmer Drop öffnen",
         description = "Zwei Handys mit Glimmer aneinanderhalten und Kontaktkarte, Fotos, Videos, Dateien, Links und Text teilen",

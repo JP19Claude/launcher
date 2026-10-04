@@ -31,6 +31,12 @@ class DropActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
+        // Switched off entirely: nothing to open.
+        GlimmerDrop.loadReady(this)
+        if (!GlimmerDrop.enabled.value) {
+            finish()
+            return
+        }
         GlimmerDrop.open(this)
         if (savedInstanceState == null) takeShared(intent)
         val look = SettingsRepository(this).settings.value
@@ -54,6 +60,7 @@ class DropActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         picking = false
+        if (!GlimmerDrop.enabled.value) return
         // Back from the app's settings (a permission given there): try again right away.
         if (GlimmerDrop.phase.value is GlimmerDrop.Phase.Failed) GlimmerDrop.restart(this) else GlimmerDrop.open(this)
         GlimmerDrop.uiShown()

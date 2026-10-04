@@ -21,3 +21,6 @@ OMEGA UI 17 auf ClaudeOS 4.0 „Aurora“
 • Vorlage „OMEGA UI“, Akzentfarbe und Glas-Tönung „Rubin“
 
 🥚 Easter Egg „Rubin“ zur 17
+
+🛠 Hotfix
+• Glimmer Drop lässt sich ganz ausschalten (Einstellungen → Glimmer → Glimmer Drop)

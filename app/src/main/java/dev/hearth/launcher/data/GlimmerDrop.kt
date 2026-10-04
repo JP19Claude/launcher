@@ -233,6 +233,32 @@ object GlimmerDrop {
         if (readyLoaded) return
         readyLoaded = true
         _ready.value = prefs(context).getBoolean("ready", true)
+        _enabled.value = prefs(context).getBoolean("enabled", true)
+    }
+
+    private val _enabled = MutableStateFlow(true)
+
+    /** Glimmer Drop at all: off means no beacon, no share-sheet entry, nowhere to be seen. */
+    val enabled: StateFlow<Boolean> = _enabled.asStateFlow()
+
+    /** Switches Glimmer Drop on or off entirely (its share-sheet entry included). */
+    fun setEnabled(context: Context, on: Boolean) {
+        loadReady(context)
+        _enabled.value = on
+        prefs(context).edit().putBoolean("enabled", on).apply()
+        runCatching {
+            context.packageManager.setComponentEnabledSetting(
+                android.content.ComponentName(context, dev.hearth.launcher.DropActivity::class.java),
+                if (on) PackageManager.COMPONENT_ENABLED_STATE_DEFAULT else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP,
+            )
+        }
+        if (!on) {
+            close()
+            stopBeacon()
+            backgroundWanted = false
+        }
+        setBackground(context, backgroundRequested)
     }
 
     /** True the first time only: Glimmer Drop asks for "devices nearby" by itself once. */
@@ -902,7 +928,7 @@ object GlimmerDrop {
         loadReady(context)
         watchBluetooth(context.applicationContext)
         backgroundRequested = on
-        val want = on && _ready.value
+        val want = on && _ready.value && _enabled.value
         if (want == backgroundWanted && (scanning != null || !want)) return
         backgroundWanted = want
         if (sessionOpen) return

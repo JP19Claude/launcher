@@ -226,7 +226,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
         if (showIntro || showOmega || !dev.hearth.launcher.BuildConfig.ALL_IN_ONE) return@LaunchedEffect
         val drop = dev.hearth.launcher.data.GlimmerDrop
         drop.loadReady(context)
-        if (drop.ready.value && !drop.hasPermissions(context) && drop.askOnce(context)) {
+        if (drop.enabled.value && drop.ready.value && !drop.hasPermissions(context) && drop.askOnce(context)) {
             dropPermissions.launch(drop.neededPermissions())
         }
     }
@@ -1127,16 +1127,21 @@ fun LauncherScreen(vm: LauncherViewModel) {
             // Hearth UI 15: the Hearth menu – everything one tap away.
             if (hubOpen) {
                 val torch by vm.controls.torchOn.collectAsStateWithLifecycle()
+                val dropOn by dev.hearth.launcher.data.GlimmerDrop.enabled.collectAsStateWithLifecycle()
                 HearthMenu(
-                    tiles = listOf(
+                    tiles = listOfNotNull(
                         HubTile("Einstellungen", Icons.Rounded.Settings, Color(0xFF8E8E93)) { settingsOpen = true },
                         HubTile("Finder", Icons.Rounded.Search, Color(0xFF3E91FF)) { searchOpen = true },
                         HubTile("Alle Apps", Icons.Rounded.Home, Color(0xFF30B0C7)) {
                             if (settings.galaxyClaude) drawerOpen = true else searchOpen = true
                         },
                         HubTile("Clawd", Icons.Rounded.Face, Color(0xFFD97757)) { vm.askClaude() },
-                        HubTile("Glimmer\nDrop", Icons.Rounded.Share, Color(0xFF5E9BFF)) {
-                            runCatching { context.startActivity(Intent(context, dev.hearth.launcher.DropActivity::class.java)) }
+                        if (dropOn) {
+                            HubTile("Glimmer\nDrop", Icons.Rounded.Share, Color(0xFF5E9BFF)) {
+                                runCatching { context.startActivity(Intent(context, dev.hearth.launcher.DropActivity::class.java)) }
+                            }
+                        } else {
+                            null
                         },
                         HubTile("Widgets", Icons.Rounded.Add, Color(0xFF34C759)) {
                             widgetTarget = (pagerState.currentPage - widgetPages).coerceAtLeast(0)

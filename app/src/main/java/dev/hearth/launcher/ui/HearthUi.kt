@@ -236,6 +236,11 @@ internal object HearthChangelog {
                     listOf("OMEGA UI 17: „Rubin“ – fünfmal auf die Version tippen und den Rubin in 17 Schnitten schleifen."),
                     everyone,
                 ),
+                ChangeSection(
+                    "Hotfix", Icons.Rounded.CheckCircle, Green,
+                    listOf("Glimmer Drop lässt sich jetzt ganz ausschalten (Einstellungen → Glimmer → Glimmer Drop): kein Bluetooth-Signal mehr, kein Eintrag im Teilen-Menü und keine Kachel im OMEGA-Menü."),
+                    withGlimmer,
+                ),
             ),
         ),
         ChangeRelease(
