@@ -220,9 +220,9 @@ private fun lookFor(packageName: String): UpdateLook = when (packageName) {
         tagline = "Galaxy × Claude",
         planet = listOf(Color(0xFFBFDDFF), Color(0xFF3E91FF), Color(0xFF5B3BC8)),
         tips = listOf(
-            "Hearth UI 16: Halte zwei Handys mit Glimmer oben aneinander – Glimmer Drop geht auf.",
+            "OMEGA UI 16: Halte zwei Handys mit Glimmer oben aneinander – Glimmer Drop geht auf.",
             "Dunkles Glas für Dock, Widgets und Menüs: Design → Dunkelmodus.",
-            "Das Hearth-Menü: lange auf den Startbildschirm drücken → „Hearth-Menü“.",
+            "Das OMEGA-Menü: lange auf den Startbildschirm drücken → „OMEGA-Menü“.",
             "Wisch auf dem Startbildschirm nach unten für den Finder, nach oben für den App-Drawer.",
             "Fluid-Ränder „Dezent“ oder „Lebendig“: unter Design → Animationen.",
             "Frag Clawd in der Suche: „Wie lange noch bis Weihnachten?“",

@@ -715,11 +715,11 @@ fun SettingsScreen(
                         description = "Bildschirm aus, Neustart und Ausschalten – mit Shizuku",
                         onClick = { secret = SecretMenu.Power },
                     )
-                    Note("Das Hearth-Menü hat alles griffbereit: Finder, Widgets, Dunkelmodus, Taschenlampe, Ein/Aus … Es öffnet sich per Doppeltippen (Startbildschirm → Doppeltippen → „Hearth-Menü“), über „Hearth-Menü“ in der Bearbeiten-Leiste oder lange drücken auf den Startbildschirm.")
+                    Note("Das OMEGA-Menü hat alles griffbereit: Finder, Widgets, Dunkelmodus, Taschenlampe, Ein/Aus … Es öffnet sich per Doppeltippen (Startbildschirm → Doppeltippen → „OMEGA-Menü“), über „OMEGA-Menü“ in der Bearbeiten-Leiste oder lange drücken auf den Startbildschirm.")
                     if (HearthLabs.unlocked) {
                         RowDivider()
                         ActionRow(
-                            label = "Hearth Labs 🧪",
+                            label = "OMEGA Labs 🧪",
                             description = "Freigeschaltet – Experimente, Bildrate, Fingertipps, Layout-Grenzen",
                             onClick = { secret = SecretMenu.Labs },
                         )
@@ -1620,7 +1620,7 @@ internal val SettingsCategories = listOf(
     SettingsCategory("general", "Allgemein", "Suche, Vibration, Sichern & Wiederherstellen", Icons.Rounded.Settings, Color(0xFF8E8E93),
         "suche suchmaschine vibration standard launcher sichern backup wiederherstellen export import"),
     // Hearth UI 14.5: what Hearth UI does that One UI and ColorOS don't.
-    SettingsCategory("vorteile", "Warum Hearth UI", "15 Dinge, die One UI und ColorOS nicht können", Icons.Rounded.Star, Color(0xFF34C759),
+    SettingsCategory("vorteile", "Warum OMEGA UI", "15 Dinge, die One UI und ColorOS nicht können", Icons.Rounded.Star, Color(0xFF34C759),
         "vorteile warum hearth ui one ui coloros vergleich werbeblocker entrümpeln turbo datenschutz"),
     // Hearth UI 14.1: the phone's own settings, inside Hearth's.
     SettingsCategory("system", "System", "Helligkeit, Töne, WLAN, Bluetooth, Akku, Apps, Sicherheit …", Icons.Rounded.Phone, Color(0xFF5E6C84),

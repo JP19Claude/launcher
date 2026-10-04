@@ -90,11 +90,11 @@ import java.util.Locale
 /*
  * Hearth UI 15: menus everywhere – and hidden ones. Like the service codes of a Galaxy, the
  * finder knows secret codes (*#0*#, *#1234#, *#0228# …) that open menus nobody sees otherwise,
- * Hearth Labs unlocks with seven taps on the build number, and the Hearth menu and the power
+ * OMEGA Labs unlocks with seven taps on the build number, and the Hearth menu and the power
  * menu sit one gesture away.
  */
 
-/** Hearth Labs: hidden until unlocked (seven taps on the build number, or its code). */
+/** OMEGA Labs: hidden until unlocked (seven taps on the build number, or its code). */
 object HearthLabs {
     private const val PREFS = "hearth_labs"
     private var loaded = false
@@ -141,17 +141,21 @@ object HearthLabs {
 enum class SecretMenu(val code: String, val title: String, val what: String) {
     Codes("*#0000#", "Geheimcodes", "Alle versteckten Menüs auf einen Blick"),
     Test("*#0*#", "Hardware-Test", "Display-Farben, Touch, Vibration und Sensoren"),
-    Info("*#1234#", "Versionen", "Hearth UI, ClaudeOS, Android und Build"),
+    Info("*#1234#", "Versionen", "OMEGA UI, ClaudeOS, Android und Build"),
     Battery("*#0228#", "Akku-Status", "Ladestand, Strom, Temperatur und Zustand – live"),
     Diagnose("*#9900#", "Diagnose", "Arbeitsspeicher, Speicher, Laufzeit und Shizuku"),
-    Labs("*#4327#", "Hearth Labs", "Experimente für Neugierige (H-E-A-R)"),
+    Labs("*#4327#", "OMEGA Labs", "Experimente für Neugierige (H-E-A-R)"),
     Clawd("*#2529#", "Clawd-Studio", "Clawd in jeder Stimmung (C-L-A-W)"),
     Power("*#7697#", "Ein/Aus-Menü", "Bildschirm aus, Neustart, Ausschalten (P-O-W-R)"),
+
+    /** Not a code: looking for "Omega" (or Ω) in the finder. Not in the code list. */
+    Omega("Ω", "Ω", "Von Alpha bis Omega"),
     ;
 
     companion object {
         fun forCode(text: String): SecretMenu? {
             val typed = text.replace(" ", "")
+            if (typed.equals("omega", ignoreCase = true) || typed == "Ω" || typed == "ω") return Omega
             return entries.firstOrNull { it.code == typed }
         }
     }
@@ -172,6 +176,7 @@ fun SecretMenuScreen(menu: SecretMenu, onClose: () -> Unit) {
             SecretMenu.Labs -> LabsMenu(back)
             SecretMenu.Clawd -> ClawdStudio(back)
             SecretMenu.Power -> PowerMenu(back)
+            SecretMenu.Omega -> OmegaEgg(back)
         }
     }
 }
@@ -314,15 +319,15 @@ private fun CodesMenu(onOpen: (SecretMenu) -> Unit, onClose: () -> Unit) {
     LaunchedEffect(Unit) { EasterEggs.find(context, "codes") }
     SecretPage("Geheimcodes", "*#0000# · psst – im Finder eintippen", onClose) {
         SecretCard("Codes") {
-            SecretMenu.entries.filter { it != SecretMenu.Codes }.forEach { menu ->
+            SecretMenu.entries.filter { it != SecretMenu.Codes && it != SecretMenu.Omega }.forEach { menu ->
                 SecretAction("${menu.code}  ·  ${menu.title}", menu.what) { onOpen(menu) }
             }
         }
         SecretCard("Weitere Verstecke") {
-            SecretValue("Hearth Labs", "Über das Telefon → siebenmal auf die Build-Nummer tippen")
+            SecretValue("OMEGA Labs", "Über das Telefon → siebenmal auf die Build-Nummer tippen")
             SecretValue("Easter-Egg-Karte", "Über das Telefon → lange auf „made by …“ drücken")
-            SecretValue("Diese Liste", "Im Hearth-Menü lange auf den Titel drücken")
-            SecretValue("Hearth-Menü", "Einstellungen → Startbildschirm → Doppeltippen, oder lange auf den Startbildschirm drücken")
+            SecretValue("Diese Liste", "Im OMEGA-Menü lange auf den Titel drücken")
+            SecretValue("OMEGA-Menü", "Einstellungen → Startbildschirm → Doppeltippen, oder lange auf den Startbildschirm drücken")
         }
     }
 }
@@ -622,7 +627,7 @@ private fun DiagnoseMenu(onClose: () -> Unit) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// *#4327# – Hearth Labs
+// *#4327# – OMEGA Labs
 // ---------------------------------------------------------------------------------------------
 
 private fun systemSetting(context: Context, key: String): Boolean =
@@ -652,7 +657,7 @@ private fun LabsMenu(onClose: () -> Unit) {
     var eggMap by remember { mutableStateOf(false) }
     val needs = "Braucht Shizuku (Einstellungen → System)"
     SecretPage(
-        "Hearth Labs",
+        "OMEGA Labs",
         "Experimente · nicht alles hier ist fertig",
         onClose,
         listOf(Color(0xFF34C759), Color(0xFF3E91FF), Color(0xFF8E6BFF)),
@@ -722,7 +727,7 @@ private fun LabsMenu(onClose: () -> Unit) {
     if (eggMap) EggMap { eggMap = false }
 }
 
-/** Hearth Labs' frame counter: how many frames the home screen draws each second. */
+/** OMEGA Labs' frame counter: how many frames the home screen draws each second. */
 @Composable
 fun FpsMeter(modifier: Modifier = Modifier) {
     var fps by remember { mutableIntStateOf(0) }
@@ -961,7 +966,7 @@ fun HearthMenu(tiles: List<HubTile>, onSecret: () -> Unit, onClose: () -> Unit) 
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "Hearth-Menü",
+                        "OMEGA-Menü",
                         style = TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 22.sp, fontWeight = FontWeight.Bold),
                         modifier = Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onSecret() }) },
                     )

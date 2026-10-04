@@ -97,7 +97,7 @@ import kotlin.math.sin
 
 /** Hearth UI's name and the things that go with its versions. */
 object HearthUi {
-    const val NAME = "Hearth UI"
+    const val NAME = "OMEGA UI"
 
     /** The big version the welcome tour is about; it shows once after reaching it. */
     const val INTRO_VERSION = 16
@@ -118,7 +118,14 @@ object HearthUi {
         prefs(context).edit().putInt("introSeen", INTRO_VERSION).apply()
     }
 
-    /** Hearth Labs: show the welcome tour again next time. */
+    /** Once: "Hearth UI is now OMEGA UI". */
+    fun omegaSeen(context: Context): Boolean = prefs(context).getBoolean("omegaSeen", false)
+
+    fun markOmegaSeen(context: Context) {
+        prefs(context).edit().putBoolean("omegaSeen", true).apply()
+    }
+
+    /** OMEGA Labs: show the welcome tour again next time. */
     fun resetIntro(context: Context) {
         prefs(context).edit().remove("introSeen").apply()
     }
@@ -169,6 +176,30 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "16.1",
+            name = "OMEGA UI",
+            summary = "Hearth UI heißt jetzt OMEGA UI. Gleiches System, neuer Name – alles bleibt, wie es ist.",
+            sections = listOf(
+                ChangeSection(
+                    "Ein neuer Name", Icons.Rounded.Star, Violet,
+                    listOf(
+                        "Hearth UI heißt jetzt OMEGA UI – mit dem Ω als Zeichen. Von Alpha bis Omega: alles in einem System.",
+                        "Einmalige Begrüßung nach dem Update; das Ω groß im Software-Update.",
+                        "OMEGA-Menü und OMEGA Labs tragen den neuen Namen.",
+                        "Deine Einstellungen, Widgets, Apps und Easter Eggs bleiben, Updates kommen wie gewohnt.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Easter Egg", Icons.Rounded.Face, Orange,
+                    listOf(
+                        "Ein neues Egg rund ums Ω – wo? Ein Tipp: Der Finder kennt den neuen Namen … (jetzt 31 Eggs)",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "16.0",
             name = "Hearth UI 16",
             summary = "Ein großes Update auf neuer Basis: ClaudeOS 4.0 „Aurora“ – mit Glimmer Drop, vielen neuen Menüs und dunklem Glas. Alles in Hearth UI, keine neue App.",
@@ -187,7 +218,7 @@ internal object HearthChangelog {
                         "Halte die Oberkanten zweier Handys mit Glimmer aneinander: Glimmers Insel leuchtet auf, Licht fließt hinüber – beide Handys gehen sofort auf.",
                         "Teile deine Kontaktkarte, Fotos, Videos, Dateien, Links und Text – mit Vorschau von allem, schon bevor das andere Handy annimmt.",
                         "Direkt über Bluetooth und Wi-Fi Direct, ohne Internet – dieselbe Technik wie Quick Share. Für Handys ohne Glimmer: „Über Quick Share senden“.",
-                        "Sofort bereit, wenn entsperrt; außerdem im Hearth-Menü, in den Einstellungen und in jeder App unter Teilen → „Glimmer Drop“.",
+                        "Sofort bereit, wenn entsperrt; außerdem im OMEGA-Menü, in den Einstellungen und in jeder App unter Teilen → „Glimmer Drop“.",
                         "Empfangene Fotos und Videos in der Galerie, Dateien unter Downloads, Kontakte mit einem Tipp gespeichert.",
                     ),
                     withGlimmer,
@@ -195,7 +226,7 @@ internal object HearthChangelog {
                 ChangeSection(
                     "Viel mehr Menüs", Icons.Rounded.Menu, Terracotta,
                     listOf(
-                        "Hearth-Menü: ein Glas-Blatt mit allem griffbereit – Einstellungen, Finder, alle Apps, Clawd, Glimmer Drop, Widgets, Hintergrund, Schnelleinstellungen, Mitteilungen, Taschenlampe, Dunkelmodus und Ein/Aus.",
+                        "OMEGA-Menü: ein Glas-Blatt mit allem griffbereit – Einstellungen, Finder, alle Apps, Clawd, Glimmer Drop, Widgets, Hintergrund, Schnelleinstellungen, Mitteilungen, Taschenlampe, Dunkelmodus und Ein/Aus.",
                         "Ein/Aus-Menü aus Glas: Bildschirm aus, Neustart, Ausschalten (mit Shizuku).",
                         "Neuer Bereich „Menüs“ in den Einstellungen; Doppeltippen kann das Hearth- oder das Ein/Aus-Menü öffnen.",
                     ),
@@ -205,7 +236,7 @@ internal object HearthChangelog {
                     "Versteckte Menüs", Icons.Rounded.Search, Slate,
                     listOf(
                         "Geheimcodes im Finder öffnen versteckte Menüs: Hardware-Test, Versionen, Akku-Status, Diagnose, Clawd-Studio und mehr.",
-                        "Hearth Labs: versteckte Experimente – Bildrate, Fingertipps, Layout-Grenzen, Zeitlupe. Wo? Das bleibt geheim … 🤫",
+                        "OMEGA Labs: versteckte Experimente – Bildrate, Fingertipps, Layout-Grenzen, Zeitlupe. Wo? Das bleibt geheim … 🤫",
                     ),
                     hearth,
                 ),
@@ -331,7 +362,7 @@ internal object HearthChangelog {
                     listOf(
                         "Bereit, wenn entsperrt: Glimmer merkt im Hintergrund, wenn ein Handy an deins gehalten wird, und öffnet Glimmer Drop von selbst.",
                         "Aus jeder App: Teilen → „Glimmer Drop“.",
-                        "Im Hearth-Menü und unter Einstellungen → Glimmer → Glimmer Drop.",
+                        "Im OMEGA-Menü und unter Einstellungen → Glimmer → Glimmer Drop.",
                         "Die Insel zeigt mit, was passiert: erkannt, senden, empfangen.",
                     ),
                     withGlimmer,
@@ -368,10 +399,10 @@ internal object HearthChangelog {
             summary = "Viel mehr Menüs überall – und versteckte Menüs, die man erst finden muss.",
             sections = listOf(
                 ChangeSection(
-                    "Hearth-Menü", Icons.Rounded.Menu, Blue,
+                    "OMEGA-Menü", Icons.Rounded.Menu, Blue,
                     listOf(
-                        "Neues Hearth-Menü: ein Glas-Blatt von unten mit allem griffbereit – Einstellungen, Finder, alle Apps, Clawd, Widgets, Hintergrund, Schnelleinstellungen, Mitteilungen, Taschenlampe, Nachtmodus, Apps auswählen und Ein/Aus.",
-                        "Öffnet sich über „Hearth-Menü“ in der Bearbeiten-Leiste (lange auf den Startbildschirm drücken), im Startbildschirm-Menü oder per Doppeltippen (Startbildschirm → Doppeltippen → „Hearth-Menü“).",
+                        "Neues OMEGA-Menü: ein Glas-Blatt von unten mit allem griffbereit – Einstellungen, Finder, alle Apps, Clawd, Widgets, Hintergrund, Schnelleinstellungen, Mitteilungen, Taschenlampe, Nachtmodus, Apps auswählen und Ein/Aus.",
+                        "Öffnet sich über „OMEGA-Menü“ in der Bearbeiten-Leiste (lange auf den Startbildschirm drücken), im Startbildschirm-Menü oder per Doppeltippen (Startbildschirm → Doppeltippen → „OMEGA-Menü“).",
                     ),
                     hearth,
                 ),
@@ -379,7 +410,7 @@ internal object HearthChangelog {
                     "Ein/Aus-Menü", Icons.Rounded.Refresh, Terracotta,
                     listOf(
                         "Ein eigenes Ein/Aus-Menü aus Glas: Bildschirm aus, Neustart und Ausschalten (mit Shizuku; Neustart und Ausschalten fragen mit einem zweiten Tipp nach).",
-                        "Erreichbar im Hearth-Menü, in den Einstellungen unter „Menüs“ oder per Doppeltippen.",
+                        "Erreichbar im OMEGA-Menü, in den Einstellungen unter „Menüs“ oder per Doppeltippen.",
                     ),
                     hearth,
                 ),
@@ -394,11 +425,11 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
-                    "Hearth Labs", Icons.Rounded.Build, Green,
+                    "OMEGA Labs", Icons.Rounded.Build, Green,
                     listOf(
-                        "Wie Androids Entwickleroptionen: Hearth Labs versteckt sich hinter einigen Tipps an einer bekannten Stelle in „Über das Telefon“.",
+                        "Wie Androids Entwickleroptionen: OMEGA Labs versteckt sich hinter einigen Tipps an einer bekannten Stelle in „Über das Telefon“.",
                         "Darin: Bildrate-Anzeige (FPS) auf dem Startbildschirm, Fingertipps und Zeigerposition zeigen, Layout-Grenzen, Animationstempo bis zur Zeitlupe, Willkommens-Tour wiederholen und Hearth neu starten.",
-                        "Einmal freigeschaltet, steht Hearth Labs auch in den Einstellungen unter „Menüs“ und in „Über das Telefon“.",
+                        "Einmal freigeschaltet, steht OMEGA Labs auch in den Einstellungen unter „Menüs“ und in „Über das Telefon“.",
                     ),
                     hearth,
                 ),
@@ -839,6 +870,10 @@ fun VersionArtwork(number: String, colors: List<Color>, modifier: Modifier = Mod
     val face = Brush.verticalGradient(listOf(Color.White, colors.first(), colors.last()))
     val style = TextStyle(brush = face, fontSize = big, fontWeight = FontWeight.Black, letterSpacing = (-4).sp)
     Box(modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
+        // OMEGA UI: the Ω big and faint behind the version.
+        if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
+            OmegaMark((height.value * 0.95f).toInt(), fade = 0.16f)
+        }
         Canvas(Modifier.matchParentSize()) {
             val t = flow?.invoke() ?: 0.8f
             colors.forEachIndexed { i, c ->
@@ -1130,19 +1165,19 @@ fun HearthUiIntro(onDone: (newLook: Boolean) -> Unit) {
                             title = "Mehr Menüs, dunkles Glas",
                             text = "Alles, was Hearth kann, ist jetzt einen Griff entfernt.",
                             points = listOf(
-                                TourPoint(Icons.Rounded.Menu, Color(0xFF8E6BFF), "Hearth-Menü", "Lange auf den Startbildschirm drücken: Einstellungen, Finder, Widgets, Glimmer Drop, Taschenlampe, Dunkelmodus …"),
+                                TourPoint(Icons.Rounded.Menu, Color(0xFF8E6BFF), "OMEGA-Menü", "Lange auf den Startbildschirm drücken: Einstellungen, Finder, Widgets, Glimmer Drop, Taschenlampe, Dunkelmodus …"),
                                 TourPoint(Icons.Rounded.Settings, Color(0xFFFF453A), "Ein/Aus-Menü", "Bildschirm aus, Neustart und Ausschalten aus Glas."),
                                 TourPoint(Icons.Rounded.Star, Color(0xFF3E4A7A), "Dunkelmodus", "Dock, Widgets, Menüs und Suchleiste als dunkles Glas – an, aus, wie Android oder nach Uhrzeit."),
-                                TourPoint(Icons.Rounded.Search, Color(0xFFFF9F0A), "Versteckte Menüs", "Geheimcodes im Finder und Hearth Labs – wo genau? Das bleibt dein Geheimnis … 🤫"),
+                                TourPoint(Icons.Rounded.Search, Color(0xFFFF9F0A), "Versteckte Menüs", "Geheimcodes im Finder und OMEGA Labs – wo genau? Das bleibt dein Geheimnis … 🤫"),
                             ),
                         )
                         else -> TourPage(
                             title = "ClaudeOS 4.0 „Aurora“",
-                            text = "Eine neue Basis unter Hearth UI, Glimmer und Clawd.",
+                            text = "Eine neue Basis unter OMEGA UI, Glimmer und Clawd.",
                             points = listOf(
                                 TourPoint(Icons.Rounded.Star, Color(0xFF6CFFB0), "Neue Basis", "Handys, die sich finden, dunkles Glas und versteckte Menüs gehören jetzt zum Fundament."),
                                 TourPoint(Icons.Rounded.Face, Color(0xFFFF9F0A), "Zwei neue Easter Eggs", "„Glühwürmchen“ und „Aurora“: fünfmal auf die Version tippen – im Software-Update und in „Über das Telefon“."),
-                                TourPoint(Icons.Rounded.CheckCircle, Color(0xFF30C26B), "Ein Update, alles drin", "Alles aus Hearth UI 15 ist dabei – in einem großen Update."),
+                                TourPoint(Icons.Rounded.CheckCircle, Color(0xFF30C26B), "Ein Update, alles drin", "Alles aus Version 15 ist dabei – in einem großen Update."),
                             ),
                         )
                     }

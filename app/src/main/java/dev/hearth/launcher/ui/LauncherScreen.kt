@@ -216,12 +216,14 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val scope = rememberCoroutineScope()
     // Hearth UI 14: the tour of what's new, once after the big update.
     var showIntro by remember { mutableStateOf(!HearthUi.introSeen(context)) }
+    // OMEGA UI: once, "Hearth UI is now OMEGA UI" (the tour already says it for new users).
+    var showOmega by remember { mutableStateOf(dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !HearthUi.omegaSeen(context)) }
     // Glimmer Drop: "devices nearby" asked once, so two phones held together just work.
     val dropPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         dev.hearth.launcher.data.GlimmerDrop.setReady(context, dev.hearth.launcher.data.GlimmerDrop.ready.value)
     }
-    LaunchedEffect(showIntro) {
-        if (showIntro || !dev.hearth.launcher.BuildConfig.ALL_IN_ONE) return@LaunchedEffect
+    LaunchedEffect(showIntro, showOmega) {
+        if (showIntro || showOmega || !dev.hearth.launcher.BuildConfig.ALL_IN_ONE) return@LaunchedEffect
         val drop = dev.hearth.launcher.data.GlimmerDrop
         drop.loadReady(context)
         if (drop.ready.value && !drop.hasPermissions(context) && drop.askOnce(context)) {
@@ -455,7 +457,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 },
                 GlassMenuItem("Hintergrundbild ändern", Icons.Rounded.Edit) { vm.openWallpaperPicker() },
                 GlassMenuItem("Suche öffnen", Icons.Rounded.Search) { searchOpen = true },
-                GlassMenuItem("Hearth-Menü", Icons.Rounded.Star) { hubOpen = true },
+                GlassMenuItem("OMEGA-Menü", Icons.Rounded.Star) { hubOpen = true },
                 GlassMenuItem("Ein/Aus-Menü", Icons.Rounded.Lock) { secret = SecretMenu.Power },
             ),
         )
@@ -1165,10 +1167,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 )
             }
 
-            // Hidden menus (secret codes in the finder, Hearth Labs, the power menu).
+            // Hidden menus (secret codes in the finder, OMEGA Labs, the power menu).
             secret?.let { open -> SecretMenuScreen(open) { secret = null } }
 
-            // Hearth Labs: the frame counter.
+            // OMEGA Labs: the frame counter.
             if (HearthLabs.fps) {
                 Box(Modifier.fillMaxSize()) {
                     FpsMeter(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 8.dp, top = 4.dp))
@@ -1178,9 +1180,18 @@ fun LauncherScreen(vm: LauncherViewModel) {
             // Easter eggs: confetti and a glass message when one is found.
             CelebrationOverlay()
 
+            if (showOmega && !showIntro) {
+                OmegaWelcome {
+                    HearthUi.markOmegaSeen(context)
+                    showOmega = false
+                }
+            }
+
             if (showIntro) {
                 HearthUiIntro { newLook ->
                     HearthUi.markIntroSeen(context)
+                    HearthUi.markOmegaSeen(context)
+                    showOmega = false
                     // Hearth UI 16's tour: "ready when unlocked" for Glimmer Drop.
                     dev.hearth.launcher.data.GlimmerDrop.setReady(context, newLook)
                     showIntro = false

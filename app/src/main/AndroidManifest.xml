@@ -146,7 +146,7 @@
         <activity
             android:name=".OneWelcomeActivity"
             android:exported="false"
-            android:label="Hearth UI" />
+            android:label="OMEGA UI" />
 
         <!-- Android's installer reports here how an update went (and asks to confirm it). -->
         <receiver

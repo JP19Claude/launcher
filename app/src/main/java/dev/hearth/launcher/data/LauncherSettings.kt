@@ -24,7 +24,7 @@ enum class IconShape(val label: String) {
 
 enum class ClockStyle(val label: String) {
     /** Hearth UI 14: hours over minutes, big and stacked, with glass chips for date and battery. */
-    Stacked("Hearth UI (gestapelt)"),
+    Stacked("OMEGA UI (gestapelt)"),
     ColorOS("ColorOS"),
     /** Samsung's home clock: big, bold, tight digits over the date. */
     OneUI("One UI"),
@@ -252,7 +252,7 @@ enum class HomeGesture(val label: String) {
     Drawer("App-Übersicht"),
     Notifications("Mitteilungen"),
     Torch("Taschenlampe"),
-    Menu("Hearth-Menü"),
+    Menu("OMEGA-Menü"),
     Power("Ein/Aus-Menü"),
 }
 

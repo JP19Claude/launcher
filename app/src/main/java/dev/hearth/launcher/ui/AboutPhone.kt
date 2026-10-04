@@ -85,7 +85,7 @@ private class Spec(
     val claudeOs: Boolean = false,
     /** Hearth UI's own version: five taps open its easter egg. */
     val hearthEgg: Boolean = false,
-    /** The build number: seven taps unlock Hearth Labs, like Android's developer options. */
+    /** The build number: seven taps unlock OMEGA Labs, like Android's developer options. */
     val labs: Boolean = false,
 )
 
@@ -133,7 +133,7 @@ private fun gatherSpecs(context: Context): List<SpecGroup> {
     val pm = context.packageManager
     val info = runCatching { pm.getPackageInfo(context.packageName, 0) }.getOrNull()
     val hearth = info?.versionName.orEmpty()
-    val edition = if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "Hearth UI (Hearth, Glimmer und Clawd in einer App)" else "Hearth"
+    val edition = if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "OMEGA UI (Launcher, Glimmer und Clawd in einer App)" else "Hearth"
     val build = info?.let { androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(it) }?.toString().orEmpty()
 
     val memory = ActivityManager.MemoryInfo().also { context.getSystemService(ActivityManager::class.java)?.getMemoryInfo(it) }
@@ -181,13 +181,13 @@ private fun gatherSpecs(context: Context): List<SpecGroup> {
 
     return listOf(
         SpecGroup(
-            if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "Hearth UI & ClaudeOS" else "Hearth & ClaudeOS",
+            if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "OMEGA UI & ClaudeOS" else "Hearth & ClaudeOS",
             listOf(
-                Spec(if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "Hearth UI-Version" else "Hearth-Version", hearth, hearthEgg = true),
+                Spec(if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "OMEGA UI-Version" else "Hearth-Version", hearth, hearthEgg = true),
                 Spec("ClaudeOS-Version", "${ClaudeOs.VERSION} („${ClaudeOs.CODENAME}“)", claudeOs = true),
                 Spec("Ausgabe", edition),
                 Spec("Build-Nummer", build, labs = true),
-                Spec("Design", "Hearth UI 16 · One UI 10 Fluid · Liquid Glass · Dunkles Glas"),
+                Spec("Design", "OMEGA UI 16 · Ω · Liquid Glass · Dunkles Glas"),
             ),
         ),
         SpecGroup(
@@ -273,7 +273,7 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
     // Hidden: holding the "made by" line opens the map of all easter eggs.
     var eggMap by remember { mutableStateOf(false) }
     var hearthTaps by remember { mutableIntStateOf(0) }
-    // Hidden: seven taps on the build number unlock Hearth Labs.
+    // Hidden: seven taps on the build number unlock OMEGA Labs.
     LaunchedEffect(Unit) { HearthLabs.init(context) }
     var labsOpen by remember { mutableStateOf(false) }
     var labsTaps by remember { mutableIntStateOf(0) }
@@ -375,7 +375,7 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                                         }
                                         spec.labs -> Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
                                             if (HearthLabs.unlocked) {
-                                                labsHint = "Hearth Labs ist schon freigeschaltet"
+                                                labsHint = "OMEGA Labs ist schon freigeschaltet"
                                                 return@clickable
                                             }
                                             labsTaps++
@@ -384,10 +384,10 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                                                 left <= 0 -> {
                                                     labsTaps = 0
                                                     HearthLabs.unlock(context)
-                                                    labsHint = "Hearth Labs freigeschaltet! 🧪"
+                                                    labsHint = "OMEGA Labs freigeschaltet! 🧪"
                                                     labsOpen = true
                                                 }
-                                                left <= 4 -> labsHint = if (left == 1) "Noch 1 Tipp bis Hearth Labs" else "Noch $left Tipps bis Hearth Labs"
+                                                left <= 4 -> labsHint = if (left == 1) "Noch 1 Tipp bis OMEGA Labs" else "Noch $left Tipps bis OMEGA Labs"
                                                 else -> Unit
                                             }
                                         }
@@ -434,7 +434,7 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                         .fluidTouch()
                         .padding(horizontal = 20.dp, vertical = 15.dp),
                 ) {
-                    Text("Hearth Labs 🧪", color = Color.White, fontSize = 16.sp)
+                    Text("OMEGA Labs 🧪", color = Color.White, fontSize = 16.sp)
                     Text("Experimente, Bildrate, Fingertipps, Layout-Grenzen …", color = Color.White.copy(alpha = 0.62f), fontSize = 14.sp)
                 }
             }

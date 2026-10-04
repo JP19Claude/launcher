@@ -384,8 +384,8 @@ private val Advantages = listOf(
 /** "Warum Hearth UI": what it does that One UI and ColorOS don't. */
 @Composable
 internal fun HearthAdvantages() {
-    Section("Warum Hearth UI") {
-        Note("Was Hearth UI kann – und ob One UI oder ColorOS das auch haben.")
+    Section("Warum OMEGA UI") {
+        Note("Was OMEGA UI kann – und ob One UI oder ColorOS das auch haben.")
         Advantages.forEachIndexed { index, advantage ->
             if (index > 0) RowDivider()
             Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp)) {

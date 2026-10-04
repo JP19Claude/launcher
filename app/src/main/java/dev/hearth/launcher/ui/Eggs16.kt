@@ -178,7 +178,7 @@ internal fun FireflyEgg(version: String, name: String, onClose: () -> Unit) {
         ) {
             Text("$name $version · Glühwürmchen", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             Text(
-                if (best >= 16) "Sechzehn Glühwürmchen – Hearth UI 16 leuchtet. ✨" else "Finger auflegen und warten · ${near.coerceAtMost(16)}/16 bei dir",
+                if (best >= 16) "Sechzehn Glühwürmchen – OMEGA UI 16 leuchtet. ✨" else "Finger auflegen und warten · ${near.coerceAtMost(16)}/16 bei dir",
                 color = Color.White.copy(alpha = 0.6f),
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,

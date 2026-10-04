@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- OMEGA UI: the launcher with Glimmer and Clawd built in (once Hearth One, then Hearth UI). -->
+    <string name="app_name">OMEGA UI</string>
+</resources>

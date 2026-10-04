@@ -143,7 +143,7 @@
             android:excludeFromRecents="true"
             android:exported="true"
             android:icon="@mipmap/ic_settings_app"
-            android:label="Hearth-Einstellungen"
+            android:label="OMEGA UI-Einstellungen"
             android:noHistory="true"
             android:roundIcon="@mipmap/ic_settings_app"
             android:taskAffinity=""
