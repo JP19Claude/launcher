@@ -292,8 +292,6 @@ fun SettingsScreen(
             if (oneUi && page == null) {
                 item { OneUISearchField(query, onClawd = { vm.askClaude() }) { query = it } }
                 if (query.isBlank()) item { HearthCard(s) }
-                // OMEGA UI 17.5: once found behind the Ω crystal, the Clawd Illumination stays here.
-                if (query.isBlank() && s.illumination) item { IlluminationCard() }
                 if (query.isBlank()) item { Section("Updates") { AppUpdateContent() } }
                 val found = SettingsCategories.filter { it.matches(query) }
                 if (found.isEmpty()) {
@@ -1723,35 +1721,6 @@ private fun OneUISearchField(query: String, onClawd: () -> Unit, onChange: (Stri
     }
 }
 
-/** OMEGA UI 17.5: the way back into the Clawd Illumination, once it has been found. */
-@Composable
-private fun IlluminationCard() {
-    val context = LocalContext.current
-    LiquidGlass(
-        cornerRadius = 24.dp,
-        refraction = 14.dp,
-        interactive = true,
-        tint = Color(0xFFFFD86B).copy(alpha = 0.12f),
-        modifier = Modifier
-            .padding(bottom = 8.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .clickable { openClawdIllumination(context) },
-    ) {
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Clawd(Modifier.size(width = 38.dp, height = 33.dp), mood = dev.hearth.launcher.data.ClawdMood.Love)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Clawd Illuminati", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Text("Der geheime Rat der sechs Clawds", color = TextSecondary, fontSize = 13.sp)
-            }
-            EyeTriangle(Modifier.size(width = 28.dp, height = 25.dp))
-            Spacer(Modifier.width(6.dp))
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
-        }
-    }
-}
-
 /** Like the account card on top of Samsung's settings: Hearth, its version and look. */
 @Composable
 private fun HearthCard(s: LauncherSettings) {
@@ -1789,7 +1758,13 @@ private fun HearthCard(s: LauncherSettings) {
         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             // OMEGA UI 17: the ruby with the Ω, the version under it.
             if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
-                OmegaRuby(size = 52.dp, version = HearthUi.major(version))
+                // OMEGA UI 18: the Ω ruby is the only way into the Clawd Illuminati.
+                val crystal = rememberCrystalTaps(version)
+                OmegaRuby(
+                    Modifier.clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, onClick = crystal),
+                    size = 52.dp,
+                    version = HearthUi.major(version),
+                )
             } else {
                 Box(
                     Modifier

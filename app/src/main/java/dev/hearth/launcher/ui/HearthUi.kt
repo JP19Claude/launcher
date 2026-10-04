@@ -209,6 +209,7 @@ internal object HearthChangelog {
                         "Farbe: Noir (Schwarz-Weiß), Sepia, Leuchtfarben – im ganzen System.",
                         "Clawd: Clawd-Schwarm und Clawd-Gruß.",
                         "Alle einzeln an- und ausschaltbar in den Clawd Illuminati; „Den Rat auflösen“ schaltet alles auf einmal aus.",
+                        "Die Clawd Illuminati bleiben geheim: Sie sind nur noch über den Ω-Rubin erreichbar (Software-Update, Telefoninfo oder der Rubin oben in den Einstellungen) – kein Eintrag mehr in den Einstellungen oder im OMEGA-Menü.",
                     ),
                     hearth,
                 ),

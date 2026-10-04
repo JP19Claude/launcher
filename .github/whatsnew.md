@@ -13,6 +13,7 @@ OMEGA UI 18 „Mythos“ auf ClaudeOS 5.0 „Mythos“ – das große Update
 • Bewegung: Parallax, Riesen-Uhr, Icon-Puls, Funkenspur
 • Farbe: Noir, Sepia, Leuchtfarben
 • Clawd: Schwarm und Gruß
+• Die Clawd Illuminati sind nur noch über den Ω-Rubin erreichbar
 
 🌈 Farbwelt
 • Färbt jetzt auch auf dem Startbildschirm alles – OMEGA Glass, Fluid, Widgets, Icons

@@ -1182,12 +1182,6 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             if (settings.galaxyClaude) drawerOpen = true else searchOpen = true
                         },
                         HubTile("Clawd", Icons.Rounded.Face, Color(0xFFD97757)) { vm.askClaude() },
-                        // OMEGA UI 17.5: once found, the Clawd Illumination is one tap away.
-                        if (settings.illumination) {
-                            HubTile("Illumi-\nnati", Icons.Rounded.Star, Color(0xFFE5A50A)) { openClawdIllumination(context) }
-                        } else {
-                            null
-                        },
                         if (dropOn) {
                             HubTile("Glimmer\nDrop", Icons.Rounded.Share, Color(0xFF5E9BFF)) {
                                 runCatching { context.startActivity(Intent(context, dev.hearth.launcher.DropActivity::class.java)) }
