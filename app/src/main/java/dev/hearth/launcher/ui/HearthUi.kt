@@ -164,6 +164,23 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "14.1",
+            name = "Systemeinstellungen",
+            summary = "Die Einstellungen deines Handys jetzt auch in Hearth.",
+            sections = listOf(
+                ChangeSection(
+                    "System in den Einstellungen", Icons.Rounded.Settings, Slate,
+                    listOf(
+                        "Neue Kategorie „System“ in den Hearth-Einstellungen.",
+                        "Direkt hier einstellen: Helligkeit, automatische Helligkeit, Drehen, Bildschirm-Timeout, Taschenlampe, Nicht stören, Klingelmodus und alle Lautstärken.",
+                        "Alles andere einen Tipp entfernt, gruppiert wie bei One UI: Verbindungen, Töne und Benachrichtigungen, Anzeige, Sicherheit, Akku, Apps und Konten, Allgemeine Verwaltung.",
+                        "Die Einstellungssuche findet auch WLAN, Bluetooth, Akku & Co.",
+                    ),
+                    hearth,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "14.0",
             name = "Hearth UI 14",
             summary = "Das größte Update bisher: ein neuer Name, eine neue Basis und ein neuer Look – vom Startbildschirm bis zum Software-Update.",

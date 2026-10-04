@@ -349,6 +349,11 @@ class SystemControls(private val context: Context) {
 
     fun setAutoRotate(on: Boolean): Boolean = writeSystem(Settings.System.ACCELEROMETER_ROTATION, if (on) 1 else 0)
 
+    /** How long the screen stays on without a touch (ms). */
+    fun screenTimeout(): Int = Settings.System.getInt(resolver, Settings.System.SCREEN_OFF_TIMEOUT, 30_000)
+
+    fun setScreenTimeout(ms: Int): Boolean = writeSystem(Settings.System.SCREEN_OFF_TIMEOUT, ms)
+
     private fun writeSystem(key: String, value: Int): Boolean {
         if (!Settings.System.canWrite(context)) {
             requestWriteSettings()

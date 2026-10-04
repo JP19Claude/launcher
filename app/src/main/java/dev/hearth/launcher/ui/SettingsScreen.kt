@@ -54,6 +54,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Phone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -624,6 +625,8 @@ fun SettingsScreen(
                     ActionRow(label = "Dock zurücksetzen", onClick = vm::resetDock)
                 }
             }
+
+            if (shows("system")) item { SystemSettingsContent(vm.controls) }
 
             if (shows("general")) item {
                 Section("Suche") {
@@ -1542,6 +1545,12 @@ internal val SettingsCategories = listOf(
         "sperre pin fingerabdruck biometrie ausblenden versteckt privat"),
     SettingsCategory("general", "Allgemein", "Suche, Vibration, Sichern & Wiederherstellen", Icons.Rounded.Settings, Color(0xFF8E8E93),
         "suche suchmaschine vibration standard launcher sichern backup wiederherstellen export import"),
+    // Hearth UI 14.1: the phone's own settings, inside Hearth's.
+    SettingsCategory("system", "System", "Helligkeit, Töne, WLAN, Bluetooth, Akku, Apps, Sicherheit …", Icons.Rounded.Phone, Color(0xFF5E6C84),
+        "system wlan wifi bluetooth mobile daten flugmodus hotspot nfc vpn helligkeit drehen timeout bildschirm lautstärke " +
+            "klingelton ton vibration nicht stören taschenlampe benachrichtigungen anzeige nachtlicht schrift hintergrund akku " +
+            "energiesparen speicher apps standard konten sicherung sicherheit fingerabdruck datenschutz standort sprache " +
+            "tastatur datum uhrzeit bedienungshilfen entwickler update telefoninfo wohlbefinden drucken übertragen"),
 )
 
 /** The start page's cards, grouped like Samsung's. */
@@ -1549,6 +1558,7 @@ private val SettingsGroups: List<List<SettingsCategory>> = listOf(
     SettingsCategories.filter { it.id == "design" || it.id == "home" },
     SettingsCategories.filter { it.id == "claude" || it.id == "clawd" || it.id == "glimmer" },
     SettingsCategories.filter { it.id == "privacy" || it.id == "general" },
+    SettingsCategories.filter { it.id == "system" },
 )
 
 /** One UI's settings search, as a glass capsule. */
