@@ -1166,11 +1166,11 @@ class GlimmerController(private val service: GlimmerService) {
 
                 // Night mode: the island goes darker and calmer with the rest of Hearth.
                 val night = dev.hearth.launcher.ui.rememberNight(settings)
-                val shown = if (night) settings.forNight() else settings
+                val nightLook = if (night) settings.forNight() else settings
                 HearthTheme(dark = true) {
                     CompositionLocalProvider(
-                        LocalSettings provides shown,
-                        LocalGlassStyle provides GlassStyle.from(shown),
+                        LocalSettings provides nightLook,
+                        LocalGlassStyle provides GlassStyle.from(nightLook),
                     ) {
                         // Held sideways it can turn with the phone: upright around the camera.
                         Box(Modifier.fillMaxSize().turnedWithPhone(turned).nightDim(night)) {
