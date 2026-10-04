@@ -267,7 +267,7 @@ fun ClawdIlluminationScreen(
             IlluminationSection("Always On Display") {
                 IlluminationSwitch(
                     "◼", "Volles Always On Display",
-                    "Wie beim Galaxy S24 Ultra: Das Hintergrundbild bleibt gedimmt sichtbar, davor eine große Uhr. Braucht Glimmer.",
+                    "Bringt das große AOD mit Hintergrundbild auf jedes Handy – auch auf Geräte, die es nicht haben (z. B. S22 Ultra): das Hintergrundbild gedimmt, davor eine große Uhr. Braucht Glimmer und das AOD des Handys auf „Immer anzeigen“.",
                     settings.fullAod,
                 ) { v -> onChange { it.copy(fullAod = v) } }
                 IlluminatiChoice("🕰", "Uhr", AodClock.entries, settings.aodClock, { it.label }) { v -> onChange { it.copy(aodClock = v) } }

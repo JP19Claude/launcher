@@ -185,7 +185,8 @@ internal object HearthChangelog {
                 ChangeSection(
                     "Always On Display", Icons.Rounded.Star, Violet,
                     listOf(
-                        "Volles Always On Display: Das Hintergrundbild bleibt gedimmt sichtbar, davor eine große Uhr – wie beim Galaxy S24 Ultra.",
+                        "Volles Always On Display für jedes Handy – auch für Geräte, die es nicht haben, wie das S22 Ultra: Das Hintergrundbild bleibt gedimmt sichtbar, davor eine große Uhr (so wie es das S24 Ultra eingebaut hat).",
+                        "Dafür muss das AOD des Handys an sein und auf „Immer anzeigen“ stehen (Einstellungen → Sperrbildschirm → Always On Display) – OMEGA legt sein großes AOD dann darüber.",
                         "Uhr in vier Stilen (OMEGA, Groß, Dünn, In Worten), in Weiß, OMEGA oder Gold; Helligkeit des Hintergrunds in drei Stufen.",
                         "Dazu wählbar: Datum, Akku, wartende Mitteilungen, ein schlafender Clawd und ein feiner OMEGA-Rand.",
                         "Alles wandert jede Minute ein kleines Stück, damit nichts einbrennt.",
