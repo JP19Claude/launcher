@@ -25,7 +25,9 @@ fun Modifier.searchFluidRim(corner: Dp, active: Boolean = false): Modifier = com
         },
         width = Dp(if (omega || active) 2f else 1.5f),
         enabled = s.fluidDesign,
-        flowing = omega || active,
+        // OMEGA UI 18.3: still unless typing – a rim flowing all the time kept the whole home
+        // screen (and every glass lens on it) drawing every frame.
+        flowing = active || s.omegaOverdrive,
     )
 }
 
@@ -44,7 +46,7 @@ internal fun BoxScope.SearchFluidFill(corner: Dp, active: Boolean = false) {
                     s.omegaGlass -> 1f
                     else -> 0.55f
                 },
-                flowing = s.omegaGlass || active,
+                flowing = active || s.omegaOverdrive,
             ),
     )
 }

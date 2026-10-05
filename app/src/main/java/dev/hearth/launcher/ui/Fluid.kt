@@ -191,7 +191,20 @@ val GalaxyOmegaFluidColors = listOf(
 
 /** The OMEGA Fluid colors for these settings (Rubin or Galaxy Omega). */
 internal fun omegaPalette(s: dev.hearth.launcher.data.LauncherSettings): List<Color> =
-    if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.GalaxyOmega) GalaxyOmegaFluidColors else OmegaFluidColors
+    when (s.omegaColor) {
+        dev.hearth.launcher.data.OmegaColor.GalaxyOmega -> GalaxyOmegaFluidColors
+        dev.hearth.launcher.data.OmegaColor.Liquid -> LiquidFluidColors
+        else -> OmegaFluidColors
+    }
+
+/** OMEGA UI 18.3 "Liquid Glass": light caught in clear glass – white with a breath of rainbow. */
+val LiquidFluidColors = listOf(
+    Color(0xFFFFFFFF),
+    Color(0xFFDDEBFF),
+    Color(0xFFF6E6FF),
+    Color(0xFFDDF7F0),
+    Color(0xFFFFF3E2),
+)
 
 /** The fluid colors in use: OMEGA Fluid with OMEGA Glass on, else Claude's. */
 @Composable

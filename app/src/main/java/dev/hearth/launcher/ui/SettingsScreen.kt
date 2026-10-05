@@ -324,7 +324,11 @@ fun SettingsScreen(
                         selected = s.omegaColor,
                         optionLabel = { it.label },
                         swatch = {
-                            if (it == dev.hearth.launcher.data.OmegaColor.GalaxyOmega) AccentColor.GalaxyOmega.color else AccentColor.Ruby.color
+                            when (it) {
+                                dev.hearth.launcher.data.OmegaColor.GalaxyOmega -> AccentColor.GalaxyOmega.color
+                                dev.hearth.launcher.data.OmegaColor.Liquid -> Color.White
+                                else -> AccentColor.Ruby.color
+                            }
                         },
                         onSelect = { v ->
                             // The system's accent follows: ruby or Galaxy Omega.
@@ -332,8 +336,16 @@ fun SettingsScreen(
                                 it.copy(
                                     omegaColor = v,
                                     omegaGlass = true,
-                                    accent = if (v == dev.hearth.launcher.data.OmegaColor.GalaxyOmega) AccentColor.GalaxyOmega else AccentColor.Ruby,
-                                    glassTint = if (v == dev.hearth.launcher.data.OmegaColor.GalaxyOmega) GlassTint.GalaxyOmega else GlassTint.Ruby,
+                                    accent = when (v) {
+                                        dev.hearth.launcher.data.OmegaColor.GalaxyOmega -> AccentColor.GalaxyOmega
+                                        dev.hearth.launcher.data.OmegaColor.Liquid -> AccentColor.White
+                                        else -> AccentColor.Ruby
+                                    },
+                                    glassTint = when (v) {
+                                        dev.hearth.launcher.data.OmegaColor.GalaxyOmega -> GlassTint.GalaxyOmega
+                                        dev.hearth.launcher.data.OmegaColor.Liquid -> GlassTint.Clear
+                                        else -> GlassTint.Ruby
+                                    },
                                 )
                             }
                         },

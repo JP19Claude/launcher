@@ -107,6 +107,9 @@ enum class AodTint(val label: String) {
     Gold("Gold"),
 }
 
+/** OMEGA UI 18.3: OMEGA Glass in the "Liquid Glass" color – clear like Apple's. */
+val LauncherSettings.liquidOmega: Boolean get() = omegaGlass && omegaColor == OmegaColor.Liquid
+
 /** OMEGA UI 18.1: does anything of the lock screen or the full AOD need Glimmer's stage? */
 fun LauncherSettings.wantsLockStage(): Boolean =
     fullAod || lockClawd || lockEdge || lockCharge || lockGreeting || lockAtmosphere || lockBattery || lockOmega || lockMessage.isNotBlank()
@@ -115,6 +118,8 @@ fun LauncherSettings.wantsLockStage(): Boolean =
 enum class OmegaColor(val label: String) {
     Ruby("Rubin"),
     GalaxyOmega("Galaxy Omega"),
+    /** OMEGA UI 18.3: clear, colorless glass like Apple's Liquid Glass – light, lens and shine. */
+    Liquid("Liquid Glass"),
 }
 
 /** Which glass gets the real lens (bending, color split); smaller glass gets the drawn edge. */
@@ -887,9 +892,20 @@ class SettingsRepository(context: Context) {
 
     // OMEGA UI 17.5: what another screen of the app changes (its own activity – the update
     // screen with the Clawd Illumination, About phone) reaches this one at once.
-    private val onPrefsChanged = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+    // OMEGA UI 18.3: one write changes many keys – read them back once, a moment later, not
+    // once per key (that was dozens of full reads for every switch).
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var rereadPending = false
+    private val reread = Runnable {
+        rereadPending = false
         val now = read()
         if (now != _settings.value) _settings.value = now
+    }
+    private val onPrefsChanged = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        if (!rereadPending) {
+            rereadPending = true
+            mainHandler.postDelayed(reread, 60)
+        }
     }
 
     init {
@@ -1401,7 +1417,7 @@ fun LauncherSettings.has(perk: Perk): Boolean = perk.name in perks
 /** What Claude Mythos switches on (besides its own takeover). */
 val MythosPerks: Set<String> = setOf(
     Perk.Stars, Perk.Fireflies, Perk.Aurora, Perk.Comets, Perk.Parallax, Perk.Sparks,
-    Perk.Vignette, Perk.Swarm, Perk.Greeting, Perk.Vivid, Perk.GiantClock,
+    Perk.Vignette, Perk.Swarm, Perk.Greeting, Perk.GiantClock,
 ).map { it.name }.toSet()
 
 /**
@@ -1414,7 +1430,6 @@ fun LauncherSettings.mythic(): LauncherSettings = if (!mythos) this else copy(
     omegaLight = true,
     fluidDesign = true,
     animations = true,
-    omegaOverdrive = true,
     hyperGlass = true,
     clawdHalo = true,
     clawdParade = true,

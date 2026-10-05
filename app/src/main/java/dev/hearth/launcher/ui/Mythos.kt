@@ -41,7 +41,8 @@ private val MythosMoods = listOf(ClawdMood.Idle, ClawdMood.Wave, ClawdMood.Dance
 
 /** A Clawd of [height] (his width follows), in [color], doing [mood]. */
 @Composable
-private fun MythosClawd(height: Dp, color: Color, mood: ClawdMood, modifier: Modifier = Modifier, mirrored: Boolean = false, fade: Float = 1f) {
+private fun MythosClawd(height: Dp, color: Color, mood: ClawdMood, modifier: Modifier = Modifier, mirrored: Boolean = false, fade: Float = 1f, moving: Boolean = false) {
+    // OMEGA UI 18.3: still pictures unless asked – dozens of moving Clawds kept every frame busy.
     Clawd(
         modifier
             .size(width = height * (14f / 11f), height = height)
@@ -51,6 +52,7 @@ private fun MythosClawd(height: Dp, color: Color, mood: ClawdMood, modifier: Mod
             },
         mood = mood,
         color = color,
+        animate = moving && LocalSettings.current.animations,
     )
 }
 

@@ -62,6 +62,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.hearth.launcher.data.GlassTint
 import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.data.liquidOmega
 import dev.hearth.launcher.data.WallpaperBackdrop
 import kotlin.math.abs
 import kotlin.math.min
@@ -109,12 +110,16 @@ data class GlassStyle(
             blur = s.glassBlur,
             // OMEGA UI 17.5, Clawd Illumination "Hyperglas": glass that bends, splits and shines
             // far more than any setting allows.
-            refraction = s.glassRefraction * if (s.hyperGlass) 1.9f else 1f,
-            dispersion = if (s.hyperGlass) (s.glassDispersion * 2.4f).coerceAtLeast(1.4f) else s.glassDispersion,
-            specular = s.glassSpecular * if (s.hyperGlass) 1.5f else 1f,
+            // OMEGA UI 18.3 "Liquid Glass": clear like Apple's – a deeper lens, more shine.
+            refraction = s.glassRefraction * (if (s.hyperGlass) 1.9f else 1f) * (if (s.liquidOmega) 1.35f else 1f),
+            dispersion = if (s.hyperGlass) (s.glassDispersion * 2.4f).coerceAtLeast(1.4f) else if (s.liquidOmega) maxOf(s.glassDispersion, 0.8f) else s.glassDispersion,
+            specular = s.glassSpecular * (if (s.hyperGlass) 1.5f else 1f) * (if (s.liquidOmega) 1.4f else 1f),
             // OMEGA Glass: ruby (or Galaxy Omega) glass through the whole system, clearly tinted
             // (and deeper still with the Illumination's Ω-Overdrive).
-            tint = if (s.omegaGlass) {
+            tint = if (s.liquidOmega) {
+                // Hardly any color at all: the world behind it, bent and lit.
+                Color.White.copy(alpha = (0.05f * s.glassTintStrength.coerceAtLeast(1f)).coerceAtMost(0.12f))
+            } else if (s.omegaGlass) {
                 val t = if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.GalaxyOmega) GlassTint.GalaxyOmega.color else GlassTint.Ruby.color
                 val boost = if (s.omegaOverdrive) 2.4f else 1.6f
                 t.copy(alpha = (t.alpha * boost * s.glassTintStrength.coerceAtLeast(1f)).coerceIn(0f, if (s.omegaOverdrive) 0.7f else 0.6f))

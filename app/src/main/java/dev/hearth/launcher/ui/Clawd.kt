@@ -104,10 +104,11 @@ fun Clawd(
         }
         return
     }
-    val t = rememberInfiniteTransition(label = "clawd")
-    // One clock for everything: 0..1 over 2.4 s.
-    val clock by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2400, easing = LinearEasing), RepeatMode.Restart), label = "clawdClock")
+    // One clock for everything: 0..1 over 2.4 s – OMEGA UI 18.3: from the shared fluid clock
+    // (calmer in Flüssig-Modus, still while scrolling) instead of each Clawd's own 120 Hz one.
+    val flow = flowPhase(2400, true)
     Canvas(modifier) {
+        val clock = ((flow?.invoke() ?: 0f) / (2f * Math.PI.toFloat())).coerceIn(0f, 1f)
         val body = color ?: when (skin) {
             ClawdSkin.Rainbow -> rainbow(clock)
             ClawdSkin.Galaxy -> galaxy(clock)

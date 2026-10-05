@@ -178,6 +178,31 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "18.3",
+            name = "Liquid Glass",
+            summary = "OMEGA Glass klar wie Apples Liquid Glass – und ein deutlich flüssigeres System.",
+            sections = listOf(
+                ChangeSection(
+                    "Liquid Glass", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Neue Farbe für OMEGA Glass: „Liquid Glass“ – klares, fast farbloses Glas wie bei Apple, mit tieferer Linse, mehr Glanz an den Kanten und OMEGA Fluid in Weiß mit einem Hauch Regenbogen.",
+                        "Unter Design → OMEGA → Farbe von OMEGA Glass; Akzent und Glas-Tönung wechseln mit.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Flüssiger", Icons.Rounded.Refresh, Green,
+                    listOf(
+                        "Der Startbildschirm steht jetzt still, wenn nichts passiert: OMEGA-Beleuchtung, die Ränder und das Fluid der Suchleisten fließen nicht mehr dauernd (nur beim Tippen oder mit Ω-Overdrive) – vorher wurde dadurch jedes Glas Bild für Bild neu berechnet.",
+                        "Alle Clawds laufen an einer gemeinsamen, ruhigeren Uhr statt jeder mit eigenen 120 Bildern pro Sekunde, und halten beim Scrollen kurz still.",
+                        "Claude Mythos ist leichter: kein Overdrive und kein Farbfilter mehr über dem ganzen Bildschirm, die vielen Clawds stehen still.",
+                        "Einstellungen werden nach einer Änderung nur noch einmal neu gelesen statt einmal pro Eintrag.",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "18.2",
             name = "Dein AOD",
             summary = "Ein eigenes Bild für das große Always On Display.",

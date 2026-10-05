@@ -117,7 +117,9 @@ internal fun OmegaHomeLight(modifier: Modifier = Modifier) {
     }
     val dark = LocalGlassStyle.current.dark
     val power = (if (dark) 0.6f else 1f) * (if (s.omegaOverdrive) 1.3f else 1f)
-    val flow = flowPhase(30_000, s.animations)
+    // OMEGA UI 18.3: the light stands still (only Ω-Overdrive lets it drift) – drifting, it
+    // redrew the whole home screen and every glass on it, frame after frame.
+    val flow = flowPhase(30_000, s.animations && s.omegaOverdrive)
     Canvas(modifier) {
         val t = flow?.invoke() ?: 1f
         val w = size.width
@@ -181,7 +183,7 @@ internal fun OmegaGlassSheet(
                 Modifier
                     .matchParentSize()
                     .clip(RoundedCornerShape(corner))
-                    .fluidGlow(strength = if (omega) 0.9f else 0.6f, flowing = omega),
+                    .fluidGlow(strength = if (omega) 0.9f else 0.6f, flowing = s.omegaOverdrive),
             )
         }
         // OMEGA UI 17.5: a big Ω etched into the glass, low in its corner.
