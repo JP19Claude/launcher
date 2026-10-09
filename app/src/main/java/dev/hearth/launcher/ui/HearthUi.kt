@@ -10,6 +10,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -99,10 +100,10 @@ import kotlin.math.sin
 
 /** Hearth UI's name and the things that go with its versions. */
 object HearthUi {
-    const val NAME = "OMEGA UI"
+    const val NAME = "ZENITH"
 
     /** The big version the welcome tour is about; it shows once after reaching it. */
-    const val INTRO_VERSION = 17
+    const val INTRO_VERSION = 19
 
     /** "14.0" → "14", "13.5" → "13.5": how the version is written big. */
     fun major(version: String): String {
@@ -120,11 +121,11 @@ object HearthUi {
         prefs(context).edit().putInt("introSeen", INTRO_VERSION).apply()
     }
 
-    /** Once: "Hearth UI is now OMEGA UI". */
-    fun omegaSeen(context: Context): Boolean = prefs(context).getBoolean("omega18Seen", false)
+    /** Once: "OMEGA UI is now ZENITH" – the sun rising to the zenith. */
+    fun omegaSeen(context: Context): Boolean = prefs(context).getBoolean("zenith19Seen", false)
 
     fun markOmegaSeen(context: Context) {
-        prefs(context).edit().putBoolean("omega18Seen", true).apply()
+        prefs(context).edit().putBoolean("zenith19Seen", true).apply()
     }
 
     /** OMEGA Labs: show the welcome tour again next time. */
@@ -177,6 +178,63 @@ internal object HearthChangelog {
     private val Slate = Color(0xFF5E6C84)
 
     val releases: List<ChangeRelease> = listOf(
+        ChangeRelease(
+            version = "19.0",
+            name = "ZENITH",
+            summary = "Aus OMEGA UI wird ZENITH – die Sonne im höchsten Punkt: ein neuer Name, ein neues Logo, eine neue Farbe, eine neue Uhr. Alles fühlt sich neu an, und die alten Easter Eggs bleiben.",
+            sections = listOf(
+                ChangeSection(
+                    "ZENITH", Icons.Rounded.Star, Green,
+                    listOf(
+                        "OMEGA UI heißt jetzt ZENITH – wie die Sonne, wenn sie im Zenit steht, ganz oben am Himmel.",
+                        "Ein neues Logo: ein weißes Z aus Licht, die 19 in Grün quer hindurch und darüber die Sonne – in den Einstellungen, unter Über das Telefon, im Software-Update und in der Tour.",
+                        "Beim ersten Start: Das Ω verblasst, die Sonne steigt an ihrem Bogen aus der Nacht bis in den Zenit, der Himmel wird hell – und oben entsteht ZENITH.",
+                        "Eine neue Tour durch alles, was neu ist.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Logo gedrückt halten", Icons.Rounded.Favorite, Orange,
+                    listOf(
+                        "Wie bei ColorOS: Hältst du das ZENITH-Logo gedrückt, lädt es sich auf – die Sonne klettert nach oben, die Strahlen drehen sich und werden länger, das Logo hebt sich und leuchtet.",
+                        "Ist es voll, klopft es spürbar; lässt du los, federt es zurück.",
+                        "Das Geheimnis bleibt: So oft antippen, wie ZENITH Nummer hat – 19-mal –, und du bist bei den Clawd Illuminati.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Zenith-Grün", Icons.Rounded.Refresh, Blue,
+                    listOf(
+                        "Eine neue Systemfarbe: Zenith – Grün, Sonnengelb und Himmelblau fließen durch Glas, Ränder, Menüs, Widgets, Glimmer und das Always On Display.",
+                        "Neu: Akzent „Zenith-Grün“ und Glas-Tönung „Sonnenglas“ (Glas mit einem Hauch Grün).",
+                        "Farben nach Sonnenstand: Zenith folgt dem Tag – morgens Gold und Pfirsich, mittags Grün und Himmel, abends Glut, nachts Mondblau.",
+                        "Liquid Glass im Zenith-Licht: klar wie bei Apple, mit einem Glanz aus Sonne und Grün.",
+                        "Galaxy × Claude bekommt das ZENITH-Design; wer OMEGA Glass in Rubin hatte, wechselt zu Zenith – Rubin und Galaxy Omega bleiben wählbar.",
+                        "Die Einstellungen haben einen eigenen Bereich „ZENITH“.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Sonnenbogen", Icons.Rounded.Home, Green,
+                    listOf(
+                        "Eine neue Uhr für den Startbildschirm: Über der Uhrzeit spannt sich der Bogen der Sonne, und die Sonne steht darauf, wo sie gerade am Himmel steht – nachts wandert der Mond.",
+                        "Darunter, was die Sonne gerade tut: „Zenit in 2 Std.“, „Sonne im Zenit“, „Sonnenuntergang in 45 Min.“, „Nadir – tiefste Nacht“.",
+                        "Den Sonnenbogen gibt es auch für das große Always On Display (Clawd Illuminati → Always On Display → Uhr).",
+                        "Mit Ziffern aus Glas, wenn „Uhren aus Glas“ an ist.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Easter Eggs", Icons.Rounded.Face, Violet,
+                    listOf(
+                        "ZENITH 19: der Sonnenlauf – schieb die Sonne ihren Bogen hinauf bis in den Zenit; jeder der 19 Clawds am Horizont, den das Licht erreicht, wacht auf.",
+                        "Das Egg-Museum: Im Software-Update unter Update-Verlauf lange auf eine alte Version drücken – ihr Easter Egg kommt wieder. Rubin, Laterne, Schmiede, Lupe, Glühwürmchen, Tresor, Kometen, Prisma … alle von Hearth und OMEGA UI bleiben.",
+                        "Rubin, Ω, OMEGA-Insel, OMEGA Cloud, die Clawd Illuminati und Claude Mythos sind weiter da.",
+                    ),
+                    hearth,
+                ),
+            ),
+        ),
         ChangeRelease(
             version = "18.5",
             name = "Liquid",
@@ -1465,9 +1523,13 @@ internal fun ChangelogCard(
     }
 }
 
-/** "Update-Verlauf": the versions before, each opening to its changelog. */
+/**
+ * "Update-Verlauf": the versions before, each opening to its changelog. ZENITH 19: held, a
+ * version opens its own easter egg again ([onEgg]) – the egg museum of Hearth, OMEGA UI and ZENITH.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-internal fun UpdateHistoryCard(releases: List<ChangeRelease>, app: ChangeApp, accent: Color, card: Color) {
+internal fun UpdateHistoryCard(releases: List<ChangeRelease>, app: ChangeApp, accent: Color, card: Color, onEgg: ((String) -> Unit)? = null) {
     var open by remember { mutableStateOf<String?>(null) }
     Column(
         Modifier
@@ -1493,7 +1555,16 @@ internal fun UpdateHistoryCard(releases: List<ChangeRelease>, app: ChangeApp, ac
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .clickable { open = if (isOpen) null else release.version }
+                    .then(
+                        if (onEgg != null) {
+                            Modifier.combinedClickable(
+                                onClick = { open = if (isOpen) null else release.version },
+                                onLongClick = { onEgg(release.version) },
+                            )
+                        } else {
+                            Modifier.clickable { open = if (isOpen) null else release.version }
+                        },
+                    )
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1517,6 +1588,14 @@ internal fun UpdateHistoryCard(releases: List<ChangeRelease>, app: ChangeApp, ac
                 HearthChangelog.sectionsFor(release, app).forEach { ChangeSectionView(it) }
                 Spacer(Modifier.height(6.dp))
             }
+        }
+        if (onEgg != null) {
+            Text(
+                "Egg-Museum: lange auf eine Version drücken – ihr Easter Egg kommt wieder.",
+                color = accent.copy(alpha = 0.85f),
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+            )
         }
     }
 }
@@ -1545,11 +1624,11 @@ fun HearthUiIntro(onDone: (newLook: Boolean) -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF0B0C1C), Color(0xFF140D26), Color(0xFF050506))))
+            .background(Brush.verticalGradient(listOf(Color(0xFF071A22), Color(0xFF0C2A2E), Color(0xFF040807))))
             // Nothing underneath gets a touch while the tour is open.
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
     ) {
-        FluidBackdrop(AiFluidColors.take(3), strength = 0.7f)
+        FluidBackdrop(ZenithFluidColors.take(3), strength = 0.6f)
         Column(
             Modifier
                 .fillMaxSize()
@@ -1591,36 +1670,36 @@ fun HearthUiIntro(onDone: (newLook: Boolean) -> Unit) {
                     when (page) {
                         0 -> TourHero { appear.value }
                         1 -> TourPage(
-                            title = "Ein neuer Startbildschirm",
-                            text = "Neue Uhren, neue Docks und neue Uhr-Widgets – alles im Licht des Rubins.",
+                            title = "Ein neuer Morgen",
+                            text = "Neue Farbe, neue Uhr, neues Glas – über deinem Startbildschirm geht die Sonne auf.",
                             points = listOf(
-                                TourPoint(Icons.Rounded.Home, Color(0xFFE5243F), "Vier neue Uhren", "OMEGA, Analog-Glas, In Worten („Viertel nach drei“) und Geteilt – unter Startbildschirm → Uhr."),
-                                TourPoint(Icons.Rounded.Star, Color(0xFFFF6B7D), "Neue Docks", "Die OMEGA-Insel schwebt in rotem Licht, das Rubin-Glas zieht sich über die ganze Breite."),
-                                TourPoint(Icons.Rounded.Refresh, Color(0xFFB0102C), "Neue Uhr-Widgets", "OMEGA-Uhr, Rubin-Analoguhr und eine Weltuhr mit Tag und Nacht."),
+                                TourPoint(Icons.Rounded.Home, ZenithSun, "Sonnenbogen", "Die neue Uhr: Die Sonne steht auf ihrem Bogen, wo sie gerade am Himmel steht – nachts der Mond. Mittags: „Sonne im Zenit“."),
+                                TourPoint(Icons.Rounded.Star, ZenithGreen, "Zenith-Grün", "Die neue Systemfarbe: Grün, Sonne und Himmel fließen durch Glas, Menüs, Widgets und Glimmer."),
+                                TourPoint(Icons.Rounded.Refresh, ZenithSky, "Sonnenglas", "Glas mit einem Hauch Grün – oder klar wie Apples Liquid Glass, mit Sonnenglanz."),
                             ),
                         ) {
                             TourSwitch(
-                                title = "OMEGA-Design verwenden",
-                                text = "Galaxy × Claude mit Rubin-Akzenten, der OMEGA-Uhr und der OMEGA-Insel als Dock – jederzeit änderbar.",
+                                title = "ZENITH-Design verwenden",
+                                text = "Galaxy × Claude mit Zenith-Grün, Sonnenglas, der Sonnenbogen-Uhr und der OMEGA-Insel als Dock – jederzeit änderbar.",
                                 checked = newLook,
                             ) { newLook = it }
                         }
                         2 -> TourPage(
-                            title = "Menüs, Fenster, Design",
-                            text = "Überall neu gemacht.",
+                            title = "Halt es gedrückt",
+                            text = "Wie bei ColorOS: Das Logo lebt.",
                             points = listOf(
-                                TourPoint(Icons.Rounded.Menu, Color(0xFF8E6BFF), "Neue Menüs", "Lange auf eine App drücken: Kopfzeile mit Icon, Aktionen als Glas-Kacheln in deiner Akzentfarbe."),
-                                TourPoint(Icons.Rounded.Add, Color(0xFF3E91FF), "Apps im Fenster", "„Im Fenster öffnen“ – jede App als schwebendes Fenster (mit Shizuku)."),
-                                TourPoint(Icons.Rounded.Favorite, Color(0xFFE5243F), "Neue Designs", "Galaxy × Claude ist jetzt OMEGA UI – mit Akzentfarbe und Glas-Tönung „Rubin“."),
+                                TourPoint(Icons.Rounded.Favorite, ZenithGreen, "Das ZENITH-Logo", "In den Einstellungen, unter Über das Telefon und im Software-Update: gedrückt halten – die Sonne steigt, die Strahlen drehen sich, und wenn sie voll ist, klopft es."),
+                                TourPoint(Icons.Rounded.Menu, Color(0xFFD4AF37), "Das Geheimnis bleibt", "Tippst du das Logo so oft an, wie ZENITH Nummer hat, kommst du zu den Clawd Illuminati."),
+                                TourPoint(Icons.Rounded.Add, ZenithSun, "Ein neuer Übergang", "Das Ω verblasst, die Sonne klettert in den Zenit, und dort oben entsteht ZENITH."),
                             ),
                         )
                         else -> TourPage(
-                            title = "OMEGA Cloud",
-                            text = "Deine Einstellungen sicher in der Cloud – über dein Google-Konto.",
+                            title = "Was bleibt",
+                            text = "OMEGA UI und Hearth sind nicht weg – sie leben in ZENITH weiter.",
                             points = listOf(
-                                TourPoint(Icons.Rounded.Share, Color(0xFFE5243F), "Sichern", "Einstellungen, Widgets, Clawd und Eggs – verschlüsselt, mit Shizuku sofort."),
-                                TourPoint(Icons.Rounded.Refresh, Color(0xFF30C26B), "Wiederherstellen", "Auf einem neuen Handy holt Android alles zurück – oder du nimmst die Datei mit."),
-                                TourPoint(Icons.Rounded.Face, Color(0xFFFF9F0A), "Ein neues Easter Egg", "Zur 17: fünfmal auf die Version tippen und einen Rubin schleifen."),
+                                TourPoint(Icons.Rounded.Face, Color(0xFFE5243F), "Das Egg-Museum", "Software-Update → Update-Verlauf: lange auf eine alte Version drücken, und ihr Easter Egg kommt wieder – Rubin, Laterne, Schmiede, Lupe, Glühwürmchen …"),
+                                TourPoint(Icons.Rounded.Share, ZenithSun, "Ein neues Easter Egg", "Zur 19: fünfmal auf die Version tippen und die Sonne bis in den Zenit schieben – 19 Clawds wachen auf."),
+                                TourPoint(Icons.Rounded.Star, Color(0xFF8E6BFF), "Alles von OMEGA", "OMEGA Cloud, OMEGA-Insel, Rubin als Farbe, die Illuminati und Claude Mythos – alles noch da."),
                             ),
                         )
                     }
@@ -1634,7 +1713,7 @@ fun HearthUiIntro(onDone: (newLook: Boolean) -> Unit) {
                     .fillMaxWidth()
                     .height(54.dp)
                     .clip(RoundedCornerShape(27.dp))
-                    .background(Brush.horizontalGradient(listOf(Color(0xFFD97757), Color(0xFF8E6BFF), Color(0xFF3E91FF))))
+                    .background(Brush.horizontalGradient(listOf(ZenithGreenDeep, ZenithGreen, ZenithSky)))
                     .glassSheen(27.dp)
                     .clickable {
                         if (last) onDone(newLook) else scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }
@@ -1664,8 +1743,8 @@ private fun TourHero(appear: () -> Float) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(20.dp))
-        // OMEGA UI 17: the ruby with the Ω, the system version under it.
-        OmegaRuby(size = 170.dp, version = "OMEGA UI 17")
+        // ZENITH 19: its mark – hold it, it charges up.
+        ZenithLogo(size = 180.dp, caption = "ZENITH 19")
         Spacer(Modifier.height(8.dp))
         Text(
             "auf ${ClaudeOs.full} „${ClaudeOs.CODENAME}“",
@@ -1673,7 +1752,7 @@ private fun TourHero(appear: () -> Float) {
         )
         Spacer(Modifier.height(18.dp))
         Text(
-            "Willkommen bei OMEGA UI. Ein neuer Startbildschirm, neue Uhren, Docks, Menüs und Fenster, OMEGA Cloud und viele neue Designs – wisch weiter.",
+            "Willkommen bei ZENITH – die Sonne im höchsten Punkt. Ein neues Logo, eine neue Farbe, eine neue Uhr: alles frisch. Halt das Logo gedrückt – und dann wisch weiter.",
             color = Color.White.copy(alpha = 0.75f),
             fontSize = 16.sp,
             lineHeight = 22.sp,

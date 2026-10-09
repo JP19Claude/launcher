@@ -192,11 +192,13 @@ val GalaxyOmegaFluidColors = listOf(
     Color(0xFFCFE3FF),
 )
 
-/** The OMEGA Fluid colors for these settings (Rubin or Galaxy Omega). */
+/** The OMEGA Fluid colors for these settings (Zenith, Rubin or Galaxy Omega). */
 internal fun omegaPalette(s: dev.hearth.launcher.data.LauncherSettings): List<Color> =
     when {
-        s.liquidOmega -> LiquidFluidColors
+        // ZENITH 19: clear glass in ZENITH's light keeps a glint of sun and green.
+        s.liquidOmega -> if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.Zenith) ZenithLiquidColors else LiquidFluidColors
         else -> when (s.omegaColor) {
+        dev.hearth.launcher.data.OmegaColor.Zenith -> if (s.zenithDaylight) zenithDaylightColors() else ZenithFluidColors
         dev.hearth.launcher.data.OmegaColor.GalaxyOmega -> GalaxyOmegaFluidColors
         dev.hearth.launcher.data.OmegaColor.Liquid -> LiquidFluidColors
         else -> OmegaFluidColors

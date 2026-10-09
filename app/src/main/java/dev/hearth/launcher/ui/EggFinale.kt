@@ -95,3 +95,8 @@ fun BoxScope.ClaudeOsFinale(show: Boolean, style: ClaudeMarkStyle) =
 @Composable
 fun BoxScope.OmegaFinale(show: Boolean) =
     EggFinale(show, "OMEGA UI") { OmegaRuby(size = 70.dp) }
+
+/** A ZENITH egg is done: ZENITH's mark, the sun over the Z. */
+@Composable
+fun BoxScope.ZenithFinale(show: Boolean) =
+    EggFinale(show, "ZENITH") { ZenithLogo(size = 96.dp, interactive = false) }

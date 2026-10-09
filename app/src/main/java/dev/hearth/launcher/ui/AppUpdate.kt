@@ -252,6 +252,8 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     var state by remember { mutableStateOf<UpdateState>(UpdateState.Checking) }
     var lastCheck by remember { mutableLongStateOf(AppUpdater.lastChecked(context)) }
     var egg by remember { mutableStateOf(false) }
+    // ZENITH 19, the egg museum: an old version's easter egg, held in the history.
+    var museum by remember { mutableStateOf<String?>(null) }
     // ClaudeOS has its own easter egg, like Android's under One UI.
     var osEgg by remember { mutableStateOf(false) }
     var osTaps by remember { mutableIntStateOf(0) }
@@ -352,17 +354,16 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
             ) {
                 val shown = release?.version ?: current
                 when (look.hero) {
-                    // OMEGA UI 17: the ruby with the Ω, the system version under it.
+                    // ZENITH 19: the ZENITH mark, the system version under it – held, it charges
+                    // up like ColorOS's logo; tapped as often as its number, the Illuminati.
                     UpdateHero.Number -> if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
-                        // OMEGA UI 17.5: tapped as often as OMEGA UI's number, the crystal opens
-                        // the Clawd Illumination.
                         val crystal = rememberCrystalTaps(current)
-                        OmegaRuby(
-                            Modifier
-                                .padding(top = 20.dp, bottom = 6.dp)
-                                .clickable(remember { MutableInteractionSource() }, indication = null, onClick = crystal),
-                            size = 170.dp,
-                            version = "OMEGA UI ${HearthUi.major(shown)}",
+                        ZenithLogo(
+                            Modifier.padding(top = 20.dp, bottom = 6.dp),
+                            size = 180.dp,
+                            number = shown.substringBefore('.'),
+                            caption = "ZENITH ${HearthUi.major(shown)}",
+                            onTap = crystal,
                         )
                     } else {
                         VersionArtwork(HearthUi.major(shown), look.number, height = 220.dp)
@@ -476,7 +477,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
 
             if (history.isNotEmpty()) {
                 UpdateSectionTitle("Update-Verlauf")
-                UpdateHistoryCard(history, app, look.accent, look.card)
+                UpdateHistoryCard(history, app, look.accent, look.card, onEgg = { museum = it })
             }
 
             // A tip from Clawd; a tap shows the next one.
@@ -581,6 +582,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
         AnimatedVisibility(osEgg, enter = fadeIn(tween(500)), exit = fadeOut(tween(300))) {
             ClaudeOsVersionEgg { osEgg = false }
         }
+        museum?.let { old -> HearthVersionEgg(old, name) { museum = null } }
     }
 }
 
@@ -594,6 +596,7 @@ internal fun HearthVersionEgg(version: String, name: String, onClose: () -> Unit
     val look = remember { lookFor(context.packageName) }
     val number = versionNumber(version)
     when {
+        number >= 19f -> SunRunEgg(version, name, onClose)
         number >= 18.5f -> LensEgg(version, name, onClose)
         number >= 18f -> ForgeEgg(version, name, onClose)
         number >= 17.5f -> LanternEgg(version, name, onClose)

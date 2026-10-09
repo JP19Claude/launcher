@@ -133,7 +133,7 @@ private fun gatherSpecs(context: Context): List<SpecGroup> {
     val pm = context.packageManager
     val info = runCatching { pm.getPackageInfo(context.packageName, 0) }.getOrNull()
     val hearth = info?.versionName.orEmpty()
-    val edition = if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "OMEGA UI (Launcher, Glimmer und Clawd in einer App)" else "Hearth"
+    val edition = if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "ZENITH (Launcher, Glimmer und Clawd in einer App)" else "Hearth"
     val build = info?.let { androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(it) }?.toString().orEmpty()
 
     val memory = ActivityManager.MemoryInfo().also { context.getSystemService(ActivityManager::class.java)?.getMemoryInfo(it) }
@@ -181,13 +181,13 @@ private fun gatherSpecs(context: Context): List<SpecGroup> {
 
     return listOf(
         SpecGroup(
-            if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "OMEGA UI & ClaudeOS" else "Hearth & ClaudeOS",
+            if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "ZENITH & ClaudeOS" else "Hearth & ClaudeOS",
             listOf(
-                Spec(if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "OMEGA UI-Version" else "Hearth-Version", hearth, hearthEgg = true),
+                Spec(if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "ZENITH-Version" else "Hearth-Version", hearth, hearthEgg = true),
                 Spec("ClaudeOS-Version", "${ClaudeOs.VERSION} („${ClaudeOs.CODENAME}“)", claudeOs = true),
                 Spec("Ausgabe", edition),
                 Spec("Build-Nummer", build, labs = true),
-                Spec("Design", "OMEGA UI 16 · Ω · Liquid Glass · Dunkles Glas"),
+                Spec("Design", "ZENITH 19 · Sonne · Liquid Glass · Zenit & Nadir"),
             ),
         ),
         SpecGroup(
@@ -313,16 +313,17 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Zurück", tint = Color.White)
             }
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                // OMEGA UI 17: the ruby with the Ω and the system version, instead of the drawn phone.
+                // ZENITH 19: the ZENITH mark instead of the drawn phone – hold it like ColorOS's logo;
+                // tapped as often as ZENITH's number, it opens the Clawd Illuminati.
                 if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
-                    // OMEGA UI 17.5: the crystal's secret – tapped as often as OMEGA UI's number.
-                    val crystal = rememberCrystalTaps(groups.first().specs.first().value)
-                    OmegaRuby(
-                        Modifier
-                            .padding(top = 10.dp)
-                            .clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, onClick = crystal),
-                        size = 160.dp,
-                        version = "OMEGA UI ${HearthUi.major(groups.first().specs.first().value)}",
+                    val shownVersion = groups.first().specs.first().value
+                    val crystal = rememberCrystalTaps(shownVersion)
+                    ZenithLogo(
+                        Modifier.padding(top = 10.dp),
+                        size = 170.dp,
+                        number = shownVersion.substringBefore('.'),
+                        caption = "ZENITH ${HearthUi.major(shownVersion)}",
+                        onTap = crystal,
                     )
                 } else {
                     PhoneHero()

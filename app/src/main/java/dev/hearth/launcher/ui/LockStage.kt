@@ -159,6 +159,12 @@ private fun FullAod(s: LauncherSettings, wallpaper: ImageBitmap?) {
                 val brush = clockBrush(s)
                 val time = omegaDigits(now.format(DateTimeFormatter.ofPattern("HH:mm", locale)), s.omegaZeros)
                 when (s.aodClock) {
+                    // ZENITH 19: the sun's arc over the time – the moon at night.
+                    AodClock.Zenith -> {
+                        val (day, along) = zenithAlong(now.hour + now.minute / 60f)
+                        ZenithArc(day, along, Modifier.size(width = 260.dp, height = 110.dp))
+                        Text(time, style = TextStyle(brush = brush, fontSize = 80.sp, fontWeight = FontWeight.Light, letterSpacing = (-1).sp, lineHeight = 84.sp))
+                    }
                     AodClock.Omega -> Text(time, style = TextStyle(brush = brush, fontSize = 92.sp, fontWeight = FontWeight.Light, letterSpacing = (-2).sp))
                     AodClock.Thin -> Text(time, style = TextStyle(brush = brush, fontSize = 84.sp, fontWeight = FontWeight.Thin))
                     AodClock.Big -> {

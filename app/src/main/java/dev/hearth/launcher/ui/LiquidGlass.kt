@@ -122,7 +122,11 @@ data class GlassStyle(
                 // Hardly any color at all: the world behind it, bent and lit.
                 Color.White.copy(alpha = (0.05f * s.glassTintStrength.coerceAtLeast(1f)).coerceAtMost(0.12f))
             } else if (s.omegaGlass) {
-                val t = if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.GalaxyOmega) GlassTint.GalaxyOmega.color else GlassTint.Ruby.color
+                val t = when (s.omegaColor) {
+                    dev.hearth.launcher.data.OmegaColor.GalaxyOmega -> GlassTint.GalaxyOmega.color
+                    dev.hearth.launcher.data.OmegaColor.Zenith -> GlassTint.Zenith.color
+                    else -> GlassTint.Ruby.color
+                }
                 val boost = if (s.omegaOverdrive) 2.4f else 1.6f
                 t.copy(alpha = (t.alpha * boost * s.glassTintStrength.coerceAtLeast(1f)).coerceIn(0f, if (s.omegaOverdrive) 0.7f else 0.6f))
             } else {

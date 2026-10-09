@@ -310,9 +310,10 @@ fun SettingsScreen(
                 }
             }
 
-            // OMEGA UI 17.1: OMEGA Glass all through the system, and the smooth mode.
+            // OMEGA UI 17.1: OMEGA Glass all through the system, and the smooth mode – ZENITH 19's
+            // own section now.
             if (shows("design")) item {
-                Section("OMEGA") {
+                Section("ZENITH") {
                     // OMEGA UI 18.5: OMEGA Glass or Apple's Liquid Glass, for the whole system.
                     ChoiceRow(
                         label = "Glas-Stil",
@@ -333,35 +334,38 @@ fun SettingsScreen(
                     ) { v -> update { it.copy(glassStatusBar = v) } }
                     RowDivider()
                     SwitchRow(
-                        label = "OMEGA Glass",
-                        description = "Rubin-Glas im ganzen System, und überall fließt OMEGA Fluid (Rubin, Rosé, Bernstein) statt Claudes Farben – Startbildschirm, Menüs, Einstellungen, Glimmer",
+                        label = "Getöntes Glas (OMEGA Glass)",
+                        description = "Glas in der Systemfarbe im ganzen System, und überall fließt Fluid in ihren Farben (Zenith: Grün, Sonne, Himmel) statt Claudes – Startbildschirm, Menüs, Einstellungen, Glimmer",
                         checked = s.omegaGlass,
                     ) { v -> update { it.copy(omegaGlass = v) } }
                     ChoiceRow(
-                        label = "Farbe von OMEGA Glass",
+                        label = "Systemfarbe",
                         options = dev.hearth.launcher.data.OmegaColor.entries,
                         selected = s.omegaColor,
                         optionLabel = { it.label },
                         swatch = {
                             when (it) {
                                 dev.hearth.launcher.data.OmegaColor.GalaxyOmega -> AccentColor.GalaxyOmega.color
+                                dev.hearth.launcher.data.OmegaColor.Zenith -> AccentColor.Zenith.color
                                 dev.hearth.launcher.data.OmegaColor.Liquid -> Color.White
                                 else -> AccentColor.Ruby.color
                             }
                         },
                         onSelect = { v ->
-                            // The system's accent follows: ruby or Galaxy Omega.
+                            // The system's accent follows: Zenith green, ruby or Galaxy Omega.
                             update {
                                 it.copy(
                                     omegaColor = v,
                                     omegaGlass = true,
                                     accent = when (v) {
                                         dev.hearth.launcher.data.OmegaColor.GalaxyOmega -> AccentColor.GalaxyOmega
+                                        dev.hearth.launcher.data.OmegaColor.Zenith -> AccentColor.Zenith
                                         dev.hearth.launcher.data.OmegaColor.Liquid -> AccentColor.White
                                         else -> AccentColor.Ruby
                                     },
                                     glassTint = when (v) {
                                         dev.hearth.launcher.data.OmegaColor.GalaxyOmega -> GlassTint.GalaxyOmega
+                                        dev.hearth.launcher.data.OmegaColor.Zenith -> GlassTint.Zenith
                                         dev.hearth.launcher.data.OmegaColor.Liquid -> GlassTint.Clear
                                         else -> GlassTint.Ruby
                                     },
@@ -369,10 +373,17 @@ fun SettingsScreen(
                             }
                         },
                     )
+                    if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.Zenith) {
+                        SwitchRow(
+                            label = "Farben nach Sonnenstand",
+                            description = "Zenith folgt der Sonne: morgens Gold und Pfirsich, mittags Grün und Himmel, abends Glut, nachts Mondblau",
+                            checked = s.zenithDaylight,
+                        ) { v -> update { it.copy(zenithDaylight = v) } }
+                    }
                     RowDivider()
                     SwitchRow(
-                        label = "OMEGA-Beleuchtung",
-                        description = "Auf dem Startbildschirm leuchtet OMEGA Fluid zwischen Hintergrundbild und Apps und Widgets – im Dark Mode gedämpft",
+                        label = "ZENITH-Licht (OMEGA-Beleuchtung)",
+                        description = "Auf dem Startbildschirm leuchtet Fluid in der Systemfarbe zwischen Hintergrundbild und Apps und Widgets – im Dark Mode gedämpft",
                         checked = s.omegaLight,
                     ) { v -> update { it.copy(omegaLight = v, omegaGlass = if (v) true else it.omegaGlass) } }
                     RowDivider()
@@ -393,7 +404,7 @@ fun SettingsScreen(
                         optionLabel = { it.label },
                         onSelect = { preset -> vm.applyPreset(preset) },
                     )
-                    Note("Setzt Icons, Uhr, Farben und Glas auf einmal. Danach kannst du alles einzeln anpassen. „Galaxy × Claude“ macht den Launcher zu One UI mit Glas und Claude im System – mit OMEGA UI: Rubin, OMEGA-Uhr und OMEGA-Insel.")
+                    Note("Setzt Icons, Uhr, Farben und Glas auf einmal. Danach kannst du alles einzeln anpassen. „Galaxy × Claude“ macht den Launcher zu One UI mit Glas und Claude im System – mit ZENITH: Zenith-Grün, Sonnenglas, Sonnenbogen-Uhr und OMEGA-Insel.")
                     SwitchRow(
                         label = "Claude im System (Galaxy × Claude)",
                         description = "Wie Galaxy AI, nur mit Claude: Now Brief auf dem Startbildschirm, Claude zuerst in der Suche (Los ohne passende App fragt Claude), Vorschläge zum Antippen und „Claude fragen“ im Menü jeder App",
@@ -1696,8 +1707,8 @@ internal val SettingsCategories = listOf(
     SettingsCategory("cloud", "OMEGA Cloud", "Sicherung über dein Google-Konto und als Datei", Icons.Rounded.Share, Color(0xFFE5243F),
         "cloud omega sicherung backup google drive konto wiederherstellen datei export import"),
     // Hearth UI 14.5: what Hearth UI does that One UI and ColorOS don't.
-    SettingsCategory("vorteile", "Warum OMEGA UI", "15 Dinge, die One UI und ColorOS nicht können", Icons.Rounded.Star, Color(0xFF34C759),
-        "vorteile warum hearth ui one ui coloros vergleich werbeblocker entrümpeln turbo datenschutz"),
+    SettingsCategory("vorteile", "Warum ZENITH", "15 Dinge, die One UI und ColorOS nicht können", Icons.Rounded.Star, Color(0xFF34C759),
+        "vorteile warum zenith omega hearth ui one ui coloros vergleich werbeblocker entrümpeln turbo datenschutz"),
     // Hearth UI 14.1: the phone's own settings, inside Hearth's.
     SettingsCategory("system", "System", "Helligkeit, Töne, WLAN, Bluetooth, Akku, Apps, Sicherheit …", Icons.Rounded.Phone, Color(0xFF5E6C84),
         "system wlan wifi bluetooth mobile daten flugmodus hotspot nfc vpn helligkeit drehen timeout bildschirm lautstärke " +
@@ -1781,15 +1792,11 @@ private fun HearthCard(s: LauncherSettings) {
         fluidEdge = false,
     ) {
         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-            // OMEGA UI 17: the ruby with the Ω, the version under it.
+            // ZENITH 19: the Z with the sun, the version through it – held, it charges up; tapped
+            // as often as its number, it's the way into the Clawd Illuminati.
             if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
-                // OMEGA UI 18: the Ω ruby is the only way into the Clawd Illuminati.
                 val crystal = rememberCrystalTaps(version)
-                OmegaRuby(
-                    Modifier.clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, onClick = crystal),
-                    size = 52.dp,
-                    version = HearthUi.major(version),
-                )
+                ZenithLogo(size = 58.dp, number = version.substringBefore('.'), onTap = crystal)
             } else {
                 Box(
                     Modifier

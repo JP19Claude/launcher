@@ -27,7 +27,7 @@ object AppUpdater {
     class Kind(val slug: String, val name: String, val packageName: String)
 
     /** Hearth UI (once Hearth One): Hearth with Glimmer and Clawd built in. Its slug stays. */
-    val HearthOne = Kind("hearthone", "OMEGA UI", "dev.hearth.launcher")
+    val HearthOne = Kind("hearthone", "ZENITH", "dev.hearth.launcher")
     val GlimmerApp = Kind("glimmer", "Glimmer", "dev.hearth.glimmer")
     val ClawdApp = Kind("clawd", "Clawd", "dev.hearth.clawd")
 

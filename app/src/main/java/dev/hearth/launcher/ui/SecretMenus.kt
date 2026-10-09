@@ -141,7 +141,7 @@ object HearthLabs {
 enum class SecretMenu(val code: String, val title: String, val what: String) {
     Codes("*#0000#", "Geheimcodes", "Alle versteckten Menüs auf einen Blick"),
     Test("*#0*#", "Hardware-Test", "Display-Farben, Touch, Vibration und Sensoren"),
-    Info("*#1234#", "Versionen", "OMEGA UI, ClaudeOS, Android und Build"),
+    Info("*#1234#", "Versionen", "ZENITH, ClaudeOS, Android und Build"),
     Battery("*#0228#", "Akku-Status", "Ladestand, Strom, Temperatur und Zustand – live"),
     Diagnose("*#9900#", "Diagnose", "Arbeitsspeicher, Speicher, Laufzeit und Shizuku"),
     Labs("*#4327#", "OMEGA Labs", "Experimente für Neugierige (H-E-A-R)"),

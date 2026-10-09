@@ -221,7 +221,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val scope = rememberCoroutineScope()
     // Hearth UI 14: the tour of what's new, once after the big update.
     var showIntro by remember { mutableStateOf(!HearthUi.introSeen(context)) }
-    // OMEGA UI: once, "Hearth UI is now OMEGA UI" (the tour already says it for new users).
+    // ZENITH 19: once, "OMEGA UI is now ZENITH" – the sun rises; the tour follows.
     var showOmega by remember { mutableStateOf(dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !HearthUi.omegaSeen(context)) }
     // Glimmer Drop: "devices nearby" asked once, so two phones held together just work.
     val dropPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -1240,19 +1240,19 @@ fun LauncherScreen(vm: LauncherViewModel) {
             if (showIntro && !showOmega) {
                 HearthUiIntro { newLook ->
                     HearthUi.markIntroSeen(context)
-                    // OMEGA UI 17's tour: the OMEGA design, if wanted.
+                    // ZENITH 19's tour: the ZENITH design, if wanted.
                     if (newLook) vm.updateSettings { it.withPreset(dev.hearth.launcher.data.DesignPreset.GalaxyClaude) }
                     showIntro = false
                 }
             }
 
-            // OMEGA UI 17: the move from Hearth UI – Hearth UI comes apart into light and the
-            // ruby forms; the tour follows.
+            // ZENITH 19: the move from OMEGA UI – the Ω fades, the sun climbs to the zenith and
+            // the ZENITH mark forms; the tour follows.
             if (showOmega) {
                 val version = remember {
                     runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
                 }
-                OmegaUpgrade(version = HearthUi.major(version)) {
+                ZenithUpgrade(version = HearthUi.major(version)) {
                     HearthUi.markOmegaSeen(context)
                     showOmega = false
                 }
@@ -1479,6 +1479,7 @@ private fun HomeHeaderContent(settings: LauncherSettings, modifier: Modifier = M
         ClockStyle.OneUI -> OneUIClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Large -> LargeClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Glass -> GlassClockCard(settings, modifier)
+        ClockStyle.Zenith -> ZenithHomeClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Omega -> OmegaHomeClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Analog -> AnalogHomeClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Words -> WordsHomeClock(settings, modifier.padding(start = 8.dp))

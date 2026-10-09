@@ -380,7 +380,7 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
                 }
             }
             Text(
-                "Funktioniert zwischen Handys mit Glimmer – mit OMEGA UI oder nur der Glimmer-App (Bluetooth an). Empfangenes landet in der Galerie bzw. unter Downloads im Ordner „Glimmer Drop“.",
+                "Funktioniert zwischen Handys mit Glimmer – mit ZENITH oder nur der Glimmer-App (Bluetooth an). Empfangenes landet in der Galerie bzw. unter Downloads im Ordner „Glimmer Drop“.",
                 color = Color.White.copy(alpha = 0.45f),
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center,
@@ -1089,7 +1089,7 @@ internal fun GlimmerDropSettings() {
         GlimmerDrop.setReady(context, v)
         if (v && !GlimmerDrop.hasPermissions(context)) ask.launch(GlimmerDrop.neededPermissions())
     }
-    Note("Funktioniert zwischen Handys mit OMEGA UI oder nur der Glimmer-App. Auch aus jeder App: Teilen → „Glimmer Drop“. Empfangenes landet in der Galerie bzw. unter Downloads im Ordner „Glimmer Drop“.")
+    Note("Funktioniert zwischen Handys mit ZENITH oder nur der Glimmer-App. Auch aus jeder App: Teilen → „Glimmer Drop“. Empfangenes landet in der Galerie bzw. unter Downloads im Ordner „Glimmer Drop“.")
 }
 
 // ---------------------------------------------------------------------------------------------

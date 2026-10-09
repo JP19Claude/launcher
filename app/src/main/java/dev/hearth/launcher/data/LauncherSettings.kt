@@ -23,6 +23,8 @@ enum class IconShape(val label: String) {
 }
 
 enum class ClockStyle(val label: String) {
+    /** ZENITH 19: the sun's arc over the time – where the sun stands now, by day; the moon by night. */
+    Zenith("Sonnenbogen"),
     /** OMEGA UI 17: thin numerals in the accent's light, the seconds as a line under them. */
     Omega("OMEGA"),
     /** OMEGA UI 17: a glass dial with a ruby at twelve, the date beside it. */
@@ -32,7 +34,7 @@ enum class ClockStyle(val label: String) {
     /** OMEGA UI 17: hours big, minutes in the accent over the date. */
     Split("Geteilt"),
     /** Hearth UI 14: hours over minutes, big and stacked, with glass chips for date and battery. */
-    Stacked("OMEGA UI (gestapelt)"),
+    Stacked("Gestapelt (OMEGA UI)"),
     ColorOS("ColorOS"),
     /** Samsung's home clock: big, bold, tight digits over the date. */
     OneUI("One UI"),
@@ -70,6 +72,8 @@ enum class GlassTint(val label: String, val color: Color) {
     Ruby("Rubin", Color(0xFFB0102C).copy(alpha = 0.16f)),
     /** OMEGA UI 17.3: deep Galaxy blue glass (the ruby comes from OMEGA Fluid). */
     GalaxyOmega("Galaxy Omega", Color(0xFF1E46B4).copy(alpha = 0.2f)),
+    /** ZENITH 19: sunlit glass with a breath of green. */
+    Zenith("Sonnenglas", Color(0xFF3FBF7F).copy(alpha = 0.13f)),
 }
 
 /**
@@ -87,6 +91,8 @@ enum class ColorWorld(val label: String, val degrees: Float) {
 
 /** OMEGA UI 18.1: the clock on the full Always On Display. */
 enum class AodClock(val label: String) {
+    /** ZENITH 19: the sun's arc over the time, the moon at night. */
+    Zenith("Sonnenbogen"),
     Omega("OMEGA"),
     Big("Groß"),
     Thin("Dünn"),
@@ -125,6 +131,8 @@ fun LauncherSettings.wantsLockStage(): Boolean =
 
 /** The color OMEGA Glass and OMEGA Fluid run in. */
 enum class OmegaColor(val label: String) {
+    /** ZENITH 19: green, sun and sky – the colors of the sun at its highest point. */
+    Zenith("Zenith"),
     Ruby("Rubin"),
     GalaxyOmega("Galaxy Omega"),
     /** OMEGA UI 18.3: clear, colorless glass like Apple's Liquid Glass – light, lens and shine. */
@@ -152,6 +160,8 @@ enum class AccentColor(val label: String, val color: Color) {
     Ruby("Rubin", Color(0xFFE5243F)),
     /** OMEGA UI 17.3: Galaxy blue – no more violet; the ruby comes from OMEGA Fluid. */
     GalaxyOmega("Galaxy Omega", Color(0xFF3D7BFF)),
+    /** ZENITH 19: the green of the 19 in ZENITH's mark. */
+    Zenith("Zenith-Grün", Color(0xFF2FD27A)),
 }
 
 enum class SearchEngine(val label: String, val url: String?) {
@@ -312,7 +322,7 @@ enum class CcToggleShape(val label: String) {
 /** Ready-made looks that set many options at once. */
 enum class DesignPreset(val label: String) {
     /** One UI's look with liquid glass, and Claude woven through the launcher. */
-    GalaxyClaude("Galaxy × Claude (OMEGA UI)"),
+    GalaxyClaude("Galaxy × Claude (ZENITH)"),
     ColorOSClaude("ColorOS × Claude"),
     IOSGlass("iOS Liquid Glass"),
     Hearth("Hearth Klassik"),
@@ -500,7 +510,9 @@ data class LauncherSettings(
     val clawdOmega: Boolean = false,
     /** OMEGA UI 17.1: ruby glass and OMEGA Fluid (ruby, rose, amber) all through the system. */
     val omegaGlass: Boolean = true,
-    val omegaColor: OmegaColor = OmegaColor.Ruby,
+    val omegaColor: OmegaColor = OmegaColor.Zenith,
+    /** ZENITH 19: Zenith's colors follow the sun – gold in the morning, green at noon, glow at dusk, moon blue at night. */
+    val zenithDaylight: Boolean = true,
     /** OMEGA UI 17.1: flowing effects at a calmer rate and lighter glass – smoother, less lag. */
     val smoothMode: Boolean = true,
     /** OMEGA UI 17.5: OMEGA light between the wallpaper and the home screen's apps and widgets. */
@@ -530,7 +542,7 @@ data class LauncherSettings(
      * AOD like a Galaxy S24 Ultra (the wallpaper dimmed behind the clock), its clock, light and
      * what it shows; and what lies on the lock screen.
      */
-    val aodClock: AodClock = AodClock.Omega,
+    val aodClock: AodClock = AodClock.Zenith,
     val aodBrightness: AodBrightness = AodBrightness.Medium,
     val aodTint: AodTint = AodTint.Omega,
     val lockMessage: String = "",
@@ -786,16 +798,18 @@ data class LauncherSettings(
             iconStyle = IconStyle.Original,
             iconShape = IconShape.Squircle,
             iconSize = 56,
-            // OMEGA UI is part of Galaxy × Claude: ruby accents and glass, the OMEGA clock, the
-            // OMEGA island as the dock.
-            accent = AccentColor.Ruby,
-            glassTint = GlassTint.Ruby,
+            // ZENITH is part of Galaxy × Claude: Zenith green, sunlit glass, the sun's arc as the
+            // clock, the OMEGA island as the dock.
+            accent = AccentColor.Zenith,
+            glassTint = GlassTint.Zenith,
+            omegaColor = OmegaColor.Zenith,
+            omegaGlass = true,
             glassTintStrength = 1f,
             glassRefraction = 1.2f,
             glassBlur = 1f,
             glassDispersion = 0.5f,
             glassSpecular = 0.95f,
-            clockStyle = ClockStyle.Omega,
+            clockStyle = ClockStyle.Zenith,
             dockStyle = DockStyle.Island,
             showGreeting = true,
             showClaudeCard = false,
@@ -893,7 +907,7 @@ data class LauncherSettings(
         const val MAX_DOCK = 6
 
         /** Current default look; installs with a lower [designVersion] get it once. */
-        const val DESIGN_VERSION = 8
+        const val DESIGN_VERSION = 9
     }
 }
 
@@ -1016,6 +1030,7 @@ class SettingsRepository(context: Context) {
             clawdOmega = prefs.getBoolean("clawdOmega", d.clawdOmega),
             omegaGlass = prefs.getBoolean("omegaGlass", d.omegaGlass),
             omegaColor = enumOf("omegaColor", d.omegaColor),
+            zenithDaylight = prefs.getBoolean("zenithDaylight", d.zenithDaylight),
             smoothMode = prefs.getBoolean("smoothMode", d.smoothMode),
             omegaLight = prefs.getBoolean("omegaLight", d.omegaLight),
             illumination = prefs.getBoolean("illumination", d.illumination),
@@ -1192,6 +1207,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("clawdOmega", s.clawdOmega)
             .putBoolean("omegaGlass", s.omegaGlass)
             .putString("omegaColor", s.omegaColor.name)
+            .putBoolean("zenithDaylight", s.zenithDaylight)
             .putBoolean("smoothMode", s.smoothMode)
             .putBoolean("omegaLight", s.omegaLight)
             .putBoolean("illumination", s.illumination)
@@ -1380,7 +1396,7 @@ class SettingsRepository(context: Context) {
          * Only the switch itself and the look (black or glass, which changes the window) restart it.
          */
         val GLIMMER_LIVE_KEYS = setOf(
-            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "glassLook", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
+            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "zenithDaylight", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "glassLook", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
             "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerPrivacy", "accent", "animations",

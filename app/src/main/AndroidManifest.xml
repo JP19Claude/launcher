@@ -152,7 +152,7 @@
         <activity
             android:name=".OneWelcomeActivity"
             android:exported="false"
-            android:label="OMEGA UI" />
+            android:label="ZENITH" />
 
         <!-- Android's installer reports here how an update went (and asks to confirm it). -->
         <receiver

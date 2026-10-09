@@ -234,6 +234,23 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                         dockStyle = if (s.dockStyle == DockStyle.Glass) DockStyle.Island else s.dockStyle,
                     )
                 }
+                // 9: ZENITH 19 – Galaxy × Claude turns to the sun: Zenith green, sunlit glass, the
+                // sun's arc as the clock. Elsewhere, the ruby of OMEGA Glass turns Zenith.
+                if (s.designVersion < 9) {
+                    s = if (s.galaxyClaude) {
+                        s.copy(
+                            omegaColor = dev.hearth.launcher.data.OmegaColor.Zenith,
+                            omegaGlass = true,
+                            accent = AccentColor.Zenith,
+                            glassTint = GlassTint.Zenith,
+                            clockStyle = if (s.clockStyle == ClockStyle.Hidden) s.clockStyle else ClockStyle.Zenith,
+                        )
+                    } else if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.Ruby) {
+                        s.copy(omegaColor = dev.hearth.launcher.data.OmegaColor.Zenith)
+                    } else {
+                        s
+                    }
+                }
                 s.copy(designVersion = LauncherSettings.DESIGN_VERSION)
             }
         }

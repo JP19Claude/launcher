@@ -94,11 +94,11 @@ jobs:
         run: |
           v=$(grep -o 'versionName = "[^"]*"' app/build.gradle.kts | cut -d'"' -f2)
           # file|slug (tag and update check, never changes)|file name|title|what it is
-          # (Hearth One became Hearth UI, now OMEGA UI; its slug stays, so installed apps keep finding it.)
+          # (Hearth One became Hearth UI, then OMEGA UI, now ZENITH; its slug stays, so installed apps keep finding it.)
           for entry in "Hearth.apk|hearth|Hearth|Hearth|der Launcher" \
                        "Glimmer.apk|glimmer|Glimmer|Glimmer|die Insel um die Kamera" \
                        "Clawd.apk|clawd|Clawd|Clawd|Clawds Widgets für jeden Launcher, sein Tamagotchi und Chat" \
-                       "HearthUI.apk|hearthone|OMEGA-UI|OMEGA UI|Launcher, Glimmer und Clawd in einer App"; do
+                       "HearthUI.apk|hearthone|ZENITH|ZENITH|Launcher, Glimmer und Clawd in einer App"; do
             IFS='|' read -r file slug name title what <<< "$entry"
             tag="$slug-v$v"
             cp "$file" "$name-$v.apk"
@@ -140,5 +140,5 @@ jobs:
           gh release create "build-${{ github.run_number }}" Hearth.apk Glimmer.apk Clawd.apk HearthUI.apk versions.json \
             --target "${{ github.sha }}" \
             --title "Hearth Build ${{ github.run_number }}" \
-            --notes "HearthUI.apk (OMEGA UI: alles in einer App), Hearth.apk (Launcher), Glimmer.apk (Insel) und Clawd.apk (Clawds Widgets für jeden Launcher). Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
+            --notes "HearthUI.apk (ZENITH: alles in einer App), Hearth.apk (Launcher), Glimmer.apk (Insel) und Clawd.apk (Clawds Widgets für jeden Launcher). Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
             --latest
