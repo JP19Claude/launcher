@@ -1,4 +1,9 @@
-ZENITH 19 auf ClaudeOS 5.0 „Mythos“ – aus OMEGA UI wird ZENITH, die Sonne im höchsten Punkt
+ZENITH 19 auf ClaudeOS 6.0 „Helios“ – aus OMEGA UI wird ZENITH, die Sonne im höchsten Punkt
+
+🌞 ClaudeOS 6.0 „Helios“
+• Neue Basis für das neue System – nach der Sonne
+• Eigenes Claude-Zeichen in Weiß, Gold und Grün
+• Neues ClaudeOS-Easter-Egg: die Sonnenfinsternis – schieb den Mond von der Sonne
 
 ☀️ ZENITH
 • Neuer Name, neues Logo: ein weißes Z aus Licht, die 19 in Grün, darüber die Sonne

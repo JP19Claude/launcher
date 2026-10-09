@@ -181,8 +181,18 @@ internal object HearthChangelog {
         ChangeRelease(
             version = "19.0",
             name = "ZENITH",
-            summary = "Aus OMEGA UI wird ZENITH – die Sonne im höchsten Punkt: ein neuer Name, ein neues Logo, eine neue Farbe, eine neue Uhr. Alles fühlt sich neu an, und die alten Easter Eggs bleiben.",
+            summary = "Aus OMEGA UI wird ZENITH – die Sonne im höchsten Punkt, auf der neuen Basis ClaudeOS 6.0 „Helios“: ein neuer Name, ein neues Logo, eine neue Farbe, eine neue Uhr. Alles fühlt sich neu an, und die alten Easter Eggs bleiben.",
             sections = listOf(
+                ChangeSection(
+                    "ClaudeOS 6.0 „Helios“", Icons.Rounded.Build, Orange,
+                    listOf(
+                        "Ein neues System braucht eine neue Basis: ZENITH läuft auf ClaudeOS 6.0 mit dem Codenamen „Helios“ – nach der Sonne.",
+                        "ZENITHs Sonne, die Farben, die dem Tag folgen, und der Sonnenbogen gehören jetzt zum Fundament.",
+                        "Ein eigenes Claude-Zeichen in Weiß, Sonnengold und Zenith-Grün.",
+                        "Neues ClaudeOS-Easter-Egg: die Sonnenfinsternis – fünfmal auf die ClaudeOS-Version tippen und den Mond von der Sonne schieben.",
+                    ),
+                    everyone,
+                ),
                 ChangeSection(
                     "ZENITH", Icons.Rounded.Star, Green,
                     listOf(
