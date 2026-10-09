@@ -28,8 +28,8 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
     val style = LocalSettings.current.dockStyle
     // Very big icons (up to 96 dp) on the home screen; the dock keeps them at a size that fits.
     val dockLook = LocalSettings.current.let { it.copy(iconSize = it.iconSize.coerceAtMost(68)) }
-    val icons: @Composable () -> Unit = {
-        androidx.compose.runtime.CompositionLocalProvider(LocalSettings provides dockLook) {
+    val iconsSized: @Composable (Int) -> Unit = { iconSize ->
+        androidx.compose.runtime.CompositionLocalProvider(LocalSettings provides dockLook.copy(iconSize = iconSize)) {
         apps.forEach { app ->
             key(app.key) {
                 AppIcon(
@@ -43,6 +43,7 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
         }
         }
     }
+    val icons: @Composable () -> Unit = { iconsSized(dockLook.iconSize) }
     when (style) {
         // The full-width glass bar.
         DockStyle.Glass -> LiquidGlass(
@@ -130,19 +131,23 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
         }
         // ZENITH 19: a slanted plate of the Z's dark metal, its ends cut like the Z's bars, green
         // light burning along its foot and pooling underneath.
-        DockStyle.Zenith -> Box(
+        DockStyle.Zenith -> androidx.compose.foundation.layout.BoxWithConstraints(
             modifier
                 .fillMaxWidth()
                 .padding(horizontal = 6.dp)
                 .drawBehind { drawZenithPlate(slant = size.height * 0.34f, unit = 170.dp.toPx()) },
         ) {
+            // Every icon the same size, as big as fits: each takes its icon plus 18 dp of cell.
+            val inner = maxWidth - 36.dp
+            val fit = ((inner / apps.size.coerceAtLeast(1)).value - 22f).toInt()
+            val iconSize = dockLook.iconSize.coerceAtMost(fit.coerceAtLeast(36))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 22.dp, vertical = 11.dp),
+                    .padding(horizontal = 18.dp, vertical = 11.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
-            ) { icons() }
+            ) { iconsSized(iconSize) }
         }
         // Just the icons, as One UI does it.
         DockStyle.Clear -> Row(

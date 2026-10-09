@@ -113,6 +113,9 @@ enum class AodTint(val label: String) {
     Gold("Gold"),
 }
 
+/** ZENITH 19: every surface of dark metal with ZENITH's green edge light instead of glass. */
+val LauncherSettings.zenithMetal: Boolean get() = glassLook == GlassLook.Zenith
+
 /** OMEGA UI 18.3: OMEGA Glass in the "Liquid Glass" color – clear like Apple's. */
 val LauncherSettings.liquidOmega: Boolean get() = glassLook == GlassLook.Liquid || (omegaGlass && omegaColor == OmegaColor.Liquid)
 
@@ -121,6 +124,8 @@ val LauncherSettings.liquidOmega: Boolean get() = glassLook == GlassLook.Liquid 
  * its colors) or Liquid Glass like Apple's (clear, a deep lens, bright edges, white light).
  */
 enum class GlassLook(val label: String) {
+    /** ZENITH 19: no glass – dark metal like the logo, silver on top, green light at the foot. */
+    Zenith("ZENITH Metall"),
     Omega("ZENITH Glass"),
     Liquid("Liquid Glass (wie Apple)"),
 }
@@ -806,6 +811,7 @@ data class LauncherSettings(
             glassTint = GlassTint.Zenith,
             omegaColor = OmegaColor.Zenith,
             omegaGlass = true,
+            glassLook = GlassLook.Zenith,
             glassTintStrength = 1f,
             glassRefraction = 1.2f,
             glassBlur = 1f,
@@ -909,7 +915,7 @@ data class LauncherSettings(
         const val MAX_DOCK = 6
 
         /** Current default look; installs with a lower [designVersion] get it once. */
-        const val DESIGN_VERSION = 10
+        const val DESIGN_VERSION = 11
     }
 }
 

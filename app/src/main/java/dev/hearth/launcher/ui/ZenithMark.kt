@@ -4,7 +4,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -16,6 +18,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import kotlin.random.Random
 
 /*
@@ -327,4 +330,85 @@ internal fun DrawScope.drawZenithPlate(slant: Float, unit: Float, alpha: Float =
     rimLight(Offset(0f, h), Offset(w - slant, h), unit, 0f, 0.25f, 0.9f, 1f)
     rimLight(Offset(w - slant, h), Offset(w, 0f), unit, 0f, 0.9f, 0.35f, 0f)
     rimSpot(Offset((w - slant) * 0.68f, h), unit * 0.05f, 0.85f)
+}
+
+/**
+ * ZENITH's edge light on a rounded plate filling this scope – the logo's light on every surface:
+ * silver along the top, green light burning along the foot and up into the lower corners, a hot
+ * spot on the right. [strength] dims it; [press] (0..1, while held) makes it burn brighter.
+ */
+internal fun DrawScope.drawZenithEdge(corner: Float, strength: Float = 1f, press: Float = 0f) {
+    val r = corner.coerceAtMost(size.minDimension / 2f)
+    val k = (strength * (1f + 0.6f * press)).coerceIn(0f, 2f)
+    val px = 1.dp.toPx()
+    drawRoundRect(
+        Brush.verticalGradient(
+            0f to Color(0xFFE6EBF0).copy(alpha = 0.55f),
+            0.3f to Color.White.copy(alpha = 0.05f),
+            0.6f to Color.Transparent,
+        ),
+        topLeft = Offset(px / 2f, px / 2f),
+        size = Size(size.width - px, size.height - px),
+        cornerRadius = CornerRadius((r - px / 2f).coerceAtLeast(0f)),
+        style = Stroke(px),
+    )
+    fun foot(width: Float, color: Color, a: Float) = drawRoundRect(
+        Brush.verticalGradient(
+            0f to Color.Transparent,
+            0.55f to Color.Transparent,
+            1f to color.copy(alpha = (a * k).coerceIn(0f, 1f)),
+        ),
+        topLeft = Offset(width / 2f, width / 2f),
+        size = Size(size.width - width, size.height - width),
+        cornerRadius = CornerRadius((r - width / 2f).coerceAtLeast(0f)),
+        style = Stroke(width),
+    )
+    foot(px * 4f, Color(0xFF2FD25A), 0.28f)
+    foot(px * 1.6f, Color(0xFF46EB6E), 0.8f)
+    foot(px * 0.6f, Color(0xFFD2FFD7), 0.9f)
+    rimSpot(Offset(size.width * 0.68f, size.height - px), minOf(size.width * 0.18f, 26.dp.toPx()), 0.7f * k)
+}
+
+/**
+ * "ZENITH Metall": a surface of the logo's dark metal instead of glass, filling this scope –
+ * smoked [fill] over the blurred wallpaper, brushed light from the top left, worn scratches on
+ * the bigger plates, a green glow where it's [touch]ed ([glow] 0..1) and ZENITH's edge light.
+ */
+internal fun DrawScope.drawZenithSurface(corner: Float, fill: Color, glow: Float, touch: Offset) {
+    val r = CornerRadius(corner)
+    drawRoundRect(fill, cornerRadius = r)
+    drawRoundRect(
+        Brush.linearGradient(
+            0f to Color.White.copy(alpha = 0.09f),
+            0.45f to Color.Transparent,
+            1f to Color.Black.copy(alpha = 0.22f),
+            start = Offset.Zero,
+            end = Offset(size.width * 0.5f, size.height),
+        ),
+        cornerRadius = r,
+    )
+    if (size.minDimension > 80.dp.toPx()) {
+        val plate = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, r)) }
+        val unit = 160.dp.toPx()
+        clipPath(plate) {
+            ZenithMetal.forEach { m ->
+                if (m.len <= 0f) return@forEach
+                val at = Offset(m.x * size.width, m.y * size.height)
+                val color = if (m.light) Color.White.copy(alpha = 0.015f + m.alpha * 0.04f) else Color.Black.copy(alpha = 0.06f + m.alpha * 0.12f)
+                drawLine(color, at, at + Offset(kotlin.math.cos(m.angle) * m.len * unit * 2f, kotlin.math.sin(m.angle) * m.len * unit), strokeWidth = m.width * unit * 1.5f)
+            }
+        }
+    }
+    if (glow > 0.01f) {
+        drawRoundRect(
+            Brush.radialGradient(
+                0f to Color(0xFF2FD27A).copy(alpha = (0.3f * glow).coerceIn(0f, 1f)),
+                1f to Color.Transparent,
+                center = touch,
+                radius = size.minDimension.coerceAtLeast(1f),
+            ),
+            cornerRadius = r,
+        )
+    }
+    drawZenithEdge(corner, 1f, glow)
 }

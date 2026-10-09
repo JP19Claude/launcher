@@ -1,5 +1,11 @@
 ZENITH 19 auf ClaudeOS 6.0 „Helios“ – aus OMEGA UI wird ZENITH, die Sonne im höchsten Punkt
 
+⬛ ZENITH Metall
+• Schluss mit Glas: jede Fläche im System aus dunklem Metall wie das Logo – Widgets, Icons, Menüs, Einstellungen, Suche, Drawer
+• Silberne Oberkante, grünes ZENITH-Licht an der Unterkante, grünes Licht von unten statt bunter Farben
+• Deutlich leichter fürs Handy (kein Linsen-Effekt)
+• Dock: alle Icons gleich groß – die Kamera wird nicht mehr zusammengedrückt
+
 🟩 ZENITH, wie es aussehen soll
 • Neues Logo: schräges Metall-Z mit grünem Kantenlicht, „ZENITH“ in Chrom
 • Alles, was OMEGA oder Hearth hieß, heißt jetzt ZENITH

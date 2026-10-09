@@ -242,6 +242,15 @@ fun Modifier.aiFluidEdge(
     flowing: Boolean = true,
 ): Modifier = composed {
     if (!enabled || strength <= 0.01f) return@composed this
+    // ZENITH Metall: no colors running round – silver on top, green light along the foot.
+    if (LocalGlassStyle.current.zenith) {
+        @Suppress("NAME_SHADOWING")
+        val strength = (strength * 1.6f).coerceIn(0.45f, 1.3f)
+        return@composed this.drawWithContent {
+            drawContent()
+            drawZenithEdge(corner.toPx(), strength)
+        }
+    }
     // OMEGA UI 17.5, Ω-Overdrive: every rim flows, and brighter.
     val overdrive = LocalSettings.current.omegaOverdrive
     @Suppress("NAME_SHADOWING")
@@ -315,6 +324,15 @@ fun Modifier.glassSheen(corner: androidx.compose.ui.unit.Dp, tint: Color = Color
  */
 fun Modifier.fluidGlow(strength: Float = 1f, enabled: Boolean = true, flowing: Boolean = false): Modifier = composed {
     if (!enabled || !LocalSettings.current.fluidDesign) return@composed this
+    // ZENITH Metall: no colors drifting – green light rising from the foot, as in the logo.
+    if (LocalGlassStyle.current.zenith) {
+        return@composed this.drawWithContent {
+            val at = Offset(size.width * 0.62f, size.height * 1.05f)
+            val r = size.maxDimension * 0.75f
+            drawCircle(Brush.radialGradient(listOf(ZenithGreen.copy(alpha = (0.18f * strength).coerceIn(0f, 0.4f)), Color.Transparent), center = at, radius = r), r, at)
+            drawContent()
+        }
+    }
     val phase = flowPhase(14_000, LocalSettings.current.animations && (flowing || LocalSettings.current.omegaOverdrive))
     val palette = fluidPalette()
     val boost = if (LocalSettings.current.omegaGlass) 1.5f else 1f

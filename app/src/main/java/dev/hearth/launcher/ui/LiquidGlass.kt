@@ -63,6 +63,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.hearth.launcher.data.GlassTint
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.liquidOmega
+import dev.hearth.launcher.data.zenithMetal
 import dev.hearth.launcher.data.WallpaperBackdrop
 import kotlin.math.abs
 import kotlin.math.min
@@ -106,6 +107,8 @@ data class GlassStyle(
     val lensMinDp: Float = 40f,
     /** OMEGA UI 18.5: Liquid Glass like Apple's – clear, with a bright inner edge. */
     val liquid: Boolean = false,
+    /** ZENITH 19, "ZENITH Metall": dark metal with silver on top and green light at the foot. */
+    val zenith: Boolean = false,
 ) {
     companion object {
         fun from(s: LauncherSettings) = GlassStyle(
@@ -137,7 +140,21 @@ data class GlassStyle(
             liquid = s.liquidOmega,
             // Flüssig-Modus: the lens only on big glass; small glass gets the drawn edge (much lighter).
             lensMinDp = if (s.smoothMode) maxOf(s.glassQuality.lensMinDp, 96f) else s.glassQuality.lensMinDp,
-        )
+        ).let { glass ->
+            // ZENITH Metall: smoked dark metal over the blurred wallpaper – no lens at all.
+            if (s.zenithMetal) {
+                glass.copy(
+                    tint = Color(0xFF14161A).copy(alpha = if (s.darkGlass) 0.8f else 0.68f),
+                    refraction = 0.3f,
+                    dispersion = 0f,
+                    liquid = false,
+                    zenith = true,
+                    lensMinDp = 100_000f,
+                )
+            } else {
+                glass
+            }
+        }
     }
 }
 
@@ -526,7 +543,7 @@ fun LiquidGlass(
             // One UI 10 Fluid on every glass surface: Claude's colors along the rim, and a
             // touch spreading like liquid light where it can be pressed.
             // (The glass glows under the finger itself, so no second touch layer on top.)
-            .aiFluidEdge(cornerRadius, strength = if (LocalSettings.current.omegaGlass) 0.55f else 0.3f, width = 1.dp, enabled = fluid && fluidEdge, flowing = false)
+            .aiFluidEdge(cornerRadius, strength = if (LocalSettings.current.omegaGlass) 0.55f else 0.3f, width = 1.dp, enabled = fluid && fluidEdge && !style.zenith, flowing = false)
             .then(
                 if (isInteractive) {
                     Modifier.pointerInput(Unit) {
@@ -614,6 +631,11 @@ fun LiquidGlass(
             Modifier
                 .matchParentSize()
                 .drawBehind {
+                    // ZENITH Metall: the logo's metal and light instead of glass.
+                    if (style.zenith) {
+                        drawZenithSurface(min(radiusPx, size.minDimension / 2f), fill, glow, touch)
+                        return@drawBehind
+                    }
                     val outline = glassShape.createOutline(size, layoutDirection, this)
                     val l = light.value
                     val reach = size.maxDimension / 2f

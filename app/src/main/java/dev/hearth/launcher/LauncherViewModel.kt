@@ -270,6 +270,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                         s
                     }
                 }
+                // 11: ZENITH Metall – Galaxy × Claude leaves glass behind: every surface of the
+                // logo's dark metal with its green edge light.
+                if (s.designVersion < 11 && s.galaxyClaude) {
+                    s = s.copy(glassLook = dev.hearth.launcher.data.GlassLook.Zenith)
+                }
                 s.copy(designVersion = LauncherSettings.DESIGN_VERSION)
             }
         }
