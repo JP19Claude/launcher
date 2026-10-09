@@ -399,6 +399,8 @@ fun OneUIDrawer(
                 Spacer(Modifier.size(14.dp))
             }
         }
+        // OMEGA UI 18.5: a strip of glass behind the status bar.
+        GlassStatusBar()
         if (menuShown) {
             DrawerMenu(
                 progress = { menu.value },
@@ -666,21 +668,8 @@ private fun MenuSwitch(
         }
         Spacer(Modifier.width(12.dp))
         Text(label, color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
-        Box(
-            Modifier
-                .size(width = 40.dp, height = 24.dp)
-                .clip(CircleShape)
-                .drawBehind { drawRect(lerp(Color.White.copy(alpha = 0.22f), accent, knob.coerceIn(0f, 1f))) },
-        ) {
-            Box(
-                Modifier
-                    .padding(3.dp)
-                    .size(18.dp)
-                    .graphicsLayer { translationX = knob * 16.dp.toPx() }
-                    .clip(CircleShape)
-                    .background(Color.White),
-            )
-        }
+        // OMEGA UI 18.5: a switch of liquid glass (the row is what is tapped).
+        GlassSwitch(checked = on, onCheckedChange = null, onColor = accent)
     }
 }
 

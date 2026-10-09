@@ -835,7 +835,9 @@ fun ClawdCompanion(onTalk: () -> Unit, modifier: Modifier = Modifier) {
                     .offset(x = (x - 20.dp).coerceIn(0.dp, (maxWidth - bubbleW).coerceAtLeast(0.dp)), y = -(h + 6.dp))
                     .widthIn(max = bubbleW)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Color.Black.copy(alpha = 0.6f))
+                    // OMEGA UI 18.5: Clawd speaks on a bubble of glass.
+                    .background(Color.Black.copy(alpha = 0.34f))
+                    .glassSheen(14.dp)
                     .tap { bubble = null }
                     .padding(horizontal = 12.dp, vertical = 7.dp),
             )

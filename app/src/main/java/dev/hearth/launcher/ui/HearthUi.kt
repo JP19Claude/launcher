@@ -178,6 +178,45 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "18.5",
+            name = "Liquid",
+            summary = "Das große Glas-Update: Liquid Glass wie bei Apple für das ganze System – und Glas an jeder Stelle, bis zu den Schaltern.",
+            sections = listOf(
+                ChangeSection(
+                    "Glas-Stil", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Neuer Glas-Stil für das ganze System: OMEGA Glass oder Liquid Glass wie bei Apple – unter Design → OMEGA und in den Clawd Illuminati.",
+                        "Liquid Glass: klar statt getönt, eine tiefere Linse, mehr Glanz und Apples heller Innenrand rundum; die Fluid-Ränder leuchten weiß mit einem Hauch Regenbogen.",
+                        "Finder, App-Drawer und Glasflächen bleiben dabei neutral und hell – keine Färbung über dem Bildschirm.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Schalter aus Glas", Icons.Rounded.CheckCircle, Green,
+                    listOf(
+                        "Alle Schalter im System sind jetzt aus Liquid Glass: Beim Festhalten wird der Knopf zur klaren Glaslinse, beim Umschalten dehnt er sich wie ein Tropfen.",
+                        "Alle Schieberegler ebenso – der Knopf wird beim Ziehen zur Linse.",
+                        "In den Einstellungen, den Clawd Illuminati, den versteckten Menüs, Glimmer Drop, dem Menü des App-Drawers und der Tour.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Glas überall", Icons.Rounded.Favorite, Pink,
+                    listOf(
+                        "Uhren aus Glas: jede Uhr auf dem Startbildschirm (One UI, Groß, ColorOS, gestapelt) mit Ziffern aus Glas – abschaltbar.",
+                        "Statusleiste aus Glas: ein weicher Streifen Milchglas hinter der Statusleiste auf dem Startbildschirm, im App-Drawer und in den Einstellungen.",
+                        "Clawds Sprechblase, die Easter-Egg-Hinweise und „Apps ausblenden“ sind jetzt aus Glas.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Easter Egg", Icons.Rounded.Search, Violet,
+                    listOf("OMEGA UI 18.5: die Lupe – schieb eine Linse aus Liquid Glass über ein Feld aus Lichtern und finde sechs winzige Clawds."),
+                    hearth,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "18.3",
             name = "Liquid Glass",
             summary = "OMEGA Glass klar wie Apples Liquid Glass – und ein deutlich flüssigeres System.",
@@ -1703,21 +1742,8 @@ private fun TourSwitch(title: String, text: String, checked: Boolean, onChange: 
             Text(text, color = Color.White.copy(alpha = 0.65f), fontSize = 13.sp, lineHeight = 18.sp)
         }
         Spacer(Modifier.width(12.dp))
-        Box(
-            Modifier
-                .size(width = 48.dp, height = 28.dp)
-                .clip(CircleShape)
-                .drawBehind { drawRect(lerp(Color.White.copy(alpha = 0.22f), Color(0xFF3E91FF), knob.coerceIn(0f, 1f))) },
-        ) {
-            Box(
-                Modifier
-                    .padding(3.dp)
-                    .size(22.dp)
-                    .graphicsLayer { translationX = knob * 20.dp.toPx() }
-                    .clip(CircleShape)
-                    .background(Color.White),
-            )
-        }
+        // OMEGA UI 18.5: a switch of liquid glass (the row is what is tapped).
+        GlassSwitch(checked = checked, onCheckedChange = null, onColor = Color(0xFF3E91FF))
     }
 }
 

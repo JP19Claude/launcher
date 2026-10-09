@@ -263,10 +263,10 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
                             fontSize = 13.sp,
                         )
                     }
-                    Switch(
+                    GlassSwitch(
                         checked = shareProfile,
                         onCheckedChange = { GlimmerDrop.shareProfile.value = it },
-                        colors = SwitchDefaults.colors(checkedTrackColor = DropBlue),
+                        onColor = DropBlue,
                     )
                 }
                 Row(
@@ -372,10 +372,10 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
                         )
                     }
                     Spacer(Modifier.width(10.dp))
-                    Switch(
+                    GlassSwitch(
                         checked = ready,
                         onCheckedChange = { GlimmerDrop.setReady(context, it) },
-                        colors = SwitchDefaults.colors(checkedTrackColor = DropBlue),
+                        onColor = DropBlue,
                     )
                 }
             }

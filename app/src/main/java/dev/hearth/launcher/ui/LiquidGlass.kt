@@ -104,6 +104,8 @@ data class GlassStyle(
     val dark: Boolean = false,
     /** Smallest glass (dp) that gets the lens shader; "Glas-Qualität" in the settings. */
     val lensMinDp: Float = 40f,
+    /** OMEGA UI 18.5: Liquid Glass like Apple's – clear, with a bright inner edge. */
+    val liquid: Boolean = false,
 ) {
     companion object {
         fun from(s: LauncherSettings) = GlassStyle(
@@ -128,6 +130,7 @@ data class GlassStyle(
             },
             interactive = s.glassInteractive,
             dark = s.darkGlass,
+            liquid = s.liquidOmega,
             // Flüssig-Modus: the lens only on big glass; small glass gets the drawn edge (much lighter).
             lensMinDp = if (s.smoothMode) maxOf(s.glassQuality.lensMinDp, 96f) else s.glassQuality.lensMinDp,
         )
@@ -686,6 +689,26 @@ fun LiquidGlass(
                         ),
                         style = Stroke(width = rimPx),
                     )
+                    // OMEGA UI 18.5, Liquid Glass: Apple's bright inner edge – light caught all
+                    // round the glass, strongest where it faces the light and opposite.
+                    if (style.liquid) {
+                        val inset = rimPx * 1.6f
+                        val r = (min(radiusPx, size.minDimension / 2f) - inset).coerceAtLeast(0f)
+                        drawRoundRect(
+                            Brush.linearGradient(
+                                0f to Color.White.copy(alpha = (0.75f * specular).coerceIn(0f, 1f)),
+                                0.3f to Color.White.copy(alpha = 0.12f),
+                                0.7f to Color.White.copy(alpha = 0.1f),
+                                1f to Color.White.copy(alpha = (0.45f * specular).coerceIn(0f, 1f)),
+                                start = lit,
+                                end = shade,
+                            ),
+                            topLeft = Offset(inset, inset),
+                            size = Size(size.width - 2 * inset, size.height - 2 * inset),
+                            cornerRadius = CornerRadius(r),
+                            style = Stroke(width = rimPx * 1.3f),
+                        )
+                    }
                     if (!lensOn && glow > 0.01f) {
                         drawOutline(
                             outline,

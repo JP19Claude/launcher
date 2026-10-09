@@ -32,6 +32,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
+import dev.hearth.launcher.data.liquidOmega
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
@@ -133,9 +134,11 @@ fun FluidBackdrop(colors: List<Color>, modifier: Modifier = Modifier, strength: 
     if (!LocalSettings.current.fluidDesign) return
     // OMEGA Glass: OMEGA Fluid drifts behind every screen instead.
     @Suppress("NAME_SHADOWING")
-    val colors = if (LocalSettings.current.omegaGlass) omegaPalette(LocalSettings.current).take(colors.size.coerceAtLeast(3)) else colors
+    val liquid = LocalSettings.current.liquidOmega
+    val colors = if (LocalSettings.current.omegaGlass || liquid) omegaPalette(LocalSettings.current).take(colors.size.coerceAtLeast(3)) else colors
     @Suppress("NAME_SHADOWING")
-    val strength = strength * (if (LocalSettings.current.omegaGlass) 1.4f else 1f) * (if (LocalSettings.current.omegaOverdrive) 1.35f else 1f)
+    // Liquid Glass: only a breath of light behind the glass, not colors.
+    val strength = strength * (if (liquid) 0.6f else if (LocalSettings.current.omegaGlass) 1.4f else 1f) * (if (LocalSettings.current.omegaOverdrive) 1.35f else 1f)
     val flow = flowPhase(24_000, LocalSettings.current.animations)
     Canvas(modifier.fillMaxSize()) {
         val t = flow?.invoke() ?: 1.2f
@@ -191,10 +194,13 @@ val GalaxyOmegaFluidColors = listOf(
 
 /** The OMEGA Fluid colors for these settings (Rubin or Galaxy Omega). */
 internal fun omegaPalette(s: dev.hearth.launcher.data.LauncherSettings): List<Color> =
-    when (s.omegaColor) {
+    when {
+        s.liquidOmega -> LiquidFluidColors
+        else -> when (s.omegaColor) {
         dev.hearth.launcher.data.OmegaColor.GalaxyOmega -> GalaxyOmegaFluidColors
         dev.hearth.launcher.data.OmegaColor.Liquid -> LiquidFluidColors
         else -> OmegaFluidColors
+        }
     }
 
 /** OMEGA UI 18.3 "Liquid Glass": light caught in clear glass – white with a breath of rainbow. */
@@ -209,7 +215,7 @@ val LiquidFluidColors = listOf(
 /** The fluid colors in use: OMEGA Fluid with OMEGA Glass on, else Claude's. */
 @Composable
 internal fun fluidPalette(): List<Color> =
-    LocalSettings.current.let { if (it.omegaGlass) omegaPalette(it) else AiFluidColors }
+    LocalSettings.current.let { if (it.omegaGlass || it.liquidOmega) omegaPalette(it) else AiFluidColors }
 
 /** The AI Fluid colors: Claude's terracotta flowing through violet, blue and pink. */
 val AiFluidColors = listOf(
@@ -241,7 +247,7 @@ fun Modifier.aiFluidEdge(
     val phase = flowPhase(4200, LocalSettings.current.animations && (flowing || overdrive))
     // Hearth UI 14 "Dezent": rims that stand still are calm glass with a hint of Claude's
     // colors; flowing ones (something running, something new) keep their full colors.
-    val omega = LocalSettings.current.omegaGlass
+    val omega = LocalSettings.current.omegaGlass || LocalSettings.current.liquidOmega
     // OMEGA Glass: OMEGA Fluid shows everywhere in full color, never the calm white.
     val calm = !omega && phase == null && LocalSettings.current.fluidRims == FluidRims.Calm
     val colors = when {

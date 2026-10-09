@@ -953,6 +953,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     }
                     // OMEGA UI 17.5, Clawd Illumination: now and then a parade of Clawds marches
                     // along the top of the dock.
+                    // OMEGA UI 18.5: a strip of glass behind the status bar.
+                    GlassStatusBar()
                     // OMEGA UI 18: the perks over the home screen – and Claude Mythos's banner.
                     PerkFrontLayers(settings, sparkField, if (dockBounds.height > 0f) dockBounds.top else 0f)
                     // Claude Mythos: Clawds peeking in from the edges and sitting on the dock.
@@ -1505,7 +1507,8 @@ private fun LargeClock(settings: LauncherSettings, modifier: Modifier = Modifier
                 style = OnWallpaperText,
             )
         }
-        RollingText(
+        ClockDigits(
+            settings,
             text = time,
             color = Color.White,
             fontFamily = clockFamily(settings, FontFamily.Serif),
@@ -1537,7 +1540,8 @@ private fun ColorOSClock(settings: LauncherSettings, modifier: Modifier = Modifi
     val accent = settings.accent.color
 
     Column(modifier) {
-        RollingText(
+        ClockDigits(
+            settings,
             text = time,
             color = Color.White,
             fontFamily = clockFamily(settings, null),
@@ -1589,8 +1593,8 @@ private fun OneUIClock(settings: LauncherSettings, modifier: Modifier = Modifier
         now.format(DateTimeFormatter.ofPattern("EEE, d. MMMM", locale))
             .replaceFirstChar { it.titlecase(locale) }
     }
-    // OMEGA UI 17.4: with OMEGA Glass the digits are glass and the date sits on glass chips.
-    val glass = settings.omegaGlass
+    // OMEGA UI 17.4: glass digits, the date on glass chips – OMEGA UI 18.5: "Uhren aus Glas".
+    val glass = settings.glassClocks
     val context = LocalContext.current
     Column(modifier) {
         if (glass) {
@@ -1696,7 +1700,8 @@ private fun StackedClock(settings: LauncherSettings, modifier: Modifier = Modifi
             .replaceFirstChar { it.titlecase(locale) }
     }
     Column(modifier) {
-        RollingText(
+        ClockDigits(
+            settings,
             text = hours,
             color = Color.White,
             fontFamily = clockFamily(settings, null),
@@ -1706,7 +1711,8 @@ private fun StackedClock(settings: LauncherSettings, modifier: Modifier = Modifi
             letterSpacing = (-4).sp,
             style = OnWallpaperText,
         )
-        RollingText(
+        ClockDigits(
+            settings,
             text = minutes,
             color = Color.White.copy(alpha = 0.78f),
             fontFamily = clockFamily(settings, null),
@@ -2367,4 +2373,47 @@ internal fun clockWeight(settings: LauncherSettings, lookDefault: FontWeight): F
     ClockFont.Bold -> FontWeight.Bold
     ClockFont.Sans, ClockFont.Mono -> FontWeight.Normal
     else -> lookDefault
+}
+
+
+/**
+ * OMEGA UI 18.5, "Uhren aus Glas": a clock's digits – of glass when that's on, else the plain
+ * rolling ones, with the same look otherwise.
+ */
+@Composable
+private fun ClockDigits(
+    settings: LauncherSettings,
+    text: String,
+    color: Color,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    modifier: Modifier = Modifier,
+    fontWeight: FontWeight? = null,
+    fontFamily: FontFamily? = null,
+    letterSpacing: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
+    lineHeight: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
+    style: androidx.compose.ui.text.TextStyle = androidx.compose.ui.text.TextStyle.Default,
+) {
+    if (settings.glassClocks) {
+        GlassNumerals(
+            text = text,
+            fontSize = fontSize,
+            modifier = modifier,
+            fontWeight = fontWeight,
+            fontFamily = fontFamily,
+            letterSpacing = letterSpacing,
+            lineHeight = lineHeight,
+        )
+    } else {
+        RollingText(
+            text = text,
+            color = color,
+            fontSize = fontSize,
+            modifier = modifier,
+            fontWeight = fontWeight,
+            fontFamily = fontFamily,
+            letterSpacing = letterSpacing,
+            lineHeight = lineHeight,
+            style = style,
+        )
+    }
 }

@@ -241,6 +241,7 @@ fun ClawdIlluminationScreen(
                     "Glas, das viel stärker bricht, Farben spaltet und glänzt als jede Einstellung erlaubt.",
                     settings.hyperGlass,
                 ) { v -> onChange { it.copy(hyperGlass = v) } }
+                IlluminatiChoice("💧", "Glas-Stil", dev.hearth.launcher.data.GlassLook.entries, settings.glassLook, { it.label }) { v -> onChange { it.copy(glassLook = v) } }
                 ColorWorldPicker(settings.colorWorld) { w -> onChange { it.copy(colorWorld = w) } }
             }
             IlluminationSection("Startbildschirm") {
@@ -429,17 +430,10 @@ private fun MythosCard(on: Boolean, onToggle: (Boolean) -> Unit) {
                     fontSize = 13.sp,
                 )
             }
-            Switch(
+            GlassSwitch(
                 checked = on,
                 onCheckedChange = onToggle,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = Color(0xFFB8860B),
-                    checkedBorderColor = Color(0xFFFFF1C2),
-                    uncheckedThumbColor = Color.White.copy(alpha = 0.7f),
-                    uncheckedTrackColor = Color.White.copy(alpha = 0.1f),
-                    uncheckedBorderColor = IlluminatiGold.copy(alpha = 0.5f),
-                ),
+                onColor = Color(0xFFB8860B),
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -513,17 +507,10 @@ private fun IlluminationSwitch(icon: String, title: String, text: String, on: Bo
             Text(title, color = Color(0xFFF3E6C8), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif)
             Text(text, color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, lineHeight = 17.sp)
         }
-        Switch(
+        GlassSwitch(
             checked = on,
             onCheckedChange = onToggle,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = Color(0xFF8C1C13),
-                checkedBorderColor = IlluminatiGold,
-                uncheckedThumbColor = Color.White.copy(alpha = 0.7f),
-                uncheckedTrackColor = Color.White.copy(alpha = 0.1f),
-                uncheckedBorderColor = Color.White.copy(alpha = 0.3f),
-            ),
+            onColor = Color(0xFF8C1C13),
         )
     }
 }

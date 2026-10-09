@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.has
+import dev.hearth.launcher.data.liquidOmega
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -64,9 +65,12 @@ internal fun OmegaScreenBackdrop(
     val palette = fluidPalette()
     // OMEGA UI 17.5 hotfix: dark mode reaches here too – much darker, the colors only glowing.
     val dark = LocalGlassStyle.current.dark
+    // OMEGA UI 18.5, Liquid Glass: neutral and light, like Apple's – no tint over the screen.
+    val liquid = s.liquidOmega
     val shade = when {
         !hasGlass -> noGlassDim
         dark -> maxOf(if (omega) omegaDim else dim, 0.6f)
+        liquid -> omegaDim * 0.8f
         omega -> omegaDim
         else -> dim
     }
@@ -79,7 +83,7 @@ internal fun OmegaScreenBackdrop(
                 .background(Color(if (dark) 0xFF05040C else 0xFF06060C).copy(alpha = shade)),
         )
         // OMEGA Glass: tinted like OMEGA glass – deepest at the top and once more at the bottom.
-        if (omega) {
+        if (omega && !liquid) {
             Box(
                 Modifier
                     .matchParentSize()
@@ -116,7 +120,7 @@ internal fun OmegaHomeLight(modifier: Modifier = Modifier) {
         else -> listOf(Color(0xFF2F4BFF), Color(0xFF14206B), Color(0xFF5C7CFF), Color(0xFF8E6BFF), Color(0xFFBFD0FF))
     }
     val dark = LocalGlassStyle.current.dark
-    val power = (if (dark) 0.6f else 1f) * (if (s.omegaOverdrive) 1.3f else 1f)
+    val power = (if (dark) 0.6f else 1f) * (if (s.omegaOverdrive) 1.3f else 1f) * (if (s.liquidOmega) 0.5f else 1f)
     // OMEGA UI 18.3: the light stands still (only Ω-Overdrive lets it drift) – drifting, it
     // redrew the whole home screen and every glass on it, frame after frame.
     val flow = flowPhase(30_000, s.animations && s.omegaOverdrive)

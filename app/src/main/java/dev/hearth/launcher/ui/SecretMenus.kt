@@ -289,11 +289,11 @@ private fun SecretSwitch(label: String, detail: String, checked: Boolean, enable
             Text(detail, color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, lineHeight = 17.sp)
         }
         Spacer(Modifier.width(10.dp))
-        Switch(
+        GlassSwitch(
             checked = checked,
             onCheckedChange = onChange,
             enabled = enabled,
-            colors = SwitchDefaults.colors(checkedTrackColor = Color(0xFF3E91FF)),
+            onColor = Color(0xFF3E91FF),
         )
     }
 }

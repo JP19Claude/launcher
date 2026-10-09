@@ -79,7 +79,9 @@ fun CelebrationOverlay() {
                     .systemBarsPadding()
                     .padding(top = 44.dp)
                     .clip(RoundedCornerShape(18.dp))
-                    .background(Color.Black.copy(alpha = 0.55f))
+                    // OMEGA UI 18.5: a little piece of glass, not a dark pill.
+                    .background(Color.Black.copy(alpha = 0.3f))
+                    .glassSheen(18.dp)
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

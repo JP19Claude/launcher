@@ -313,6 +313,25 @@ fun SettingsScreen(
             // OMEGA UI 17.1: OMEGA Glass all through the system, and the smooth mode.
             if (shows("design")) item {
                 Section("OMEGA") {
+                    // OMEGA UI 18.5: OMEGA Glass or Apple's Liquid Glass, for the whole system.
+                    ChoiceRow(
+                        label = "Glas-Stil",
+                        options = dev.hearth.launcher.data.GlassLook.entries,
+                        selected = s.glassLook,
+                        optionLabel = { it.label },
+                        onSelect = { v -> update { it.copy(glassLook = v) } },
+                    )
+                    SwitchRow(
+                        label = "Uhren aus Glas",
+                        description = "Jede Uhr auf dem Startbildschirm mit Ziffern aus Glas",
+                        checked = s.glassClocks,
+                    ) { v -> update { it.copy(glassClocks = v) } }
+                    SwitchRow(
+                        label = "Statusleiste aus Glas",
+                        description = "Ein Streifen Glas hinter der Statusleiste – auf dem Startbildschirm, im App-Drawer und in den Einstellungen",
+                        checked = s.glassStatusBar,
+                    ) { v -> update { it.copy(glassStatusBar = v) } }
+                    RowDivider()
                     SwitchRow(
                         label = "OMEGA Glass",
                         description = "Rubin-Glas im ganzen System, und überall fließt OMEGA Fluid (Rubin, Rosé, Bernstein) statt Claudes Farben – Startbildschirm, Menüs, Einstellungen, Glimmer",
@@ -868,6 +887,8 @@ fun SettingsScreen(
                 }
             }
         }
+        // OMEGA UI 18.5: the list slides under a strip of glass behind the status bar.
+        GlassStatusBar()
 
         // One UI 9: once the big title has slid away, a slim bar with the small one takes its
         // place; the close button stays in reach all the time.
@@ -1324,9 +1345,12 @@ private fun HiddenAppsPicker(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.55f))
+            .background(Color.Black.copy(alpha = 0.3f))
             .pointerInput(Unit) { detectTapGestures { } },
     ) {
+        // OMEGA UI 18.5: frosted glass behind the list, not just a dark veil.
+        GlassBackdropFill(blur = 36.dp, modifier = Modifier.matchParentSize())
+        Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.3f)))
         Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 6.dp, bottom = 12.dp)) {
                 Column(Modifier.weight(1f)) {
@@ -1454,18 +1478,12 @@ internal fun SliderRow(
             Text(label, color = TextPrimary, fontSize = 15.sp, modifier = Modifier.weight(1f))
             Text(valueText, color = TextSecondary, fontSize = 14.sp)
         }
-        Slider(
+        // OMEGA UI 18.5: a slider of liquid glass.
+        GlassSlider(
             value = value.coerceIn(range.start, range.endInclusive),
             onValueChange = onChange,
             valueRange = range,
             steps = steps,
-            colors = SliderDefaults.colors(
-                thumbColor = Color.White,
-                activeTrackColor = Color.White.copy(alpha = 0.85f),
-                inactiveTrackColor = Color.White.copy(alpha = 0.18f),
-                activeTickColor = Color.Transparent,
-                inactiveTickColor = Color.Transparent,
-            ),
         )
     }
 }
@@ -1519,17 +1537,10 @@ internal fun SwitchRow(
             }
         }
         Spacer(Modifier.width(12.dp))
-        Switch(
+        GlassSwitch(
             checked = checked,
             onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = SwitchOn,
-                checkedBorderColor = Color.Transparent,
-                uncheckedThumbColor = Color.White.copy(alpha = 0.9f),
-                uncheckedTrackColor = Color.White.copy(alpha = 0.15f),
-                uncheckedBorderColor = Color.White.copy(alpha = 0.3f),
-            ),
+            onColor = SwitchOn,
         )
     }
 }

@@ -1,11 +1,15 @@
-OMEGA UI 18.3 „Liquid Glass“ auf ClaudeOS 5.0 „Mythos“
+OMEGA UI 18.5 „Liquid“ auf ClaudeOS 5.0 „Mythos“ – das große Glas-Update
 
-💧 Liquid Glass
-• Neue Farbe für OMEGA Glass: klar wie Apples Liquid Glass – tiefere Linse, mehr Glanz, Fluid in Weiß
-• Design → OMEGA → Farbe von OMEGA Glass
+💧 Glas-Stil
+• OMEGA Glass oder Liquid Glass wie bei Apple – für das ganze System
+• Liquid Glass: klar, tiefere Linse, mehr Glanz, heller Innenrand, weiße Fluid-Ränder
 
-⚡ Viel flüssiger
-• Startbildschirm steht still, wenn nichts passiert – kein dauerndes Neuberechnen des Glases mehr
-• Clawds an einer gemeinsamen, ruhigeren Uhr
-• Claude Mythos leichter
-• Einstellungen nur einmal neu gelesen
+🔘 Schalter und Regler aus Liquid Glass
+• Der Knopf wird beim Festhalten zur Glaslinse und dehnt sich beim Umschalten wie ein Tropfen
+
+✨ Glas überall
+• Uhren aus Glas für jede Uhr
+• Statusleiste aus Glas
+• Sprechblasen, Hinweise und Overlays aus Glas
+
+🔍 Neues Easter Egg: die Lupe
