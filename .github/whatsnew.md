@@ -1,17 +1,23 @@
 ZENITH 19 auf ClaudeOS 6.0 „Helios“ – aus OMEGA UI wird ZENITH, die Sonne im höchsten Punkt
 
+🟩 ZENITH, wie es aussehen soll
+• Neues Logo: schräges Metall-Z mit grünem Kantenlicht, „ZENITH“ in Chrom
+• Alles, was OMEGA oder Hearth hieß, heißt jetzt ZENITH
+• Das Ω im System ist jetzt das ZENITH-Z
+• Neuer Startbildschirm: ZENITH-Dock aus Metall, grünes ZENITH-Licht, schräge Seitenstriche, Uhr in Chrom
+
 🌞 ClaudeOS 6.0 „Helios“
 • Neue Basis für das neue System – nach der Sonne
 • Eigenes Claude-Zeichen in Weiß, Gold und Grün
 • Neues ClaudeOS-Easter-Egg: die Sonnenfinsternis – schieb den Mond von der Sonne
 
 ☀️ ZENITH
-• Neuer Name, neues Logo: ein scharfes weißes Z, die 19 in glänzendem Grün schräg hindurch, darüber der Sonnenbogen
+• Neuer Name
 • Neue Übergangsanimation: Die Sonne steigt aus der Nacht in den Zenit
 • Neue Tour durch alles, was neu ist
 
 ✊ Logo gedrückt halten – wie bei ColorOS
-• Der Bogen füllt sich mit Licht bis zur Sonne, ein goldener Glanz läuft übers Z, ein Lichtring, wenn es voll ist
+• Das grüne Licht brennt heller, ein Lichtband läuft übers Metall, eine grüne Welle, wenn es voll ist
 • 19-mal antippen: die Clawd Illuminati
 
 💚 Zenith-Grün

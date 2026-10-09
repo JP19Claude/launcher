@@ -46,7 +46,7 @@ private class EggSpot(val id: String, val name: String, val where: String)
 private val EggSpots = listOf(
     EggSpot("version", "ZENITH-Version", "Software-Update oder Über das Telefon: fünfmal schnell auf die ZENITH-Version tippen. Jede große Version hat ein eigenes Egg (19: Sonnenlauf, 18.5: Lupe, 18: Schmiede, 17.5: Laterne, 17: Rubin, 16: Glühwürmchen, 15.5: Funken, 15: Tresor, 14.5: Kometen, 14: Prisma, 13.5: Tropfen, 13: Seide …)."),
     EggSpot("claudeos", "ClaudeOS", "Software-Update oder Über das Telefon: fünfmal schnell auf die ClaudeOS-Version tippen (lange drücken: das ClaudeOS-Museum mit allen Eggs) und dann: ClaudeOS 6 „Helios“ – bei der Sonnenfinsternis den Mond von der Sonne schieben (ClaudeOS 5 „Mythos“: den Finger halten, bis der Rat erscheint; ClaudeOS 4 „Aurora“: Nordlichter an den Himmel malen; ClaudeOS 3 „Nova“: den Stern zur Supernova bringen)."),
-    EggSpot("footer", "Gebaut mit Claude", "Einstellungen ganz unten: siebenmal auf „Hearth · gebaut mit Claude“ tippen."),
+    EggSpot("footer", "Gebaut mit Claude", "Einstellungen ganz unten: siebenmal auf „${dev.hearth.launcher.data.Brand.name} · gebaut mit Claude“ tippen."),
     EggSpot("clock", "Uhr", "Startbildschirm: fünfmal schnell auf die Uhr tippen."),
     EggSpot("spin", "Glas-Uhr", "Das Glas-Uhr-Widget dreimal schnell antippen – es dreht sich."),
     EggSpot("rainbow", "Regenbogen", "Im Finder nach „Regenbogen“ suchen."),
@@ -74,7 +74,7 @@ private val EggSpots = listOf(
     EggSpot("riddles", "Rätselmeister", "Alle Rätsel von Clawd lösen."),
     EggSpot("codes", "Codeknacker", "Im Finder *#0000# eintippen – die Liste aller Geheimcodes. (Oder lange auf den großen Titel „Einstellungen“ drücken.)"),
     EggSpot("omega", "Von Alpha bis Omega", "Im Finder nach „Omega“ (oder Ω) suchen und alle griechischen Buchstaben um das Ω kreisen lassen."),
-    EggSpot("labs", "OMEGA Labs", "Über das Telefon: siebenmal auf die Build-Nummer tippen."),
+    EggSpot("labs", "ZENITH Labs", "Über das Telefon: siebenmal auf die Build-Nummer tippen."),
     EggSpot("illumination", "Clawd Illumination", "So oft auf das ZENITH-Logo tippen, wie ZENITH Nummer hat (19)."),
 )
 

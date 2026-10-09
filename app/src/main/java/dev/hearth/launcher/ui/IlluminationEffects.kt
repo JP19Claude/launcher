@@ -154,9 +154,8 @@ internal fun OmegaRain(modifier: Modifier = Modifier) {
     val phase = flowPhase(90_000, s.animations)
     val measurer = rememberTextMeasurer()
     val palette = fluidPalette()
-    val glyphs = remember(measurer) {
-        listOf(16, 24, 34, 48).map { size -> measurer.measure("Ω", TextStyle(fontSize = size.sp, fontWeight = FontWeight.Bold)) }
-    }
+    // ZENITH: Z marks instead of Ω, in four sizes.
+    val glyphs = listOf(18, 26, 38, 52)
     val drops = remember {
         val random = kotlin.random.Random(17)
         List(18) {
@@ -175,16 +174,11 @@ internal fun OmegaRain(modifier: Modifier = Modifier) {
         val swing = 16.dp.toPx()
         drops.forEach { d ->
             val p = (t * d.speed + d.offset) % 1f
-            val glyph = glyphs[d.size]
+            val mark = glyphs[d.size].dp.toPx()
             val y = size.height * 1.05f - p * (size.height * 1.15f)
             val x = size.width * d.x + sin(p * 2f * PI.toFloat() * d.sway + d.offset * 9f) * swing
             val fade = sin(p * PI.toFloat()).coerceIn(0f, 1f)
-            drawText(
-                glyph,
-                color = palette[d.color % palette.size],
-                topLeft = Offset(x - glyph.size.width / 2f, y),
-                alpha = 0.16f + 0.3f * fade * (0.5f + 0.15f * d.size),
-            )
+            drawZenithMarkAt(Offset(x, y), mark, palette[d.color % palette.size], alpha = 0.16f + 0.3f * fade * (0.5f + 0.15f * d.size))
         }
     }
 }
@@ -233,8 +227,6 @@ internal fun ClawdParade(modifier: Modifier = Modifier) {
             delay(kotlin.random.Random.nextLong(25_000, 45_000))
         }
     }
-    val measurer = rememberTextMeasurer()
-    val omega = remember(measurer) { measurer.measure("Ω", TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Black)) }
     Canvas(modifier) {
         val p = march.value
         if (p <= 0f || p >= 1f) return@Canvas
@@ -265,17 +257,13 @@ internal fun ClawdParade(modifier: Modifier = Modifier) {
                 )
                 drawContext.size = full
             }
-            // The leader holds the Ω up high.
+            // The leader holds ZENITH's Z up high.
             if (i == 0) {
-                drawText(
-                    omega,
-                    color = Color(0xFFFFEDB0),
-                    topLeft = Offset(x + w * 0.78f, hop - omega.size.height * 0.55f),
-                )
+                drawZenithMarkAt(Offset(x + w * 0.95f, hop - h * 0.12f), w * 0.5f, ZenithGreen)
             }
         }
     }
 }
 
-/** Ω-Ziffern: the zeros of a clock as Ω. */
-internal fun omegaDigits(text: String, on: Boolean): String = if (on) text.replace('0', 'Ω') else text
+/** Sonnen-Ziffern (once Ω-Ziffern): the zeros of a clock as suns. */
+internal fun omegaDigits(text: String, on: Boolean): String = if (on) text.replace('0', '☉') else text

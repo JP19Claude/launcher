@@ -1265,7 +1265,7 @@ class GlimmerController(private val service: GlimmerService) {
             x = cameraX
             y = 0
             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-            title = "Hearth Glimmer"
+            title = "${dev.hearth.launcher.data.Brand.name} Glimmer"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) setFitInsetsTypes(0)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && settings.glimmerStyle == GlimmerStyle.Glass) {
                 flags = flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND

@@ -96,8 +96,8 @@ internal fun ClawdSettings(
             onSelect = { v -> update { it.copy(clawdCloth = v) } },
         )
         SwitchRow(
-            label = "OMEGA-Abzeichen",
-            description = "Ein kleiner Rubin mit dem Ω auf Clawds Brust",
+            label = "ZENITH-Abzeichen",
+            description = "Ein kleines ZENITH-Z mit grünem Kantenlicht auf Clawds Brust",
             checked = s.clawdOmega,
         ) { v -> update { it.copy(clawdOmega = v) } }
         Wardrobe(
@@ -144,7 +144,7 @@ internal fun ClawdSettings(
             var installed by remember { mutableStateOf(ClawdLink.isInstalled(context)) }
             ActionRow(
                 label = if (installed) "Clawd-App öffnen" else "Clawd-App holen",
-                description = "Clawds Widgets auch für den Samsung-Launcher und jeden anderen – Hearth hat sie schon eingebaut",
+                description = "Clawds Widgets auch für den Samsung-Launcher und jeden anderen – ${dev.hearth.launcher.data.Brand.name} hat sie schon eingebaut",
             ) {
                 installed = ClawdLink.isInstalled(context)
                 if (installed) {

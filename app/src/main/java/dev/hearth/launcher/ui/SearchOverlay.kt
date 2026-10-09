@@ -316,7 +316,7 @@ fun SearchOverlay(
 private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         // OMEGA UI 17.5: Ω in front.
-        (if (LocalSettings.current.omegaGlass) "Ω  " else "") + text,
+        (if (LocalSettings.current.omegaGlass) "$ZenithSymbol  " else "") + text,
         color = Color.White.copy(alpha = 0.62f),
         fontSize = 13.sp,
         fontWeight = FontWeight.SemiBold,

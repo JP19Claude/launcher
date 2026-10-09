@@ -69,7 +69,7 @@ internal fun OmegaHomeClock(settings: LauncherSettings, modifier: Modifier = Mod
         SecondsLine(accent, settings.animations, Modifier.width(220.dp).height(6.dp))
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Ω", color = accent, fontSize = 16.sp, fontWeight = FontWeight.Black, style = OnWallpaperText)
+            ZenithMark(accent, 20.dp)
             Spacer(Modifier.width(8.dp))
             Text(dateLine(now), color = Color.White.copy(alpha = 0.9f), fontSize = 16.sp, style = OnWallpaperText)
         }
@@ -240,7 +240,7 @@ internal fun OmegaClockWidget(modifier: Modifier) {
         val big = (min(maxWidth.value * 0.28f, maxHeight.value * 0.55f)).coerceIn(30f, 80f)
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Ω", color = accent, fontSize = (big * 0.3f).sp, fontWeight = FontWeight.Black)
+                ZenithMark(accent, (big * 0.36f).dp)
                 Spacer(Modifier.width(6.dp))
                 Text(dateLine(now), color = Color.White.copy(alpha = 0.8f), fontSize = (big * 0.22f).sp)
             }

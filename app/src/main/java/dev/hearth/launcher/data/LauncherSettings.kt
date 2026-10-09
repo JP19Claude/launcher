@@ -24,9 +24,9 @@ enum class IconShape(val label: String) {
 
 enum class ClockStyle(val label: String) {
     /** ZENITH 19: the sun's arc over the time – where the sun stands now, by day; the moon by night. */
-    Zenith("Sonnenbogen"),
+    Zenith("ZENITH (Sonnenbogen)"),
     /** OMEGA UI 17: thin numerals in the accent's light, the seconds as a line under them. */
-    Omega("OMEGA"),
+    Omega("Schmal"),
     /** OMEGA UI 17: a glass dial with a ruby at twelve, the date beside it. */
     Analog("Analog-Glas"),
     /** OMEGA UI 17: "Viertel nach drei". */
@@ -34,7 +34,7 @@ enum class ClockStyle(val label: String) {
     /** OMEGA UI 17: hours big, minutes in the accent over the date. */
     Split("Geteilt"),
     /** Hearth UI 14: hours over minutes, big and stacked, with glass chips for date and battery. */
-    Stacked("Gestapelt (OMEGA UI)"),
+    Stacked("Gestapelt"),
     ColorOS("ColorOS"),
     /** Samsung's home clock: big, bold, tight digits over the date. */
     OneUI("One UI"),
@@ -71,7 +71,7 @@ enum class GlassTint(val label: String, val color: Color) {
     /** OMEGA UI: glass with a breath of ruby. */
     Ruby("Rubin", Color(0xFFB0102C).copy(alpha = 0.16f)),
     /** OMEGA UI 17.3: deep Galaxy blue glass (the ruby comes from OMEGA Fluid). */
-    GalaxyOmega("Galaxy Omega", Color(0xFF1E46B4).copy(alpha = 0.2f)),
+    GalaxyOmega("Galaxy Zenith", Color(0xFF1E46B4).copy(alpha = 0.2f)),
     /** ZENITH 19: sunlit glass with a breath of green. */
     Zenith("Sonnenglas", Color(0xFF3FBF7F).copy(alpha = 0.13f)),
 }
@@ -93,7 +93,7 @@ enum class ColorWorld(val label: String, val degrees: Float) {
 enum class AodClock(val label: String) {
     /** ZENITH 19: the sun's arc over the time, the moon at night. */
     Zenith("Sonnenbogen"),
-    Omega("OMEGA"),
+    Omega("Schmal"),
     Big("Groß"),
     Thin("Dünn"),
     Words("In Worten"),
@@ -109,7 +109,7 @@ enum class AodBrightness(val label: String, val light: Float) {
 /** The color of the Always On Display's clock. */
 enum class AodTint(val label: String) {
     White("Weiß"),
-    Omega("OMEGA"),
+    Omega("ZENITH"),
     Gold("Gold"),
 }
 
@@ -121,7 +121,7 @@ val LauncherSettings.liquidOmega: Boolean get() = glassLook == GlassLook.Liquid 
  * its colors) or Liquid Glass like Apple's (clear, a deep lens, bright edges, white light).
  */
 enum class GlassLook(val label: String) {
-    Omega("OMEGA Glass"),
+    Omega("ZENITH Glass"),
     Liquid("Liquid Glass (wie Apple)"),
 }
 
@@ -134,7 +134,7 @@ enum class OmegaColor(val label: String) {
     /** ZENITH 19: green, sun and sky – the colors of the sun at its highest point. */
     Zenith("Zenith"),
     Ruby("Rubin"),
-    GalaxyOmega("Galaxy Omega"),
+    GalaxyOmega("Galaxy Zenith"),
     /** OMEGA UI 18.3: clear, colorless glass like Apple's Liquid Glass – light, lens and shine. */
     Liquid("Liquid Glass"),
 }
@@ -159,7 +159,7 @@ enum class AccentColor(val label: String, val color: Color) {
     /** OMEGA UI's ruby red. */
     Ruby("Rubin", Color(0xFFE5243F)),
     /** OMEGA UI 17.3: Galaxy blue – no more violet; the ruby comes from OMEGA Fluid. */
-    GalaxyOmega("Galaxy Omega", Color(0xFF3D7BFF)),
+    GalaxyOmega("Galaxy Zenith", Color(0xFF3D7BFF)),
     /** ZENITH 19: the green of the 19 in ZENITH's mark. */
     Zenith("Zenith-Grün", Color(0xFF2FD27A)),
 }
@@ -325,7 +325,7 @@ enum class DesignPreset(val label: String) {
     GalaxyClaude("Galaxy × Claude (ZENITH)"),
     ColorOSClaude("ColorOS × Claude"),
     IOSGlass("iOS Liquid Glass"),
-    Hearth("Hearth Klassik"),
+    Hearth("${dev.hearth.launcher.data.Brand.name} Klassik"),
 }
 
 /** What a double tap on an empty spot of the home screen does. */
@@ -337,7 +337,7 @@ enum class HomeGesture(val label: String) {
     Drawer("App-Übersicht"),
     Notifications("Mitteilungen"),
     Torch("Taschenlampe"),
-    Menu("OMEGA-Menü"),
+    Menu("ZENITH-Menü"),
     Power("Ein/Aus-Menü"),
 }
 
@@ -364,9 +364,11 @@ enum class DockStyle(val label: String) {
     Floating("Schwebende Glas-Kapsel"),
     Clear("Ohne Hintergrund"),
     /** OMEGA UI 17: a dark glass island just around the icons, a ruby glow along its rim. */
-    Island("OMEGA-Insel"),
+    Island("ZENITH-Insel"),
     /** OMEGA UI 17: the full bar, tinted ruby. */
     Ruby("Rubin-Glas"),
+    /** ZENITH 19: a slanted plate of the Z's dark metal, green light along its foot. */
+    Zenith("ZENITH-Dock"),
 }
 
 /** The color of Clawd's clothes; [color] null keeps each outfit's own colors. */
@@ -810,7 +812,7 @@ data class LauncherSettings(
             glassDispersion = 0.5f,
             glassSpecular = 0.95f,
             clockStyle = ClockStyle.Zenith,
-            dockStyle = DockStyle.Island,
+            dockStyle = DockStyle.Zenith,
             showGreeting = true,
             showClaudeCard = false,
             galaxyClaude = true,
@@ -907,7 +909,7 @@ data class LauncherSettings(
         const val MAX_DOCK = 6
 
         /** Current default look; installs with a lower [designVersion] get it once. */
-        const val DESIGN_VERSION = 9
+        const val DESIGN_VERSION = 10
     }
 }
 
@@ -1434,13 +1436,13 @@ enum class Perk(val title: String, val emoji: String, val text: String, val grou
     EyeCare("Augenschutz", "🌙", "Warmes Licht im ganzen System – schont abends die Augen.", "Licht"),
     NightRest("Nachtruhe", "💤", "Zwischen 23 und 6 Uhr wird der Startbildschirm sanft dunkler.", "Licht"),
     Aurora("Aurora-Himmel", "🌌", "Nordlichter wehen oben über den Startbildschirm.", "Licht"),
-    DayLight("Tageszeit-Licht", "🌅", "Die OMEGA-Beleuchtung folgt dem Tag: morgens Gold, mittags hell, abends Rot, nachts Blau.", "Licht"),
+    DayLight("Tageszeit-Licht", "🌅", "Die ZENITH-Beleuchtung folgt dem Tag: morgens Gold, mittags hell, abends Rot, nachts Blau.", "Licht"),
     BatteryAura("Akku-Aura", "🔋", "Unten leuchtet der Akku: grün voll, rot fast leer, beim Laden pulsierend.", "Licht"),
-    OmegaMark("Ω-Wasserzeichen", "Ω", "Ein großes, leises Ω mitten im Hintergrund.", "Licht"),
+    OmegaMark("Z-Wasserzeichen", "Ƶ", "Ein großes, leises ZENITH-Z mitten im Hintergrund.", "Licht"),
     Parallax("Parallax", "◇", "Der Startbildschirm bewegt sich mit, wenn du das Handy neigst – echte Tiefe.", "Bewegung"),
     GiantClock("Riesen-Uhr", "🕰", "Die Uhr auf dem Startbildschirm ein gutes Stück größer.", "Bewegung"),
     Pulse("Icon-Puls", "♥", "Die Apps atmen sanft, jede in ihrem Takt.", "Bewegung"),
-    Sparks("Funkenspur", "✦", "Wo dein Finger den Startbildschirm berührt, sprühen OMEGA-Funken.", "Bewegung"),
+    Sparks("Funkenspur", "✦", "Wo dein Finger den Startbildschirm berührt, sprühen ZENITH-Funken.", "Bewegung"),
     Noir("Noir", "◑", "Das ganze System in Schwarz-Weiß.", "Farbe"),
     Sepia("Sepia", "📜", "Das ganze System in warmen, alten Farben.", "Farbe"),
     Vivid("Leuchtfarben", "🌈", "Alle Farben im ganzen System viel kräftiger.", "Farbe"),

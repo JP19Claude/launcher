@@ -15,6 +15,7 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,6 +54,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontFamily
@@ -89,46 +92,22 @@ val ZenithFluidColors = listOf(
 )
 
 /**
- * The Z of ZENITH's mark in a box [s] wide starting at [left]: three sharp bars, the diagonal
- * as thick as the other two.
- */
-private fun zenithZ(s: Float, left: Float): Path {
-    val l = left + s * 0.2f
-    val r = left + s * 0.8f
-    val t = s * 0.3f
-    val b = s * 0.86f
-    val bar = s * 0.12f
-    val k = s * 0.2f
-    return Path().apply {
-        moveTo(l, t)
-        lineTo(r, t)
-        lineTo(r, t + bar)
-        lineTo(l + k, b - bar)
-        lineTo(r, b - bar)
-        lineTo(r, b)
-        lineTo(l, b)
-        lineTo(l, b - bar)
-        lineTo(r - k, t + bar)
-        lineTo(l, t + bar)
-        close()
-    }
-}
-
-/**
- * The ZENITH mark: a sharp white Z lit from above, the version set through it in glossy green
- * with a clean cut round it, and over it the sun's arc with the sun at its top – the zenith.
- * Held down (like ColorOS's logo), it charges up: the arc fills with light from the horizon to
- * the sun, a gold glint runs over the Z, the sun swells – a knock and a ring of light when it's
- * full – and it settles back with a bounce when let go. [onTap] counts quick taps (the
- * Illuminati's secret).
+ * The ZENITH mark, as in its logo: a slanted Z of dark, worn metal with cut ends, a silver bevel
+ * and green light burning along its lower edges – "ZENITH" in wide chrome letters under it
+ * ([caption]; a number after the name comes in green). Held down (like ColorOS's logo) it charges
+ * up: the green burns brighter and floods the metal, a band of light runs over it – a knock and
+ * a green shock wave when it's full – and it settles back with a bounce when let go. [onTap]
+ * counts quick taps (the Illuminati's secret). [size] is the Z's width; [light] dims the green
+ * (for its entrance).
  */
 @Composable
 fun ZenithLogo(
     modifier: Modifier = Modifier,
     size: Dp = 150.dp,
-    number: String = "19",
+    @Suppress("UNUSED_PARAMETER") number: String = "19",
     caption: String? = null,
     interactive: Boolean = true,
+    light: Float = 1f,
     onTap: (() -> Unit)? = null,
 ) {
     val haptics = LocalHapticFeedback.current
@@ -149,7 +128,7 @@ fun ZenithLogo(
                         charge.animateTo(1f, tween(1100, easing = FastOutSlowInEasing))
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         burst.snapTo(0f)
-                        burst.animateTo(1f, tween(750, easing = LinearEasing))
+                        burst.animateTo(1f, tween(800, easing = LinearEasing))
                     }
                 } else {
                     null
@@ -166,145 +145,78 @@ fun ZenithLogo(
         }
     }
     val density = LocalDensity.current
-    val measurer = rememberTextMeasurer()
-    val digits = remember(number, size, density) {
-        measurer.measure(
-            number,
-            TextStyle(
-                fontSize = with(density) { (size * 0.32f).toSp() },
-                fontWeight = FontWeight.Black,
-                fontFamily = FontFamily.SansSerif,
-                letterSpacing = with(density) { (size * -0.02f).toSp() },
-                // Leaning with the Z's diagonal.
-                textGeometricTransform = TextGeometricTransform(skewX = -0.2f),
-            ),
-        )
-    }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Canvas(
             Modifier
-                .size(size)
+                .size(width = size, height = size * 0.64f)
                 .then(holdModifier)
                 .graphicsLayer {
                     val c = charge.value
-                    scaleX = 1f + 0.06f * c
-                    scaleY = 1f + 0.06f * c
-                    // Its own layer, so the cut round the number only cuts the Z.
-                    compositingStrategy = CompositingStrategy.Offscreen
+                    scaleX = 1f + 0.05f * c
+                    scaleY = 1f + 0.05f * c
                 },
         ) {
-            val s = this.size.minDimension
-            val x0 = (this.size.width - s) / 2f
-            val cx = x0 + s * 0.5f
+            val w = this.size.width * 0.9f
+            val left = (this.size.width - w) / 2f
+            val top = (this.size.height - w * ZenithZAspect) / 2f
             val c = charge.value
-            // The sun's way: an arc over the Z, its top the zenith.
-            val arcC = Offset(cx, s * 0.62f)
-            val arcR = s * 0.46f
-            val arcBox = Offset(arcC.x - arcR, arcC.y - arcR)
-            val arcSize = Size(arcR * 2f, arcR * 2f)
-            val sun = Offset(cx, arcC.y - arcR)
-            val glowR = s * (0.2f + 0.14f * c)
-            drawCircle(
-                Brush.radialGradient(listOf(ZenithSun.copy(alpha = 0.4f + 0.4f * c), ZenithSun.copy(alpha = 0.1f), Color.Transparent), center = sun, radius = glowR),
-                glowR,
-                sun,
-            )
-            drawArc(
-                Brush.horizontalGradient(
-                    listOf(Color.Transparent, Color.White.copy(alpha = 0.5f), ZenithSun, Color.White.copy(alpha = 0.5f), Color.Transparent),
-                    startX = arcC.x - arcR,
-                    endX = arcC.x + arcR,
-                ),
-                startAngle = 205f,
-                sweepAngle = 130f,
-                useCenter = false,
-                topLeft = arcBox,
-                size = arcSize,
-                style = Stroke(s * 0.016f, cap = StrokeCap.Round),
-            )
+            val mid = Offset(left + w / 2f, top + w * ZenithZAspect / 2f)
             if (c > 0.01f) {
-                // Held: the way lights up, from the horizon over the zenith.
-                drawArc(ZenithSun.copy(alpha = 0.3f), 205f, 130f * c, false, arcBox, arcSize, style = Stroke(s * 0.055f, cap = StrokeCap.Round))
-                drawArc(Color.White, 205f, 130f * c, false, arcBox, arcSize, style = Stroke(s * 0.02f, cap = StrokeCap.Round))
+                // Held: green light pooling behind it.
+                drawCircle(
+                    Brush.radialGradient(listOf(ZenithGreen.copy(alpha = 0.3f * c), Color.Transparent), center = mid, radius = w * 0.65f),
+                    w * 0.65f,
+                    mid,
+                )
             }
-            // The sun at the zenith: white-hot, gold at its edge.
-            val sunR = s * 0.05f * (1f + 0.4f * c)
-            drawCircle(
-                Brush.radialGradient(listOf(Color.White, Color(0xFFFFF1B8), ZenithSun), center = sun - Offset(sunR * 0.3f, sunR * 0.3f), radius = sunR * 1.4f),
-                sunR,
-                sun,
-            )
-            // The Z: sharp, white, lit from above.
-            val z = zenithZ(s, x0)
-            drawPath(z, Brush.verticalGradient(listOf(Color.White, Color(0xFFF3F7FB), Color(0xFFC7D2E0)), startY = s * 0.3f, endY = s * 0.86f))
-            if (c > 0.01f) {
-                // A gold glint running over it while it charges.
-                clipPath(z) {
-                    val band = x0 + s * (-0.2f + 1.4f * c)
-                    drawRect(
-                        Brush.linearGradient(
-                            listOf(Color.Transparent, ZenithSun.copy(alpha = 0.55f), Color.Transparent),
-                            start = Offset(band - s * 0.16f, s * 0.3f),
-                            end = Offset(band + s * 0.16f, s * 0.9f),
-                        ),
-                    )
-                }
-            }
-            // The number, set through the Z: a clean cut round it, then glossy green.
-            val fontPx = s * 0.32f
-            val glyph = fontPx * 0.71f
-            val baseline = s * 0.58f + glyph / 2f
-            val tl = Offset(cx - digits.size.width / 2f, baseline - digits.firstBaseline)
-            // (The text's gradients are in its own space: from the top of the digits to their foot.)
-            val foot = digits.firstBaseline
-            val head = foot - glyph
-            drawText(digits, color = Color.Black, topLeft = tl, drawStyle = Stroke(s * 0.04f, join = StrokeJoin.Round), blendMode = BlendMode.Clear)
-            drawText(
-                digits,
-                brush = Brush.verticalGradient(listOf(Color(0xFFC8FFE0), ZenithGreen, ZenithGreenDeep), startY = head, endY = foot),
-                topLeft = tl,
-            )
-            drawText(
-                digits,
-                brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.Transparent), startY = head, endY = head + glyph * 0.55f),
-                topLeft = tl,
-            )
-            drawText(digits, color = Color.White.copy(alpha = 0.3f), topLeft = tl, drawStyle = Stroke(s * 0.006f))
-            // Full: a ring of light going out from the sun.
+            drawZenithZ(left, top, w, light = light, charge = c)
+            // Full: a green shock wave in the Z's shape.
             val b = burst.value
             if (b < 1f) {
-                drawCircle(ZenithSun.copy(alpha = (1f - b) * 0.85f), s * (0.06f + 0.55f * b), sun, style = Stroke(s * 0.014f * (1f - b) + 1f))
+                scale(1f + 0.3f * b, pivot = mid) {
+                    drawPath(zenithZPath(left, top, w), ZenithGreen.copy(alpha = (1f - b) * 0.8f), style = Stroke(w * 0.012f * (1f - b) + 1f))
+                }
             }
         }
         if (caption != null) {
-            // "ZENITH 19": the name in white, the number in ZENITH's green.
+            // "ZENITH 19": the chrome lettering, the number after it in green.
             val words = caption.split(' ')
-            val last = words.last()
-            val text = buildAnnotatedString {
-                if (words.size > 1 && last.firstOrNull()?.isDigit() == true) {
-                    append(words.dropLast(1).joinToString(" "))
-                    append(" ")
-                    withStyle(SpanStyle(color = ZenithGreen)) { append(last) }
-                } else {
-                    append(caption)
+            val named = words.first().equals("ZENITH", ignoreCase = true)
+            val letters = size * 0.058f
+            if (named) {
+                Row(Modifier.padding(top = size * 0.03f), verticalAlignment = Alignment.CenterVertically) {
+                    ZenithLettering(letters)
+                    val rest = words.drop(1).joinToString(" ")
+                    if (rest.isNotEmpty()) {
+                        Spacer(Modifier.width(letters * 1.4f))
+                        Text(
+                            rest,
+                            color = ZenithGreen,
+                            fontSize = with(density) { (letters * 1.55f).toSp() },
+                            fontWeight = FontWeight.Light,
+                            letterSpacing = with(density) { (letters * 0.3f).toSp() },
+                        )
+                    }
                 }
+            } else {
+                Text(
+                    caption,
+                    color = Color.White,
+                    fontSize = with(density) { (size * 0.08f).toSp() },
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = with(density) { (size * 0.025f).toSp() },
+                    modifier = Modifier.padding(top = size * 0.02f),
+                )
             }
-            Text(
-                text,
-                color = Color.White,
-                fontSize = with(density) { (size * 0.1f).toSp() },
-                fontWeight = FontWeight.Medium,
-                letterSpacing = with(density) { (size * 0.025f).toSp() },
-                modifier = Modifier.padding(top = size * 0.02f),
-            )
         }
     }
 }
 
 /**
- * Once, after updating: the move from OMEGA UI to ZENITH. Night; the Ω of the old name fades;
- * the sun rises from the horizon along its arc up to the zenith while the sky turns to day –
- * and up there the ZENITH mark forms. A tap (once it's done) goes on.
+ * Once, after updating: the move from OMEGA UI to ZENITH. Night; the Ω of the old name fades; a
+ * green light rises from the horizon along its arc up to the zenith while the dark turns deep
+ * green – and there the ZENITH Z forms out of the dark, its green edges lighting up one after
+ * the other. A tap (once it's done) goes on.
  */
 @Composable
 fun ZenithUpgrade(version: String, onDone: () -> Unit) {
@@ -323,9 +235,9 @@ fun ZenithUpgrade(version: String, onDone: () -> Unit) {
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        lerp(Color(0xFF02030A), Color(0xFF2E7BD6), climb),
-                        lerp(Color(0xFF070B1C), Color(0xFF8FD3FF), climb),
-                        lerp(Color(0xFF0B0F22), Color(0xFFFFE9B0), climb * 0.8f),
+                        lerp(Color(0xFF02030A), Color(0xFF040A07), climb),
+                        lerp(Color(0xFF070B1C), Color(0xFF071A11), climb),
+                        lerp(Color(0xFF0B0F22), Color(0xFF0E3320), climb),
                     ),
                 ),
             )
@@ -341,10 +253,16 @@ fun ZenithUpgrade(version: String, onDone: () -> Unit) {
             val f = 0.05f + 0.45f * FastOutSlowInEasing.transform(climb)
             val sun = Offset(w * f * 2f * 0.9f + w * 0.05f, horizon - (horizon - top) * sin(f * PI).toFloat())
             val glow = w * (0.25f + 0.25f * climb)
-            drawCircle(Brush.radialGradient(listOf(ZenithSun.copy(alpha = 0.7f * climb + 0.1f), Color.Transparent), center = sun, radius = glow), radius = glow, center = sun)
-            drawCircle(Color.White.copy(alpha = (0.4f + 0.6f * climb) * (1f - form)), radius = w * 0.045f, center = sun)
-            // The horizon line, fading as the day comes.
-            drawLine(Color.White.copy(alpha = 0.25f * (1f - form)), Offset(0f, horizon), Offset(w, horizon), strokeWidth = 1.dp.toPx())
+            val fade = 1f - form
+            drawCircle(Brush.radialGradient(listOf(ZenithGreen.copy(alpha = (0.55f * climb + 0.1f) * fade), Color.Transparent), center = sun, radius = glow), radius = glow, center = sun)
+            drawCircle(Color.White.copy(alpha = (0.4f + 0.6f * climb) * fade), radius = w * 0.03f, center = sun)
+            // The horizon: a line of green light, fading as ZENITH forms.
+            drawLine(
+                Brush.horizontalGradient(listOf(Color.Transparent, ZenithGreen.copy(alpha = 0.7f * fade), Color.Transparent)),
+                Offset(0f, horizon),
+                Offset(w, horizon),
+                strokeWidth = 1.5.dp.toPx(),
+            )
         }
         // The old name going.
         if (old > 0.01f) {
@@ -364,9 +282,14 @@ fun ZenithUpgrade(version: String, onDone: () -> Unit) {
                 },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                ZenithLogo(size = 190.dp, number = version.substringBefore('.'), interactive = false)
-                Spacer(Modifier.height(10.dp))
-                Text("ZENITH ${version.substringBefore('.')}", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
+                ZenithLogo(
+                    size = 260.dp,
+                    caption = "ZENITH ${version.substringBefore('.')}",
+                    interactive = false,
+                    // Its green edges light up once the metal is there.
+                    light = ((form - 0.35f) / 0.5f).coerceIn(0f, 1f),
+                )
+                Spacer(Modifier.height(14.dp))
                 Text(
                     "auf ${ClaudeOs.full} „${ClaudeOs.CODENAME}“",
                     color = Color.White.copy(alpha = 0.75f),
@@ -376,7 +299,7 @@ fun ZenithUpgrade(version: String, onDone: () -> Unit) {
         }
         if (p >= 0.8f) {
             Text(
-                "OMEGA UI heißt jetzt ZENITH – die Sonne im höchsten Punkt.\nAntippen, um loszulegen",
+                "OMEGA UI heißt jetzt ZENITH – ganz oben, im Zenit.\nAntippen, um loszulegen",
                 color = Color.White.copy(alpha = 0.85f),
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,

@@ -253,13 +253,13 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
                         Note(
                             when {
                                 app == FamilyApp.Controls && hearthInstalled ->
-                                    "Mit Hearth: Das Aussehen stellst du in Hearth ein, es gilt dann auch hier."
+                                    "Mit ${dev.hearth.launcher.data.Brand.name}: Das Aussehen stellst du in ${dev.hearth.launcher.data.Brand.name} ein, es gilt dann auch hier."
                                 app == FamilyApp.Controls ->
                                     "Läuft mit jedem Launcher. Die Insel um die Kamera ist die App „Glimmer“."
                                 hearthInstalled ->
-                                    "Mit Hearth: Apps, die du über Hearth öffnest, fliegen beim Schließen in Glimmer."
+                                    "Mit ${dev.hearth.launcher.data.Brand.name}: Apps, die du über ${dev.hearth.launcher.data.Brand.name} öffnest, fliegen beim Schließen in Glimmer."
                                 else ->
-                                    "Glimmer läuft mit jedem Launcher. Mit Hearth als Launcher fliegen geschlossene Apps zusätzlich in die Insel."
+                                    "Glimmer läuft mit jedem Launcher. Mit ${dev.hearth.launcher.data.Brand.name} als Launcher fliegen geschlossene Apps zusätzlich in die Insel."
                             },
                         )
                     }
@@ -283,7 +283,7 @@ private fun FamilySettingsScreen(app: FamilyApp, repo: SettingsRepository, media
                         ClaudeSpark(s.accent.color, Modifier.size(14.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            if (app == FamilyApp.Glimmer) "Glimmer · Teil von Hearth" else "Kontrollzentrum · Teil von Hearth",
+                            if (app == FamilyApp.Glimmer) "Glimmer · Teil von ${dev.hearth.launcher.data.Brand.name}" else "Kontrollzentrum · Teil von ${dev.hearth.launcher.data.Brand.name}",
                             color = Color.White.copy(alpha = 0.5f),
                             fontSize = 12.sp,
                         )

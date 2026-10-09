@@ -128,6 +128,22 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
                 verticalAlignment = Alignment.CenterVertically,
             ) { icons() }
         }
+        // ZENITH 19: a slanted plate of the Z's dark metal, its ends cut like the Z's bars, green
+        // light burning along its foot and pooling underneath.
+        DockStyle.Zenith -> Box(
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp)
+                .drawBehind { drawZenithPlate(slant = size.height * 0.34f, unit = 170.dp.toPx()) },
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 22.dp, vertical = 11.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) { icons() }
+        }
         // Just the icons, as One UI does it.
         DockStyle.Clear -> Row(
             modifier = modifier

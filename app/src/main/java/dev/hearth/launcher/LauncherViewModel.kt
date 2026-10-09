@@ -251,6 +251,25 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                         s
                     }
                 }
+                // 10: ZENITH's new face – the dock becomes a plate of the Z's metal with its green
+                // light, the clock the ZENITH clock, the home screen lit by ZENITH's green.
+                if (s.designVersion < 10) {
+                    s = if (s.galaxyClaude) {
+                        s.copy(
+                            omegaColor = dev.hearth.launcher.data.OmegaColor.Zenith,
+                            omegaGlass = true,
+                            omegaLight = true,
+                            accent = AccentColor.Zenith,
+                            glassTint = GlassTint.Zenith,
+                            dockStyle = DockStyle.Zenith,
+                            clockStyle = if (s.clockStyle == ClockStyle.Hidden) s.clockStyle else ClockStyle.Zenith,
+                        )
+                    } else if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.Zenith && s.dockStyle == DockStyle.Island) {
+                        s.copy(dockStyle = DockStyle.Zenith)
+                    } else {
+                        s
+                    }
+                }
                 s.copy(designVersion = LauncherSettings.DESIGN_VERSION)
             }
         }

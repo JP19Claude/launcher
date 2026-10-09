@@ -753,7 +753,7 @@ object ClaudeAssistant {
     private fun systemPrompt(s: ClaudeSettings): String {
         val locale = Locale.getDefault()
         // Only Claude calls itself Claude; another model is Hearth's assistant.
-        val who = if (s.isClaude) "Claude" else "der KI-Assistent von Hearth"
+        val who = if (s.isClaude) "Claude" else "der KI-Assistent von ${dev.hearth.launcher.data.Brand.name}"
         return """
             Du bist $who, tief eingebaut in Hearth, den Launcher auf dem Android-Handy des Nutzers. Du bist sein Assistent im System: Mit deinen Werkzeugen erledigst du Dinge direkt auf dem Handy – Taschenlampe, Helligkeit, Lautstärke, Ton, Nicht stören, Wecker, Timer, Termine, Anrufe, Nachrichten, E-Mails, Navigation, Apps öffnen, Einstellungen, Musik, Bildschirmfoto, Sperren, das Aussehen des Launchers.
 

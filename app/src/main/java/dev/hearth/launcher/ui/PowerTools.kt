@@ -307,7 +307,7 @@ internal fun PrivacyCheck(shizukuReady: Boolean) {
         }
         Note(
             if (shizukuReady) "Tippe auf eine App, um ihr den Zugriff sofort zu entziehen (sie kann später wieder fragen)."
-            else "Tippe auf eine App, um ihre Berechtigungen zu öffnen. Mit Shizuku entzieht Hearth den Zugriff direkt.",
+            else "Tippe auf eine App, um ihre Berechtigungen zu öffnen. Mit Shizuku entzieht ${dev.hearth.launcher.data.Brand.name} den Zugriff direkt.",
         )
         Accesses.forEachIndexed { index, access ->
             val holders = found[access].orEmpty()
@@ -376,7 +376,7 @@ private val Advantages = listOf(
     Advantage("APK teilen", "Jede App als Datei weitergeben oder sichern – direkt aus dem App-Menü."),
     Advantage("Liquid Glass & One UI 10 Fluid", "Echtes, lichtbrechendes Glas und fließende Farben, die auf Berührung reagieren."),
     Advantage("Apps sperren und ausblenden", "Mit PIN oder Fingerabdruck – direkt im Launcher, ohne Sicheren Ordner.", oneUi = true),
-    Advantage("Schalter, die Android Apps verbietet", "WLAN, Bluetooth, mobile Daten, Flugmodus, NFC, Dunkelmodus – direkt in Hearth.", oneUi = true, colorOs = true),
+    Advantage("Schalter, die Android Apps verbietet", "WLAN, Bluetooth, mobile Daten, Flugmodus, NFC, Dunkelmodus – direkt in ${dev.hearth.launcher.data.Brand.name}.", oneUi = true, colorOs = true),
     Advantage("Bildschirm beim Laden anlassen", "Als Nachttisch-Uhr oder beim Navigieren – ohne Entwickleroptionen."),
     Advantage("Updates direkt aus der App", "Mit ausführlichem Änderungsprotokoll – und alle Neuerungen für jedes Handy, nicht nur für neue Modelle."),
 )

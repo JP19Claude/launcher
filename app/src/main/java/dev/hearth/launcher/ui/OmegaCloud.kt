@@ -37,12 +37,12 @@ import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 
-/** A cloud of ruby light, with the Ω in it. */
+/** A cloud of green ZENITH light, with the Z in it. */
 @Composable
 private fun CloudMark() {
     Box(Modifier.size(width = 150.dp, height = 96.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(width = 150.dp, height = 96.dp)) {
-            val face = Brush.verticalGradient(listOf(Color(0xFFFFC2CA), Color(0xFFE5243F), Color(0xFF7A0A1E)))
+            val face = Brush.verticalGradient(listOf(Color(0xFFC8FFE0), ZenithGreen, Color(0xFF0B4A2C)))
             val w = size.width
             val h = size.height
             drawCircle(face, h * 0.34f, Offset(w * 0.34f, h * 0.58f), alpha = 0.9f)
@@ -50,11 +50,7 @@ private fun CloudMark() {
             drawCircle(face, h * 0.3f, Offset(w * 0.74f, h * 0.62f), alpha = 0.9f)
             drawRoundRect(face, topLeft = Offset(w * 0.2f, h * 0.6f), size = androidx.compose.ui.geometry.Size(w * 0.62f, h * 0.32f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(h * 0.16f), alpha = 0.9f)
         }
-        Text(
-            "Ω",
-            style = TextStyle(brush = Brush.verticalGradient(listOf(Color.White, Color(0xFFFFD6DC))), fontSize = 34.sp, fontWeight = FontWeight.Black),
-            modifier = Modifier.padding(top = 10.dp),
-        )
+        ZenithMark(Color.White, 46.dp, Modifier.padding(top = 12.dp))
     }
 }
 
@@ -85,14 +81,14 @@ internal fun OmegaCloudSection(vm: LauncherViewModel) {
         if (uri != null) status = if (vm.exportSettings(uri)) "Als Datei gesichert." else "Sichern ging nicht."
     }
     val restore = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) status = if (vm.importSettings(uri)) "Wiederhergestellt." else "Diese Datei ist keine OMEGA-Sicherung."
+        if (uri != null) status = if (vm.importSettings(uri)) "Wiederhergestellt." else "Diese Datei ist keine ZENITH-Sicherung."
     }
 
     Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         CloudMark()
         Spacer(Modifier.height(6.dp))
         Text(
-            "OMEGA Cloud",
+            "ZENITH Cloud",
             style = TextStyle(brush = Brush.linearGradient(listOf(Color.White, Color(0xFFFF8A98), Color(0xFFE5243F))), fontSize = 26.sp, fontWeight = FontWeight.Bold),
         )
         Text(
@@ -152,7 +148,7 @@ internal fun OmegaCloudSection(vm: LauncherViewModel) {
         ActionRow(
             label = "In Datei sichern",
             description = "Alle Einstellungen als Datei (ohne API-Schlüssel)",
-        ) { runCatching { save.launch("OMEGA-UI-Sicherung.json") } }
+        ) { runCatching { save.launch("ZENITH-Sicherung.json") } }
         RowDivider()
         ActionRow(
             label = "Aus Datei wiederherstellen",

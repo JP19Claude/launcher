@@ -151,7 +151,7 @@ object ClawdLines {
     private val Tips = listOf(
         "Halt mich gedrückt, dann reden wir.",
         "Ich wohne auch in jeder Suchleiste – tipp mich dort an.",
-        "Schon gewusst? In Hearth sind 10 Easter Eggs versteckt.",
+        "Schon gewusst? In ${dev.hearth.launcher.data.Brand.name} sind 10 Easter Eggs versteckt.",
         "Trink mal ein Glas Wasser 💧",
         "Kurz strecken? Ich mach mit! 🙆",
         "Ich kann Wecker stellen, Apps öffnen und mehr – frag einfach.",

@@ -119,7 +119,8 @@ fun rememberCrystalTaps(version: String): () -> Unit {
 }
 
 /**
- * The Ω, set like a jewel: in OMEGA Fluid's colors (with OMEGA Glass), white otherwise.
+ * ZENITH's sign (where the Ω used to be): the slanted Z of its logo, in the system's fluid colors
+ * (with tinted glass), white otherwise – about as tall as a letter of [size].
  */
 @Composable
 fun OmegaSign(size: androidx.compose.ui.unit.TextUnit, modifier: Modifier = Modifier) {
@@ -130,12 +131,12 @@ fun OmegaSign(size: androidx.compose.ui.unit.TextUnit, modifier: Modifier = Modi
     } else {
         Brush.verticalGradient(listOf(Color.White, Color.White.copy(alpha = 0.75f)))
     }
-    Text(
-        "Ω",
-        modifier = modifier,
-        style = TextStyle(brush = brush, fontSize = size, fontWeight = FontWeight.Black, lineHeight = size, shadow = OnWallpaperText.shadow),
-        maxLines = 1,
-    )
+    val width = with(androidx.compose.ui.platform.LocalDensity.current) { size.toDp() } * 1.3f
+    Canvas(modifier.size(width = width, height = width * ZenithZAspect)) {
+        // A soft shadow, then the Z.
+        drawZenithMark(this.size.width * 0.02f, this.size.height * 0.06f, this.size.width, androidx.compose.ui.graphics.SolidColor(Color.Black), alpha = 0.3f)
+        drawZenithMark(0f, 0f, this.size.width, brush)
+    }
 }
 
 /**
@@ -230,10 +231,10 @@ fun ClawdIlluminationScreen(
             MythosCard(settings.mythos) { v -> onChange { it.copy(mythos = v) } }
             Spacer(Modifier.height(18.dp))
 
-            IlluminationSection("Ω System") {
+            IlluminationSection("Ƶ System") {
                 IlluminationSwitch(
-                    "⚡", "Ω-Overdrive",
-                    "Jeder Rand fließt, das OMEGA-Glas wird tiefer, OMEGA Fluid überall stärker.",
+                    "⚡", "Z-Overdrive",
+                    "Jeder Rand fließt, das ZENITH-Glas wird tiefer, ZENITH Fluid überall stärker.",
                     settings.omegaOverdrive,
                 ) { v -> onChange { it.copy(omegaOverdrive = v) } }
                 IlluminationSwitch(
@@ -246,8 +247,8 @@ fun ClawdIlluminationScreen(
             }
             IlluminationSection("Startbildschirm") {
                 IlluminationSwitch(
-                    "Ω", "Ω-Regen",
-                    "Ω-Zeichen in den OMEGA-Farben steigen langsam hinter dem Startbildschirm auf.",
+                    "Ƶ", "Z-Regen",
+                    "Z-Zeichen in den ZENITH-Farben steigen langsam hinter dem Startbildschirm auf.",
                     settings.omegaRain,
                 ) { v -> onChange { it.copy(omegaRain = v) } }
                 IlluminationSwitch(
@@ -257,7 +258,7 @@ fun ClawdIlluminationScreen(
                 ) { v -> onChange { it.copy(weightless = v) } }
                 IlluminationSwitch(
                     "🎺", "Clawd-Parade",
-                    "Ab und zu marschiert eine bunte Parade aus Clawds über das Dock – vorneweg einer mit Ω.",
+                    "Ab und zu marschiert eine bunte Parade aus Clawds über das Dock – vorneweg einer mit dem ZENITH-Z.",
                     settings.clawdParade,
                 ) { v -> onChange { it.copy(clawdParade = v) } }
                 IlluminationSwitch(
@@ -281,16 +282,16 @@ fun ClawdIlluminationScreen(
                 IlluminationSwitch("🔋", "Akku", "Der Akkustand, beim Laden mit Blitz.", settings.aodBattery) { v -> onChange { it.copy(aodBattery = v) } }
                 IlluminationSwitch("🔔", "Mitteilungen", "Wie viele Mitteilungen warten.", settings.aodNotifications) { v -> onChange { it.copy(aodNotifications = v) } }
                 IlluminationSwitch("💤", "Schlafender Clawd", "Clawd schläft unten auf dem Always On Display.", settings.aodClawd) { v -> onChange { it.copy(aodClawd = v) } }
-                IlluminationSwitch("◯", "OMEGA-Rand", "Ein feiner Rand aus OMEGA Fluid um den Bildschirm.", settings.aodEdge) { v -> onChange { it.copy(aodEdge = v) } }
+                IlluminationSwitch("◯", "ZENITH-Rand", "Ein feiner Rand aus ZENITH Fluid um den Bildschirm.", settings.aodEdge) { v -> onChange { it.copy(aodEdge = v) } }
             }
             IlluminationSection("Sperrbildschirm") {
                 IlluminationSwitch("🦀", "Clawd auf dem Sperrbildschirm", "Clawd sitzt rechts und winkt – beim Laden tanzt er.", settings.lockClawd) { v -> onChange { it.copy(lockClawd = v) } }
-                IlluminationSwitch("◯", "OMEGA-Rand", "OMEGA Fluid leuchtet rund um den Sperrbildschirm.", settings.lockEdge) { v -> onChange { it.copy(lockEdge = v) } }
-                IlluminationSwitch("⚡", "Lade-Licht", "Beim Laden steigt OMEGA-Licht von unten auf, dazu der Akkustand groß.", settings.lockCharge) { v -> onChange { it.copy(lockCharge = v) } }
+                IlluminationSwitch("◯", "ZENITH-Rand", "ZENITH Fluid leuchtet rund um den Sperrbildschirm.", settings.lockEdge) { v -> onChange { it.copy(lockEdge = v) } }
+                IlluminationSwitch("⚡", "Lade-Licht", "Beim Laden steigt ZENITH-Licht von unten auf, dazu der Akkustand groß.", settings.lockCharge) { v -> onChange { it.copy(lockCharge = v) } }
                 IlluminationSwitch("👋", "Begrüßung", "„Guten Morgen“ bis „Gute Nacht“ – je nach Tageszeit.", settings.lockGreeting) { v -> onChange { it.copy(lockGreeting = v) } }
                 IlluminationSwitch("✨", "Atmosphäre", "Die Vorteile aus „Atmosphäre“ (Schnee, Sterne …) auch auf dem Sperrbildschirm.", settings.lockAtmosphere) { v -> onChange { it.copy(lockAtmosphere = v) } }
                 IlluminationSwitch("🔋", "Akku", "Der Akkustand als kleiner Chip.", settings.lockBattery) { v -> onChange { it.copy(lockBattery = v) } }
-                IlluminationSwitch("Ω", "Ω-Zeichen", "Das Ω oben auf dem Sperrbildschirm.", settings.lockOmega) { v -> onChange { it.copy(lockOmega = v) } }
+                IlluminationSwitch("Ƶ", "Z-Zeichen", "Das ZENITH-Z oben auf dem Sperrbildschirm.", settings.lockOmega) { v -> onChange { it.copy(lockOmega = v) } }
                 LockMessageField(settings.lockMessage) { v -> onChange { it.copy(lockMessage = v) } }
                 Text(
                     "Alles hier zeichnet Glimmer über Sperrbildschirm und Always On Display – Glimmer muss dafür an sein.",
@@ -313,8 +314,8 @@ fun ClawdIlluminationScreen(
             }
             IlluminationSection("Uhr & Clawd") {
                 IlluminationSwitch(
-                    "🕛", "Ω-Ziffern",
-                    "Jede Null in den Uhren wird zum Ω – 1Ω:Ω5.",
+                    "🕛", "Sonnen-Ziffern",
+                    "Jede Null in den Uhren wird zur Sonne – 1☉:☉5.",
                     settings.omegaZeros,
                 ) { v -> onChange { it.copy(omegaZeros = v) } }
                 IlluminationSwitch(
@@ -365,7 +366,7 @@ fun ClawdIlluminationScreen(
             }
             Spacer(Modifier.height(18.dp))
             Text(
-                "MDCCLXXVI · Ω · gefunden am Kristall",
+                "MDCCLXXVI · Ƶ · gefunden am Logo",
                 color = Color.White.copy(alpha = 0.35f),
                 fontSize = 12.sp,
             )
@@ -438,7 +439,7 @@ private fun MythosCard(on: Boolean, onToggle: (Boolean) -> Unit) {
         }
         Spacer(Modifier.height(10.dp))
         Text(
-            "Solange Mythos an ist, läuft alles auf Höchststufe: OMEGA Glass und Fluid im Overdrive, Hyperglas, Heiligenscheine, " +
+            "Solange Mythos an ist, läuft alles auf Höchststufe: ZENITH Glass und Fluid im Overdrive, Hyperglas, Heiligenscheine, " +
                 "die Parade, das allsehende Auge, Sternenhimmel, Aurora, Glühwürmchen, Sternschnuppen, Parallax, Funkenspur, " +
                 "Leuchtfarben, Riesen-Uhr, Clawd-Schwarm und -Gruß – und ein riesiger goldener Clawd wacht über dem Startbildschirm. " +
                 "Aus: alles wie vorher.",

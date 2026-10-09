@@ -22,8 +22,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -126,26 +128,28 @@ internal fun ZenithHomeClock(settings: LauncherSettings, modifier: Modifier = Mo
     Column(modifier) {
         Box(Modifier.width(300.dp).height(150.dp)) {
             ZenithArc(day, along, Modifier.fillMaxSize())
-            val numerals = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp)
-            if (settings.glassClocks) {
-                GlassNumerals(time, fontSize = 62.sp, modifier = numerals, fontWeight = FontWeight.Light, lineHeight = 64.sp)
-            } else {
-                Text(
-                    time,
-                    modifier = numerals,
-                    style = TextStyle(
-                        brush = Brush.verticalGradient(listOf(Color.White, Color.White, lerp(Color.White, if (day) ZenithGreen else ZenithSky, 0.45f))),
-                        fontSize = 62.sp,
-                        fontWeight = FontWeight.Light,
-                        lineHeight = 64.sp,
-                        shadow = OnWallpaperText.shadow,
+            // The time in chrome like the ZENITH lettering, glowing green from behind.
+            Text(
+                time,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
+                style = TextStyle(
+                    brush = Brush.verticalGradient(
+                        0f to Color(0xFFF4F6F7),
+                        0.45f to Color(0xFFA9AEB2),
+                        0.55f to Color(0xFFE8EBED),
+                        1f to Color(0xFF7C8186),
                     ),
-                )
-            }
+                    fontSize = 70.sp,
+                    fontWeight = FontWeight.Light,
+                    letterSpacing = 2.sp,
+                    lineHeight = 72.sp,
+                    shadow = Shadow(if (day) ZenithGreen.copy(alpha = 0.7f) else ZenithSky.copy(alpha = 0.6f), Offset(0f, 3f), 34f),
+                ),
+            )
         }
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(if (day) "☀" else "☾", color = if (day) ZenithSun else ZenithSky, fontSize = 16.sp, style = OnWallpaperText)
+            if (day) ZenithMark(ZenithGreen, 20.dp) else Text("☾", color = ZenithSky, fontSize = 16.sp, style = OnWallpaperText)
             Spacer(Modifier.width(8.dp))
             Text("$date · $words", color = Color.White.copy(alpha = 0.9f), fontSize = 15.sp, style = OnWallpaperText)
         }
@@ -184,7 +188,7 @@ internal fun ZenithArc(day: Boolean, along: Float, modifier: Modifier = Modifier
         // The way come so far: gold to green by day, blue by night.
         drawArc(
             Brush.horizontalGradient(
-                if (day) listOf(ZenithSun, ZenithGreen, ZenithSun) else listOf(ZenithSky, Color(0xFF9AA8FF), ZenithSky),
+                if (day) listOf(Color.White, ZenithGreen, Color.White) else listOf(ZenithSky, Color(0xFF9AA8FF), ZenithSky),
                 startX = cx - rx,
                 endX = cx + rx,
             ),
@@ -208,8 +212,8 @@ internal fun ZenithArc(day: Boolean, along: Float, modifier: Modifier = Modifier
         if (day) {
             // The sun: a glow, a white-hot core.
             val glow = 30.dp.toPx()
-            drawCircle(Brush.radialGradient(listOf(ZenithSun.copy(alpha = 0.65f), ZenithSun.copy(alpha = 0.12f), Color.Transparent), center = p, radius = glow), glow, p)
-            drawCircle(Brush.radialGradient(listOf(Color.White, ZenithSun), center = p, radius = 9.dp.toPx()), 8.dp.toPx(), p)
+            drawCircle(Brush.radialGradient(listOf(ZenithGreen.copy(alpha = 0.6f), ZenithGreen.copy(alpha = 0.12f), Color.Transparent), center = p, radius = glow), glow, p)
+            drawCircle(Brush.radialGradient(listOf(Color.White, Color(0xFFB8F5C8)), center = p, radius = 9.dp.toPx()), 8.dp.toPx(), p)
         } else {
             // The moon: a pale crescent with a cool glow.
             val r = 8.dp.toPx()
@@ -218,6 +222,36 @@ internal fun ZenithArc(day: Boolean, along: Float, modifier: Modifier = Modifier
             val bite = Path().apply { addOval(Rect(p + Offset(r * 0.5f, -r * 0.35f), r * 0.85f)) }
             val crescent = Path().apply { op(disc, bite, PathOperation.Difference) }
             drawPath(crescent, Color(0xFFEAF2FF))
+        }
+    }
+}
+
+/**
+ * ZENITH's light on the home screen, between the wallpaper and the apps: the sky darker over the
+ * clock (like the logo on black), a soft beam of green along the Z's diagonal, a green glint high
+ * on the right, and green light rising from the bottom – as if everything stood on the logo's
+ * green edge. Drawn once; nothing moves.
+ */
+@Composable
+internal fun ZenithHomeLight(modifier: Modifier = Modifier) {
+    val power = if (LocalGlassStyle.current.dark) 0.7f else 1f
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        drawRect(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.4f * power), 0.34f to Color.Transparent))
+        // The beam along the diagonal, soft at its sides.
+        val from = Offset(w * 0.84f, -h * 0.05f)
+        val to = Offset(-w * 0.04f, h * 1.05f)
+        listOf(0.62f to 0.022f, 0.36f to 0.028f, 0.12f to 0.035f).forEach { (width, alpha) ->
+            drawLine(ZenithGreen.copy(alpha = alpha * power), from, to, strokeWidth = w * width)
+        }
+        val glint = Offset(w * 0.86f, h * 0.05f)
+        drawCircle(Brush.radialGradient(listOf(ZenithGreen.copy(alpha = 0.22f * power), Color.Transparent), center = glint, radius = w * 0.5f), w * 0.5f, glint)
+        // The floor: dark green, a pool of green light behind the dock.
+        drawRect(Brush.verticalGradient(0.6f to Color.Transparent, 1f to Color(0xFF06331C).copy(alpha = 0.6f * power)))
+        val pool = Offset(w * 0.6f, h * 1.02f)
+        scale(1f, 0.45f, pivot = pool) {
+            drawCircle(Brush.radialGradient(listOf(ZenithGreen.copy(alpha = 0.4f * power), Color.Transparent), center = pool, radius = w * 0.85f), w * 0.85f, pool)
         }
     }
 }

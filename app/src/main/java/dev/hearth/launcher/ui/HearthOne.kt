@@ -90,7 +90,7 @@ fun HearthOneCard(accent: Color) {
                     }
                     if (!AppUpdater.canInstall(context)) {
                         AppUpdater.askInstallPermission(context)
-                        step = OneStep.Failed("Erlaube Hearth einmal „Unbekannte Apps installieren“ und tippe dann nochmal auf „Upgraden“.")
+                        step = OneStep.Failed("Erlaube ${dev.hearth.launcher.data.Brand.name} einmal „Unbekannte Apps installieren“ und tippe dann nochmal auf „Upgraden“.")
                         return@launch
                     }
                     step = OneStep.Installing
@@ -148,7 +148,7 @@ fun HearthOneCard(accent: Color) {
         }
         Spacer(Modifier.height(10.dp))
         Text(
-            "Hearth mit Glimmer und Clawd eingebaut: eine App statt drei. Deine Einstellungen, Clawds Tamagotchi, " +
+            "${dev.hearth.launcher.data.Brand.name} mit Glimmer und Clawd eingebaut: eine App statt drei. Deine Einstellungen, Clawds Tamagotchi, " +
                 "Rekorde, Abzeichen und Easter Eggs kommen mit. Danach kannst du die einzelnen Apps Glimmer und Clawd entfernen.",
             color = Color.White.copy(alpha = 0.8f),
             fontSize = 14.sp,
@@ -163,7 +163,7 @@ fun HearthOneCard(accent: Color) {
                 is OneStep.OldTooOld -> "${s.apps.joinToString(" und ") { it.name }} ist zu alt, um die Daten zu übergeben – erst aktualisieren, dann nochmal „Upgraden“."
                 is OneStep.Updating -> "Aktualisiere ${s.name} … ${(s.progress * 100).toInt()} %"
                 is OneStep.Downloading -> "Lade ZENITH … ${(s.progress * 100).toInt()} %"
-                OneStep.Installing -> "Android fragt gleich, ob du Hearth aktualisieren willst."
+                OneStep.Installing -> "Android fragt gleich, ob du ${dev.hearth.launcher.data.Brand.name} aktualisieren willst."
                 is OneStep.Failed -> s.reason
             },
             color = accent,
@@ -229,7 +229,7 @@ fun HearthOneWelcome(onDone: () -> Unit) {
                 textAlign = TextAlign.Center,
             )
             Text(
-                "Hearth, Glimmer und Clawd sind jetzt eine App · ${ClaudeOs.full}",
+                "${dev.hearth.launcher.data.Brand.name}, Glimmer und Clawd sind jetzt eine App · ${ClaudeOs.full}",
                 color = Color.White.copy(alpha = 0.7f),
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
@@ -239,9 +239,9 @@ fun HearthOneWelcome(onDone: () -> Unit) {
                 number = 1,
                 title = "Fortschritt übernommen",
                 text = if (taken) {
-                    "Einstellungen, Tamagotchi, Rekorde, Abzeichen und Easter Eggs sind in Hearth."
+                    "Einstellungen, Tamagotchi, Rekorde, Abzeichen und Easter Eggs sind in ${dev.hearth.launcher.data.Brand.name}."
                 } else {
-                    "Ein Teil konnte nicht übernommen werden (zu alte Glimmer- oder Clawd-App). Hearth hat, was es hatte."
+                    "Ein Teil konnte nicht übernommen werden (zu alte Glimmer- oder Clawd-App). ${dev.hearth.launcher.data.Brand.name} hat, was es hatte."
                 },
                 done = taken,
             )
@@ -249,9 +249,9 @@ fun HearthOneWelcome(onDone: () -> Unit) {
                 number = 2,
                 title = "Alte Apps entfernen",
                 text = if (oldApps.isEmpty()) {
-                    "Erledigt – Glimmer und Clawd gibt es nur noch in Hearth."
+                    "Erledigt – Glimmer und Clawd gibt es nur noch in ${dev.hearth.launcher.data.Brand.name}."
                 } else {
-                    "Glimmer und Clawd stecken jetzt in Hearth. Die einzelnen Apps brauchst du nicht mehr."
+                    "Glimmer und Clawd stecken jetzt in ${dev.hearth.launcher.data.Brand.name}. Die einzelnen Apps brauchst du nicht mehr."
                 },
                 done = oldApps.isEmpty(),
             ) {
@@ -263,9 +263,9 @@ fun HearthOneWelcome(onDone: () -> Unit) {
                 number = 3,
                 title = "Glimmer einschalten",
                 text = if (glimmerOn) {
-                    "Die Insel läuft – jetzt als Teil von Hearth."
+                    "Die Insel läuft – jetzt als Teil von ${dev.hearth.launcher.data.Brand.name}."
                 } else {
-                    "Android verlangt das einmal neu: unter Bedienungshilfen bei „Hearth“ den Dienst „Glimmer“ einschalten."
+                    "Android verlangt das einmal neu: unter Bedienungshilfen bei „${dev.hearth.launcher.data.Brand.name}“ den Dienst „Glimmer“ einschalten."
                 },
                 done = glimmerOn,
             ) {

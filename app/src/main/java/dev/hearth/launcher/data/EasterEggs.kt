@@ -94,7 +94,7 @@ object EasterEggs {
         val n = _found.value.size.coerceAtMost(TOTAL)
         _party.tryEmit(
             if (n == TOTAL) {
-                Party("Alle $TOTAL Easter Eggs gefunden! Du bist offiziell Hearth-Profi.", big = true)
+                Party("Alle $TOTAL Easter Eggs gefunden! Du bist offiziell ${dev.hearth.launcher.data.Brand.name}-Profi.", big = true)
             } else {
                 Party("🥚 $n/$TOTAL", big = false)
             },

@@ -114,7 +114,7 @@ class LockStage(private val service: GlimmerService, private val onShown: () -> 
             PixelFormat.TRANSLUCENT,
         ).apply {
             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-            title = "OMEGA Lock Stage"
+            title = "ZENITH Lock Stage"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) setFitInsetsTypes(0)
         }
         if (runCatching { windowManager.addView(compose, p) }.isSuccess) {

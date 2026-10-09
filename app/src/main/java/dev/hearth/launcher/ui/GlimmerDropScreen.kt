@@ -1049,7 +1049,7 @@ internal fun GlimmerDropSettings() {
     val dropOn by GlimmerDrop.enabled.collectAsState()
     SwitchRow(
         label = "Glimmer Drop",
-        description = if (dropOn) "An" else "Ganz aus: kein Bluetooth-Signal, nicht im Teilen-Menü, nicht im OMEGA-Menü",
+        description = if (dropOn) "An" else "Ganz aus: kein Bluetooth-Signal, nicht im Teilen-Menü, nicht im ZENITH-Menü",
         checked = dropOn,
     ) { v -> GlimmerDrop.setEnabled(context, v) }
     if (!dropOn) return

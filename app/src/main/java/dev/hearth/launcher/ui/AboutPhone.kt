@@ -396,7 +396,7 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                                         }
                                         spec.labs -> Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
                                             if (HearthLabs.unlocked) {
-                                                labsHint = "OMEGA Labs ist schon freigeschaltet"
+                                                labsHint = "ZENITH Labs ist schon freigeschaltet"
                                                 return@clickable
                                             }
                                             labsTaps++
@@ -405,10 +405,10 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                                                 left <= 0 -> {
                                                     labsTaps = 0
                                                     HearthLabs.unlock(context)
-                                                    labsHint = "OMEGA Labs freigeschaltet! 🧪"
+                                                    labsHint = "ZENITH Labs freigeschaltet! 🧪"
                                                     labsOpen = true
                                                 }
-                                                left <= 4 -> labsHint = if (left == 1) "Noch 1 Tipp bis OMEGA Labs" else "Noch $left Tipps bis OMEGA Labs"
+                                                left <= 4 -> labsHint = if (left == 1) "Noch 1 Tipp bis ZENITH Labs" else "Noch $left Tipps bis ZENITH Labs"
                                                 else -> Unit
                                             }
                                         }
@@ -455,7 +455,7 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                         .fluidTouch()
                         .padding(horizontal = 20.dp, vertical = 15.dp),
                 ) {
-                    Text("OMEGA Labs 🧪", color = Color.White, fontSize = 16.sp)
+                    Text("ZENITH Labs 🧪", color = Color.White, fontSize = 16.sp)
                     Text("Experimente, Bildrate, Fingertipps, Layout-Grenzen …", color = Color.White.copy(alpha = 0.62f), fontSize = 14.sp)
                 }
             }

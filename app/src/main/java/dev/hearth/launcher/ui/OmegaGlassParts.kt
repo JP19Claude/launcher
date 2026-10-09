@@ -109,6 +109,11 @@ internal fun OmegaScreenBackdrop(
 @Composable
 internal fun OmegaHomeLight(modifier: Modifier = Modifier) {
     val s = LocalSettings.current
+    // ZENITH: its own light – dark like the logo's ground, green rising from below.
+    if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.Zenith && s.omegaLight && !s.has(dev.hearth.launcher.data.Perk.DayLight)) {
+        ZenithHomeLight(modifier)
+        return
+    }
     if (!s.omegaGlass || !s.omegaLight || !s.fluidDesign) return
     // OMEGA UI 18, Tageszeit-Licht: the light follows the day.
     val hour = if (s.has(dev.hearth.launcher.data.Perk.DayLight)) java.time.LocalTime.now().hour else -1
@@ -190,21 +195,19 @@ internal fun OmegaGlassSheet(
                     .fluidGlow(strength = if (omega) 0.9f else 0.6f, flowing = s.omegaOverdrive),
             )
         }
-        // OMEGA UI 17.5: a big Ω etched into the glass, low in its corner.
+        // OMEGA UI 17.5: a big sign etched into the glass, low in its corner – ZENITH's Z now.
         if (omega) {
             Box(
                 Modifier
                     .matchParentSize()
                     .clip(RoundedCornerShape(corner)),
             ) {
-                Text(
-                    "Ω",
-                    color = Color.White.copy(alpha = 0.05f),
-                    fontSize = 190.sp,
-                    fontWeight = FontWeight.Black,
-                    modifier = Modifier
+                ZenithMark(
+                    Color.White.copy(alpha = 0.05f),
+                    210.dp,
+                    Modifier
                         .align(Alignment.BottomEnd)
-                        .offset(x = 26.dp, y = 56.dp),
+                        .offset(x = 40.dp, y = 30.dp),
                 )
             }
         }

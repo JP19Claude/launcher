@@ -366,7 +366,7 @@ fun WidgetPicker(
                     item(key = "hearth-photos") {
                         HearthWidgetRow(
                             title = "Fotos",
-                            subtitle = "Hearth-Widget: deine Bilder als Diashow auf Glas",
+                            subtitle = "${dev.hearth.launcher.data.Brand.name}-Widget: deine Bilder als Diashow auf Glas",
                             onClick = onPickPhotos,
                         )
                     }
@@ -392,7 +392,7 @@ fun WidgetPicker(
                     }
                     item(key = "glass-header") {
                         Text(
-                            "Hearth",
+                            "${dev.hearth.launcher.data.Brand.name}",
                             color = Color.White.copy(alpha = 0.8f),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -404,7 +404,7 @@ fun WidgetPicker(
                         item(key = "hearth-${kind.name}") {
                             HearthWidgetRow(
                                 title = kind.label,
-                                subtitle = "Hearth-Widget: ${kind.description}",
+                                subtitle = "${dev.hearth.launcher.data.Brand.name}-Widget: ${kind.description}",
                                 glyph = when (kind) {
                                     HearthWidget.Battery -> Glyph.Battery
                                     HearthWidget.Clock, HearthWidget.OmegaClock, HearthWidget.RubyAnalog, HearthWidget.WorldClock -> Glyph.Alarm

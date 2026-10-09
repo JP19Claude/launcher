@@ -129,7 +129,7 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
                 props("page" to str("Seite", SettingsPages.keys.toList())), "page"))
             put(tool("copy_text", "Kopiert Text in die Zwischenablage.", props("text" to str("Text")), "text"))
             put(tool("device_status", "Liest den Zustand des Handys: Uhrzeit, Akku, Laden, nächster Wecker, Ton, Nicht stören, WLAN, Bluetooth, Helligkeit, Lautstärke, Speicher.", props()))
-            put(tool("launcher", "Hearth (der Launcher): Design-Vorlage anwenden, Launcher-Einstellungen oder Hintergrundbild öffnen.",
+            put(tool("launcher", "${dev.hearth.launcher.data.Brand.name} (der Launcher): Design-Vorlage anwenden, Launcher-Einstellungen oder Hintergrundbild öffnen.",
                 props(
                     "action" to str("Aktion", listOf("design", "settings", "wallpaper")),
                     "design" to str("Für action=design", DesignPreset.entries.map { it.name }),
@@ -313,7 +313,7 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
             controls.requestWriteSettings()
             return ToolResult(
                 false,
-                "Hearth darf die Systemeinstellungen noch nicht ändern. Der Nutzer muss „Systemeinstellungen ändern“ für Hearth erlauben (der Bildschirm dafür ist jetzt offen).",
+                "${dev.hearth.launcher.data.Brand.name} darf die Systemeinstellungen noch nicht ändern. Der Nutzer muss „Systemeinstellungen ändern“ für ${dev.hearth.launcher.data.Brand.name} erlauben (der Bildschirm dafür ist jetzt offen).",
                 label = "Erlaubnis fehlt: Systemeinstellungen ändern",
                 opensScreen = true,
                 fix = ClaudeFix.WriteSettings,
@@ -361,7 +361,7 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
             controls.setRingerMode(value) // opens the access screen
             return ToolResult(
                 false,
-                "Für Lautlos braucht Hearth Zugriff auf „Nicht stören“. Der Bildschirm dafür ist jetzt offen.",
+                "Für Lautlos braucht ${dev.hearth.launcher.data.Brand.name} Zugriff auf „Nicht stören“. Der Bildschirm dafür ist jetzt offen.",
                 label = "Erlaubnis fehlt: Nicht stören",
                 opensScreen = true,
                 fix = ClaudeFix.DoNotDisturb,
@@ -377,7 +377,7 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
             controls.setDoNotDisturb(on) // opens the access screen
             return ToolResult(
                 false,
-                "Hearth braucht Zugriff auf „Nicht stören“. Der Bildschirm dafür ist jetzt offen; danach noch einmal fragen.",
+                "${dev.hearth.launcher.data.Brand.name} braucht Zugriff auf „Nicht stören“. Der Bildschirm dafür ist jetzt offen; danach noch einmal fragen.",
                 label = "Erlaubnis fehlt: Nicht stören",
                 opensScreen = true,
                 fix = ClaudeFix.DoNotDisturb,
@@ -487,7 +487,7 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
         if (context.checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
             return ToolResult(
                 false,
-                "Hearth darf die Kontakte noch nicht lesen. Der Nutzer kann es mit dem Knopf „Kontakte erlauben“ freigeben, dann noch einmal fragen.",
+                "${dev.hearth.launcher.data.Brand.name} darf die Kontakte noch nicht lesen. Der Nutzer kann es mit dem Knopf „Kontakte erlauben“ freigeben, dann noch einmal fragen.",
                 label = "Erlaubnis fehlt: Kontakte",
                 fix = ClaudeFix.Contacts,
             )
@@ -563,7 +563,7 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
     private suspend fun pickContact(name: String): Pair<Pair<String, String>?, ToolResult?> {
         val all = contactNumbers(name) ?: return null to ToolResult(
             false,
-            "Hearth darf die Kontakte noch nicht lesen. Tippe auf „Kontakte erlauben“ und frag noch einmal.",
+            "${dev.hearth.launcher.data.Brand.name} darf die Kontakte noch nicht lesen. Tippe auf „Kontakte erlauben“ und frag noch einmal.",
             label = "Erlaubnis fehlt: Kontakte",
             fix = ClaudeFix.Contacts,
         )
@@ -698,7 +698,7 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
     /** Clean storage, end background apps, or both – with Shizuku. */
     private suspend fun phoneCare(action: String): ToolResult {
         if (!ShizukuBridge.isReady(context)) {
-            return ToolResult(false, "Dafür braucht Hearth Shizuku (Einstellungen → System). Shizuku ist gerade nicht aktiv.", label = "Shizuku fehlt")
+            return ToolResult(false, "Dafür braucht ${dev.hearth.launcher.data.Brand.name} Shizuku (Einstellungen → System). Shizuku ist gerade nicht aktiv.", label = "Shizuku fehlt")
         }
         val free = { runCatching { android.os.StatFs(android.os.Environment.getDataDirectory().path).availableBytes }.getOrDefault(0L) }
         val before = free()
@@ -794,10 +794,10 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
             val launcher = host()
             when {
                 preset == null -> ToolResult(false, "Unbekannte Vorlage „$design“. Möglich: ${DesignPreset.entries.joinToString { it.name }}")
-                launcher == null -> ToolResult(false, "Hearth läuft gerade nicht im Hintergrund; öffne den Startbildschirm und frag noch einmal.")
+                launcher == null -> ToolResult(false, "${dev.hearth.launcher.data.Brand.name} läuft gerade nicht im Hintergrund; öffne den Startbildschirm und frag noch einmal.")
                 else -> {
                     launcher.applyPreset(preset)
-                    ToolResult(true, "Design „${preset.label}“ angewendet.", label = "Design: ${preset.label}", say = "Hearth sieht jetzt aus wie ${preset.label}.")
+                    ToolResult(true, "Design „${preset.label}“ angewendet.", label = "Design: ${preset.label}", say = "${dev.hearth.launcher.data.Brand.name} sieht jetzt aus wie ${preset.label}.")
                 }
             }
         }
@@ -811,7 +811,7 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
             }
         }
         else -> openScreen(
-            "Hearth-Einstellungen",
+            "${dev.hearth.launcher.data.Brand.name}-Einstellungen",
             Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_OPEN_SETTINGS, true),
         )
     }

@@ -707,7 +707,7 @@ private fun ModelPicker(s: ClaudeSettings) {
     if (s.apiKey.isBlank()) return
     ActionRow(
         label = if (loading) "Lade Modelle …" else "Verfügbare Modelle laden",
-        description = "Zeigt, welche Modelle ${s.provider.label} gerade anbietet (die besten für Hearth zuerst)",
+        description = "Zeigt, welche Modelle ${s.provider.label} gerade anbietet (die besten für ${dev.hearth.launcher.data.Brand.name} zuerst)",
     ) {
         if (loading) return@ActionRow
         loading = true
@@ -844,7 +844,7 @@ internal fun ClaudeAssistantSettings() {
                     placeholder = s.provider.defaultModel.ifEmpty { "Modellname" },
                 ) { v -> ClaudeAssistant.updateSettings { it.copy(models = it.models + (it.provider to v.trim())) } }
                 Text(
-                    "Leer lassen für ${s.provider.defaultModel.ifEmpty { "automatische Wahl" }}. Gibt es ein Modell nicht mehr, nimmt Hearth von selbst das nächste passende.",
+                    "Leer lassen für ${s.provider.defaultModel.ifEmpty { "automatische Wahl" }}. Gibt es ein Modell nicht mehr, nimmt ${dev.hearth.launcher.data.Brand.name} von selbst das nächste passende.",
                     color = Color.White.copy(alpha = 0.55f),
                     fontSize = 12.sp,
                     modifier = Modifier.padding(top = 4.dp),
@@ -854,7 +854,7 @@ internal fun ClaudeAssistantSettings() {
         }
         SwitchRow(
             label = "Sparmodus",
-            description = "Alles, was Hearth selbst versteht (Licht, Wecker, Anrufe, Rechnen …), läuft kostenlos ohne API. Nur der Rest geht an die KI",
+            description = "Alles, was ${dev.hearth.launcher.data.Brand.name} selbst versteht (Licht, Wecker, Anrufe, Rechnen …), läuft kostenlos ohne API. Nur der Rest geht an die KI",
             checked = s.saver,
         ) { v -> ClaudeAssistant.updateSettings { it.copy(saver = v) } }
         SwitchRow(
@@ -865,7 +865,7 @@ internal fun ClaudeAssistantSettings() {
         RowDivider()
         ActionRow(
             label = "Als digitalen Assistenten festlegen",
-            description = "Dann öffnet langes Drücken auf Home (oder die Seitentaste, je nach Handy) Claude – über jeder App. Wähle dort „Hearth“.",
+            description = "Dann öffnet langes Drücken auf Home (oder die Seitentaste, je nach Handy) Claude – über jeder App. Wähle dort „${dev.hearth.launcher.data.Brand.name}“.",
         ) {
             val opened = listOf(
                 Intent(Settings.ACTION_VOICE_INPUT_SETTINGS),
@@ -874,6 +874,6 @@ internal fun ClaudeAssistantSettings() {
             if (!opened) runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         }
         ActionRow(label = "Verlauf löschen", onClick = ClaudeAssistant::clear)
-        Note("Weitere Wege zu Claude: die Kachel „Claude“ in den Schnelleinstellungen (Bearbeiten → hinzufügen) und Doppeltippen auf Glimmer (Glimmer → Bedienung). Ohne Schlüssel entstehen keine Kosten: Hearth erledigt einfache Befehle selbst und gibt alles andere an die Claude-App (dein Claude-Konto) weiter. Mit Schlüssel bleibt er nur auf diesem Handy; die API wird getrennt vom Claude-Abo abgerechnet. Anrufe, Nachrichten und Termine bestätigst du immer selbst.")
+        Note("Weitere Wege zu Claude: die Kachel „Claude“ in den Schnelleinstellungen (Bearbeiten → hinzufügen) und Doppeltippen auf Glimmer (Glimmer → Bedienung). Ohne Schlüssel entstehen keine Kosten: ${dev.hearth.launcher.data.Brand.name} erledigt einfache Befehle selbst und gibt alles andere an die Claude-App (dein Claude-Konto) weiter. Mit Schlüssel bleibt er nur auf diesem Handy; die API wird getrennt vom Claude-Abo abgerechnet. Anrufe, Nachrichten und Termine bestätigst du immer selbst.")
     }
 }

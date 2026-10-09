@@ -122,10 +122,10 @@ object HearthUi {
     }
 
     /** Once: "OMEGA UI is now ZENITH" – the sun rising to the zenith. */
-    fun omegaSeen(context: Context): Boolean = prefs(context).getBoolean("zenith19Seen", false)
+    fun omegaSeen(context: Context): Boolean = prefs(context).getBoolean("zenith19LogoSeen", false)
 
     fun markOmegaSeen(context: Context) {
-        prefs(context).edit().putBoolean("zenith19Seen", true).apply()
+        prefs(context).edit().putBoolean("zenith19LogoSeen", true).apply()
     }
 
     /** OMEGA Labs: show the welcome tour again next time. */
@@ -184,6 +184,18 @@ internal object HearthChangelog {
             summary = "Aus OMEGA UI wird ZENITH – die Sonne im höchsten Punkt, auf der neuen Basis ClaudeOS 6.0 „Helios“: ein neuer Name, ein neues Logo, eine neue Farbe, eine neue Uhr. Alles fühlt sich neu an, und die alten Easter Eggs bleiben.",
             sections = listOf(
                 ChangeSection(
+                    "ZENITH, wie es aussehen soll", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Ein neues Logo: ein schräges Z aus dunklem, gezeichnetem Metall mit schräg geschnittenen Enden, silberner Kante und grünem Licht an seinen unteren Kanten – darunter „ZENITH“ in weiten Chrom-Buchstaben.",
+                        "Gedrückt halten: Das grüne Licht brennt heller und flutet das Metall, ein Lichtband läuft darüber – voll geladen klopft es und eine grüne Welle in Form des Z geht davon aus.",
+                        "Alles, was OMEGA hieß, heißt jetzt ZENITH: ZENITH Labs, ZENITH Cloud, ZENITH-Menü, ZENITH-Insel, ZENITH Glass, ZENITH-Uhr, ZENITH-Rand, ZENITH-Abzeichen – und wo „Hearth“ stand, steht ZENITH.",
+                        "Die Ω-Zeichen im System sind jetzt das ZENITH-Z: in Menüs, vor den Seitenpunkten, an der Suchleiste, auf dem Sperrbildschirm, als Wasserzeichen, auf Clawds Brust, im Z-Regen und bei der Clawd-Parade. Aus den Ω-Ziffern werden Sonnen-Ziffern (1☉:☉5).",
+                        "Ein neuer Startbildschirm: das ZENITH-Dock – eine schräge Platte aus dem Metall des Z mit grünem Licht an ihrem Fuß –, ZENITHs eigenes Licht (dunkler Himmel, ein grüner Strahl entlang der Diagonale, grünes Licht von unten), Seitenstriche schräg wie die Balken des Z und die Uhr in Chrom mit grünem Glühen.",
+                        "Der Übergang beim ersten Start zeigt das neue Logo: Aus der Nacht steigt ein grünes Licht, und das Metall-Z leuchtet Kante für Kante auf.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
                     "ClaudeOS 6.0 „Helios“", Icons.Rounded.Build, Orange,
                     listOf(
                         "Ein neues System braucht eine neue Basis: ZENITH läuft auf ClaudeOS 6.0 mit dem Codenamen „Helios“ – nach der Sonne.",
@@ -197,8 +209,8 @@ internal object HearthChangelog {
                     "ZENITH", Icons.Rounded.Star, Green,
                     listOf(
                         "OMEGA UI heißt jetzt ZENITH – wie die Sonne, wenn sie im Zenit steht, ganz oben am Himmel.",
-                        "Ein neues Logo: ein scharfes weißes Z, von oben beleuchtet, die 19 in glänzendem Grün schräg mit der Diagonale hindurch, sauber ausgeschnitten – und darüber der Bogen der Sonne mit der Sonne im Zenit. In den Einstellungen, unter Über das Telefon, im Software-Update und in der Tour.",
-                        "Beim ersten Start: Das Ω verblasst, die Sonne steigt an ihrem Bogen aus der Nacht bis in den Zenit, der Himmel wird hell – und oben entsteht ZENITH.",
+                        "Ein neues Logo – in den Einstellungen, unter Über das Telefon, im Software-Update und in der Tour.",
+                        "Beim ersten Start: Das Ω verblasst, ein grünes Licht steigt an seinem Bogen aus der Nacht bis in den Zenit – und dort entsteht ZENITH.",
                         "Eine neue Tour durch alles, was neu ist.",
                     ),
                     hearth,
@@ -206,8 +218,7 @@ internal object HearthChangelog {
                 ChangeSection(
                     "Logo gedrückt halten", Icons.Rounded.Favorite, Orange,
                     listOf(
-                        "Wie bei ColorOS: Hältst du das ZENITH-Logo gedrückt, lädt es sich auf – der Bogen füllt sich vom Horizont bis zur Sonne mit Licht, ein goldener Glanz läuft über das Z, die Sonne wächst.",
-                        "Ist es voll, klopft es spürbar und ein Lichtring geht von der Sonne aus; lässt du los, federt es zurück.",
+                        "Wie bei ColorOS: Hältst du das ZENITH-Logo gedrückt, lädt es sich auf; ist es voll, klopft es spürbar; lässt du los, federt es zurück.",
                         "Das Geheimnis bleibt: So oft antippen, wie ZENITH Nummer hat – 19-mal –, und du bist bei den Clawd Illuminati.",
                     ),
                     hearth,
@@ -219,7 +230,7 @@ internal object HearthChangelog {
                         "Neu: Akzent „Zenith-Grün“ und Glas-Tönung „Sonnenglas“ (Glas mit einem Hauch Grün).",
                         "Farben nach Sonnenstand: Zenith folgt dem Tag – morgens Gold und Pfirsich, mittags Grün und Himmel, abends Glut, nachts Mondblau.",
                         "Liquid Glass im Zenith-Licht: klar wie bei Apple, mit einem Glanz aus Sonne und Grün.",
-                        "Galaxy × Claude bekommt das ZENITH-Design; wer OMEGA Glass in Rubin hatte, wechselt zu Zenith – Rubin und Galaxy Omega bleiben wählbar.",
+                        "Galaxy × Claude bekommt das ZENITH-Design; wer getöntes Glas in Rubin hatte, wechselt zu Zenith – Rubin und Galaxy Zenith bleiben wählbar.",
                         "Die Einstellungen haben einen eigenen Bereich „ZENITH“.",
                     ),
                     everyone,
@@ -238,9 +249,9 @@ internal object HearthChangelog {
                     "Easter Eggs", Icons.Rounded.Face, Violet,
                     listOf(
                         "ZENITH 19: der Sonnenlauf – schieb die Sonne ihren Bogen hinauf bis in den Zenit; jeder der 19 Clawds am Horizont, den das Licht erreicht, wacht auf.",
-                        "Das Egg-Museum: Im Software-Update unter Update-Verlauf lange auf eine alte Version drücken – ihr Easter Egg kommt wieder. Rubin, Laterne, Schmiede, Lupe, Glühwürmchen, Tresor, Kometen, Prisma … alle von Hearth und OMEGA UI bleiben.",
+                        "Das Egg-Museum: Im Software-Update unter Update-Verlauf lange auf eine alte Version drücken – ihr Easter Egg kommt wieder. Rubin, Laterne, Schmiede, Lupe, Glühwürmchen, Tresor, Kometen, Prisma … alle von ${dev.hearth.launcher.data.Brand.name} und ZENITH bleiben.",
                         "Das ClaudeOS-Museum: lange auf die ClaudeOS-Version drücken – alle sechs ClaudeOS-Eggs von „Ember“ bis „Helios“, jedes mit seinem eigenen Namen.",
-                        "Rubin, Ω, OMEGA-Insel, OMEGA Cloud, die Clawd Illuminati und Claude Mythos sind weiter da.",
+                        "Rubin, die ZENITH-Insel, ZENITH Cloud, ZENITH Labs, die Clawd Illuminati und Claude Mythos sind weiter da – alles, was OMEGA hieß, heißt jetzt ZENITH.",
                     ),
                     hearth,
                 ),
@@ -1383,9 +1394,9 @@ fun VersionArtwork(number: String, colors: List<Color>, modifier: Modifier = Mod
     val face = Brush.verticalGradient(listOf(Color.White, colors.first(), colors.last()))
     val style = TextStyle(brush = face, fontSize = big, fontWeight = FontWeight.Black, letterSpacing = (-4).sp)
     Box(modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
-        // OMEGA UI: the Ω big and faint behind the version.
+        // ZENITH: its Z big and faint behind the version (the Ω before).
         if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
-            OmegaMark((height.value * 0.95f).toInt(), fade = 0.16f)
+            ZenithMark(Color.White.copy(alpha = 0.12f), height * 1.25f)
         }
         Canvas(Modifier.matchParentSize()) {
             val t = flow?.invoke() ?: 0.8f
@@ -1691,7 +1702,7 @@ fun HearthUiIntro(onDone: (newLook: Boolean) -> Unit) {
                         ) {
                             TourSwitch(
                                 title = "ZENITH-Design verwenden",
-                                text = "Galaxy × Claude mit Zenith-Grün, Sonnenglas, der Sonnenbogen-Uhr und der OMEGA-Insel als Dock – jederzeit änderbar.",
+                                text = "Galaxy × Claude mit Zenith-Grün, Sonnenglas, der Sonnenbogen-Uhr und dem ZENITH-Dock – jederzeit änderbar.",
                                 checked = newLook,
                             ) { newLook = it }
                         }
@@ -1710,7 +1721,7 @@ fun HearthUiIntro(onDone: (newLook: Boolean) -> Unit) {
                             points = listOf(
                                 TourPoint(Icons.Rounded.Face, Color(0xFFE5243F), "Das Egg-Museum", "Software-Update → Update-Verlauf: lange auf eine alte Version drücken, und ihr Easter Egg kommt wieder – Rubin, Laterne, Schmiede, Lupe, Glühwürmchen …"),
                                 TourPoint(Icons.Rounded.Share, ZenithSun, "Ein neues Easter Egg", "Zur 19: fünfmal auf die Version tippen und die Sonne bis in den Zenit schieben – 19 Clawds wachen auf."),
-                                TourPoint(Icons.Rounded.Star, Color(0xFF8E6BFF), "Alles von OMEGA", "OMEGA Cloud, OMEGA-Insel, Rubin als Farbe, die Illuminati und Claude Mythos – alles noch da."),
+                                TourPoint(Icons.Rounded.Star, Color(0xFF8E6BFF), "Alles, was OMEGA hieß", "heißt jetzt ZENITH: ZENITH Cloud, ZENITH-Insel, ZENITH Labs – dazu Rubin als Farbe, die Illuminati und Claude Mythos."),
                             ),
                         )
                     }

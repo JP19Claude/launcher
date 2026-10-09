@@ -272,7 +272,7 @@ fun OneUIDrawer(
             ) {
                 Text(
                     // OMEGA UI 17.5: Ω in front.
-                    (if (settings.omegaGlass) "Ω  " else "") + "${apps.size} Apps",
+                    (if (settings.omegaGlass) "$ZenithSymbol  " else "") + "${apps.size} Apps",
                     color = Color.White.copy(alpha = 0.62f),
                     fontSize = 13.sp,
                     modifier = Modifier.weight(1f),
@@ -703,7 +703,7 @@ fun OneUIEditBar(
             EditAction(Icons.Rounded.Edit, "Hintergrund\nund Stil", onWallpaper)
             EditAction(Icons.Rounded.Add, "Widgets", onWidgets)
             EditAction(Icons.Rounded.CheckCircle, "Apps\nauswählen", onSelectApps)
-            EditAction(Icons.Rounded.Menu, "Hearth-\nMenü", onMenu)
+            EditAction(Icons.Rounded.Menu, "${dev.hearth.launcher.data.Brand.name}-\nMenü", onMenu)
             EditAction(Icons.Rounded.Settings, "Einstellungen", onSettings)
         }
     }

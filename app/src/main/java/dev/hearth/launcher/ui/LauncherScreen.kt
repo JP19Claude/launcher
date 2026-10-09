@@ -110,6 +110,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TileMode
@@ -446,7 +447,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
         } else {
             menu = GlassMenuRequest(
             anchor = Rect(position, Size(1f, 1f)),
-            title = "Hearth",
+            title = "${dev.hearth.launcher.data.Brand.name}",
             items = listOf(
                 GlassMenuItem("Launcher-Einstellungen", Icons.Rounded.Settings) { settingsOpen = true },
                 GlassMenuItem("Schnelleinstellungen", Icons.Rounded.Home) {
@@ -462,7 +463,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 },
                 GlassMenuItem("Hintergrundbild ändern", Icons.Rounded.Edit) { vm.openWallpaperPicker() },
                 GlassMenuItem("Suche öffnen", Icons.Rounded.Search) { searchOpen = true },
-                GlassMenuItem("OMEGA-Menü", Icons.Rounded.Star) { hubOpen = true },
+                GlassMenuItem("ZENITH-Menü", Icons.Rounded.Star) { hubOpen = true },
                 GlassMenuItem("Ein/Aus-Menü", Icons.Rounded.Lock) { secret = SecretMenu.Power },
             ),
         )
@@ -2064,6 +2065,7 @@ private fun PageDots(count: Int, position: () -> Float, modifier: Modifier = Mod
     val wide = 18.dp
     val gap = 8.dp
     val omega = LocalSettings.current.omegaGlass
+    val zenith = LocalSettings.current.omegaColor == dev.hearth.launcher.data.OmegaColor.Zenith
     LiquidGlass(cornerRadius = 12.dp, refraction = 6.dp, blur = 10.dp, modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
         // OMEGA UI 17.5: the Ω leads the page dots.
@@ -2079,12 +2081,32 @@ private fun PageDots(count: Int, position: () -> Float, modifier: Modifier = Mod
             for (i in 0 until count) {
                 val near = (1f - kotlin.math.abs(at - i)).coerceIn(0f, 1f)
                 val w = dot.toPx() + (wide - dot).toPx() * near
-                drawRoundRect(
-                    Color.White.copy(alpha = 0.4f + 0.55f * near),
-                    topLeft = Offset(x, 0f),
-                    size = Size(w, h),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2f),
-                )
+                if (zenith) {
+                    // ZENITH: slanted dashes like the Z's bars – the page you're on lit green.
+                    val cut = h * 0.9f
+                    val dash = Path().apply {
+                        moveTo(x + cut, 0f)
+                        lineTo(x + w, 0f)
+                        lineTo(x + w - cut, h)
+                        lineTo(x, h)
+                        close()
+                    }
+                    if (near > 0.05f) {
+                        drawRect(
+                            Brush.radialGradient(listOf(ZenithGreen.copy(alpha = 0.45f * near), Color.Transparent), center = Offset(x + w / 2f, h / 2f), radius = w),
+                            topLeft = Offset(x - w / 2f, -h * 2f),
+                            size = Size(w * 2f, h * 5f),
+                        )
+                    }
+                    drawPath(dash, androidx.compose.ui.graphics.lerp(Color(0xFFB4B9BE).copy(alpha = 0.55f), ZenithGreen, near))
+                } else {
+                    drawRoundRect(
+                        Color.White.copy(alpha = 0.4f + 0.55f * near),
+                        topLeft = Offset(x, 0f),
+                        size = Size(w, h),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2f),
+                    )
+                }
                 x += w + gap.toPx()
             }
         }

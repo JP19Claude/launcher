@@ -144,7 +144,7 @@ enum class SecretMenu(val code: String, val title: String, val what: String) {
     Info("*#1234#", "Versionen", "ZENITH, ClaudeOS, Android und Build"),
     Battery("*#0228#", "Akku-Status", "Ladestand, Strom, Temperatur und Zustand – live"),
     Diagnose("*#9900#", "Diagnose", "Arbeitsspeicher, Speicher, Laufzeit und Shizuku"),
-    Labs("*#4327#", "OMEGA Labs", "Experimente für Neugierige (H-E-A-R)"),
+    Labs("*#4327#", "ZENITH Labs", "Experimente für Neugierige (H-E-A-R)"),
     Clawd("*#2529#", "Clawd-Studio", "Clawd in jeder Stimmung (C-L-A-W)"),
     Power("*#7697#", "Ein/Aus-Menü", "Bildschirm aus, Neustart, Ausschalten (P-O-W-R)"),
 
@@ -324,10 +324,10 @@ private fun CodesMenu(onOpen: (SecretMenu) -> Unit, onClose: () -> Unit) {
             }
         }
         SecretCard("Weitere Verstecke") {
-            SecretValue("OMEGA Labs", "Über das Telefon → siebenmal auf die Build-Nummer tippen")
+            SecretValue("ZENITH Labs", "Über das Telefon → siebenmal auf die Build-Nummer tippen")
             SecretValue("Easter-Egg-Karte", "Über das Telefon → lange auf „made by …“ drücken")
-            SecretValue("Diese Liste", "Im OMEGA-Menü lange auf den Titel drücken")
-            SecretValue("OMEGA-Menü", "Einstellungen → Startbildschirm → Doppeltippen, oder lange auf den Startbildschirm drücken")
+            SecretValue("Diese Liste", "Im ZENITH-Menü lange auf den Titel drücken")
+            SecretValue("ZENITH-Menü", "Einstellungen → Startbildschirm → Doppeltippen, oder lange auf den Startbildschirm drücken")
         }
     }
 }
@@ -452,7 +452,7 @@ private fun InfoMenu(onClose: () -> Unit) {
     val info = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull() }
     val code = remember(info) { info?.let { androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(it) } }
     SecretPage("Versionen", "*#1234#", onClose) {
-        SecretCard("Hearth") {
+        SecretCard("${dev.hearth.launcher.data.Brand.name}") {
             SecretValue(HearthUi.NAME, "${info?.versionName.orEmpty()} (Build $code)")
             SecretValue("ClaudeOS", "${ClaudeOs.VERSION} „${ClaudeOs.CODENAME}“")
             SecretValue("Paket", context.packageName)
@@ -586,20 +586,20 @@ private fun readDiagnose(context: Context): List<Pair<String, String>> {
     val stat = runCatching { StatFs(Environment.getDataDirectory().path) }.getOrNull()
     val shizuku = when (ShizukuBridge.status(context)) {
         ShizukuBridge.Status.Ready -> "Bereit"
-        ShizukuBridge.Status.NoPermission -> "Läuft, Hearth hat noch keine Erlaubnis"
+        ShizukuBridge.Status.NoPermission -> "Läuft, ${dev.hearth.launcher.data.Brand.name} hat noch keine Erlaubnis"
         ShizukuBridge.Status.NotRunning -> "Installiert, läuft nicht"
         ShizukuBridge.Status.NotInstalled -> "Nicht installiert"
     }
     return buildList {
         add("Arbeitsspeicher" to "${gb(memory.availMem)} von ${gb(memory.totalMem)} frei" + if (memory.lowMemory) " · knapp!" else "")
-        add("Hearth selbst" to "${mb(runtime.totalMemory() - runtime.freeMemory())} von ${mb(runtime.maxMemory())}")
+        add("${dev.hearth.launcher.data.Brand.name} selbst" to "${mb(runtime.totalMemory() - runtime.freeMemory())} von ${mb(runtime.maxMemory())}")
         stat?.let { add("Speicher" to "${gb(it.availableBytes)} von ${gb(it.totalBytes)} frei") }
         add("Prozessorkerne" to "${runtime.availableProcessors()}")
         add("Seit dem Start" to since(SystemClock.elapsedRealtime()))
         add("Davon wach" to since(SystemClock.uptimeMillis()))
         add("Shizuku" to shizuku)
         add("Animationen" to String.format(Locale.GERMAN, "%.1f×", ShizukuBridge.animationScale(context)))
-        add("Hearth-Prozess" to "PID ${android.os.Process.myPid()}")
+        add("${dev.hearth.launcher.data.Brand.name}-Prozess" to "PID ${android.os.Process.myPid()}")
     }
 }
 
@@ -618,7 +618,7 @@ private fun DiagnoseMenu(onClose: () -> Unit) {
             lines.forEach { (label, value) -> SecretValue(label, value) }
         }
         SecretCard("Aufräumen") {
-            SecretAction("Hearth-Speicher freigeben", "Gibt nicht mehr gebrauchten Speicher von Hearth zurück") {
+            SecretAction("${dev.hearth.launcher.data.Brand.name}-Speicher freigeben", "Gibt nicht mehr gebrauchten Speicher von ${dev.hearth.launcher.data.Brand.name} zurück") {
                 System.gc()
                 lines = readDiagnose(context)
             }
@@ -657,7 +657,7 @@ private fun LabsMenu(onClose: () -> Unit) {
     var eggMap by remember { mutableStateOf(false) }
     val needs = "Braucht Shizuku (Einstellungen → System)"
     SecretPage(
-        "OMEGA Labs",
+        "ZENITH Labs",
         "Experimente · nicht alles hier ist fertig",
         onClose,
         listOf(Color(0xFF34C759), Color(0xFF3E91FF), Color(0xFF8E6BFF)),
@@ -717,7 +717,7 @@ private fun LabsMenu(onClose: () -> Unit) {
                 message = "Die Tour kommt beim nächsten Start."
             }
             SecretAction("Easter-Egg-Karte", "Wo alle Eggs versteckt sind") { eggMap = true }
-            SecretAction("Hearth neu starten", "Startet den Launcher frisch (Glimmer kurz mit)") { restartHearth(context) }
+            SecretAction("${dev.hearth.launcher.data.Brand.name} neu starten", "Startet den Launcher frisch (Glimmer kurz mit)") { restartHearth(context) }
             SecretAction("Labs wieder verstecken", "Bis zu den nächsten sieben Tipps", destructive = true) {
                 HearthLabs.hide(context)
                 onClose()
@@ -966,7 +966,7 @@ fun HearthMenu(tiles: List<HubTile>, onSecret: () -> Unit, onClose: () -> Unit) 
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "Ω  OMEGA-Menü",
+                        "$ZenithSymbol  ZENITH-Menü",
                         style = TextStyle(brush = Brush.linearGradient(fluidPalette()), fontSize = 22.sp, fontWeight = FontWeight.Bold),
                         modifier = Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onSecret() }) },
                     )

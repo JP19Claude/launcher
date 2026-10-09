@@ -128,7 +128,7 @@ private fun systemGroups(context: Context): List<Pair<String, List<SystemPage>>>
             SystemPage("Schriftgröße und -stil", "Text und Anzeigegröße", orange, listOf(action("android.settings.TEXT_READING_SETTINGS"), action(Settings.ACTION_DISPLAY_SETTINGS)), icon = Icons.Rounded.Edit),
             SystemPage("Bildschirmschoner", "Beim Laden und im Dock", orange, listOf(action(Settings.ACTION_DREAM_SETTINGS)), glyph = Glyph.Contrast),
             SystemPage("Hintergrund", "Startbildschirm und Sperrbildschirm", pink, listOf(Intent.createChooser(Intent(Intent.ACTION_SET_WALLPAPER), "Hintergrund wählen")), icon = Icons.Rounded.Favorite),
-            SystemPage("Standard-Startbildschirm", "Hearth als Launcher", blue, listOf(action(Settings.ACTION_HOME_SETTINGS), action(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)), icon = Icons.Rounded.Home),
+            SystemPage("Standard-Startbildschirm", "${dev.hearth.launcher.data.Brand.name} als Launcher", blue, listOf(action(Settings.ACTION_HOME_SETTINGS), action(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)), icon = Icons.Rounded.Home),
         ),
         "Sicherheit & Datenschutz" to listOf(
             SystemPage("Sperrbildschirm & Sicherheit", "PIN, Muster, Fingerabdruck, Gesicht", blue, listOf(action(Settings.ACTION_SECURITY_SETTINGS)), glyph = Glyph.Lock),
@@ -146,7 +146,7 @@ private fun systemGroups(context: Context): List<Pair<String, List<SystemPage>>>
         "Apps & Konten" to listOf(
             SystemPage("Apps", "Alle Apps, Berechtigungen", blue, listOf(action(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS), action(Settings.ACTION_APPLICATION_SETTINGS)), icon = Icons.Rounded.Star),
             SystemPage("Standard-Apps", "Browser, Telefon, SMS", blue, listOf(action(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)), icon = Icons.Rounded.Star),
-            SystemPage("Hearth (App-Info)", "Berechtigungen, Speicher von Hearth", gray, listOf(action(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, me)), icon = Icons.Rounded.Info),
+            SystemPage("${dev.hearth.launcher.data.Brand.name} (App-Info)", "Berechtigungen, Speicher von ${dev.hearth.launcher.data.Brand.name}", gray, listOf(action(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, me)), icon = Icons.Rounded.Info),
             SystemPage("Konten und Sicherung", "Konten, Synchronisieren", orange, listOf(action(Settings.ACTION_SYNC_SETTINGS)), icon = Icons.Rounded.AccountCircle),
             SystemPage("Konto hinzufügen", "Google, Samsung, E-Mail …", orange, listOf(action(Settings.ACTION_ADD_ACCOUNT)), icon = Icons.Rounded.Person),
         ),
@@ -218,7 +218,7 @@ internal fun SystemSettingsContent(controls: SystemControls) {
         ShizukuSection(state) { state = controls.state() }
         Section("Schnell einstellen") {
             if (!state.canWriteSettings) {
-                Note("Für Helligkeit, automatisches Drehen und den Bildschirm-Timeout braucht Hearth einmal die Erlaubnis „Systemeinstellungen ändern“.")
+                Note("Für Helligkeit, automatisches Drehen und den Bildschirm-Timeout braucht ${dev.hearth.launcher.data.Brand.name} einmal die Erlaubnis „Systemeinstellungen ändern“.")
                 SystemPageRow(
                     SystemPage("Erlaubnis geben", "Systemeinstellungen ändern", Color(0xFF3E91FF), emptyList(), icon = Icons.Rounded.Settings),
                 ) { controls.requestWriteSettings() }
@@ -378,7 +378,7 @@ private fun ShizukuSection(state: ControlState, onChanged: () -> Unit) {
     Section("Shizuku · Erweiterte Schalter") {
         when (status) {
             ShizukuBridge.Status.NotInstalled -> {
-                Note("Mit der kostenlosen App Shizuku kann Hearth WLAN, Bluetooth, mobile Daten, Flugmodus, Standort, NFC, Dunkelmodus und Energiesparen selbst schalten – ohne Root und ohne neue ROM.")
+                Note("Mit der kostenlosen App Shizuku kann ${dev.hearth.launcher.data.Brand.name} WLAN, Bluetooth, mobile Daten, Flugmodus, Standort, NFC, Dunkelmodus und Energiesparen selbst schalten – ohne Root und ohne neue ROM.")
                 SystemPageRow(SystemPage("Shizuku installieren", "Kostenlos, aus dem Play Store", Color(0xFF3E91FF), emptyList(), icon = Icons.Rounded.Refresh)) {
                     ShizukuBridge.openApp(context)
                 }
@@ -395,8 +395,8 @@ private fun ShizukuSection(state: ControlState, onChanged: () -> Unit) {
                 }
             }
             ShizukuBridge.Status.NoPermission -> {
-                Note("Shizuku läuft. Erlaube Hearth einmal, es zu benutzen.")
-                SystemPageRow(SystemPage("Hearth erlauben", "Zugriff auf Shizuku", Color(0xFF34C759), emptyList(), icon = Icons.Rounded.Settings)) {
+                Note("Shizuku läuft. Erlaube ${dev.hearth.launcher.data.Brand.name} einmal, es zu benutzen.")
+                SystemPageRow(SystemPage("${dev.hearth.launcher.data.Brand.name} erlauben", "Zugriff auf Shizuku", Color(0xFF34C759), emptyList(), icon = Icons.Rounded.Settings)) {
                     ShizukuBridge.requestPermission()
                 }
             }
@@ -409,7 +409,7 @@ private fun ShizukuSection(state: ControlState, onChanged: () -> Unit) {
                 if (hasNfc) SwitchRow("NFC", pending["nfc"] ?: state.nfc) { v -> switch("nfc", v, ShizukuBridge::setNfc) }
                 SwitchRow("Dunkelmodus", pending["dark"] ?: state.darkMode) { v -> switch("dark", v, ShizukuBridge::setDarkMode) }
                 SwitchRow("Energiesparmodus", pending["saver"] ?: state.batterySaver) { v -> switch("saver", v, ShizukuBridge::setBatterySaver) }
-                Note("Über Shizuku verbunden – Hearth schaltet mit ADB-Rechten.")
+                Note("Über Shizuku verbunden – ${dev.hearth.launcher.data.Brand.name} schaltet mit ADB-Rechten.")
             }
         }
     }

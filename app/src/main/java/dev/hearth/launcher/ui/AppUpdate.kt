@@ -220,14 +220,14 @@ private fun lookFor(packageName: String): UpdateLook = when (packageName) {
         tagline = "Galaxy × Claude",
         planet = listOf(Color(0xFFBFDDFF), Color(0xFF3E91FF), Color(0xFF5B3BC8)),
         tips = listOf(
-            "OMEGA UI 16: Halte zwei Handys mit Glimmer oben aneinander – Glimmer Drop geht auf.",
+            "Glimmer Drop: Halte zwei Handys mit Glimmer oben aneinander – Glimmer Drop geht auf.",
             "Dunkles Glas für Dock, Widgets und Menüs: Design → Dunkelmodus.",
-            "Das OMEGA-Menü: lange auf den Startbildschirm drücken → „OMEGA-Menü“.",
+            "Das ZENITH-Menü: lange auf den Startbildschirm drücken → „ZENITH-Menü“.",
             "Wisch auf dem Startbildschirm nach unten für den Finder, nach oben für den App-Drawer.",
             "Fluid-Ränder „Dezent“ oder „Lebendig“: unter Design → Animationen.",
             "Frag Clawd in der Suche: „Wie lange noch bis Weihnachten?“",
             "Tipp Clawd auf dem Startbildschirm sechsmal schnell an …",
-            "Hearth, Glimmer und Clawd aktualisieren sich jetzt selbst.",
+            "${dev.hearth.launcher.data.Brand.name}, Glimmer und Clawd aktualisieren sich jetzt selbst.",
         ),
     )
 }
@@ -812,7 +812,7 @@ private fun DowngradeCard(name: String, current: String, look: UpdateLook) {
                 Text(
                     "Android installiert eine ältere Version nicht über eine neuere. Zwei Wege:\n" +
                         "1. Mit Shizuku (Einstellungen → System): dann klappt es hier mit einem Tipp, und alles bleibt.\n" +
-                        "2. Von Hand: Hearth sichern (Einstellungen → Allgemein → Sichern), die Datei herunterladen, $name deinstallieren, " +
+                        "2. Von Hand: ${dev.hearth.launcher.data.Brand.name} sichern (Einstellungen → Allgemein → Sichern), die Datei herunterladen, $name deinstallieren, " +
                         "die Datei aus „Downloads“ installieren und die Sicherung wieder einspielen.",
                     color = Color.White.copy(alpha = 0.75f),
                     fontSize = 14.sp,

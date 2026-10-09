@@ -669,22 +669,28 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOutfit(
     }
 }
 
-/** OMEGA UI 17.1: a little ruby with a white Ω on his chest, in his grid's pixels. */
+/**
+ * OMEGA UI 17.1's badge on his chest – ZENITH's now: a little plate of dark metal with the silver
+ * Z on it and its green edge light, in his grid's pixels.
+ */
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOmegaBadge(left: Float, top: Float, px: Float) {
     fun r(x: Float, y: Float, w: Float, h: Float, c: Color) =
         drawRect(c, Offset(left + x * px, top + y * px), Size(w * px + 0.5f, h * px + 0.5f))
-    val ruby = Color(0xFFC8102E)
-    val light = Color(0xFFFF6B7D)
-    // The stone: a small cut gem.
-    r(5.6f, 3.5f, 2.8f, 2.4f, ruby)
+    val metal = Color(0xFF2B2E30)
+    val light = Color(0xFF6B7075)
+    // The plate.
+    r(5.6f, 3.5f, 2.8f, 2.4f, metal)
     r(5.9f, 3.2f, 2.2f, 0.3f, light)
-    r(5.9f, 5.9f, 2.2f, 0.3f, ruby)
-    r(5.6f, 3.5f, 0.6f, 0.6f, light)
-    // The Ω in white.
-    val w = Color.White
-    r(6.3f, 3.8f, 1.4f, 0.35f, w)
-    r(6.1f, 4.1f, 0.35f, 1f, w)
-    r(7.55f, 4.1f, 0.35f, 1f, w)
-    r(5.9f, 5.1f, 0.65f, 0.35f, w)
-    r(7.45f, 5.1f, 0.65f, 0.35f, w)
+    r(5.9f, 5.9f, 2.2f, 0.3f, metal)
+    // The Z in silver: its top, its diagonal in steps, its foot.
+    val silver = Color(0xFFE6E9EB)
+    r(6.1f, 3.8f, 1.8f, 0.4f, silver)
+    r(7.2f, 4.2f, 0.55f, 0.35f, silver)
+    r(6.8f, 4.5f, 0.55f, 0.35f, silver)
+    r(6.4f, 4.8f, 0.55f, 0.35f, silver)
+    r(6.1f, 5.1f, 1.8f, 0.4f, silver)
+    // The green light along its lower edges.
+    val green = Color(0xFF46EB6E)
+    r(6.1f, 5.5f, 1.8f, 0.12f, green)
+    r(6.1f, 4.2f, 0.9f, 0.1f, green)
 }

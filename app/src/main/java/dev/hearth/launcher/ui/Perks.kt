@@ -109,9 +109,8 @@ internal fun PerkBackLayers(settings: LauncherSettings, modifier: Modifier = Mod
     if (!any) return
     val flow = flowPhase(60_000, settings.animations)
     val measurer = rememberTextMeasurer()
-    val omegaBig = remember(measurer) { measurer.measure("Ω", TextStyle(fontSize = 300.sp, fontWeight = FontWeight.Black)) }
     val matrixGlyphs = remember(measurer) {
-        "ｱｲｳｴｵｶｷｸｹｺｻｼ01Ω".map { measurer.measure(it.toString(), TextStyle(fontSize = 15.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)) }
+        "ｱｲｳｴｵｶｷｸｹｺｻｼ01Ƶ".map { measurer.measure(it.toString(), TextStyle(fontSize = 15.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)) }
     }
     val snow = remember { motes(70, 1) }
     val flies = remember { motes(22, 2) }
@@ -168,7 +167,8 @@ internal fun PerkBackLayers(settings: LauncherSettings, modifier: Modifier = Mod
             }
         }
         if (settings.has(Perk.OmegaMark)) {
-            drawText(omegaBig, color = Color.White, topLeft = Offset((w - omegaBig.size.width) / 2f, (h - omegaBig.size.height) / 2.4f), alpha = 0.06f)
+            // ZENITH's Z, big and faint.
+            drawZenithMarkAt(Offset(w / 2f, h * 0.42f), w * 0.78f, Color.White, alpha = 0.06f)
         }
         if (settings.has(Perk.Snow)) {
             snow.forEach { m ->

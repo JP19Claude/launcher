@@ -324,7 +324,7 @@ fun SettingsScreen(
                     )
                     SwitchRow(
                         label = "Uhren aus Glas",
-                        description = "Jede Uhr auf dem Startbildschirm mit Ziffern aus Glas",
+                        description = "Jede Uhr auf dem Startbildschirm mit Ziffern aus Glas (die ZENITH-Uhr hat Chrom)",
                         checked = s.glassClocks,
                     ) { v -> update { it.copy(glassClocks = v) } }
                     SwitchRow(
@@ -334,7 +334,7 @@ fun SettingsScreen(
                     ) { v -> update { it.copy(glassStatusBar = v) } }
                     RowDivider()
                     SwitchRow(
-                        label = "Getöntes Glas (OMEGA Glass)",
+                        label = "Getöntes Glas (ZENITH Glass)",
                         description = "Glas in der Systemfarbe im ganzen System, und überall fließt Fluid in ihren Farben (Zenith: Grün, Sonne, Himmel) statt Claudes – Startbildschirm, Menüs, Einstellungen, Glimmer",
                         checked = s.omegaGlass,
                     ) { v -> update { it.copy(omegaGlass = v) } }
@@ -382,7 +382,7 @@ fun SettingsScreen(
                     }
                     RowDivider()
                     SwitchRow(
-                        label = "ZENITH-Licht (OMEGA-Beleuchtung)",
+                        label = "ZENITH-Licht",
                         description = "Auf dem Startbildschirm leuchtet Fluid in der Systemfarbe zwischen Hintergrundbild und Apps und Widgets – im Dark Mode gedämpft",
                         checked = s.omegaLight,
                     ) { v -> update { it.copy(omegaLight = v, omegaGlass = if (v) true else it.omegaGlass) } }
@@ -404,7 +404,7 @@ fun SettingsScreen(
                         optionLabel = { it.label },
                         onSelect = { preset -> vm.applyPreset(preset) },
                     )
-                    Note("Setzt Icons, Uhr, Farben und Glas auf einmal. Danach kannst du alles einzeln anpassen. „Galaxy × Claude“ macht den Launcher zu One UI mit Glas und Claude im System – mit ZENITH: Zenith-Grün, Sonnenglas, Sonnenbogen-Uhr und OMEGA-Insel.")
+                    Note("Setzt Icons, Uhr, Farben und Glas auf einmal. Danach kannst du alles einzeln anpassen. „Galaxy × Claude“ macht den Launcher zu One UI mit Glas und Claude im System – mit ZENITH: Zenith-Grün, Sonnenglas, der ZENITH-Uhr, dem ZENITH-Dock und ZENITHs grünem Licht.")
                     SwitchRow(
                         label = "Claude im System (Galaxy × Claude)",
                         description = "Wie Galaxy AI, nur mit Claude: Now Brief auf dem Startbildschirm, Claude zuerst in der Suche (Los ohne passende App fragt Claude), Vorschläge zum Antippen und „Claude fragen“ im Menü jeder App",
@@ -723,7 +723,7 @@ fun SettingsScreen(
                     RowDivider()
                     ActionRow(
                         label = "Medienanzeige erlauben",
-                        description = "Benachrichtigungszugriff, damit Hearth zeigt, was gerade läuft",
+                        description = "Benachrichtigungszugriff, damit ${dev.hearth.launcher.data.Brand.name} zeigt, was gerade läuft",
                         onClick = vm.media::requestAccess,
                     )
                     RowDivider()
@@ -802,11 +802,11 @@ fun SettingsScreen(
                         description = "Bildschirm aus, Neustart und Ausschalten – mit Shizuku",
                         onClick = { secret = SecretMenu.Power },
                     )
-                    Note("Das OMEGA-Menü hat alles griffbereit: Finder, Widgets, Dunkelmodus, Taschenlampe, Ein/Aus … Es öffnet sich per Doppeltippen (Startbildschirm → Doppeltippen → „OMEGA-Menü“), über „OMEGA-Menü“ in der Bearbeiten-Leiste oder lange drücken auf den Startbildschirm.")
+                    Note("Das ZENITH-Menü hat alles griffbereit: Finder, Widgets, Dunkelmodus, Taschenlampe, Ein/Aus … Es öffnet sich per Doppeltippen (Startbildschirm → Doppeltippen → „ZENITH-Menü“), über „ZENITH-Menü“ in der Bearbeiten-Leiste oder lange drücken auf den Startbildschirm.")
                     if (HearthLabs.unlocked) {
                         RowDivider()
                         ActionRow(
-                            label = "OMEGA Labs 🧪",
+                            label = "ZENITH Labs 🧪",
                             description = "Freigeschaltet – Experimente, Bildrate, Fingertipps, Layout-Grenzen",
                             onClick = { secret = SecretMenu.Labs },
                         )
@@ -829,7 +829,7 @@ fun SettingsScreen(
                         },
                     ) { lockPickerOpen = true }
                     Note(
-                        "Aus Hearth heraus fragt die Sperre immer. Damit sie auch beim Öffnen über Benachrichtigungen, die letzten Apps oder andere Apps fragt, muss Glimmer an sein (Bedienungshilfe). " +
+                        "Aus ${dev.hearth.launcher.data.Brand.name} heraus fragt die Sperre immer. Damit sie auch beim Öffnen über Benachrichtigungen, die letzten Apps oder andere Apps fragt, muss Glimmer an sein (Bedienungshilfe). " +
                             "Entsperrt bleibt eine App, bis der Bildschirm ausgeht oder du zum Startbildschirm gehst. Auch über das App-Menü: lange drücken → „Sperren“.",
                     )
                 }
@@ -889,7 +889,7 @@ fun SettingsScreen(
                     ClaudeSpark(s.accent.color, Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "Hearth · gebaut mit Claude" + if (eggs.isNotEmpty()) "  ·  🥚 ${eggs.size}/${EasterEggs.TOTAL}" else "",
+                        text = "${dev.hearth.launcher.data.Brand.name} · gebaut mit Claude" + if (eggs.isNotEmpty()) "  ·  🥚 ${eggs.size}/${EasterEggs.TOTAL}" else "",
                         color = TextSecondary,
                         fontFamily = FontFamily.Serif,
                         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
@@ -1030,7 +1030,7 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             description = "Statt bei jedem Entsperren nur beim ersten des Tages",
             checked = s.glimmerClawdGreetDaily,
         ) { v -> update { it.copy(glimmerClawdGreetDaily = v) } }
-        Note("Er trägt Farbe, Hut und Outfit aus Hearth bzw. der Clawd-App. Nachts schläft er in der Pille. Seite, Position und Größe siehst du oben in der Vorschau.")
+        Note("Er trägt Farbe, Hut und Outfit aus ${dev.hearth.launcher.data.Brand.name} bzw. der Clawd-App. Nachts schläft er in der Pille. Seite, Position und Größe siehst du oben in der Vorschau.")
     }
     Section("Glimmer") {
         Note("Die Insel um die Frontkamera, in jeder App: Musik, Anrufe, Timer, Stoppuhr, Navigation, Downloads, Nachrichten, Laden und mehr. Nach unten ziehen klappt sie auf, nach oben schließt sie, zur Seite wechselt zwischen zwei Aktivitäten.")
@@ -1076,7 +1076,7 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
         if (s.glimmerFlyIn) {
             SwitchRow(
                 label = "Auch mit anderen Launchern",
-                description = "Auch mit One UI, ColorOS, dem Pixel-Launcher und jedem anderen: Glimmer spielt dieselbe Animation wie Hearth selbst – die App fliegt in die Insel (ab Android 11 die App selbst, sonst ihre Karte). Mit Hearth als Launcher macht es Hearth.",
+                description = "Auch mit One UI, ColorOS, dem Pixel-Launcher und jedem anderen: Glimmer spielt dieselbe Animation wie ${dev.hearth.launcher.data.Brand.name} selbst – die App fliegt in die Insel (ab Android 11 die App selbst, sonst ihre Karte). Mit ${dev.hearth.launcher.data.Brand.name} als Launcher macht es ${dev.hearth.launcher.data.Brand.name}.",
                 checked = s.glimmerFlyInEverywhere,
             ) { v -> update { it.copy(glimmerFlyInEverywhere = v) } }
             if (s.glimmerFlyInEverywhere) SwitchRow(
@@ -1280,11 +1280,11 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
 @Composable
 private fun GlimmerLinkRows(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
     val context = LocalContext.current
-    Note("Die Insel um die Kamera ist eine eigene App: „Glimmer“ (Insel mit Live-Aktivitäten). Sie läuft mit jedem Launcher; mit Hearth fliegen geschlossene Apps in Glimmer.")
+    Note("Die Insel um die Kamera ist eine eigene App: „Glimmer“ (Insel mit Live-Aktivitäten). Sie läuft mit jedem Launcher; mit ${dev.hearth.launcher.data.Brand.name} fliegen geschlossene Apps in Glimmer.")
     FamilyAppRow("Glimmer", GlimmerLink, GlimmerLink.DOWNLOAD_URL)
     SwitchRow(
         label = "Apps fliegen in Glimmer",
-        description = "Schließt du eine App, die du über Hearth geöffnet hast, fliegt sie selbst in die Insel (wie bei HarmonyOS). Braucht Glimmer.",
+        description = "Schließt du eine App, die du über ${dev.hearth.launcher.data.Brand.name} geöffnet hast, fliegt sie selbst in die Insel (wie bei HarmonyOS). Braucht Glimmer.",
         checked = s.glimmerFlyIn,
     ) { v ->
         update { it.copy(glimmerFlyIn = v) }
@@ -1425,11 +1425,11 @@ internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit)
         val fluidTitle = LocalSettings.current.fluidDesign
         // Claude Mythos: Clawds over every group.
         Box(Modifier.padding(start = 10.dp, bottom = 2.dp)) { MythosRow(20.dp) }
-        // OMEGA UI 17.5: Ω in front, in OMEGA Fluid's colors.
+        // OMEGA UI 17.5: the sign in front (ZENITH's Z now), in the fluid's colors.
         val omega = LocalSettings.current.omegaGlass
         val palette = fluidPalette()
         Text(
-            text = (if (omega) "Ω  " else "") + if (oneUi) title else title.uppercase(),
+            text = (if (omega) "$ZenithSymbol  " else "") + if (oneUi) title else title.uppercase(),
             color = if (fluidTitle) Color.Unspecified else if (oneUi) LocalSettings.current.accent.color else TextSecondary,
             fontSize = if (oneUi) 14.sp else 13.sp,
             fontWeight = if (oneUi || fluidTitle) FontWeight.SemiBold else FontWeight.Medium,
@@ -1704,7 +1704,7 @@ internal val SettingsCategories = listOf(
     SettingsCategory("general", "Allgemein", "Suche, Vibration, Sichern & Wiederherstellen", Icons.Rounded.Settings, Color(0xFF8E8E93),
         "suche suchmaschine vibration standard launcher sichern backup wiederherstellen export import"),
     // OMEGA UI 17: OMEGA Cloud – backup with the Google account and as a file.
-    SettingsCategory("cloud", "OMEGA Cloud", "Sicherung über dein Google-Konto und als Datei", Icons.Rounded.Share, Color(0xFFE5243F),
+    SettingsCategory("cloud", "ZENITH Cloud", "Sicherung über dein Google-Konto und als Datei", Icons.Rounded.Share, Color(0xFFE5243F),
         "cloud omega sicherung backup google drive konto wiederherstellen datei export import"),
     // Hearth UI 14.5: what Hearth UI does that One UI and ColorOS don't.
     SettingsCategory("vorteile", "Warum ZENITH", "15 Dinge, die One UI und ColorOS nicht können", Icons.Rounded.Star, Color(0xFF34C759),
@@ -1874,13 +1874,13 @@ private fun BackupSection(vm: LauncherViewModel) {
         if (uri != null) status = if (vm.exportSettings(uri)) "Gesichert." else "Sichern ging nicht."
     }
     val restore = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) status = if (vm.importSettings(uri)) "Wiederhergestellt." else "Diese Datei ist keine Hearth-Sicherung."
+        if (uri != null) status = if (vm.importSettings(uri)) "Wiederhergestellt." else "Diese Datei ist keine ${dev.hearth.launcher.data.Brand.name}-Sicherung."
     }
     Section("Sichern & Wiederherstellen") {
         ActionRow(
             label = "Einstellungen sichern",
             description = "Alle Launcher-Einstellungen als Datei (ohne API-Schlüssel)",
-        ) { runCatching { save.launch("Hearth-Einstellungen.json") } }
+        ) { runCatching { save.launch("${dev.hearth.launcher.data.Brand.name}-Einstellungen.json") } }
         ActionRow(
             label = "Einstellungen wiederherstellen",
             description = "Aus einer gesicherten Datei, auch auf einem neuen Handy",
