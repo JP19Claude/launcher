@@ -197,7 +197,7 @@ internal object HearthChangelog {
                     "ZENITH", Icons.Rounded.Star, Green,
                     listOf(
                         "OMEGA UI heißt jetzt ZENITH – wie die Sonne, wenn sie im Zenit steht, ganz oben am Himmel.",
-                        "Ein neues Logo: ein weißes Z aus Licht, die 19 in Grün quer hindurch und darüber die Sonne – in den Einstellungen, unter Über das Telefon, im Software-Update und in der Tour.",
+                        "Ein neues Logo: ein scharfes weißes Z, von oben beleuchtet, die 19 in glänzendem Grün schräg mit der Diagonale hindurch, sauber ausgeschnitten – und darüber der Bogen der Sonne mit der Sonne im Zenit. In den Einstellungen, unter Über das Telefon, im Software-Update und in der Tour.",
                         "Beim ersten Start: Das Ω verblasst, die Sonne steigt an ihrem Bogen aus der Nacht bis in den Zenit, der Himmel wird hell – und oben entsteht ZENITH.",
                         "Eine neue Tour durch alles, was neu ist.",
                     ),
@@ -206,8 +206,8 @@ internal object HearthChangelog {
                 ChangeSection(
                     "Logo gedrückt halten", Icons.Rounded.Favorite, Orange,
                     listOf(
-                        "Wie bei ColorOS: Hältst du das ZENITH-Logo gedrückt, lädt es sich auf – die Sonne klettert nach oben, die Strahlen drehen sich und werden länger, das Logo hebt sich und leuchtet.",
-                        "Ist es voll, klopft es spürbar; lässt du los, federt es zurück.",
+                        "Wie bei ColorOS: Hältst du das ZENITH-Logo gedrückt, lädt es sich auf – der Bogen füllt sich vom Horizont bis zur Sonne mit Licht, ein goldener Glanz läuft über das Z, die Sonne wächst.",
+                        "Ist es voll, klopft es spürbar und ein Lichtring geht von der Sonne aus; lässt du los, federt es zurück.",
                         "Das Geheimnis bleibt: So oft antippen, wie ZENITH Nummer hat – 19-mal –, und du bist bei den Clawd Illuminati.",
                     ),
                     hearth,

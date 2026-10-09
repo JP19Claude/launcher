@@ -36,12 +36,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -49,9 +46,19 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextGeometricTransform
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -82,10 +89,37 @@ val ZenithFluidColors = listOf(
 )
 
 /**
- * The ZENITH mark: a white Z of light, the version written through it in green, and the sun
- * resting above it. Held down (like ColorOS's logo), it charges up: the sun climbs to the
- * zenith, its rays turn and stretch, the mark lifts and glows – with a little knock when it's
- * full – and settles back with a bounce when let go. [onTap] counts quick taps (the
+ * The Z of ZENITH's mark in a box [s] wide starting at [left]: three sharp bars, the diagonal
+ * as thick as the other two.
+ */
+private fun zenithZ(s: Float, left: Float): Path {
+    val l = left + s * 0.2f
+    val r = left + s * 0.8f
+    val t = s * 0.3f
+    val b = s * 0.86f
+    val bar = s * 0.12f
+    val k = s * 0.2f
+    return Path().apply {
+        moveTo(l, t)
+        lineTo(r, t)
+        lineTo(r, t + bar)
+        lineTo(l + k, b - bar)
+        lineTo(r, b - bar)
+        lineTo(r, b)
+        lineTo(l, b)
+        lineTo(l, b - bar)
+        lineTo(r - k, t + bar)
+        lineTo(l, t + bar)
+        close()
+    }
+}
+
+/**
+ * The ZENITH mark: a sharp white Z lit from above, the version set through it in glossy green
+ * with a clean cut round it, and over it the sun's arc with the sun at its top – the zenith.
+ * Held down (like ColorOS's logo), it charges up: the arc fills with light from the horizon to
+ * the sun, a gold glint runs over the Z, the sun swells – a knock and a ring of light when it's
+ * full – and it settles back with a bounce when let go. [onTap] counts quick taps (the
  * Illuminati's secret).
  */
 @Composable
@@ -100,8 +134,7 @@ fun ZenithLogo(
     val haptics = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val charge = remember { Animatable(0f) }
-    val spin = remember { Animatable(0f) }
-    var full by remember { mutableStateOf(false) }
+    val burst = remember { Animatable(1f) }
     val holdModifier = if (!interactive && onTap == null) {
         Modifier
     } else {
@@ -113,10 +146,10 @@ fun ZenithLogo(
                 val job = if (interactive) {
                     scope.launch {
                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        launch { spin.animateTo(spin.value + 720f, tween(2600, easing = LinearEasing)) }
-                        charge.animateTo(1f, tween(900, easing = FastOutSlowInEasing))
-                        full = true
+                        charge.animateTo(1f, tween(1100, easing = FastOutSlowInEasing))
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        burst.snapTo(0f)
+                        burst.animateTo(1f, tween(750, easing = LinearEasing))
                     }
                 } else {
                     null
@@ -124,103 +157,145 @@ fun ZenithLogo(
                 waitForUpOrCancellation()?.consume()
                 job?.cancel()
                 val quick = System.currentTimeMillis() - start < 280
-                full = false
                 if (quick) onTap?.invoke()
-                if (interactive) scope.launch { charge.animateTo(0f, spring(dampingRatio = 0.35f, stiffness = 260f)) }
+                if (interactive) {
+                    scope.launch { burst.snapTo(1f) }
+                    scope.launch { charge.animateTo(0f, spring(dampingRatio = 0.4f, stiffness = 240f)) }
+                }
             }
         }
     }
     val density = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    val digits = remember(number, size, density) {
+        measurer.measure(
+            number,
+            TextStyle(
+                fontSize = with(density) { (size * 0.32f).toSp() },
+                fontWeight = FontWeight.Black,
+                fontFamily = FontFamily.SansSerif,
+                letterSpacing = with(density) { (size * -0.02f).toSp() },
+                // Leaning with the Z's diagonal.
+                textGeometricTransform = TextGeometricTransform(skewX = -0.2f),
+            ),
+        )
+    }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
+        Canvas(
             Modifier
                 .size(size)
                 .then(holdModifier)
                 .graphicsLayer {
                     val c = charge.value
-                    scaleX = 1f + 0.12f * c
-                    scaleY = 1f + 0.12f * c
-                    translationY = -c * size.toPx() * 0.04f
+                    scaleX = 1f + 0.06f * c
+                    scaleY = 1f + 0.06f * c
+                    // Its own layer, so the cut round the number only cuts the Z.
+                    compositingStrategy = CompositingStrategy.Offscreen
                 },
-            contentAlignment = Alignment.Center,
         ) {
-            Canvas(Modifier.matchParentSize()) {
-                val s = this.size.minDimension
-                val c = charge.value
-                // The sun: resting just above the Z; held, it climbs to the very top.
-                val sun = Offset(this.size.width / 2f, s * (0.13f - 0.08f * c))
-                val glowR = s * (0.32f + 0.25f * c)
-                drawCircle(
-                    Brush.radialGradient(listOf(ZenithSun.copy(alpha = 0.45f + 0.35f * c), ZenithSun.copy(alpha = 0.08f), Color.Transparent), center = sun, radius = glowR),
-                    radius = glowR,
-                    center = sun,
-                )
-                // Its rays: turning and stretching while held.
-                rotate(spin.value, sun) {
-                    val rays = 12
-                    for (i in 0 until rays) {
-                        val a = i * (2 * PI / rays)
-                        val inner = s * 0.075f
-                        val outer = s * (0.11f + 0.09f * c) * (if (i % 2 == 0) 1f else 0.75f)
-                        drawLine(
-                            ZenithSun.copy(alpha = 0.75f),
-                            sun + Offset(cos(a).toFloat() * inner, sin(a).toFloat() * inner),
-                            sun + Offset(cos(a).toFloat() * outer, sin(a).toFloat() * outer),
-                            strokeWidth = s * 0.018f,
-                            cap = StrokeCap.Round,
-                        )
-                    }
-                }
-                drawCircle(
-                    Brush.radialGradient(listOf(Color.White, ZenithSun), center = sun - Offset(s * 0.015f, s * 0.015f), radius = s * 0.06f),
-                    radius = s * 0.055f,
-                    center = sun,
-                )
-                // The Z: a stroke of white light with a soft glow behind it.
-                val z = Path().apply {
-                    moveTo(s * 0.2f, s * 0.3f)
-                    lineTo(s * 0.8f, s * 0.3f)
-                    lineTo(s * 0.18f, s * 0.8f)
-                    lineTo(s * 0.84f, s * 0.8f)
-                }
-                val zx = (this.size.width - s) / 2f
-                translate(zx, 0f) {
-                    drawPath(z, Color.White.copy(alpha = 0.18f + 0.25f * c), style = Stroke(s * 0.16f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                    drawPath(
-                        z,
-                        Brush.linearGradient(listOf(Color.White, Color(0xFFE6F2FF), Color.White), Offset(0f, s * 0.3f), Offset(s, s * 0.8f)),
-                        style = Stroke(s * 0.075f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            val s = this.size.minDimension
+            val x0 = (this.size.width - s) / 2f
+            val cx = x0 + s * 0.5f
+            val c = charge.value
+            // The sun's way: an arc over the Z, its top the zenith.
+            val arcC = Offset(cx, s * 0.62f)
+            val arcR = s * 0.46f
+            val arcBox = Offset(arcC.x - arcR, arcC.y - arcR)
+            val arcSize = Size(arcR * 2f, arcR * 2f)
+            val sun = Offset(cx, arcC.y - arcR)
+            val glowR = s * (0.2f + 0.14f * c)
+            drawCircle(
+                Brush.radialGradient(listOf(ZenithSun.copy(alpha = 0.4f + 0.4f * c), ZenithSun.copy(alpha = 0.1f), Color.Transparent), center = sun, radius = glowR),
+                glowR,
+                sun,
+            )
+            drawArc(
+                Brush.horizontalGradient(
+                    listOf(Color.Transparent, Color.White.copy(alpha = 0.5f), ZenithSun, Color.White.copy(alpha = 0.5f), Color.Transparent),
+                    startX = arcC.x - arcR,
+                    endX = arcC.x + arcR,
+                ),
+                startAngle = 205f,
+                sweepAngle = 130f,
+                useCenter = false,
+                topLeft = arcBox,
+                size = arcSize,
+                style = Stroke(s * 0.016f, cap = StrokeCap.Round),
+            )
+            if (c > 0.01f) {
+                // Held: the way lights up, from the horizon over the zenith.
+                drawArc(ZenithSun.copy(alpha = 0.3f), 205f, 130f * c, false, arcBox, arcSize, style = Stroke(s * 0.055f, cap = StrokeCap.Round))
+                drawArc(Color.White, 205f, 130f * c, false, arcBox, arcSize, style = Stroke(s * 0.02f, cap = StrokeCap.Round))
+            }
+            // The sun at the zenith: white-hot, gold at its edge.
+            val sunR = s * 0.05f * (1f + 0.4f * c)
+            drawCircle(
+                Brush.radialGradient(listOf(Color.White, Color(0xFFFFF1B8), ZenithSun), center = sun - Offset(sunR * 0.3f, sunR * 0.3f), radius = sunR * 1.4f),
+                sunR,
+                sun,
+            )
+            // The Z: sharp, white, lit from above.
+            val z = zenithZ(s, x0)
+            drawPath(z, Brush.verticalGradient(listOf(Color.White, Color(0xFFF3F7FB), Color(0xFFC7D2E0)), startY = s * 0.3f, endY = s * 0.86f))
+            if (c > 0.01f) {
+                // A gold glint running over it while it charges.
+                clipPath(z) {
+                    val band = x0 + s * (-0.2f + 1.4f * c)
+                    drawRect(
+                        Brush.linearGradient(
+                            listOf(Color.Transparent, ZenithSun.copy(alpha = 0.55f), Color.Transparent),
+                            start = Offset(band - s * 0.16f, s * 0.3f),
+                            end = Offset(band + s * 0.16f, s * 0.9f),
+                        ),
                     )
                 }
             }
-            // The version, green, written through the Z.
-            Text(
-                number,
-                style = TextStyle(
-                    brush = Brush.verticalGradient(listOf(lerp(ZenithGreen, Color.White, 0.25f), ZenithGreen, ZenithGreenDeep)),
-                    fontSize = with(density) { (size * 0.42f).toSp() },
-                    fontWeight = FontWeight.Black,
-                    fontStyle = FontStyle.Italic,
-                    letterSpacing = with(density) { (size * -0.02f).toSp() },
-                    shadow = Shadow(Color.Black.copy(alpha = 0.55f), Offset(0f, 4f), 14f),
-                ),
-                modifier = Modifier
-                    .padding(top = size * 0.1f)
-                    .graphicsLayer {
-                        val c = charge.value
-                        scaleX = 1f + 0.08f * c
-                        scaleY = 1f + 0.08f * c
-                    },
+            // The number, set through the Z: a clean cut round it, then glossy green.
+            val fontPx = s * 0.32f
+            val glyph = fontPx * 0.71f
+            val baseline = s * 0.58f + glyph / 2f
+            val tl = Offset(cx - digits.size.width / 2f, baseline - digits.firstBaseline)
+            // (The text's gradients are in its own space: from the top of the digits to their foot.)
+            val foot = digits.firstBaseline
+            val head = foot - glyph
+            drawText(digits, color = Color.Black, topLeft = tl, drawStyle = Stroke(s * 0.04f, join = StrokeJoin.Round), blendMode = BlendMode.Clear)
+            drawText(
+                digits,
+                brush = Brush.verticalGradient(listOf(Color(0xFFC8FFE0), ZenithGreen, ZenithGreenDeep), startY = head, endY = foot),
+                topLeft = tl,
             )
+            drawText(
+                digits,
+                brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.Transparent), startY = head, endY = head + glyph * 0.55f),
+                topLeft = tl,
+            )
+            drawText(digits, color = Color.White.copy(alpha = 0.3f), topLeft = tl, drawStyle = Stroke(s * 0.006f))
+            // Full: a ring of light going out from the sun.
+            val b = burst.value
+            if (b < 1f) {
+                drawCircle(ZenithSun.copy(alpha = (1f - b) * 0.85f), s * (0.06f + 0.55f * b), sun, style = Stroke(s * 0.014f * (1f - b) + 1f))
+            }
         }
         if (caption != null) {
+            // "ZENITH 19": the name in white, the number in ZENITH's green.
+            val words = caption.split(' ')
+            val last = words.last()
+            val text = buildAnnotatedString {
+                if (words.size > 1 && last.firstOrNull()?.isDigit() == true) {
+                    append(words.dropLast(1).joinToString(" "))
+                    append(" ")
+                    withStyle(SpanStyle(color = ZenithGreen)) { append(last) }
+                } else {
+                    append(caption)
+                }
+            }
             Text(
-                caption,
-                color = Color.White.copy(alpha = 0.9f),
+                text,
+                color = Color.White,
                 fontSize = with(density) { (size * 0.1f).toSp() },
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 2.sp,
-                modifier = Modifier.padding(top = size * 0.04f),
+                fontWeight = FontWeight.Medium,
+                letterSpacing = with(density) { (size * 0.025f).toSp() },
+                modifier = Modifier.padding(top = size * 0.02f),
             )
         }
     }
