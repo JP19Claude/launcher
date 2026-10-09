@@ -1,5 +1,11 @@
 ZENITH 19 auf ClaudeOS 6.0 „Helios“ – aus OMEGA UI wird ZENITH, die Sonne im höchsten Punkt
 
+✊ Das Z zum Anfassen
+• Überall antwortet das ZENITH-Z: drücken lässt es grün glühen, tippen und halten machen verschiedene Dinge
+• Seitenpunkte, Suchleiste, Now Brief und ZENITH-Menü: ZENITH-Menü, Claude, geheime Codes
+• Neues Widget „ZENITH-Z“: das Metall-Z groß, sein grünes Licht ist der Akku
+• Größeres ZENITH-Dock mit größeren Icons
+
 ⬛ ZENITH Metall
 • Schluss mit Glas: jede Fläche im System aus dunklem Metall wie das Logo – Widgets, Icons, Menüs, Einstellungen, Suche, Drawer
 • Silberne Oberkante, grünes ZENITH-Licht an der Unterkante, grünes Licht von unten statt bunter Farben

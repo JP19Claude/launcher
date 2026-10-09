@@ -134,17 +134,17 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
         DockStyle.Zenith -> androidx.compose.foundation.layout.BoxWithConstraints(
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp)
-                .drawBehind { drawZenithPlate(slant = size.height * 0.34f, unit = 170.dp.toPx()) },
+                .drawBehind { drawZenithPlate(slant = size.height * 0.3f, unit = 190.dp.toPx()) },
         ) {
-            // Every icon the same size, as big as fits: each takes its icon plus 18 dp of cell.
-            val inner = maxWidth - 36.dp
-            val fit = ((inner / apps.size.coerceAtLeast(1)).value - 22f).toInt()
-            val iconSize = dockLook.iconSize.coerceAtMost(fit.coerceAtLeast(36))
+            // Big icons, every one the same size, as big as fits (up to 78 dp): each takes its
+            // icon plus 18 dp of cell.
+            val inner = maxWidth - 28.dp
+            val fit = ((inner / apps.size.coerceAtLeast(1)).value - 20f).toInt()
+            val iconSize = fit.coerceIn(36, 78)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 11.dp),
+                    .padding(horizontal = 14.dp, vertical = 17.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) { iconsSized(iconSize) }

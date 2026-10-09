@@ -838,6 +838,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                             NowBriefCard(
                                                 onAsk = { vm.askClaude(it) },
                                                 modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp),
+                                                onZ = { hubOpen = true },
                                             )
                                         } else if (settings.showClaudeCard) {
                                             ClaudeCard(
@@ -935,11 +936,13 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                     count = widgetPages + pages.size + libraryPages,
                                     position = { pagerState.currentPage + pagerState.currentPageOffsetFraction },
                                     modifier = Modifier.padding(bottom = 10.dp),
+                                    onZ = { hubOpen = true },
+                                    onZHold = { vm.askClaude() },
                                 )
                             }
                             // The App Library has its own search bar at the top.
                             if (settings.showSearchPill && !onLibraryPage) {
-                                SearchPill(onClick = { searchOpen = true })
+                                SearchPill(onClick = { searchOpen = true }, onZ = { vm.askClaude() }, onZHold = { hubOpen = true })
                             }
                         }
 
@@ -948,7 +951,13 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             actions = actions,
                             draggingKey = drag?.item?.key,
                             modifier = Modifier
-                                .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 10.dp)
+                                // ZENITH 19: the ZENITH dock nearly from edge to edge.
+                                .padding(
+                                    start = if (settings.dockStyle == dev.hearth.launcher.data.DockStyle.Zenith) 4.dp else 14.dp,
+                                    end = if (settings.dockStyle == dev.hearth.launcher.data.DockStyle.Zenith) 4.dp else 14.dp,
+                                    top = 12.dp,
+                                    bottom = 10.dp,
+                                )
                                 .onGloballyPositioned { dockBounds = it.boundsInRoot() },
                         )
                     }
@@ -1781,7 +1790,7 @@ private fun briefLine(hour: Int): String = when (hour) {
  * next alarm and the battery at a glance, and things to ask Claude with one tap.
  */
 @Composable
-private fun NowBriefCard(onAsk: (String?) -> Unit, modifier: Modifier = Modifier) {
+private fun NowBriefCard(onAsk: (String?) -> Unit, modifier: Modifier = Modifier, onZ: (() -> Unit)? = null) {
     val context = LocalContext.current
     val now by rememberNow()
     val battery by rememberBattery()
@@ -1840,9 +1849,10 @@ private fun NowBriefCard(onAsk: (String?) -> Unit, modifier: Modifier = Modifier
                 Text("NOW BRIEF", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.5.sp, style = OnWallpaperText)
                 Text("  ·  Claude", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, style = OnWallpaperText)
                 Spacer(Modifier.weight(1f))
+                // ZENITH 19: tap the Z for the ZENITH menu, hold it for Claude.
                 if (omega) {
-                    OmegaSign(16.sp)
-                    Spacer(Modifier.width(4.dp))
+                    OmegaSign(18.sp, onTap = onZ, onHold = { onAsk(null) })
+                    Spacer(Modifier.width(2.dp))
                 }
                 Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = Color.White.copy(alpha = 0.8f))
             }
@@ -2058,7 +2068,13 @@ private fun BatteryRing(battery: BatteryState) {
 
 /** Page indicator on a small glass capsule. */
 @Composable
-private fun PageDots(count: Int, position: () -> Float, modifier: Modifier = Modifier) {
+private fun PageDots(
+    count: Int,
+    position: () -> Float,
+    modifier: Modifier = Modifier,
+    onZ: (() -> Unit)? = null,
+    onZHold: (() -> Unit)? = null,
+) {
     // Hearth UI 14: the current page's dot stretches to a pill and flows along with the swipe
     // (drawn from the pager's position, so swiping never recomposes it).
     val dot = 6.dp
@@ -2069,10 +2085,11 @@ private fun PageDots(count: Int, position: () -> Float, modifier: Modifier = Mod
     LiquidGlass(cornerRadius = 12.dp, refraction = 6.dp, blur = 10.dp, modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
         // OMEGA UI 17.5: the Ω leads the page dots.
-        if (omega) OmegaSign(12.sp, Modifier.padding(start = 10.dp))
+        // ZENITH 19: tap the Z for the ZENITH menu, hold it for Claude.
+        if (omega) OmegaSign(15.sp, Modifier.padding(start = 4.dp), onTap = onZ, onHold = onZHold)
         Canvas(
             Modifier
-                .padding(start = if (omega) 7.dp else 11.dp, end = 11.dp, top = 7.dp, bottom = 7.dp)
+                .padding(start = if (omega) 2.dp else 11.dp, end = 11.dp, top = 7.dp, bottom = 7.dp)
                 .size(width = wide + (dot + gap) * (count - 1), height = dot),
         ) {
             val at = position()
@@ -2116,7 +2133,7 @@ private fun PageDots(count: Int, position: () -> Float, modifier: Modifier = Mod
 
 /** Glass capsule; swells and glows under the finger, like liquid glass. */
 @Composable
-private fun SearchPill(onClick: () -> Unit) {
+private fun SearchPill(onClick: () -> Unit, onZ: (() -> Unit)? = null, onZHold: (() -> Unit)? = null) {
     // Galaxy × Claude: the pill asks Claude first, like Galaxy AI's search bar.
     val galaxy = LocalSettings.current.galaxyClaude
     // OMEGA UI 17.3: OMEGA glass with OMEGA Fluid flowing round it and drifting inside.
@@ -2148,9 +2165,10 @@ private fun SearchPill(onClick: () -> Unit) {
             Spacer(Modifier.width(6.dp))
             Text(if (galaxy) "Frag Clawd oder suche" else "Suchen", color = Color.White, fontSize = 14.sp, style = OnWallpaperText)
             // OMEGA UI 17.5: and the Ω at its end.
+            // ZENITH 19: tap the Z for Claude, hold it for the ZENITH menu.
             if (LocalSettings.current.omegaGlass) {
-                Spacer(Modifier.width(8.dp))
-                OmegaSign(15.sp)
+                Spacer(Modifier.width(4.dp))
+                OmegaSign(15.sp, onTap = onZ, onHold = onZHold)
             }
         }
     }

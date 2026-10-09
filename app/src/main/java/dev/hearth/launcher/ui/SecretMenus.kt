@@ -965,11 +965,21 @@ fun HearthMenu(tiles: List<HubTile>, onSecret: () -> Unit, onClose: () -> Unit) 
                     Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        "$ZenithSymbol  ZENITH-Menü",
-                        style = TextStyle(brush = Brush.linearGradient(fluidPalette()), fontSize = 22.sp, fontWeight = FontWeight.Bold),
-                        modifier = Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onSecret() }) },
-                    )
+                    // ZENITH 19: the Z heads its menu – held until charged, the secret codes; tapped
+                    // as often as ZENITH's number, the Clawd Illuminati.
+                    val menuContext = androidx.compose.ui.platform.LocalContext.current
+                    val version = remember {
+                        runCatching { menuContext.packageManager.getPackageInfo(menuContext.packageName, 0).versionName }.getOrNull().orEmpty()
+                    }
+                    ZenithLogo(size = 64.dp, onTap = rememberCrystalTaps(version), onCharged = onSecret)
+                    Spacer(Modifier.width(8.dp))
+                    Column(Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onSecret() }) }) {
+                        Text(
+                            "ZENITH-Menü",
+                            style = TextStyle(brush = Brush.linearGradient(fluidPalette()), fontSize = 22.sp, fontWeight = FontWeight.Bold),
+                        )
+                        Text("Z halten: geheime Codes", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                    }
                     Spacer(Modifier.weight(1f))
                     // Claude Mythos: the Clawds have taken over this menu too.
                     MythosRow(30.dp)

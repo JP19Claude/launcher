@@ -123,7 +123,13 @@ fun rememberCrystalTaps(version: String): () -> Unit {
  * (with tinted glass), white otherwise – about as tall as a letter of [size].
  */
 @Composable
-fun OmegaSign(size: androidx.compose.ui.unit.TextUnit, modifier: Modifier = Modifier) {
+fun OmegaSign(
+    size: androidx.compose.ui.unit.TextUnit,
+    modifier: Modifier = Modifier,
+    /** ZENITH 19: the Z answers – tapped, this; held until charged, [onHold]. */
+    onTap: (() -> Unit)? = null,
+    onHold: (() -> Unit)? = null,
+) {
     val s = LocalSettings.current
     val palette = fluidPalette()
     val brush = if (s.omegaGlass) {
@@ -132,11 +138,7 @@ fun OmegaSign(size: androidx.compose.ui.unit.TextUnit, modifier: Modifier = Modi
         Brush.verticalGradient(listOf(Color.White, Color.White.copy(alpha = 0.75f)))
     }
     val width = with(androidx.compose.ui.platform.LocalDensity.current) { size.toDp() } * 1.3f
-    Canvas(modifier.size(width = width, height = width * ZenithZAspect)) {
-        // A soft shadow, then the Z.
-        drawZenithMark(this.size.width * 0.02f, this.size.height * 0.06f, this.size.width, androidx.compose.ui.graphics.SolidColor(Color.Black), alpha = 0.3f)
-        drawZenithMark(0f, 0f, this.size.width, brush)
-    }
+    ZenithSign(width, brush, modifier, onTap, onHold)
 }
 
 /**

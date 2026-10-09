@@ -109,7 +109,10 @@ fun ZenithLogo(
     interactive: Boolean = true,
     light: Float = 1f,
     onTap: (() -> Unit)? = null,
+    /** Held until it's fully charged: this happens (after the knock and the wave). */
+    onCharged: (() -> Unit)? = null,
 ) {
+    val charged by androidx.compose.runtime.rememberUpdatedState(onCharged)
     val haptics = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val charge = remember { Animatable(0f) }
@@ -127,6 +130,7 @@ fun ZenithLogo(
                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         charge.animateTo(1f, tween(1100, easing = FastOutSlowInEasing))
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        charged?.invoke()
                         burst.snapTo(0f)
                         burst.animateTo(1f, tween(800, easing = LinearEasing))
                     }

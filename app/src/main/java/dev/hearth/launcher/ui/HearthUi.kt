@@ -184,6 +184,19 @@ internal object HearthChangelog {
             summary = "Aus OMEGA UI wird ZENITH – die Sonne im höchsten Punkt, auf der neuen Basis ClaudeOS 6.0 „Helios“: ein neuer Name, ein neues Logo, eine neue Farbe, eine neue Uhr. Alles fühlt sich neu an, und die alten Easter Eggs bleiben.",
             sections = listOf(
                 ChangeSection(
+                    "Das Z zum Anfassen", Icons.Rounded.Favorite, Green,
+                    listOf(
+                        "Das ZENITH-Z antwortet jetzt überall: Drückst du es, sammelt sich grünes Licht dahinter und es wächst; kurz tippen macht eins, halten, bis es geladen ist – ein Klopfen und eine grüne Welle in Form des Z –, macht etwas anderes.",
+                        "Das Z vor den Seitenpunkten: tippen öffnet das ZENITH-Menü, halten Claude.",
+                        "Das Z an der Suchleiste: tippen öffnet Claude, halten das ZENITH-Menü.",
+                        "Das Z im Now Brief: tippen öffnet das ZENITH-Menü, halten Claude.",
+                        "Das ZENITH-Menü hat oben das Metall-Z: halten, bis es geladen ist, öffnet die geheimen Codes; 19-mal tippen die Clawd Illuminati.",
+                        "Neues Widget „ZENITH-Z“: das Metall-Z groß auf dem Startbildschirm – sein grünes Licht brennt so stark, wie der Akku voll ist; antippen lädt es auf, halten öffnet Claude, 19-mal tippen die Illuminati.",
+                        "Das ZENITH-Dock ist größer: fast von Rand zu Rand, höher, und die Icons bis zu 78 dp groß – alle gleich.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
                     "ZENITH Metall", Icons.Rounded.Home, Green,
                     listOf(
                         "Schluss mit Glas: Der neue Stil „ZENITH Metall“ macht jede Fläche im System zu dunklem, gebürstetem Metall wie das Logo – Widgets, Now Brief, App-Icons, Menüs, Einstellungen, Suche, App-Drawer, Schalterfelder und Fenster.",

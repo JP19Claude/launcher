@@ -63,6 +63,7 @@ import kotlin.math.sin
 @Composable
 fun InternalWidget(repo: WidgetRepository, id: Int, modifier: Modifier = Modifier) {
     when (remember(id) { repo.kindOf(id) }) {
+        HearthWidget.Zenith -> ZenithZWidget(modifier)
         HearthWidget.Photos -> PhotoWidget(repo, id, modifier)
         HearthWidget.Clock -> GlassAnalogClock(modifier)
         HearthWidget.Battery -> BatteryWidget(modifier)
