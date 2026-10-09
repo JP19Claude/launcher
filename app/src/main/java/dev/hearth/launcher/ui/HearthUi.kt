@@ -250,7 +250,8 @@ internal object HearthChangelog {
                     listOf(
                         "ZENITH 19: der Sonnenlauf – schieb die Sonne ihren Bogen hinauf bis in den Zenit; jeder der 19 Clawds am Horizont, den das Licht erreicht, wacht auf.",
                         "Das Egg-Museum: Im Software-Update unter Update-Verlauf lange auf eine alte Version drücken – ihr Easter Egg kommt wieder. Rubin, Laterne, Schmiede, Lupe, Glühwürmchen, Tresor, Kometen, Prisma … alle von ${dev.hearth.launcher.data.Brand.name} und ZENITH bleiben.",
-                        "Das ClaudeOS-Museum: lange auf die ClaudeOS-Version drücken – alle sechs ClaudeOS-Eggs von „Ember“ bis „Helios“, jedes mit seinem eigenen Namen.",
+                        "Die Ruhmeshalle: lange auf die ZENITH-Version drücken (Software-Update oder Über das Telefon) – jede große Version von Hearth 11 bis ZENITH 19, die ganzen und die .5er, jede mit ihrem Easter Egg.",
+                        "Die ClaudeOS-Ruhmeshalle: lange auf die ClaudeOS-Version drücken – alle sechs ClaudeOS-Eggs von „Ember“ bis „Helios“, jedes mit seinem eigenen Namen.",
                         "Rubin, die ZENITH-Insel, ZENITH Cloud, ZENITH Labs, die Clawd Illuminati und Claude Mythos sind weiter da – alles, was OMEGA hieß, heißt jetzt ZENITH.",
                     ),
                     hearth,
@@ -1613,7 +1614,7 @@ internal fun UpdateHistoryCard(releases: List<ChangeRelease>, app: ChangeApp, ac
         }
         if (onEgg != null) {
             Text(
-                "Egg-Museum: lange auf eine Version drücken – ihr Easter Egg kommt wieder. Lange auf die ClaudeOS-Version: das ClaudeOS-Museum.",
+                "Egg-Museum: lange auf eine Version drücken – ihr Easter Egg kommt wieder. Lange auf die Systemversion: die Ruhmeshalle; auf die ClaudeOS-Version: die ClaudeOS-Ruhmeshalle.",
                 color = accent.copy(alpha = 0.85f),
                 fontSize = 12.sp,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),

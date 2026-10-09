@@ -33,4 +33,5 @@ ZENITH 19 auf ClaudeOS 6.0 „Helios“ – aus OMEGA UI wird ZENITH, die Sonne 
 🥚 Easter Eggs
 • Neu: der Sonnenlauf – schieb die Sonne in den Zenit und weck 19 Clawds
 • Egg-Museum: lange auf eine alte Version im Update-Verlauf drücken – die Eggs von Hearth und OMEGA UI bleiben
-• ClaudeOS-Museum: lange auf die ClaudeOS-Version drücken – alle Eggs von Ember bis Helios
+• Ruhmeshalle: lange auf die ZENITH-Version drücken – jede große Version von Hearth 11 bis ZENITH 19 mit ihrem Egg
+• ClaudeOS-Ruhmeshalle: lange auf die ClaudeOS-Version drücken – alle Eggs von Ember bis Helios

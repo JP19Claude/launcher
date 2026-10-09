@@ -259,6 +259,9 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     // ZENITH 19, the ClaudeOS museum: held, the ClaudeOS version shows every ClaudeOS and its egg.
     var osMuseum by remember { mutableStateOf(false) }
     var osOld by remember { mutableStateOf<String?>(null) }
+    // ZENITH 19, the Ruhmeshalle: held, the system's version shows every big version and its egg.
+    var hall by remember { mutableStateOf(false) }
+    var hallEgg by remember { mutableStateOf<String?>(null) }
     var osTaps by remember { mutableIntStateOf(0) }
     var osLastTap by remember { mutableLongStateOf(0L) }
     var taps by remember { mutableIntStateOf(0) }
@@ -308,7 +311,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     }
 
     LaunchedEffect(Unit) { check() }
-    BackHandler(enabled = !egg && !osEgg && !osMuseum && osOld == null && museum == null, onBack = onClose)
+    BackHandler(enabled = !egg && !osEgg && !osMuseum && osOld == null && museum == null && !hall && hallEgg == null, onBack = onClose)
 
     val s = state
     val release = when (s) {
@@ -455,7 +458,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                         egg = true
                     }
                 }
-                InfoRow("$name-Version", current, Modifier.clickable(remember { MutableInteractionSource() }, indication = null, onClick = tapVersion))
+                InfoRow("$name-Version", current, Modifier.tapOrHold(remember { MutableInteractionSource() }, onTap = tapVersion, onHold = { hall = true }))
                 InfoRow(
                     "${dev.hearth.launcher.data.ClaudeOs.NAME}-Version",
                     "${dev.hearth.launcher.data.ClaudeOs.VERSION} („${dev.hearth.launcher.data.ClaudeOs.CODENAME}“)",
@@ -590,8 +593,10 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
             ClaudeOsVersionEgg { osEgg = false }
         }
         museum?.let { old -> HearthVersionEgg(old, name) { museum = null } }
+        if (hall) SystemHall(onPick = { hallEgg = it }, onClaudeOs = { osMuseum = true }, onClose = { hall = false })
         if (osMuseum) ClaudeOsMuseum(onPick = { osOld = it }, onClose = { osMuseum = false })
         osOld?.let { old -> ClaudeOsVersionEgg(old) { osOld = null } }
+        hallEgg?.let { old -> HearthVersionEgg(old, systemEra(old).system) { hallEgg = null } }
     }
 }
 

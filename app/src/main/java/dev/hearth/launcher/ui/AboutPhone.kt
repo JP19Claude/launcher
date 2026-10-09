@@ -269,6 +269,9 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
     // ZENITH 19, the ClaudeOS museum: held, the ClaudeOS version shows every ClaudeOS and its egg.
     var osMuseum by remember { mutableStateOf(false) }
     var osOld by remember { mutableStateOf<String?>(null) }
+    // ZENITH 19, the Ruhmeshalle: held, the system's version shows every big version and its egg.
+    var hall by remember { mutableStateOf(false) }
+    var hallEgg by remember { mutableStateOf<String?>(null) }
     var taps by remember { mutableIntStateOf(0) }
     var lastTap by remember { mutableLongStateOf(0L) }
     // Hearth UI's own easter egg, five taps on its version – next to ClaudeOS's.
@@ -296,7 +299,7 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
             groups = gatherSpecs(context)
         }
     }
-    BackHandler(enabled = !osEgg && !hearthEgg && !eggMap && !labsOpen && !osMuseum && osOld == null, onBack = onClose)
+    BackHandler(enabled = !osEgg && !hearthEgg && !eggMap && !labsOpen && !osMuseum && osOld == null && !hall && hallEgg == null, onBack = onClose)
     val name = remember { phoneName(context) }
 
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF070912), Color(0xFF050506))))) {
@@ -385,15 +388,19 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                                             },
                                             onHold = { osMuseum = true },
                                         )
-                                        spec.hearthEgg -> Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
-                                            val now = System.currentTimeMillis()
-                                            hearthTaps = if (now - hearthLastTap < 1500) hearthTaps + 1 else 1
-                                            hearthLastTap = now
-                                            if (hearthTaps >= 5) {
-                                                hearthTaps = 0
-                                                hearthEgg = true
-                                            }
-                                        }
+                                        spec.hearthEgg -> Modifier.tapOrHold(
+                                            remember { MutableInteractionSource() },
+                                            onTap = {
+                                                val now = System.currentTimeMillis()
+                                                hearthTaps = if (now - hearthLastTap < 1500) hearthTaps + 1 else 1
+                                                hearthLastTap = now
+                                                if (hearthTaps >= 5) {
+                                                    hearthTaps = 0
+                                                    hearthEgg = true
+                                                }
+                                            },
+                                            onHold = { hall = true },
+                                        )
                                         spec.labs -> Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
                                             if (HearthLabs.unlocked) {
                                                 labsHint = "ZENITH Labs ist schon freigeschaltet"
@@ -481,8 +488,10 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
         AnimatedVisibility(osEgg, enter = fadeIn(tween(500)), exit = fadeOut(tween(300))) {
             ClaudeOsVersionEgg { osEgg = false }
         }
+        if (hall) SystemHall(onPick = { hallEgg = it }, onClaudeOs = { osMuseum = true }, onClose = { hall = false })
         if (osMuseum) ClaudeOsMuseum(onPick = { osOld = it }, onClose = { osMuseum = false })
         osOld?.let { old -> ClaudeOsVersionEgg(old) { osOld = null } }
+        hallEgg?.let { old -> HearthVersionEgg(old, systemEra(old).system) { hallEgg = null } }
         AnimatedVisibility(eggMap, enter = fadeIn(tween(300)), exit = fadeOut(tween(250))) {
             EggMap { eggMap = false }
         }
