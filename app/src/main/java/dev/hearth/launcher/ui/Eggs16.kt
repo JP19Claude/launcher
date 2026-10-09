@@ -288,7 +288,7 @@ internal fun AuroraEgg(onClose: () -> Unit) {
             Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 36.dp, start = 24.dp, end = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("${ClaudeOs.full} „${ClaudeOs.CODENAME}“", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Text("${LocalClaudeOsEra.current.full} „${LocalClaudeOsEra.current.codename}“", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             Text(
                 if (ribbons.size >= 5) "Der Himmel ist voller Nordlicht. 🌌" else "Mal mit dem Finger Nordlichter an den Himmel · ${ribbons.size}/5",
                 color = Color.White.copy(alpha = 0.6f),

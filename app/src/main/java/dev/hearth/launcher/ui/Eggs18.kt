@@ -238,7 +238,7 @@ internal fun MythosEgg(onClose: () -> Unit) {
             Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 36.dp, start = 24.dp, end = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("${ClaudeOs.full} „${ClaudeOs.CODENAME}“", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Text("${LocalClaudeOsEra.current.full} „${LocalClaudeOsEra.current.codename}“", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(4.dp))
             Text(
                 if (done) "Der Rat ist versammelt. Mythos ist erwacht. ✦" else "Halte den Finger auf das Dunkel und lass den Mythos erwachen.",

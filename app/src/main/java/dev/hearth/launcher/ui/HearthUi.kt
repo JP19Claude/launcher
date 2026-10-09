@@ -239,6 +239,7 @@ internal object HearthChangelog {
                     listOf(
                         "ZENITH 19: der Sonnenlauf – schieb die Sonne ihren Bogen hinauf bis in den Zenit; jeder der 19 Clawds am Horizont, den das Licht erreicht, wacht auf.",
                         "Das Egg-Museum: Im Software-Update unter Update-Verlauf lange auf eine alte Version drücken – ihr Easter Egg kommt wieder. Rubin, Laterne, Schmiede, Lupe, Glühwürmchen, Tresor, Kometen, Prisma … alle von Hearth und OMEGA UI bleiben.",
+                        "Das ClaudeOS-Museum: lange auf die ClaudeOS-Version drücken – alle sechs ClaudeOS-Eggs von „Ember“ bis „Helios“, jedes mit seinem eigenen Namen.",
                         "Rubin, Ω, OMEGA-Insel, OMEGA Cloud, die Clawd Illuminati und Claude Mythos sind weiter da.",
                     ),
                     hearth,
@@ -1601,7 +1602,7 @@ internal fun UpdateHistoryCard(releases: List<ChangeRelease>, app: ChangeApp, ac
         }
         if (onEgg != null) {
             Text(
-                "Egg-Museum: lange auf eine Version drücken – ihr Easter Egg kommt wieder.",
+                "Egg-Museum: lange auf eine Version drücken – ihr Easter Egg kommt wieder. Lange auf die ClaudeOS-Version: das ClaudeOS-Museum.",
                 color = accent.copy(alpha = 0.85f),
                 fontSize = 12.sp,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),

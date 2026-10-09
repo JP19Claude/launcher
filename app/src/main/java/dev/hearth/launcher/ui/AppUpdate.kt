@@ -256,6 +256,9 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     var museum by remember { mutableStateOf<String?>(null) }
     // ClaudeOS has its own easter egg, like Android's under One UI.
     var osEgg by remember { mutableStateOf(false) }
+    // ZENITH 19, the ClaudeOS museum: held, the ClaudeOS version shows every ClaudeOS and its egg.
+    var osMuseum by remember { mutableStateOf(false) }
+    var osOld by remember { mutableStateOf<String?>(null) }
     var osTaps by remember { mutableIntStateOf(0) }
     var osLastTap by remember { mutableLongStateOf(0L) }
     var taps by remember { mutableIntStateOf(0) }
@@ -305,7 +308,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     }
 
     LaunchedEffect(Unit) { check() }
-    BackHandler(enabled = !egg && !osEgg, onBack = onClose)
+    BackHandler(enabled = !egg && !osEgg && !osMuseum && osOld == null && museum == null, onBack = onClose)
 
     val s = state
     val release = when (s) {
@@ -456,15 +459,19 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                 InfoRow(
                     "${dev.hearth.launcher.data.ClaudeOs.NAME}-Version",
                     "${dev.hearth.launcher.data.ClaudeOs.VERSION} („${dev.hearth.launcher.data.ClaudeOs.CODENAME}“)",
-                    Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
-                        val now = System.currentTimeMillis()
-                        osTaps = if (now - osLastTap < 1500) osTaps + 1 else 1
-                        osLastTap = now
-                        if (osTaps >= 5) {
-                            osTaps = 0
-                            osEgg = true
-                        }
-                    },
+                    Modifier.tapOrHold(
+                        remember { MutableInteractionSource() },
+                        onTap = {
+                            val now = System.currentTimeMillis()
+                            osTaps = if (now - osLastTap < 1500) osTaps + 1 else 1
+                            osLastTap = now
+                            if (osTaps >= 5) {
+                                osTaps = 0
+                                osEgg = true
+                            }
+                        },
+                        onHold = { osMuseum = true },
+                    ),
                 )
                 InfoRow("Build-Nummer", buildNumber)
                 if (release != null) InfoRow("Neue Version", "${release.version} · ${megabytes(release.size)}")
@@ -583,6 +590,8 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
             ClaudeOsVersionEgg { osEgg = false }
         }
         museum?.let { old -> HearthVersionEgg(old, name) { museum = null } }
+        if (osMuseum) ClaudeOsMuseum(onPick = { osOld = it }, onClose = { osMuseum = false })
+        osOld?.let { old -> ClaudeOsVersionEgg(old) { osOld = null } }
     }
 }
 
@@ -1179,10 +1188,10 @@ internal fun ClaudeOsEgg(onClose: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                dev.hearth.launcher.data.ClaudeOs.full,
+                LocalClaudeOsEra.current.full,
                 style = TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 34.sp, fontWeight = FontWeight.Bold),
             )
-            Text("Codename „${dev.hearth.launcher.data.ClaudeOs.CODENAME}“", color = Color.White.copy(alpha = 0.75f), fontSize = 15.sp)
+            Text("Codename „${LocalClaudeOsEra.current.codename}“", color = Color.White.copy(alpha = 0.75f), fontSize = 15.sp)
             Spacer(Modifier.height(6.dp))
             Text(
                 if (clawds) "Die Clawds sind los! 🎉" else "Dreh den Stern im Kreis",

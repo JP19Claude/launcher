@@ -82,15 +82,18 @@ internal fun versionNumber(version: String): Float =
 
 /** ClaudeOS's egg for the ClaudeOS that's running. */
 @Composable
-internal fun ClaudeOsVersionEgg(onClose: () -> Unit) {
-    val number = versionNumber(ClaudeOs.VERSION)
-    when {
-        number >= 6f -> HeliosEgg(onClose)
-        number >= 5f -> MythosEgg(onClose)
-        number >= 4f -> AuroraEgg(onClose)
-        number >= 3f -> NovaEgg(onClose)
-        number >= 2f -> BlazeEgg(onClose)
-        else -> ClaudeOsEgg(onClose)
+internal fun ClaudeOsVersionEgg(version: String = ClaudeOs.VERSION, onClose: () -> Unit) {
+    val number = versionNumber(version)
+    // ZENITH 19: the museum opens older ones too – each egg shows its own ClaudeOS.
+    androidx.compose.runtime.CompositionLocalProvider(LocalClaudeOsEra provides claudeOsEra(version)) {
+        when {
+            number >= 6f -> HeliosEgg(onClose)
+            number >= 5f -> MythosEgg(onClose)
+            number >= 4f -> AuroraEgg(onClose)
+            number >= 3f -> NovaEgg(onClose)
+            number >= 2f -> BlazeEgg(onClose)
+            else -> ClaudeOsEgg(onClose)
+        }
     }
 }
 
@@ -643,10 +646,10 @@ internal fun BlazeEgg(onClose: () -> Unit) {
         }
         Column(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 70.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                ClaudeOs.full,
+                LocalClaudeOsEra.current.full,
                 style = TextStyle(brush = Brush.linearGradient(FireColors), fontSize = 40.sp, fontWeight = FontWeight.Bold),
             )
-            Text("Codename „${ClaudeOs.CODENAME}“", color = Color.White.copy(alpha = 0.8f), fontSize = 16.sp)
+            Text("Codename „${LocalClaudeOsEra.current.codename}“", color = Color.White.copy(alpha = 0.8f), fontSize = 16.sp)
             Spacer(Modifier.height(6.dp))
             Text(
                 if (blaze) "Blaze! Die Clawds tanzen ums Feuer 🔥" else "Wisch übers Display und fach das Feuer an",
@@ -1083,7 +1086,7 @@ internal fun NovaEgg(onClose: () -> Unit) {
             )
         }
         Column(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 36.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("${ClaudeOs.full} · ${ClaudeOs.CODENAME}", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Text("${LocalClaudeOsEra.current.full} · ${LocalClaudeOsEra.current.codename}", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             Text(
                 when {
                     formed -> "Ein neuer Stern: Claudes Stern ✨ · Tippen für eine neue Nova"

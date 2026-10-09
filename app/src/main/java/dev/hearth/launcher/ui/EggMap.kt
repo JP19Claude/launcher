@@ -45,7 +45,7 @@ private class EggSpot(val id: String, val name: String, val where: String)
 /** All of Hearth's easter eggs and how to find them. */
 private val EggSpots = listOf(
     EggSpot("version", "ZENITH-Version", "Software-Update oder Über das Telefon: fünfmal schnell auf die ZENITH-Version tippen. Jede große Version hat ein eigenes Egg (19: Sonnenlauf, 18.5: Lupe, 18: Schmiede, 17.5: Laterne, 17: Rubin, 16: Glühwürmchen, 15.5: Funken, 15: Tresor, 14.5: Kometen, 14: Prisma, 13.5: Tropfen, 13: Seide …)."),
-    EggSpot("claudeos", "ClaudeOS", "Software-Update oder Über das Telefon: fünfmal schnell auf die ClaudeOS-Version tippen und dann: ClaudeOS 6 „Helios“ – bei der Sonnenfinsternis den Mond von der Sonne schieben (ClaudeOS 5 „Mythos“: den Finger halten, bis der Rat erscheint; ClaudeOS 4 „Aurora“: Nordlichter an den Himmel malen; ClaudeOS 3 „Nova“: den Stern zur Supernova bringen)."),
+    EggSpot("claudeos", "ClaudeOS", "Software-Update oder Über das Telefon: fünfmal schnell auf die ClaudeOS-Version tippen (lange drücken: das ClaudeOS-Museum mit allen Eggs) und dann: ClaudeOS 6 „Helios“ – bei der Sonnenfinsternis den Mond von der Sonne schieben (ClaudeOS 5 „Mythos“: den Finger halten, bis der Rat erscheint; ClaudeOS 4 „Aurora“: Nordlichter an den Himmel malen; ClaudeOS 3 „Nova“: den Stern zur Supernova bringen)."),
     EggSpot("footer", "Gebaut mit Claude", "Einstellungen ganz unten: siebenmal auf „Hearth · gebaut mit Claude“ tippen."),
     EggSpot("clock", "Uhr", "Startbildschirm: fünfmal schnell auf die Uhr tippen."),
     EggSpot("spin", "Glas-Uhr", "Das Glas-Uhr-Widget dreimal schnell antippen – es dreht sich."),

@@ -144,7 +144,7 @@ internal fun HeliosEgg(onClose: () -> Unit) {
             Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 36.dp, start = 24.dp, end = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("${ClaudeOs.full} „${ClaudeOs.CODENAME}“", color = if (day > 0.6f) Color(0xFF0B2A1A) else Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Text("${LocalClaudeOsEra.current.full} „${LocalClaudeOsEra.current.codename}“", color = if (day > 0.6f) Color(0xFF0B2A1A) else Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(4.dp))
             Text(
                 if (done) "Helios ist frei – die Sonne von ClaudeOS 6 scheint wieder. ☀" else "Sonnenfinsternis. Schieb den Mond von der Sonne.",
