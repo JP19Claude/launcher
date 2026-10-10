@@ -42,6 +42,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -264,6 +265,10 @@ fun ClawdIlluminationScreen(
             MythosCard(settings.mythos) { v -> onChange { it.copy(mythos = v) } }
             Spacer(Modifier.height(18.dp))
 
+            // ZENITH 19: Projekt Zenith lives only here, behind a secret password.
+            IlluminationSection("◈ Projekt Zenith") {
+                ProjectZenithGate(settings.projectZenith, settings.animations) { v -> onChange { it.copy(projectZenith = v) } }
+            }
             IlluminationSection("Ƶ System") {
                 IlluminationSwitch(
                     "⚡", "Z-Overdrive",
@@ -325,7 +330,6 @@ fun ClawdIlluminationScreen(
                 IlluminationSwitch("✨", "Atmosphäre", "Die Vorteile aus „Atmosphäre“ (Schnee, Sterne …) auch auf dem Sperrbildschirm.", settings.lockAtmosphere) { v -> onChange { it.copy(lockAtmosphere = v) } }
                 IlluminationSwitch("🔋", "Akku", "Der Akkustand als kleiner Chip.", settings.lockBattery) { v -> onChange { it.copy(lockBattery = v) } }
                 IlluminationSwitch("Ƶ", "Z-Zeichen", "Das ZENITH-Z oben auf dem Sperrbildschirm.", settings.lockOmega) { v -> onChange { it.copy(lockOmega = v) } }
-                IlluminationSwitch("◈", "Projekt Zenith", "Das ganze System futuristisch: Hologramme, HUD, Computerschrift, ein Gitter-Horizont.", settings.projectZenith) { v -> onChange { it.copy(projectZenith = v) } }
                 IlluminationSwitch("⚡", "Z-Angriff überall", "Bei jedem Entsperren zieht ein riesiges Z aus grünem Licht über den Bildschirm – wie Zygardes Kern-Vollstrecker, über allen Apps.", settings.zenithStrikeSystem) { v -> onChange { it.copy(zenithStrikeSystem = v) } }
                 LockMessageField(settings.lockMessage) { v -> onChange { it.copy(lockMessage = v) } }
                 Text(
@@ -691,6 +695,103 @@ private fun saveAodPicture(context: android.content.Context, uri: android.net.Ur
     java.io.File(context.filesDir, name).outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, it) }
     name
 }.getOrNull()
+
+/**
+ * Projekt Zenith, only for those who know the password: switching it on asks for it (and the
+ * Z-Angriff greets the ones who got it right); switching it off never does.
+ */
+@Composable
+private fun ProjectZenithGate(on: Boolean, animate: Boolean, onToggle: (Boolean) -> Unit) {
+    var asking by remember { mutableStateOf(false) }
+    var typed by remember { mutableStateOf("") }
+    var wrong by remember { mutableStateOf(false) }
+    var strike by remember { mutableStateOf(false) }
+    fun tryOpen() {
+        if (dev.hearth.launcher.data.ProjectZenithLock.opens(typed)) {
+            asking = false
+            typed = ""
+            wrong = false
+            onToggle(true)
+            if (animate) strike = true
+        } else {
+            wrong = true
+        }
+    }
+    if (on) {
+        IlluminationSwitch("◈", "Projekt Zenith", "An – das ganze System futuristisch. Ausschalten geht ohne Passwort.", true) { v -> if (!v) onToggle(false) }
+    } else {
+        IlluminationSwitch("🔒", "Projekt Zenith", "Gesperrt. Nur wer das geheime Passwort kennt, kann es einschalten.", false) { v ->
+            if (v) {
+                asking = true
+                wrong = false
+            }
+        }
+        if (asking) {
+            Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color.White.copy(alpha = 0.06f))
+                        .border(1.dp, (if (wrong) Color(0xFFFF5A5F) else IlluminatiGold).copy(alpha = 0.6f), RoundedCornerShape(14.dp))
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                ) {
+                    if (typed.isEmpty()) Text("Passwort", color = Color.White.copy(alpha = 0.35f), fontSize = 15.sp)
+                    androidx.compose.foundation.text.BasicTextField(
+                        value = typed,
+                        onValueChange = {
+                            typed = it.take(40)
+                            wrong = false
+                        },
+                        singleLine = true,
+                        textStyle = TextStyle(color = Color.White, fontSize = 15.sp, letterSpacing = 2.sp),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(IlluminatiGold),
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+                        ),
+                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { tryOpen() }),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        if (wrong) "Falsches Passwort." else "Das Passwort steht nirgends im System.",
+                        color = if (wrong) Color(0xFFFF8A8E) else Color.White.copy(alpha = 0.45f),
+                        fontSize = 12.sp,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        "Abbrechen",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 14.sp,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable {
+                                asking = false
+                                typed = ""
+                                wrong = false
+                            }
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                    )
+                    Text(
+                        "Öffnen",
+                        color = IlluminatiGold,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .border(1.dp, IlluminatiGold.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+                            .clickable { tryOpen() }
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                    )
+                }
+            }
+        }
+    }
+    if (strike) ZenithStrikeOverlay { strike = false }
+}
 
 /** The lock screen's own message, typed in. */
 @Composable

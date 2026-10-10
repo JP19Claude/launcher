@@ -552,8 +552,6 @@ fun LauncherScreen(vm: LauncherViewModel) {
             null
         }
     }
-    // ZENITH 19: the Z-Angriff over the home screen (switching Projekt Zenith on, for one).
-    var strikeNow by remember { mutableStateOf(false) }
     // ZENITH 19: after the phone starts, the Z lights up once.
     var bootIntro by remember { mutableStateOf(settings.zenithBootIntro && dev.hearth.launcher.BuildConfig.ALL_IN_ONE && ZenithBoot.isNewStart(context)) }
     val menuBlur by animateDpAsState(
@@ -1236,12 +1234,6 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             if (settings.galaxyClaude) drawerOpen = true else searchOpen = true
                         },
                         HubTile("Clawd", Icons.Rounded.Face, Color(0xFFD97757)) { vm.askClaude() },
-                        // ZENITH 19: Projekt Zenith on and off, with the Z-Angriff.
-                        HubTile(if (settings.projectZenith) "Projekt Zenith\naus" else "Projekt\nZenith", Icons.Rounded.Star, Color(0xFF2FD27A)) {
-                            val on = !settings.projectZenith
-                            vm.updateSettings { it.copy(projectZenith = on) }
-                            if (on && settings.zenithStrike) strikeNow = true
-                        },
                         // ZENITH 19: the ZENITH-Tresor.
                         HubTile("ZENITH-\nTresor", Icons.Rounded.Lock, Color(0xFF15965A)) {
                             runCatching { context.startActivity(Intent(context, dev.hearth.launcher.VaultActivity::class.java)) }
@@ -1322,7 +1314,6 @@ fun LauncherScreen(vm: LauncherViewModel) {
             if (bootIntro && !showOmega) {
                 ZenithBootIntro { bootIntro = false }
             }
-            if (strikeNow) ZenithStrikeOverlay { strikeNow = false }
 
             drag?.let { d ->
                 DragOverlay(

@@ -157,8 +157,17 @@ object ZenithShield {
     }
 
     /** 0..100: how well protected, from the [checks]. */
-    fun score(checks: List<Check>): Int =
-        (100 - checks.sumOf { if (it.level == Level.Bad) 25 else if (it.level == Level.Warn) 8 else 0 }).coerceIn(0, 100)
+    fun score(checks: List<Check>): Int {
+        var penalty = 0
+        checks.forEach { c ->
+            penalty += when (c.level) {
+                Level.Bad -> 25
+                Level.Warn -> 8
+                Level.Good -> 0
+            }
+        }
+        return (100 - penalty).coerceIn(0, 100)
+    }
 
     /** Every app with an icon and what Android lets it use (only what's actually granted). */
     fun apps(context: Context): List<AppAccess> {

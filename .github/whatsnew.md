@@ -23,7 +23,8 @@ ZENITH 19 auf ClaudeOS 6.0 „Helios“ – aus OMEGA UI wird ZENITH, die Sonne 
 ◈ Projekt Zenith
 • Neuer Modus: das ganze System futuristisch – Hologramm-Flächen, grüne Hologramm-Icons, Computerschrift
 • Gitter-Horizont mit Z-Hologramm als Hintergrund, HUD-Uhr, HUD-Rahmen mit Scanlinie
-• Design → ZENITH, in den Illuminati oder im ZENITH-Menü
+• Geheim: nur in den Illuminati, nur mit Passwort
+• Keine Klammern mehr in den Ecken des Startbildschirms
 
 ✨ Hochwertiger
 • ZENITH Metall ruhiger: keine Leuchtflecken, klare silberne und grüne Linien, nur Grün und Silber

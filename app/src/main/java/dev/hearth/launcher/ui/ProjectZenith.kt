@@ -102,8 +102,8 @@ internal fun DrawScope.drawProjectWallpaper() {
 }
 
 /**
- * Projekt Zenith's frame round the home screen: brackets in the four corners, a readout along the
- * top, and now and then a scan line sweeping down over everything.
+ * Projekt Zenith's frame round the home screen: a readout along the top, and now and then a scan
+ * line sweeping down over everything (no brackets in the corners any more).
  */
 @Composable
 internal fun ProjectHudFrame(modifier: Modifier = Modifier) {
@@ -115,19 +115,6 @@ internal fun ProjectHudFrame(modifier: Modifier = Modifier) {
     val locale = Locale.getDefault()
     androidx.compose.foundation.layout.Box(modifier) {
         Canvas(androidx.compose.ui.Modifier.matchParentSize()) {
-            val inset = 10.dp.toPx()
-            val t0 = top.toPx() + 4.dp.toPx()
-            val l = 26.dp.toPx()
-            val sw = 2.dp.toPx()
-            val c = HudGreen.copy(alpha = 0.8f)
-            fun corner(at: Offset, dx: Float, dy: Float) {
-                drawLine(c, at, at + Offset(dx * l, 0f), strokeWidth = sw, cap = StrokeCap.Square)
-                drawLine(c, at, at + Offset(0f, dy * l), strokeWidth = sw, cap = StrokeCap.Square)
-            }
-            corner(Offset(inset, t0), 1f, 1f)
-            corner(Offset(size.width - inset, t0), -1f, 1f)
-            corner(Offset(inset, size.height - inset), 1f, -1f)
-            corner(Offset(size.width - inset, size.height - inset), -1f, -1f)
             // The scan line: a third of the time it sweeps down, otherwise it rests.
             val p = phase?.invoke()?.let { (it / (2f * PI.toFloat())) % 1f } ?: -1f
             if (p in 0f..0.33f) {
@@ -145,7 +132,7 @@ internal fun ProjectHudFrame(modifier: Modifier = Modifier) {
             fontSize = 10.sp,
             fontFamily = HudFont,
             letterSpacing = 1.5.sp,
-            modifier = Modifier.padding(start = 42.dp, top = top + 8.dp),
+            modifier = Modifier.padding(start = 20.dp, top = top + 8.dp),
         )
     }
 }

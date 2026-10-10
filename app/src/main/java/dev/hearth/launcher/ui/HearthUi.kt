@@ -233,12 +233,12 @@ internal object HearthChangelog {
                 ChangeSection(
                     "Projekt Zenith", Icons.Rounded.Star, Green,
                     listOf(
-                        "Ein neuer Modus, der das ganze System futuristisch macht: Design → ZENITH → Projekt Zenith, in den Illuminati oder als Kachel im ZENITH-Menü (mit Z-Angriff beim Einschalten).",
+                        "Ein geheimer Modus, der das ganze System futuristisch macht – nur in den Illuminati zu finden und nur mit einem geheimen Passwort einzuschalten (mit Z-Angriff, wenn es stimmt). Ausschalten geht jederzeit.",
                         "Jede Fläche wird ein Hologramm: dunkles Glas mit grünem Hauch, Scanlinien, ein feiner grüner Rahmen mit hellen Klammern an den Ecken und Strichmarken oben.",
                         "Alle App-Icons werden grüne Hologramme, Texte stehen in Computerschrift.",
                         "Der Hintergrund: ein leuchtender Horizont mit einem Gitterboden, darüber das Z als Drahtgitter-Hologramm, Lichtpunkte, Scanlinien.",
                         "Die HUD-Uhr: „ZENITH // ZEIT“, die Zeit groß in Computerziffern mit grünem Glühen, die Sekunden daneben, darunter Datum, Akku und Sonnenstand – in Klammern.",
-                        "Ein HUD-Rahmen um den Startbildschirm: Klammern in allen vier Ecken, oben eine Anzeige mit Datum und Akku, und ab und zu fährt eine Scanlinie über alles.",
+                        "Auf dem Startbildschirm oben eine Anzeige mit Datum und Akku, und ab und zu fährt eine Scanlinie über alles – ohne Klammern in den Ecken.",
                         "Das Dock wird eine Hologramm-Platte.",
                     ),
                     everyone,
