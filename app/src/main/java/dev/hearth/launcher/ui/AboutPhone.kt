@@ -90,6 +90,8 @@ private class Spec(
     val hearthEgg: Boolean = false,
     /** The build number: seven taps unlock OMEGA Labs, like Android's developer options. */
     val labs: Boolean = false,
+    /** ZENITH 19.6: five quick taps open this hidden menu. */
+    val secret: SecretMenu? = null,
 )
 
 private class SpecGroup(val title: String, val specs: List<Spec>)
@@ -209,7 +211,7 @@ private fun gatherSpecs(context: Context): List<SpecGroup> {
                 oneUiVersion()?.let { Spec("One UI-Version", it) },
                 Spec("Sicherheitspatch", Build.VERSION.SECURITY_PATCH),
                 Spec("Build", Build.DISPLAY),
-                System.getProperty("os.version")?.let { Spec("Kernel", it) },
+                System.getProperty("os.version")?.let { Spec("Kernel", it, secret = SecretMenu.Console) },
             ),
         ),
         SpecGroup(
@@ -233,7 +235,7 @@ private fun gatherSpecs(context: Context): List<SpecGroup> {
         SpecGroup(
             "Display",
             listOfNotNull(
-                Spec("Auflösung", "$w × $h"),
+                Spec("Auflösung", "$w × $h", secret = SecretMenu.Neon),
                 Spec("Pixeldichte", "${context.resources.displayMetrics.densityDpi} dpi"),
                 maxHz?.let { Spec("Bildrate", "bis ${it.toInt()} Hz" + (nowHz?.let { n -> " · jetzt ${n.toInt()} Hz" } ?: "")) },
             ),
@@ -241,7 +243,7 @@ private fun gatherSpecs(context: Context): List<SpecGroup> {
         SpecGroup(
             "Akku",
             listOfNotNull(
-                level?.let { Spec("Ladestand", "$it %" + if (plugged) " · lädt" else "", share = it / 100f) },
+                level?.let { Spec("Ladestand", "$it %" + if (plugged) " · lädt" else "", share = it / 100f, secret = SecretMenu.Snake) },
                 Spec("Zustand", health),
                 cycles?.let { Spec("Ladezyklen", "$it") },
                 temperature?.let { Spec("Temperatur", String.format(Locale.GERMAN, "%.1f °C", it / 10f)) },
@@ -286,6 +288,9 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
     LaunchedEffect(Unit) { HearthLabs.init(context) }
     var labsOpen by remember { mutableStateOf(false) }
     var labsTaps by remember { mutableIntStateOf(0) }
+    // ZENITH 19.6: quick taps on the lines that hide a menu, and on the "made by" line.
+    val secretTaps = remember { longArrayOf(0L, 0L) }
+    val creditTaps = remember { longArrayOf(0L, 0L) }
     var labsHint by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(labsHint) {
         if (labsHint != null) {
@@ -364,7 +369,18 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.pointerInput(Unit) {
-                        detectTapGestures(onLongPress = { eggMap = true })
+                        detectTapGestures(
+                            onLongPress = { eggMap = true },
+                            onTap = {
+                                val at = System.currentTimeMillis()
+                                creditTaps[0] = if (at - creditTaps[1] < 700) creditTaps[0] + 1 else 1
+                                creditTaps[1] = at
+                                if (creditTaps[0] >= 5) {
+                                    creditTaps[0] = 0
+                                    SecretRoutes.open(context, SecretMenu.Credits)
+                                }
+                            },
+                        )
                     },
                 )
                 Spacer(Modifier.height(18.dp))
@@ -434,6 +450,15 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                                                 }
                                                 left <= 4 -> labsHint = if (left == 1) "Noch 1 Tipp bis ZENITH Labs" else "Noch $left Tipps bis ZENITH Labs"
                                                 else -> Unit
+                                            }
+                                        }
+                                        spec.secret != null -> Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
+                                            val at = System.currentTimeMillis()
+                                            secretTaps[0] = if (at - secretTaps[1] < 1000) secretTaps[0] + 1 else 1
+                                            secretTaps[1] = at
+                                            if (secretTaps[0] >= 5) {
+                                                secretTaps[0] = 0
+                                                spec.secret?.let { SecretRoutes.open(context, it) }
                                             }
                                         }
                                         else -> Modifier

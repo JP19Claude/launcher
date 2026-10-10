@@ -200,9 +200,18 @@ internal object HearthChangelog {
                     everyone,
                 ),
                 ChangeSection(
+                    "Im System selbst zu finden", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Die Geheimmenüs öffnen sich nicht nur über Codes: Du findest sie, indem du das System anfasst.",
+                        "Im ZENITH-Menü lange auf Kacheln drücken. In „Über das Telefon“ bestimmte Zeilen fünfmal schnell antippen oder die „made by“-Zeile. Auf dem Startbildschirm die Uhr zur richtigen Minute antippen. In der Ruhmeshalle eine Zeit lange drücken. In den Einstellungen die Zeile ganz unten lange drücken. Im Core Enforcer Studio den Titel lange drücken.",
+                        "Die Easter-Egg-Karte verrät bei jedem Egg, wo es steckt.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
                     "Verstecke, die ein Wort brauchen", Icons.Rounded.Favorite, Terracotta,
                     listOf(
-                        "Sieben Verstecke öffnen sich nicht mit Zahlen, sondern mit dem richtigen Wort im Finder – aus den Hearth-, OMEGA- und ZENITH-Jahren: ein Kamin, ein alter Code, fließendes Licht, ein paar Scherze und mehr.",
+                        "Sieben Verstecke stammen aus den Hearth-, OMEGA- und ZENITH-Jahren: ein Kamin, ein alter Code, fließendes Licht, ein paar Scherze und mehr. Sie öffnen sich im System – und auch mit dem richtigen Wort im Finder.",
                         "Wo sie sind, verrät nur die Easter-Egg-Karte (Über das Telefon → „made by …“ lange drücken).",
                     ),
                     everyone,

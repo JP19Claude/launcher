@@ -9,9 +9,12 @@ ZENITH 19.6 „Verstecke“ auf ClaudeOS 6.0 „Helios“
 • *#9277# Blitz-Test: wie schnell bist du?
 • *#2733# Abspann: alle Zeiten, alle Namen
 
-🥚 Verstecke, die ein Wort brauchen
-• Sieben Verstecke öffnen sich mit dem richtigen Wort im Finder – aus den Hearth-, OMEGA- und ZENITH-Jahren
-• Wo sie sind, verrät nur die Easter-Egg-Karte
+👆 Im System selbst zu finden
+• Die Geheimmenüs öffnen sich nicht nur über Codes: Kacheln im ZENITH-Menü lange drücken, Zeilen in „Über das Telefon“ fünfmal antippen, die Uhr zur richtigen Minute, die Ruhmeshalle, die Einstellungen ganz unten, der Titel im Studio
+• Die Easter-Egg-Karte verrät bei jedem Egg, wo es steckt
+
+🥚 Verstecke aus den Hearth-, OMEGA- und ZENITH-Jahren
+• Ein Kamin, ein alter Code, fließendes Licht und ein paar Scherze – im System und mit dem richtigen Wort im Finder
 
 ✨ Kleine Funde überall
 • Im ZENITH-Monitor, im Schutzschild, im Core Enforcer Studio und auf der Uhr stecken kleine Eggs

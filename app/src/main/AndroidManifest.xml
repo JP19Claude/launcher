@@ -160,6 +160,12 @@
             android:exported="false"
             android:label="ZENITH-Schutzschild" />
 
+        <!-- ZENITH 19.6: the hidden menus, opened by touching the system. -->
+        <activity
+            android:name=".SecretActivity"
+            android:exported="false"
+            android:label="ZENITH" />
+
         <!-- "Telefoninfo": the phone, its specs, Hearth and ClaudeOS. -->
         <activity
             android:name=".AboutPhoneActivity"

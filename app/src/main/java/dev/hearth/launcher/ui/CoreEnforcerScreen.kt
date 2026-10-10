@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -36,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -108,7 +110,16 @@ fun CoreEnforcerScreen(repo: SettingsRepository, onClose: () -> Unit) {
                 Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     ZenithMark(color = ZenithGreen, width = 76.dp)
                     Spacer(Modifier.height(12.dp))
-                    Text("Core Enforcer Studio", color = VaultText, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Core Enforcer Studio",
+                        color = VaultText,
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        // ZENITH 19.6: held, the terminal.
+                        modifier = Modifier.pointerInput(Unit) {
+                            detectTapGestures(onLongPress = { SecretRoutes.open(context, SecretMenu.Console) })
+                        },
+                    )
                     Text(
                         "Bau dein System um. Alles, was du hier einstellst, gilt sofort.",
                         color = VaultDim,

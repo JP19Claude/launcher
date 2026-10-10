@@ -20,7 +20,9 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -365,7 +367,8 @@ private fun CodesMenu(onOpen: (SecretMenu) -> Unit, onClose: () -> Unit) {
             }
         }
         SecretCard("Weitere Verstecke") {
-            SecretValue("Wörter im Finder", "Manche Verstecke öffnen sich nicht mit Zahlen, sondern mit dem richtigen Wort. Die Easter-Egg-Karte verrät sie.")
+            SecretValue("Berühren statt tippen", "Die meisten Menüs öffnen sich auch im System selbst: Kacheln im ZENITH-Menü lange drücken, Zeilen in „Über das Telefon“ fünfmal antippen, die Uhr zur richtigen Minute, die Ruhmeshalle. Die Easter-Egg-Karte verrät wo.")
+            SecretValue("Wörter im Finder", "Manche Verstecke öffnen sich auch mit dem richtigen Wort im Finder.")
             SecretValue("ZENITH Labs", "Über das Telefon → siebenmal auf die Build-Nummer tippen")
             SecretValue("Easter-Egg-Karte", "Über das Telefon → lange auf „made by …“ drücken")
             SecretValue("Diese Liste", "Im ZENITH-Menü lange auf den Titel drücken")
@@ -966,12 +969,20 @@ private fun PowerButton(icon: ImageVector, label: String, color: Color, enabled:
 // The Hearth menu: everything one tap away
 // ---------------------------------------------------------------------------------------------
 
-class HubTile(val label: String, val icon: ImageVector, val color: Color, val onClick: () -> Unit)
+/** A tile of the ZENITH menu: tapped, [onClick]; held, [onLongClick] (a hidden menu, if the tile has one). */
+class HubTile(
+    val label: String,
+    val icon: ImageVector,
+    val color: Color,
+    val onLongClick: (() -> Unit)? = null,
+    val onClick: () -> Unit,
+)
 
 /**
  * The Hearth menu: a glass sheet from below with everything Hearth can do at hand. Holding
  * its title opens the list of secret codes.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HearthMenu(tiles: List<HubTile>, onSecret: () -> Unit, onClose: () -> Unit) {
     BackHandler(onBack = onClose)
@@ -1035,10 +1046,18 @@ fun HearthMenu(tiles: List<HubTile>, onSecret: () -> Unit, onClose: () -> Unit) 
                                 Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(18.dp))
-                                    .clickable {
-                                        onClose()
-                                        tile.onClick()
-                                    }
+                                    .combinedClickable(
+                                        onLongClick = tile.onLongClick?.let { hold ->
+                                            {
+                                                onClose()
+                                                hold()
+                                            }
+                                        },
+                                        onClick = {
+                                            onClose()
+                                            tile.onClick()
+                                        },
+                                    )
                                     .padding(vertical = 6.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {

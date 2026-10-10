@@ -105,6 +105,19 @@ import kotlin.random.Random
  * list at *#0000#.
  */
 
+/** ZENITH 19.6: the way to a hidden menu from somewhere in the system (a long press, quick taps, the clock). */
+internal object SecretRoutes {
+    fun open(context: Context, menu: SecretMenu) {
+        runCatching {
+            context.startActivity(
+                Intent(context, dev.hearth.launcher.SecretActivity::class.java)
+                    .putExtra(dev.hearth.launcher.SecretActivity.EXTRA, menu.name)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
+    }
+}
+
 private fun version(context: Context): String =
     runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
 

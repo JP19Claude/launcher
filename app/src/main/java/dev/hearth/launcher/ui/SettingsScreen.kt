@@ -927,15 +927,20 @@ fun SettingsScreen(
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-                            val now = System.currentTimeMillis()
-                            footerTaps[0] = if (now - footerTaps[1] < 800) footerTaps[0] + 1 else 1
-                            footerTaps[1] = now
-                            if (footerTaps[0] >= 7) {
-                                footerTaps[0] = 0
-                                EasterEggs.find(context, "footer")
-                            }
-                        }
+                        .tapOrHold(
+                            remember { MutableInteractionSource() },
+                            onTap = {
+                                val now = System.currentTimeMillis()
+                                footerTaps[0] = if (now - footerTaps[1] < 800) footerTaps[0] + 1 else 1
+                                footerTaps[1] = now
+                                if (footerTaps[0] >= 7) {
+                                    footerTaps[0] = 0
+                                    EasterEggs.find(context, "footer")
+                                }
+                            },
+                            // ZENITH 19.6: held, the old code.
+                            onHold = { SecretRoutes.open(context, SecretMenu.Konami) },
+                        )
                         .padding(vertical = 24.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,

@@ -210,8 +210,10 @@ private fun EraBadge(era: SystemEra) {
  * plays that egg again ([onPick] gets its version). [onClaudeOs] opens the ClaudeOS one.
  * Opened by holding the system's version.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun SystemHall(onPick: (String) -> Unit, onClaudeOs: () -> Unit, onClose: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     BackHandler(onBack = onClose)
     val current = remember { SystemEras.last().version }
     Box(
@@ -233,7 +235,7 @@ internal fun SystemHall(onPick: (String) -> Unit, onClaudeOs: () -> Unit, onClos
             Text("Ruhmeshalle", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
             Text(
-                "Jede große Version – von Hearth über Hearth UI und OMEGA UI bis ZENITH – mit ihrem eigenen Easter Egg. Tippe auf eine, um es noch einmal zu spielen.",
+                "Jede große Version – von Hearth über Hearth UI und OMEGA UI bis ZENITH – mit ihrem eigenen Easter Egg. Tippe auf eine, um es noch einmal zu spielen – und drück eine lange: Jede Zeit versteckt etwas.",
                 color = Color.White.copy(alpha = 0.65f),
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
@@ -276,7 +278,19 @@ internal fun SystemHall(onPick: (String) -> Unit, onClaudeOs: () -> Unit, onClos
                         .clip(RoundedCornerShape(22.dp))
                         .background(Color.White.copy(alpha = if (now) 0.11f else 0.06f))
                         .glassSheen(22.dp)
-                        .clickable { onPick(era.version) }
+                        // ZENITH 19.6: held, an era shows what hides in it – Hearth's fire, OMEGA's fluid, the zenith.
+                        .combinedClickable(
+                            onLongClick = {
+                                val hidden = when {
+                                    era.system.startsWith("Hearth") -> SecretMenu.Hearth
+                                    era.system.startsWith("OMEGA") -> SecretMenu.Fluid
+                                    era.system.startsWith("ZENITH") -> SecretMenu.Zenith
+                                    else -> null
+                                }
+                                hidden?.let { SecretRoutes.open(context, it) }
+                            },
+                            onClick = { onPick(era.version) },
+                        )
                         .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

@@ -1253,12 +1253,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 val dropOn by dev.hearth.launcher.data.GlimmerDrop.enabled.collectAsStateWithLifecycle()
                 HearthMenu(
                     tiles = listOfNotNull(
-                        HubTile("Einstellungen", Icons.Rounded.Settings, Color(0xFF8E8E93)) { settingsOpen = true },
+                        HubTile("Einstellungen", Icons.Rounded.Settings, Color(0xFF8E8E93), onLongClick = { SecretRoutes.open(context, SecretMenu.Hello) }) { settingsOpen = true },
                         HubTile("Finder", Icons.Rounded.Search, Color(0xFF3E91FF)) { searchOpen = true },
                         HubTile("Alle Apps", Icons.Rounded.Home, Color(0xFF30B0C7)) {
                             if (settings.galaxyClaude) drawerOpen = true else searchOpen = true
                         },
-                        HubTile("Clawd", Icons.Rounded.Face, Color(0xFFD97757)) { vm.askClaude() },
+                        HubTile("Clawd", Icons.Rounded.Face, Color(0xFFD97757), onLongClick = { SecretRoutes.open(context, SecretMenu.Oracle) }) { vm.askClaude() },
                         // ZENITH 19: the ZENITH-Tresor.
                         HubTile("ZENITH-\nTresor", Icons.Rounded.Lock, Color(0xFF15965A)) {
                             runCatching { context.startActivity(Intent(context, dev.hearth.launcher.VaultActivity::class.java)) }
@@ -1270,7 +1270,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ShieldActivity::class.java)) }
                         },
                         if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
-                            HubTile("Z-Angriff", Icons.Rounded.Star, Color(0xFF00E676)) { strikeNow = true }
+                            HubTile("Z-Angriff", Icons.Rounded.Star, Color(0xFF00E676), onLongClick = { SecretRoutes.open(context, SecretMenu.Draw) }) { strikeNow = true }
                         } else {
                             null
                         },
@@ -1290,7 +1290,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             vm.controls.expandQuickSettings()
                         },
                         HubTile("Mitteilungen", Icons.Rounded.Info, Color(0xFFFF9F0A)) { openNotifications() },
-                        HubTile(if (torch) "Licht aus" else "Taschen-\nlampe", Icons.Rounded.Star, Color(0xFFFFCC00)) {
+                        HubTile(if (torch) "Licht aus" else "Taschen-\nlampe", Icons.Rounded.Star, Color(0xFFFFCC00), onLongClick = { SecretRoutes.open(context, SecretMenu.Zapp) }) {
                             vm.controls.setTorch(!torch)
                         },
                         HubTile(if (night) "Dunkelmodus\naus" else "Dunkelmodus", Icons.Rounded.DateRange, Color(0xFF8E6BFF)) {
@@ -1300,7 +1300,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             selecting = true
                             selected = emptySet()
                         },
-                        HubTile("Ein/Aus", Icons.Rounded.Lock, Color(0xFFFF453A)) { secret = SecretMenu.Power },
+                        HubTile("Ein/Aus", Icons.Rounded.Lock, Color(0xFFFF453A), onLongClick = { SecretRoutes.open(context, SecretMenu.Sudo) }) { secret = SecretMenu.Power },
                     ),
                     onSecret = {
                         hubOpen = false
@@ -1560,11 +1560,15 @@ private fun HomeHeader(settings: LauncherSettings, modifier: Modifier = Modifier
             taps[0] = 0
             EasterEggs.find(context, "clock")
         }
-        // ZENITH 19.6: a tap on the clock at exactly 13:37.
+        // ZENITH 19.6: a tap on the clock at exactly 13:37 or 3:14 opens something hidden.
         val moment = java.util.Calendar.getInstance()
-        if (moment.get(java.util.Calendar.HOUR_OF_DAY) == 13 && moment.get(java.util.Calendar.MINUTE) == 37) {
+        val hour = moment.get(java.util.Calendar.HOUR_OF_DAY)
+        val minute = moment.get(java.util.Calendar.MINUTE)
+        if (hour == 13 && minute == 37) {
             EasterEggs.find(context, "leet")
+            SecretRoutes.open(context, SecretMenu.Console)
         }
+        if ((hour == 3 || hour == 15) && minute == 14) SecretRoutes.open(context, SecretMenu.Pi)
     }
     HomeHeaderContent(settings, modifier.then(tapped))
 }
