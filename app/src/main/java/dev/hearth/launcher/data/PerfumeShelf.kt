@@ -14,6 +14,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -28,6 +29,12 @@ enum class PerfumeTaste(val label: String, val key: String) {
     Love("Mag ich", "love"),
     Neutral("Okay", "neutral"),
     Dislike("Mag ich nicht", "dislike"),
+}
+
+/** Who stands beside the advice: Clawd, or the ZENITH mark. */
+enum class PerfumeHelper(val label: String, val display: String, val cupboard: String) {
+    Clawd("Clawd", "Clawd", "Clawds Duftschrank"),
+    Zenith("ZENITH", "ZENITH", "ZENITH-Duftschrank"),
 }
 
 /** One perfume of the collection, as Clawd knows it. */
@@ -49,6 +56,10 @@ data class Perfume(
     val taste: PerfumeTaste = PerfumeTaste.Neutral,
     val lastWorn: Long = 0L,
     val addedAt: Long = System.currentTimeMillis(),
+    /** Whether there's a picture of it (from a photo); else a drawn bottle stands in. */
+    val photo: Boolean = false,
+    /** When the picture was set, so a new one shows at once. */
+    val photoAt: Long = 0L,
 ) {
     /** Whether Clawd has looked at it yet (without a key he only keeps the name). */
     val analysed: Boolean get() = family.isNotBlank() || summary.isNotBlank()
@@ -63,6 +74,7 @@ data class Perfume(
         .put("occasions", JSONArray(occasions)).put("strength", strength)
         .put("summary", summary).put("taste", taste.key)
         .put("lastWorn", lastWorn).put("addedAt", addedAt)
+        .put("photo", photo).put("photoAt", photoAt)
 
     companion object {
         private fun strings(array: JSONArray?): List<String> =
@@ -88,6 +100,8 @@ data class Perfume(
                 taste = PerfumeTaste.entries.firstOrNull { it.key == o.optString("taste") } ?: PerfumeTaste.Neutral,
                 lastWorn = o.optLong("lastWorn", 0L),
                 addedAt = o.optLong("addedAt", System.currentTimeMillis()),
+                photo = o.optBoolean("photo", false),
+                photoAt = o.optLong("photoAt", 0L),
             )
         }
     }
@@ -145,6 +159,7 @@ object PerfumeShelf {
     private const val PREFS = "hearth_perfume"
 
     private lateinit var prefs: SharedPreferences
+    private lateinit var app: Context
 
     private val _shelf = MutableStateFlow<List<Perfume>>(emptyList())
     val shelf: StateFlow<List<Perfume>> = _shelf.asStateFlow()
@@ -156,6 +171,13 @@ object PerfumeShelf {
 
     /** The city the weather comes from ("" until one is set). */
     val city: StateFlow<String> = _city.asStateFlow()
+
+    private val _helper = MutableStateFlow(PerfumeHelper.Clawd)
+
+    /** Who stands beside the advice (the widget and the shelf show Clawd or the ZENITH mark). */
+    val helper: StateFlow<PerfumeHelper> = _helper.asStateFlow()
+
+    private val who: String get() = _helper.value.display
 
     private val _busy = MutableStateFlow(false)
 
@@ -171,7 +193,9 @@ object PerfumeShelf {
     fun init(context: Context) {
         if (::prefs.isInitialized) return
         ClaudeAssistant.init(context)
-        prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        app = context.applicationContext
+        prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        _helper.value = PerfumeHelper.entries.firstOrNull { it.name == prefs.getString("helper", null) } ?: PerfumeHelper.Clawd
         _shelf.value = runCatching {
             val array = JSONArray(prefs.getString("shelf", "[]"))
             (0 until array.length()).mapNotNull { array.optJSONObject(it)?.let(Perfume::fromJson) }
@@ -218,7 +242,13 @@ object PerfumeShelf {
         }
     }
 
+    fun setHelper(helper: PerfumeHelper) {
+        _helper.value = helper
+        prefs.edit().putString("helper", helper.name).apply()
+    }
+
     fun remove(id: String) {
+        runCatching { photoFile(id).delete() }
         _shelf.value = _shelf.value.filterNot { it.id == id }
         saveShelf()
         if (_pick.value?.perfumeId == id) {
@@ -248,6 +278,8 @@ object PerfumeShelf {
                     taste = current[index].taste,
                     lastWorn = current[index].lastWorn,
                     addedAt = current[index].addedAt,
+                    photo = current[index].photo,
+                    photoAt = current[index].photoAt,
                 )
             }
         }
@@ -260,20 +292,32 @@ object PerfumeShelf {
     private fun namesIn(text: String): List<String> =
         text.split(',', ';', '\n').map { it.trim().trim('•', '-', '*', ' ') }.filter { it.length in 2..80 }
 
-    private val analysisSystem = """
-        Du bist Clawd, ein freundlicher Duft-Experte auf dem Handy des Nutzers. Du erkennst Parfüms und beschreibst sie sachkundig.
+    private fun analysisSystem(): String = """
+        Du bist $who, ein freundlicher Duft-Experte auf dem Handy des Nutzers. Du erkennst Parfüms und beschreibst sie sachkundig.
         Antworte AUSSCHLIESSLICH mit einem JSON-Array, ohne Text davor oder danach und ohne Code-Block. Ein Objekt pro Parfüm:
         {"name": "Name des Parfüms, mit Konzentration wenn bekannt (z. B. Eau de Toilette)", "house": "Marke", "family": "Duftfamilie, z. B. frisch-aromatisch, holzig-würzig, blumig-fruchtig, orientalisch-süß", "notes": ["bis zu 6 typische Duftnoten"], "seasons": ["die passenden aus Frühling, Sommer, Herbst, Winter"], "tempMin": niedrigste passende Außentemperatur in °C, "tempMax": höchste passende Außentemperatur in °C, "occasions": ["die passenden aus Büro, Alltag, Abend, Date, Sport, Festlich"], "strength": 1 (zart) bis 5 (sehr intensiv), "summary": "ein Satz auf Deutsch: wie es riecht und für wen oder wann es passt"}
+        Bei Fotos gib zusätzlich an: "photo": die Nummer des Fotos (1 = das erste) und "box": [links, oben, rechts, unten] – der Rahmen genau um diesen Flakon, als Zahlen von 0 bis 1000 bezogen auf Breite und Höhe dieses Fotos.
         Erkennst du ein Parfüm nicht sicher, nimm den Namen so, wie er dasteht, und schätze vorsichtig. Ist gar kein Parfüm zu erkennen, antworte mit [].
     """.trimIndent()
 
-    private fun parse(answer: String): List<Perfume> {
+    /** A perfume the AI described and, from a photo, where on which photo its bottle is. */
+    private class Found(val perfume: Perfume, val photo: Int, val box: List<Double>?)
+
+    private fun parse(answer: String): List<Found> {
         val start = answer.indexOf('[')
         val end = answer.lastIndexOf(']')
         if (start < 0 || end <= start) return emptyList()
         val array = runCatching { JSONArray(answer.substring(start, end + 1)) }.getOrNull() ?: return emptyList()
         return (0 until array.length()).mapNotNull { i ->
-            array.optJSONObject(i)?.let { o -> Perfume.fromJson(o.put("id", UUID.randomUUID().toString()).put("taste", "neutral")) }
+            val o = array.optJSONObject(i) ?: return@mapNotNull null
+            val index = o.optInt("photo", 1)
+            o.remove("photo")
+            o.remove("photoAt")
+            val perfume = Perfume.fromJson(o.put("id", UUID.randomUUID().toString()).put("taste", "neutral")) ?: return@mapNotNull null
+            val raw = o.optJSONArray("box")
+            val box = if (raw != null && raw.length() == 4) List(4) { raw.optDouble(it, -1.0) } else null
+            val valid = box != null && box.all { it in 0.0..1000.0 } && box[2] - box[0] >= 40.0 && box[3] - box[1] >= 40.0
+            Found(perfume, index, if (valid) box else null)
         }
     }
 
@@ -284,7 +328,7 @@ object PerfumeShelf {
         else -> "${added.size} Parfüms sind im Schrank. Sag mir unten, welche du magst und welche nicht."
     }
 
-    /** Parfums written down: Clawd looks at each (or, without a key, just keeps the names). */
+    /** Parfums written down: the helper looks at each (or, without a key, just keeps the names). */
     suspend fun addFromText(text: String): PerfumeAdded {
         val names = namesIn(text)
         if (names.isEmpty()) return PerfumeAdded(emptyList(), "Schreib mir, welche Parfüms du hast – zum Beispiel „Sauvage, Black Opium“.")
@@ -296,47 +340,110 @@ object PerfumeShelf {
             )
         }
         return try {
-            val answer = ClaudeAssistant.complete(analysisSystem, "Das hat der Nutzer geschrieben:\n" + names.joinToString("\n"))
+            val answer = ClaudeAssistant.complete(analysisSystem(), "Das hat der Nutzer geschrieben:\n" + names.joinToString("\n"))
             val found = parse(answer)
-            val added = merge(found)
+            val added = merge(found.map { it.perfume })
             PerfumeAdded(added, report(added, found.size))
         } catch (e: ClaudeApiException) {
-            PerfumeAdded(emptyList(), e.message ?: "Clawd konnte das nicht lesen.")
+            PerfumeAdded(emptyList(), e.message ?: "$who konnte das nicht lesen.")
         }
     }
 
-    /** Photos of perfume bottles: Clawd recognises them and looks at each one. */
+    /** Photos of perfume bottles: recognised, looked at one by one – and each bottle cut out as its picture. */
     suspend fun addFromPhotos(images: List<ByteArray>, note: String): PerfumeAdded {
         if (images.isEmpty()) return PerfumeAdded(emptyList(), "Die Fotos konnte ich nicht öffnen.")
         return try {
             val extra = if (note.isBlank()) "" else "\nDer Nutzer schreibt dazu: ${note.trim()}"
             val answer = ClaudeAssistant.complete(
-                analysisSystem,
-                "Auf den Fotos stehen Parfümflakons. Erkenne jedes einzelne Parfüm (Marke und Name vom Flakon ablesen) und beschreibe es.$extra",
+                analysisSystem(),
+                "Auf den ${images.size} Fotos stehen Parfümflakons. Erkenne jedes einzelne Parfüm (Marke und Name vom Flakon ablesen), beschreibe es und gib an, auf welchem Foto und wo es steht.$extra",
                 images,
                 maxTokens = 3500,
             )
             val found = parse(answer)
-            val added = merge(found)
+            val added = merge(found.map { it.perfume })
+            withContext(Dispatchers.IO) { keepPhotos(images, found) }
             PerfumeAdded(added, report(added, found.size))
         } catch (e: ClaudeApiException) {
             val vision = if (ClaudeAssistant.settings.value.isClaude) "" else " Fotos klappen mit Claude oder Gemini."
-            PerfumeAdded(emptyList(), (e.message ?: "Clawd konnte die Fotos nicht lesen.") + vision)
+            PerfumeAdded(emptyList(), (e.message ?: "$who konnte die Fotos nicht lesen.") + vision)
         }
     }
 
     /** Looks at the perfumes that so far are only names. */
     suspend fun analyseNames(): PerfumeAdded {
         val open = _shelf.value.filterNot { it.analysed }
-        if (open.isEmpty()) return PerfumeAdded(emptyList(), "Clawd kennt schon alle genau.")
+        if (open.isEmpty()) return PerfumeAdded(emptyList(), "$who kennt schon alle genau.")
         return try {
-            val answer = ClaudeAssistant.complete(analysisSystem, "Das hat der Nutzer geschrieben:\n" + open.joinToString("\n") { it.title })
+            val answer = ClaudeAssistant.complete(analysisSystem(), "Das hat der Nutzer geschrieben:\n" + open.joinToString("\n") { it.title })
             val found = parse(answer)
-            merge(found)
-            PerfumeAdded(emptyList(), if (found.isEmpty()) "Ich konnte sie nicht einordnen." else "Clawd hat sich ${found.size} Parfüm${if (found.size == 1) "" else "s"} genau angesehen.")
+            merge(found.map { it.perfume })
+            PerfumeAdded(emptyList(), if (found.isEmpty()) "Ich konnte sie nicht einordnen." else "$who hat sich ${found.size} Parfüm${if (found.size == 1) "" else "s"} genau angesehen.")
         } catch (e: ClaudeApiException) {
-            PerfumeAdded(emptyList(), e.message ?: "Clawd konnte das nicht lesen.")
+            PerfumeAdded(emptyList(), e.message ?: "$who konnte das nicht lesen.")
         }
+    }
+
+    // ---- Pictures ----------------------------------------------------------------------------------
+
+    fun photoFile(id: String): File = File(File(app.filesDir, "perfume"), "$id.jpg")
+
+    /** The perfume's picture, small (null when it has none). */
+    fun loadPhoto(id: String): Bitmap? = runCatching { BitmapFactory.decodeFile(photoFile(id).path) }.getOrNull()
+
+    /** Cuts the bottle out of [bytes] (by [box], 0..1000 each way; the whole photo without) and keeps it, 512 px at most. */
+    private fun storePhoto(id: String, bytes: ByteArray, box: List<Double>?): Boolean {
+        return runCatching {
+            val source = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return@runCatching false
+            var region = source
+            if (box != null) {
+                val w = source.width
+                val h = source.height
+                val marginX = (box[2] - box[0]) * 0.06
+                val marginY = (box[3] - box[1]) * 0.06
+                val left = ((box[0] - marginX).coerceAtLeast(0.0) / 1000.0 * w).toInt()
+                val top = ((box[1] - marginY).coerceAtLeast(0.0) / 1000.0 * h).toInt()
+                val right = ((box[2] + marginX).coerceAtMost(1000.0) / 1000.0 * w).toInt().coerceAtMost(w)
+                val bottom = ((box[3] + marginY).coerceAtMost(1000.0) / 1000.0 * h).toInt().coerceAtMost(h)
+                if (right - left >= 48 && bottom - top >= 48) region = Bitmap.createBitmap(source, left, top, right - left, bottom - top)
+            }
+            val scale = minOf(1f, 512f / maxOf(region.width, region.height))
+            val scaled = if (scale < 1f) {
+                Bitmap.createScaledBitmap(region, (region.width * scale).toInt().coerceAtLeast(1), (region.height * scale).toInt().coerceAtLeast(1), true)
+            } else {
+                region
+            }
+            val dir = File(app.filesDir, "perfume").apply { mkdirs() }
+            File(dir, "$id.jpg").outputStream().use { scaled.compress(Bitmap.CompressFormat.JPEG, 85, it) }
+            true
+        }.getOrDefault(false)
+    }
+
+    /** Gives each perfume that has no picture yet the bottle cut out of its photo. */
+    private fun keepPhotos(images: List<ByteArray>, found: List<Found>) {
+        val stored = mutableSetOf<String>()
+        found.forEach { f ->
+            val target = _shelf.value.firstOrNull { same(it, f.perfume) } ?: return@forEach
+            if (target.photo || target.id in stored) return@forEach
+            val bytes = images.getOrNull(f.photo - 1) ?: images.firstOrNull() ?: return@forEach
+            if (storePhoto(target.id, bytes, f.box)) stored += target.id
+        }
+        if (stored.isNotEmpty()) {
+            val at = System.currentTimeMillis()
+            _shelf.value = _shelf.value.map { if (it.id in stored) it.copy(photo = true, photoAt = at) else it }
+            saveShelf()
+        }
+    }
+
+    /** The owner's own picture for a perfume (any photo). */
+    suspend fun setPhoto(id: String, bytes: ByteArray): Boolean {
+        val ok = withContext(Dispatchers.IO) { storePhoto(id, bytes, null) }
+        if (ok) {
+            val at = System.currentTimeMillis()
+            _shelf.value = _shelf.value.map { if (it.id == id) it.copy(photo = true, photoAt = at) else it }
+            saveShelf()
+        }
+        return ok
     }
 
     /** A photo as JPEG, small enough to send (null when it can't be read). */
@@ -418,8 +525,8 @@ object PerfumeShelf {
     private fun daysSinceWorn(p: Perfume): Int? =
         if (p.lastWorn <= 0L) null else ((System.currentTimeMillis() - p.lastWorn) / 86_400_000L).toInt()
 
-    private val adviceSystem = """
-        Du bist Clawd und suchst dem Nutzer jeden Morgen das Parfüm aus. Du bekommst das Wetter, den Tag und seine Sammlung mit seinem Geschmack.
+    private fun adviceSystem(): String = """
+        Du bist $who und suchst dem Nutzer jeden Morgen das Parfüm aus. Du bekommst das Wetter, den Tag und seine Sammlung mit seinem Geschmack.
         Regeln: Wähle nie ein Parfüm mit taste = "dislike". Bevorzuge taste = "love", wechsle aber ab: nicht dasselbe wie an den letzten Tagen (daysSinceWorn klein heißt: erst kürzlich getragen). Achte auf die Temperatur (tempMin bis tempMax gegen die Höchsttemperatur des Tages), auf Regen, die Jahreszeit und den Wochentag (Arbeitstag: eher dezent, Wochenende oder Abend: gern auffälliger).
         Antworte NUR mit JSON, ohne Code-Block: {"id": "<id aus der Sammlung>", "reason": "ein bis zwei freundliche Sätze auf Deutsch in der Du-Form, mit Bezug aufs Wetter und den Tag"}
     """.trimIndent()
@@ -444,7 +551,7 @@ object PerfumeShelf {
                     },
                 ),
             )
-        val answer = ClaudeAssistant.complete(adviceSystem, context.toString(), maxTokens = 600)
+        val answer = ClaudeAssistant.complete(adviceSystem(), context.toString(), maxTokens = 600)
         val start = answer.indexOf('{')
         val end = answer.lastIndexOf('}')
         if (start < 0 || end <= start) return null

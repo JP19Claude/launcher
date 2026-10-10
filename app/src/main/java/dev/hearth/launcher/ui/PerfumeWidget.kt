@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -42,6 +43,7 @@ internal fun ClawdPerfumeWidget(modifier: Modifier) {
     val shelf by PerfumeShelf.shelf.collectAsState()
     val pick by PerfumeShelf.pick.collectAsState()
     val choosing by PerfumeShelf.busy.collectAsState()
+    val helper by PerfumeShelf.helper.collectAsState()
     LaunchedEffect(shelf.size) { PerfumeShelf.refreshToday() }
     val perfume = pick?.let { p -> shelf.firstOrNull { it.id == p.perfumeId } }
     Row(
@@ -54,13 +56,15 @@ internal fun ClawdPerfumeWidget(modifier: Modifier) {
             },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Clawd(
-            Modifier.fillMaxHeight(0.6f).width(72.dp),
-            mood = when {
+        // Clawd – or, if you chose it, the ZENITH Z.
+        PerfumeHelperFigure(
+            helper,
+            when {
                 choosing -> ClawdMood.Thinking
                 perfume != null -> ClawdMood.Love
                 else -> ClawdMood.Idle
             },
+            Modifier.fillMaxHeight(0.6f).width(60.dp),
         )
         Spacer(Modifier.width(8.dp))
         Box(
@@ -108,6 +112,11 @@ internal fun ClawdPerfumeWidget(modifier: Modifier) {
                     )
                 }
             }
+        }
+        // The picture of the perfume beside it.
+        if (perfume != null) {
+            Spacer(Modifier.width(8.dp))
+            PerfumePicture(perfume, Modifier.size(76.dp))
         }
     }
 }
