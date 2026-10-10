@@ -156,8 +156,8 @@ fun LauncherSettings.withColorOsLook(): LauncherSettings = if (!colorOsLook) {
         galaxyClaude = false,
         iconStyle = IconStyle.Original,
         iconShape = IconShape.Squircle,
-        clockStyle = ClockStyle.ColorOS,
-        dockStyle = DockStyle.Floating,
+        clockStyle = colorOsClock,
+        dockStyle = colorOsDock,
         showGreeting = true,
         showSearchPill = true,
         zenithWallpaper = false,
@@ -165,6 +165,18 @@ fun LauncherSettings.withColorOsLook(): LauncherSettings = if (!colorOsLook) {
         glassLook = if (glassLook == GlassLook.Zenith) GlassLook.Liquid else glassLook,
     ).withCcStyle(CcStyle.ColorOS)
 }
+
+/** ZENITH 19.3: the clock as it's shown – in the ColorOS 17.1 look, that look's own choice. */
+val LauncherSettings.shownClock: ClockStyle get() = if (colorOsLook) colorOsClock else clockStyle
+
+/** ZENITH 19.3: the dock as it's shown – in the ColorOS 17.1 look, that look's own choice. */
+val LauncherSettings.shownDock: DockStyle get() = if (colorOsLook) colorOsDock else dockStyle
+
+/** Picks the clock for what's shown now: in the ColorOS 17.1 look its own, else the usual one. */
+fun LauncherSettings.withClock(style: ClockStyle): LauncherSettings = if (colorOsLook) copy(colorOsClock = style) else copy(clockStyle = style)
+
+/** Picks the dock for what's shown now: in the ColorOS 17.1 look its own, else the usual one. */
+fun LauncherSettings.withDock(style: DockStyle): LauncherSettings = if (colorOsLook) copy(colorOsDock = style) else copy(dockStyle = style)
 
 /** OMEGA UI 18.3: OMEGA Glass in the "Liquid Glass" color – clear like Apple's. */
 val LauncherSettings.liquidOmega: Boolean get() = glassLook == GlassLook.Liquid || (omegaGlass && omegaColor == OmegaColor.Liquid)
@@ -589,6 +601,9 @@ data class LauncherSettings(
     val projectZenithGlass: Boolean = false,
     /** ZENITH 19.2, Projekt Zenith's "ColorOS 17.1" look: the whole system as ColorOS dresses it, glass adjustable. */
     val projectColorOs: Boolean = false,
+    /** ZENITH 19.3: the clock and dock of the ColorOS 17.1 look (its own, apart from the usual ones). */
+    val colorOsClock: ClockStyle = ClockStyle.ColorOS,
+    val colorOsDock: DockStyle = DockStyle.Floating,
     /** OMEGA UI 17.1: flowing effects at a calmer rate and lighter glass – smoother, less lag. */
     val smoothMode: Boolean = true,
     /** OMEGA UI 17.5: OMEGA light between the wallpaper and the home screen's apps and widgets. */
@@ -1117,6 +1132,8 @@ class SettingsRepository(context: Context) {
             projectZenith = prefs.getBoolean("projectZenith", d.projectZenith),
             projectZenithGlass = prefs.getBoolean("projectZenithGlass", d.projectZenithGlass),
             projectColorOs = prefs.getBoolean("projectColorOs", d.projectColorOs),
+            colorOsClock = enumOf("colorOsClock", d.colorOsClock),
+            colorOsDock = enumOf("colorOsDock", d.colorOsDock),
             smoothMode = prefs.getBoolean("smoothMode", d.smoothMode),
             omegaLight = prefs.getBoolean("omegaLight", d.omegaLight),
             illumination = prefs.getBoolean("illumination", d.illumination),
@@ -1303,6 +1320,8 @@ class SettingsRepository(context: Context) {
             .putBoolean("projectZenith", s.projectZenith)
             .putBoolean("projectZenithGlass", s.projectZenithGlass)
             .putBoolean("projectColorOs", s.projectColorOs)
+            .putString("colorOsClock", s.colorOsClock.name)
+            .putString("colorOsDock", s.colorOsDock.name)
             .putBoolean("smoothMode", s.smoothMode)
             .putBoolean("omegaLight", s.omegaLight)
             .putBoolean("illumination", s.illumination)

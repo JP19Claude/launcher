@@ -60,6 +60,11 @@ import dev.hearth.launcher.data.PageTransition
 import dev.hearth.launcher.data.SettingsRepository
 import dev.hearth.launcher.data.StrikeColor
 import dev.hearth.launcher.data.StrikeSpeed
+import dev.hearth.launcher.data.colorOsLook
+import dev.hearth.launcher.data.shownClock
+import dev.hearth.launcher.data.shownDock
+import dev.hearth.launcher.data.withClock
+import dev.hearth.launcher.data.withDock
 import kotlinx.coroutines.delay
 import java.text.DateFormat
 import java.util.Date
@@ -207,9 +212,9 @@ fun CoreEnforcerScreen(repo: SettingsRepository, onClose: () -> Unit) {
 
             item {
                 StudioPanel("Uhr, Dock & Blättern") {
-                    ChoiceRow(label = "Uhr", options = ClockStyle.entries, selected = s.clockStyle, optionLabel = { it.label }, onSelect = { v -> update { it.copy(clockStyle = v) } })
+                    ChoiceRow(label = if (s.colorOsLook) "Uhr (ColorOS-Look)" else "Uhr", options = ClockStyle.entries, selected = s.shownClock, optionLabel = { it.label }, onSelect = { v -> update { it.withClock(v) } })
                     ChoiceRow(label = "Schrift der Uhr", options = ClockFont.entries, selected = s.clockFont, optionLabel = { it.label }, onSelect = { v -> update { it.copy(clockFont = v) } })
-                    ChoiceRow(label = "Dock", options = DockStyle.entries, selected = s.dockStyle, optionLabel = { it.label }, onSelect = { v -> update { it.copy(dockStyle = v) } })
+                    ChoiceRow(label = if (s.colorOsLook) "Dock (ColorOS-Look)" else "Dock", options = DockStyle.entries, selected = s.shownDock, optionLabel = { it.label }, onSelect = { v -> update { it.withDock(v) } })
                     ChoiceRow(label = "Seitenwechsel", options = PageTransition.entries, selected = s.pageTransition, optionLabel = { it.label }, onSelect = { v -> update { it.copy(pageTransition = v) } })
                     SwitchRow(label = "Begrüßung", checked = s.showGreeting) { v -> update { it.copy(showGreeting = v) } }
                     SwitchRow(label = "Suchleiste", checked = s.showSearchPill) { v -> update { it.copy(showSearchPill = v) } }

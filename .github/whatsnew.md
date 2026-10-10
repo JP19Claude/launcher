@@ -1,5 +1,8 @@
 ZENITH 19.3 „Core Enforcer“ auf ClaudeOS 6.0 „Helios“
 
+◐ ColorOS-Look: Uhr und Dock frei
+• Uhr und Dock im ColorOS-Look frei wählbar – in den Illuminati, den Einstellungen und im Studio
+
 ⚡ Der Z-Angriff, mächtiger
 • Der Strahl brennt das echte ZENITH-Z in den Boden – breit und schwer wie im Logo
 • Danach steigt das Metall-Z riesig aus dem Boden auf, mit Lichtband und Schockwellen in Z-Form

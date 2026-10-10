@@ -735,6 +735,23 @@ private fun ProjectZenithGate(settings: LauncherSettings, onChange: ((LauncherSe
             "Das ganze System im Stil von ColorOS 17.1 – Milchglas, runde Squircle-Icons, die ColorOS-Uhr, das ColorOS-Schnellmenü, schwebendes Dock, dein eigener Hintergrund. Das Glas stellst du unten frei ein; ausgeschaltet ist alles wieder wie vorher.",
             settings.projectColorOs,
         ) { v -> onChange { it.copy(projectColorOs = v, projectZenithGlass = if (v) false else it.projectZenithGlass) } }
+        // ZENITH 19.3: the ColorOS look's own clock and dock.
+        if (settings.projectColorOs) {
+            ChoiceRow(
+                label = "Uhr im ColorOS-Look",
+                options = dev.hearth.launcher.data.ClockStyle.entries,
+                selected = settings.colorOsClock,
+                optionLabel = { it.label },
+                onSelect = { v -> onChange { it.copy(colorOsClock = v) } },
+            )
+            ChoiceRow(
+                label = "Dock im ColorOS-Look",
+                options = dev.hearth.launcher.data.DockStyle.entries,
+                selected = settings.colorOsDock,
+                optionLabel = { it.label },
+                onSelect = { v -> onChange { it.copy(colorOsDock = v) } },
+            )
+        }
         if (settings.projectColorOs || settings.projectZenithGlass) GlassTuning(settings, onChange)
     } else {
         IlluminationSwitch("🔒", "Projekt Zenith", "Gesperrt. Nur wer das geheime Passwort kennt, kann es einschalten.", false) { v ->

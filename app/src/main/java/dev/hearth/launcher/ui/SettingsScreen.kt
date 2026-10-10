@@ -123,6 +123,8 @@ import dev.hearth.launcher.data.SwipeDownAction
 import dev.hearth.launcher.data.TriggerZone
 import kotlinx.coroutines.delay
 import dev.hearth.launcher.data.ThemeMode
+import dev.hearth.launcher.data.withClock
+import dev.hearth.launcher.data.withDock
 import kotlin.math.roundToInt
 
 private val TextPrimary = Color.White
@@ -677,7 +679,8 @@ fun SettingsScreen(
                         options = ClockStyle.entries,
                         selected = s.clockStyle,
                         optionLabel = { it.label },
-                        onSelect = { style -> update { it.copy(clockStyle = style) } },
+                        // In the ColorOS 17.1 look, that look's own clock.
+                        onSelect = { style -> update { it.withClock(style) } },
                     )
                     ChoiceRow(
                         label = "Schriftart der Uhr",
@@ -785,7 +788,8 @@ fun SettingsScreen(
                         options = DockStyle.entries,
                         selected = s.dockStyle,
                         optionLabel = { it.label },
-                        onSelect = { v -> update { it.copy(dockStyle = v) } },
+                        // In the ColorOS 17.1 look, that look's own dock.
+                        onSelect = { v -> update { it.withDock(v) } },
                     )
                     RowDivider()
                     IntSlider("Anzahl Apps", s.dockSize.coerceIn(1, LauncherSettings.MAX_DOCK), 1..LauncherSettings.MAX_DOCK) { v ->

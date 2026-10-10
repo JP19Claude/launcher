@@ -23,7 +23,7 @@ object CoreProfiles {
         "glassDispersion", "glassSpecular", "glassQuality", "omegaGlass", "omegaColor",
         "fluidDesign", "zenithWallpaper", "zenithDaylight", "smoothMode",
         "showGreeting", "showSearchPill", "galaxyClaude", "ccStyle",
-        "strikeColor", "strikeSpeed", "zenithStrike",
+        "strikeColor", "strikeSpeed", "zenithStrike", "colorOsClock", "colorOsDock",
     )
 
     private fun prefs(context: Context) = context.getSharedPreferences("core_enforcer", Context.MODE_PRIVATE)
@@ -66,12 +66,12 @@ object CoreProfiles {
     /** A look rolled at random – bold, but always something that works. */
     fun rolled(s: LauncherSettings, r: Random = Random.Default): LauncherSettings {
         fun step(from: Float, to: Float) = (Math.round((from + r.nextFloat() * (to - from)) * 20f) / 20f)
+        val clock = ClockStyle.entries.filter { it != ClockStyle.Hidden }.random(r)
+        val dock = DockStyle.entries.random(r)
         return s.copy(
             accent = AccentColor.entries.random(r),
             iconShape = IconShape.entries.random(r),
             iconStyle = IconStyle.entries.random(r),
-            clockStyle = ClockStyle.entries.filter { it != ClockStyle.Hidden }.random(r),
-            dockStyle = DockStyle.entries.random(r),
             pageTransition = PageTransition.entries.random(r),
             glassTint = GlassTint.entries.random(r),
             glassRefraction = step(0.4f, 2.2f),
@@ -80,6 +80,6 @@ object CoreProfiles {
             glassSpecular = step(0.6f, 1.8f),
             glassTintStrength = step(0.5f, 2f),
             strikeColor = StrikeColor.entries.random(r),
-        )
+        ).withClock(clock).withDock(dock)
     }
 }

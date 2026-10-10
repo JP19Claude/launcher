@@ -186,6 +186,14 @@ internal object HearthChangelog {
             summary = "Das Core Enforcer Studio: die Werkstatt, in der du dein System umbaust – Look würfeln, Profile speichern, den Z-Angriff in Farbe und Tempo gestalten und alles vom Icon bis zum Glas an einem Ort einstellen.",
             sections = listOf(
                 ChangeSection(
+                    "ColorOS-Look: Uhr und Dock frei", Icons.Rounded.Edit, Blue,
+                    listOf(
+                        "Im ColorOS-17.1-Look lassen sich Uhr und Dock jetzt frei wählen – in den Illuminati direkt unter dem Schalter, in den Einstellungen und im Core Enforcer Studio.",
+                        "Der ColorOS-Look merkt sich seine Uhr und sein Dock getrennt: Schaltest du ihn aus, sind deine üblichen wieder da.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
                     "Der Z-Angriff, mächtiger", Icons.Rounded.Star, Green,
                     listOf(
                         "Der Strahl brennt jetzt das echte ZENITH-Z in den Boden – Balken für Balken, so breit und schwer wie im Logo, statt dünner Linien.",
