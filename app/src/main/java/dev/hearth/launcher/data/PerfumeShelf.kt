@@ -5,10 +5,16 @@ import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -60,6 +66,8 @@ data class Perfume(
     val photo: Boolean = false,
     /** When the picture was set, so a new one shows at once. */
     val photoAt: Long = 0L,
+    /** The picture is a product shot from the web (shown whole, on light) – not a crop of a photo. */
+    val photoWeb: Boolean = false,
 ) {
     /** Whether Clawd has looked at it yet (without a key he only keeps the name). */
     val analysed: Boolean get() = family.isNotBlank() || summary.isNotBlank()
@@ -74,7 +82,7 @@ data class Perfume(
         .put("occasions", JSONArray(occasions)).put("strength", strength)
         .put("summary", summary).put("taste", taste.key)
         .put("lastWorn", lastWorn).put("addedAt", addedAt)
-        .put("photo", photo).put("photoAt", photoAt)
+        .put("photo", photo).put("photoAt", photoAt).put("photoWeb", photoWeb)
 
     companion object {
         private fun strings(array: JSONArray?): List<String> =
@@ -102,6 +110,7 @@ data class Perfume(
                 addedAt = o.optLong("addedAt", System.currentTimeMillis()),
                 photo = o.optBoolean("photo", false),
                 photoAt = o.optLong("photoAt", 0L),
+                photoWeb = o.optBoolean("photoWeb", false),
             )
         }
     }
@@ -189,6 +198,14 @@ object PerfumeShelf {
     @Volatile
     private var lastTry = 0L
     private val picking = Mutex()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var pictureJob: Job? = null
+    private val tried = mutableSetOf<String>()
+
+    private val _fetching = MutableStateFlow(false)
+
+    /** The pictures of the bottles are being looked for on the web. */
+    val fetching: StateFlow<Boolean> = _fetching.asStateFlow()
 
     fun init(context: Context) {
         if (::prefs.isInitialized) return
@@ -280,6 +297,7 @@ object PerfumeShelf {
                     addedAt = current[index].addedAt,
                     photo = current[index].photo,
                     photoAt = current[index].photoAt,
+                    photoWeb = current[index].photoWeb,
                 )
             }
         }
@@ -334,6 +352,7 @@ object PerfumeShelf {
         if (names.isEmpty()) return PerfumeAdded(emptyList(), "Schreib mir, welche Parfüms du hast – zum Beispiel „Sauvage, Black Opium“.")
         if (!ClaudeAssistant.settings.value.hasKey) {
             val added = merge(names.map { Perfume(id = UUID.randomUUID().toString(), name = it) })
+            searchPictures()
             return PerfumeAdded(
                 added,
                 if (added.isEmpty()) report(added, names.size) else "${added.size} Namen gemerkt. Für Analyse und kluge Tipps trag deinen API-Schlüssel bei „Frag Clawd“ ein.",
@@ -343,6 +362,7 @@ object PerfumeShelf {
             val answer = ClaudeAssistant.complete(analysisSystem(), "Das hat der Nutzer geschrieben:\n" + names.joinToString("\n"))
             val found = parse(answer)
             val added = merge(found.map { it.perfume })
+            searchPictures()
             PerfumeAdded(added, report(added, found.size))
         } catch (e: ClaudeApiException) {
             PerfumeAdded(emptyList(), e.message ?: "$who konnte das nicht lesen.")
@@ -363,6 +383,7 @@ object PerfumeShelf {
             val found = parse(answer)
             val added = merge(found.map { it.perfume })
             withContext(Dispatchers.IO) { keepPhotos(images, found) }
+            searchPictures()
             PerfumeAdded(added, report(added, found.size))
         } catch (e: ClaudeApiException) {
             val vision = if (ClaudeAssistant.settings.value.isClaude) "" else " Fotos klappen mit Claude oder Gemini."
@@ -378,6 +399,7 @@ object PerfumeShelf {
             val answer = ClaudeAssistant.complete(analysisSystem(), "Das hat der Nutzer geschrieben:\n" + open.joinToString("\n") { it.title })
             val found = parse(answer)
             merge(found.map { it.perfume })
+            searchPictures()
             PerfumeAdded(emptyList(), if (found.isEmpty()) "Ich konnte sie nicht einordnen." else "$who hat sich ${found.size} Parfüm${if (found.size == 1) "" else "s"} genau angesehen.")
         } catch (e: ClaudeApiException) {
             PerfumeAdded(emptyList(), e.message ?: "$who konnte das nicht lesen.")
@@ -394,7 +416,12 @@ object PerfumeShelf {
     /** Cuts the bottle out of [bytes] (by [box], 0..1000 each way; the whole photo without) and keeps it, 512 px at most. */
     private fun storePhoto(id: String, bytes: ByteArray, box: List<Double>?): Boolean {
         return runCatching {
-            val source = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return@runCatching false
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            var sample = 1
+            while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 2048) sample *= 2
+            val source = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
+                ?: return@runCatching false
             var region = source
             if (box != null) {
                 val w = source.width
@@ -430,20 +457,52 @@ object PerfumeShelf {
         }
         if (stored.isNotEmpty()) {
             val at = System.currentTimeMillis()
-            _shelf.value = _shelf.value.map { if (it.id in stored) it.copy(photo = true, photoAt = at) else it }
+            _shelf.update { list -> list.map { if (it.id in stored) it.copy(photo = true, photoAt = at, photoWeb = false) else it } }
             saveShelf()
         }
     }
 
-    /** The owner's own picture for a perfume (any photo). */
-    suspend fun setPhoto(id: String, bytes: ByteArray): Boolean {
+    /** A picture for a perfume: the owner's own photo, or ([web]) a product shot chosen from the web. */
+    suspend fun setPhoto(id: String, bytes: ByteArray, web: Boolean = false): Boolean {
         val ok = withContext(Dispatchers.IO) { storePhoto(id, bytes, null) }
         if (ok) {
             val at = System.currentTimeMillis()
-            _shelf.value = _shelf.value.map { if (it.id == id) it.copy(photo = true, photoAt = at) else it }
+            _shelf.update { list -> list.map { if (it.id == id) it.copy(photo = true, photoAt = at, photoWeb = web) else it } }
             saveShelf()
         }
         return ok
+    }
+
+    /** The first picture the web has for this perfume that can be had; false when none could. */
+    suspend fun findPicture(id: String): Boolean {
+        val perfume = _shelf.value.firstOrNull { it.id == id } ?: return false
+        for (hit in PerfumeImages.search(perfume.title).take(6)) {
+            val bytes = withContext(Dispatchers.IO) { PerfumeImages.download(hit.full) ?: PerfumeImages.download(hit.thumb) } ?: continue
+            if (setPhoto(id, bytes, web = true)) return true
+        }
+        return false
+    }
+
+    /**
+     * Looks for the picture of every perfume that has none, one after the other, in the background
+     * – each only once while the app runs, unless [again].
+     */
+    fun searchPictures(again: Boolean = false) {
+        if (!::prefs.isInitialized || pictureJob?.isActive == true) return
+        if (again) tried.clear()
+        pictureJob = scope.launch {
+            _fetching.value = true
+            try {
+                for (perfume in _shelf.value.toList()) {
+                    if (perfume.photo || perfume.id in tried) continue
+                    tried += perfume.id
+                    findPicture(perfume.id)
+                    delay(500)
+                }
+            } finally {
+                _fetching.value = false
+            }
+        }
     }
 
     /** A photo as JPEG, small enough to send (null when it can't be read). */

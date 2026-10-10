@@ -4,7 +4,10 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -43,6 +47,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
@@ -54,6 +61,8 @@ import dev.hearth.launcher.data.ClaudeAssistant
 import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.Perfume
 import dev.hearth.launcher.data.PerfumeHelper
+import dev.hearth.launcher.data.PerfumeImageHit
+import dev.hearth.launcher.data.PerfumeImages
 import dev.hearth.launcher.data.PerfumeShelf
 import dev.hearth.launcher.data.PerfumeTaste
 import kotlinx.coroutines.Dispatchers
@@ -81,6 +90,7 @@ fun PerfumeScreen(onClose: () -> Unit) {
     val city by PerfumeShelf.city.collectAsState()
     val choosing by PerfumeShelf.busy.collectAsState()
     val helper by PerfumeShelf.helper.collectAsState()
+    val fetching by PerfumeShelf.fetching.collectAsState()
     val ai by ClaudeAssistant.settings.collectAsState()
     val hasKey = ai.hasKey
     var text by remember { mutableStateOf("") }
@@ -89,8 +99,15 @@ fun PerfumeScreen(onClose: () -> Unit) {
     var message by remember { mutableStateOf<String?>(null) }
     var open by remember { mutableStateOf<String?>(null) }
     var photoFor by remember { mutableStateOf<String?>(null) }
+    // The pictures the web found for one perfume, to choose from.
+    var findFor by remember { mutableStateOf<String?>(null) }
+    var hits by remember { mutableStateOf<List<PerfumeImageHit>>(emptyList()) }
+    var finding by remember { mutableStateOf(false) }
     BackHandler { onClose() }
-    LaunchedEffect(shelf.size) { PerfumeShelf.refreshToday() }
+    LaunchedEffect(shelf.size) {
+        PerfumeShelf.refreshToday()
+        PerfumeShelf.searchPictures()
+    }
 
     val photos = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
@@ -113,6 +130,24 @@ fun PerfumeScreen(onClose: () -> Unit) {
                 val bytes = withContext(Dispatchers.IO) { PerfumeShelf.readPhoto(context, uri) }
                 message = if (bytes != null && PerfumeShelf.setPhoto(id, bytes)) "Das Bild ist gespeichert." else "Das Bild konnte ich nicht öffnen."
             }
+        }
+    }
+    val startFind: (Perfume) -> Unit = { perfume ->
+        findFor = perfume.id
+        hits = emptyList()
+        finding = true
+        scope.launch {
+            hits = PerfumeImages.search(perfume.title)
+            finding = false
+        }
+    }
+    val applyHit: (String, PerfumeImageHit) -> Unit = { id, hit ->
+        scope.launch {
+            message = "Das Bild wird geladen …"
+            val bytes = withContext(Dispatchers.IO) { PerfumeImages.download(hit.full) ?: PerfumeImages.download(hit.thumb) }
+            val saved = bytes != null && PerfumeShelf.setPhoto(id, bytes, web = true)
+            message = if (saved) "Das Bild ist gespeichert." else "Dieses Bild ging nicht – nimm ein anderes."
+            if (saved) findFor = null
         }
     }
     val addText: () -> Unit = {
@@ -265,6 +300,13 @@ fun PerfumeScreen(onClose: () -> Unit) {
                     if (shelf.isEmpty()) {
                         Text("Noch leer.", color = VaultDim, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp))
                     }
+                    if (fetching) {
+                        Text("${helper.display} sucht die Bilder der Flakons im Netz …", color = PerfumeLove, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp))
+                    } else if (shelf.any { !it.photo }) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
+                            VaultButton("Fehlende Bilder suchen", Modifier.fillMaxWidth(), primary = false) { PerfumeShelf.searchPictures(again = true) }
+                        }
+                    }
                     shelf.sortedWith(compareBy({ it.taste == PerfumeTaste.Dislike }, { it.title.lowercase() })).forEach { perfume ->
                         PerfumeRow(
                             perfume = perfume,
@@ -276,6 +318,10 @@ fun PerfumeScreen(onClose: () -> Unit) {
                                 photoFor = perfume.id
                                 onePhoto.launch("image/*")
                             },
+                            candidates = if (findFor == perfume.id) hits else null,
+                            searching = finding && findFor == perfume.id,
+                            onFind = { startFind(perfume) },
+                            onPick = { hit -> applyHit(perfume.id, hit) },
                         )
                     }
                     if (shelf.any { !it.analysed } && hasKey) {
@@ -354,6 +400,10 @@ private fun PerfumeRow(
     onTaste: (PerfumeTaste) -> Unit,
     onDelete: () -> Unit,
     onPhoto: () -> Unit,
+    candidates: List<PerfumeImageHit>?,
+    searching: Boolean,
+    onFind: () -> Unit,
+    onPick: (PerfumeImageHit) -> Unit,
 ) {
     val accent = when (perfume.taste) {
         PerfumeTaste.Love -> PerfumeLove
@@ -411,8 +461,34 @@ private fun PerfumeRow(
                 PerfumeFact("Zuletzt getragen", SimpleDateFormat("d. MMMM", Locale.GERMAN).format(Date(perfume.lastWorn)))
             }
             Spacer(Modifier.height(10.dp))
-            VaultButton(if (perfume.photo) "Anderes Bild wählen" else "Eigenes Bild wählen", Modifier.fillMaxWidth(), primary = false, onClick = onPhoto)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                VaultButton("Bild suchen", Modifier.weight(1f), primary = false, onClick = onFind)
+                VaultButton("Eigenes Foto", Modifier.weight(1f), primary = false, onClick = onPhoto)
+            }
+            if (candidates != null) {
+                when {
+                    searching -> Text("Die Suche läuft …", color = VaultDim, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                    candidates.isEmpty() -> Text("Nichts gefunden. Nimm ein eigenes Foto.", color = VaultDim, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                    else -> {
+                        Text("Tippe auf das richtige:", color = VaultDim, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp, bottom = 6.dp))
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            candidates.forEach { hit -> RemoteThumb(hit.thumb, Modifier.size(88.dp)) { onPick(hit) } }
+                        }
+                    }
+                }
+            }
         }
+    }
+}
+
+/** A picture from the web, loaded as it's shown; a tap chooses it. */
+@Composable
+private fun RemoteThumb(url: String, modifier: Modifier, onClick: () -> Unit) {
+    val bitmap by produceState<ImageBitmap?>(null, url) {
+        value = withContext(Dispatchers.IO) { PerfumeImages.bitmap(url)?.asImageBitmap() }
+    }
+    Box(modifier.clip(RoundedCornerShape(12.dp)).background(Color(0xFFF4F1EC)).clickable(onClick = onClick)) {
+        bitmap?.let { Image(it, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize()) }
     }
 }
 

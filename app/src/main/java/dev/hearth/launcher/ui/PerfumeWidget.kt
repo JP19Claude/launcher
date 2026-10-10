@@ -44,7 +44,10 @@ internal fun ClawdPerfumeWidget(modifier: Modifier) {
     val pick by PerfumeShelf.pick.collectAsState()
     val choosing by PerfumeShelf.busy.collectAsState()
     val helper by PerfumeShelf.helper.collectAsState()
-    LaunchedEffect(shelf.size) { PerfumeShelf.refreshToday() }
+    LaunchedEffect(shelf.size) {
+        PerfumeShelf.refreshToday()
+        PerfumeShelf.searchPictures()
+    }
     val perfume = pick?.let { p -> shelf.firstOrNull { it.id == p.perfumeId } }
     Row(
         modifier

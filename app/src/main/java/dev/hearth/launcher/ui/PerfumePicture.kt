@@ -84,9 +84,15 @@ internal fun PerfumePicture(perfume: Perfume, modifier: Modifier = Modifier, cor
     val bitmap = remember(perfume.id, perfume.photo, perfume.photoAt) {
         if (perfume.photo) PerfumeShelf.loadPhoto(perfume.id)?.asImageBitmap() else null
     }
-    Box(modifier.clip(RoundedCornerShape(corner)).background(Color(0xFF0B0F12))) {
+    // A product shot from the web is shown whole on light, like in a shop; a crop of a photo fills the frame.
+    Box(modifier.clip(RoundedCornerShape(corner)).background(if (perfume.photoWeb) Color(0xFFF4F1EC) else Color(0xFF0B0F12))) {
         if (bitmap != null) {
-            Image(bitmap, contentDescription = perfume.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            Image(
+                bitmap,
+                contentDescription = perfume.title,
+                contentScale = if (perfume.photoWeb) ContentScale.Fit else ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
         } else {
             PerfumeBottle(perfume, Modifier.fillMaxSize())
         }
