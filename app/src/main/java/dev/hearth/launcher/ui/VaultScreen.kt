@@ -961,8 +961,8 @@ private fun VaultOpen(
             val send = Intent(Intent.ACTION_SEND)
                 .setType(entry.mime)
                 .putExtra(Intent.EXTRA_STREAM, uri)
-                .setClipData(android.content.ClipData.newRawUri(entry.name, uri))
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                .apply { clipData = android.content.ClipData.newRawUri(entry.name, uri) }
             host.stayOpen()
             runCatching { context.startActivity(Intent.createChooser(send, "„${entry.name}“ teilen")) }
                 .onSuccess { note = "Geteilt wird eine unverschlüsselte Kopie – im Tresor bleibt alles verschlüsselt." }
