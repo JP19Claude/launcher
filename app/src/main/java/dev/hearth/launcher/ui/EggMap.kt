@@ -76,6 +76,31 @@ private val EggSpots = listOf(
     EggSpot("omega", "Von Alpha bis Omega", "Im Finder nach „Omega“ (oder Ω) suchen und alle griechischen Buchstaben um das Ω kreisen lassen."),
     EggSpot("labs", "ZENITH Labs", "Über das Telefon: siebenmal auf die Build-Nummer tippen."),
     EggSpot("illumination", "Clawd Illumination", "So oft auf das ZENITH-Logo tippen, wie ZENITH Nummer hat (19)."),
+    // ZENITH 19.6: more hidden menus (codes in the finder) …
+    EggSpot("console", "Z-Konsole", "Im Finder *#8376# eintippen (T-E-R-M): ein Terminal. Tippe help – und probier auch Befehle, die nicht in der Liste stehen."),
+    EggSpot("neon", "Neon", "Im Finder *#6366# eintippen (N-E-O-N): der Regen aus Zeichen."),
+    EggSpot("snake", "Funken-Schlange", "Im Finder *#7625# eintippen (S-N-A-K): wischen, Funken fressen, lang werden."),
+    EggSpot("snake12", "Lange Schlange", "In der Funken-Schlange zwölf Funken fressen."),
+    EggSpot("draw", "Lichtmalerei", "Im Finder *#3729# eintippen (D-R-A-W): mit dem Finger Licht malen."),
+    EggSpot("oracle", "Ω-Orakel", "Im Finder *#6725# eintippen (O-R-A-K): eine Frage, ein Tipp auf die Kugel."),
+    EggSpot("oracle7", "Sieben Fragen", "Dem Ω-Orakel sieben Fragen stellen."),
+    EggSpot("zapp", "Blitz-Test", "Im Finder *#9277# eintippen (Z-A-P-P): wer ist schneller?"),
+    EggSpot("zapp250", "Blitzschnell", "Im Blitz-Test unter 250 Millisekunden bleiben."),
+    EggSpot("credits", "Abspann", "Im Finder *#2733# eintippen (C-R-E-D): alle Zeiten, alle Namen."),
+    // … words in the finder, from the Hearth, OMEGA and ZENITH years …
+    EggSpot("kamin", "Hearth-Kamin", "Im Finder nach „Hearth“ suchen und fünf Scheite nachlegen – wo der Name herkommt."),
+    EggSpot("konami", "Der alte Code", "Im Finder nach „Konami“ suchen und ↑ ↑ ↓ ↓ ← → ← → B A drücken."),
+    EggSpot("fluid", "OMEGA Fluid", "Im Finder nach „Fluid“ suchen und sechs Sekunden den Finger auf das Licht halten."),
+    EggSpot("zenithword", "Zenith", "Im Finder nach „Zenith“ suchen."),
+    EggSpot("sudo", "Sudo", "Im Finder „sudo su“ eintippen (oder in der Z-Konsole „sudo“)."),
+    EggSpot("hello", "Hallo, Welt", "Im Finder „hello world“ eintippen."),
+    EggSpot("pi", "Pi", "Im Finder „π“ eintippen (oder 3,14)."),
+    // … and a few small ones.
+    EggSpot("monitor", "Monitor-Check", "Beim ZENITH-Monitor-Widget fünfmal schnell auf den Titel tippen."),
+    EggSpot("shield10", "Schildklopfer", "Im Schutzschild zehnmal schnell auf den Kreis tippen."),
+    EggSpot("shield100", "Makellos", "Im Schutzschild 100 von 100 Punkten erreichen."),
+    EggSpot("dice10", "Würfelglück", "Im Core Enforcer Studio zehnmal würfeln."),
+    EggSpot("leet", "Elite", "Auf dem Startbildschirm genau um 13:37 auf die Uhr tippen."),
 )
 
 /**

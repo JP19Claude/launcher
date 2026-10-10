@@ -1560,6 +1560,11 @@ private fun HomeHeader(settings: LauncherSettings, modifier: Modifier = Modifier
             taps[0] = 0
             EasterEggs.find(context, "clock")
         }
+        // ZENITH 19.6: a tap on the clock at exactly 13:37.
+        val moment = java.util.Calendar.getInstance()
+        if (moment.get(java.util.Calendar.HOUR_OF_DAY) == 13 && moment.get(java.util.Calendar.MINUTE) == 37) {
+            EasterEggs.find(context, "leet")
+        }
     }
     HomeHeaderContent(settings, modifier.then(tapped))
 }

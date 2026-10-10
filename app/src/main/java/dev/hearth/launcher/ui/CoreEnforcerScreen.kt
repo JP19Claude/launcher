@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,6 +50,7 @@ import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.CoreProfile
 import dev.hearth.launcher.data.CoreProfiles
 import dev.hearth.launcher.data.DockStyle
+import dev.hearth.launcher.data.EasterEggs
 import dev.hearth.launcher.data.GlassLook
 import dev.hearth.launcher.data.GlassQuality
 import dev.hearth.launcher.data.GlassTint
@@ -85,6 +87,8 @@ fun CoreEnforcerScreen(repo: SettingsRepository, onClose: () -> Unit) {
     var name by remember { mutableStateOf("") }
     var note by remember { mutableStateOf<String?>(null) }
     var testing by remember { mutableStateOf(false) }
+    // ZENITH 19.6: ten rolls of the die in one visit.
+    var rolls by remember { mutableIntStateOf(0) }
     BackHandler { onClose() }
     LaunchedEffect(note) {
         if (note != null) {
@@ -124,6 +128,8 @@ fun CoreEnforcerScreen(repo: SettingsRepository, onClose: () -> Unit) {
                             note = "Neuer Look gewürfelt."
                             // ZENITH 19.5: the new look arrives with the Z-Angriff in its new color.
                             if (s.strikeOnDice) testing = true
+                            rolls++
+                            if (rolls >= 10) EasterEggs.find(context, "dice10")
                         }
                         Spacer(Modifier.width(8.dp))
                         VaultButton("Zurück", Modifier.weight(1f), primary = false, enabled = undo != null) {

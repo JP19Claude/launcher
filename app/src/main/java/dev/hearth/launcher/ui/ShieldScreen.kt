@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import dev.hearth.launcher.data.EasterEggs
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.ZenithShield
 import kotlinx.coroutines.Dispatchers
@@ -99,6 +101,10 @@ fun ShieldScreen(onClose: () -> Unit, onUpdate: (((LauncherSettings) -> Launcher
 
     val found = checks
     val score = found?.let { ZenithShield.score(it) }
+    // ZENITH 19.6: ten quick taps on the gauge strike; a perfect score is its own find.
+    val gaugeTaps = remember { longArrayOf(0L, 0L) }
+    var strike by remember { mutableStateOf(false) }
+    LaunchedEffect(score) { if (score == 100) EasterEggs.find(context, "shield100") }
     val all = apps.orEmpty()
     val only = filter
     val shown = all.filter { only == null || only in it.access }
@@ -112,7 +118,18 @@ fun ShieldScreen(onClose: () -> Unit, onUpdate: (((LauncherSettings) -> Launcher
             item { VaultTopBar(onClose, title = "SCHUTZSCHILD") }
             item {
                 Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    ShieldGauge(score)
+                    Box(
+                        Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
+                            val at = System.currentTimeMillis()
+                            gaugeTaps[0] = if (at - gaugeTaps[1] < 600) gaugeTaps[0] + 1 else 1
+                            gaugeTaps[1] = at
+                            if (gaugeTaps[0] >= 10) {
+                                gaugeTaps[0] = 0
+                                EasterEggs.find(context, "shield10")
+                                strike = true
+                            }
+                        },
+                    ) { ShieldGauge(score) }
                     Spacer(Modifier.height(10.dp))
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
@@ -193,6 +210,7 @@ fun ShieldScreen(onClose: () -> Unit, onUpdate: (((LauncherSettings) -> Launcher
                 )
             }
         }
+        if (strike) ZenithStrikeOverlay { strike = false }
     }
 }
 

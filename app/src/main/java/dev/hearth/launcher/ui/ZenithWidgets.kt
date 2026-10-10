@@ -7,9 +7,11 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.StatFs
 import android.os.SystemClock
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.hearth.launcher.data.EasterEggs
 import dev.hearth.launcher.data.ZenithShield
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -93,6 +97,8 @@ private fun gigabytes(bytes: Long): String = "%.1f".format(bytes / 1_073_741_824
 @Composable
 internal fun ZenithMonitorWidget(modifier: Modifier) {
     val context = LocalContext.current
+    // ZENITH 19.6: five quick taps on the title.
+    val titleTaps = remember { longArrayOf(0L, 0L) }
     val reading by produceState<MonitorReading?>(null) {
         while (true) {
             value = withContext(Dispatchers.IO) { readMonitor(context) }
@@ -112,7 +118,24 @@ internal fun ZenithMonitorWidget(modifier: Modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             ZenithMark(color = ZenithGreen, width = 18.dp)
             Spacer(Modifier.width(8.dp))
-            Text("ZENITH // MONITOR", color = HudGreen, fontSize = 11.sp, fontFamily = HudFont, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "ZENITH // MONITOR",
+                color = HudGreen,
+                fontSize = 11.sp,
+                fontFamily = HudFont,
+                letterSpacing = 2.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
+                    val at = System.currentTimeMillis()
+                    titleTaps[0] = if (at - titleTaps[1] < 600) titleTaps[0] + 1 else 1
+                    titleTaps[1] = at
+                    if (titleTaps[0] >= 5) {
+                        titleTaps[0] = 0
+                        EasterEggs.find(context, "monitor")
+                        Toast.makeText(context, "Alle Werte im grünen Bereich.", Toast.LENGTH_SHORT).show()
+                    }
+                },
+            )
             Spacer(Modifier.weight(1f))
             val r = reading
             if (r != null) {

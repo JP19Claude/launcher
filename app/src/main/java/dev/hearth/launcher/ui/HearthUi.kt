@@ -181,6 +181,50 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "19.6",
+            name = "Verstecke",
+            summary = "Viel mehr zu finden: sieben neue Geheimmenüs, Verstecke aus den Hearth-, OMEGA- und ZENITH-Jahren und kleine Funde überall im System – jetzt 54 Easter Eggs.",
+            sections = listOf(
+                ChangeSection(
+                    "Sieben neue Geheimmenüs", Icons.Rounded.Search, Violet,
+                    listOf(
+                        "*#8376# Z-Konsole: ein Terminal mit Befehlen – tippe help. Es gibt auch welche, die nicht in der Liste stehen.",
+                        "*#6366# Neon: der Regen aus Zeichen, in allen Farben des Z-Angriffs.",
+                        "*#7625# Funken-Schlange: wischen, Funken fressen, lang werden – mit Bestwert.",
+                        "*#3729# Lichtmalerei: mit dem Finger Licht malen, das langsam verblasst.",
+                        "*#6725# Ω-Orakel: eine Ja-Nein-Frage, ein Tipp auf die Kugel, eine Antwort.",
+                        "*#9277# Blitz-Test: wer tippt schneller, wenn es grün wird?",
+                        "*#2733# Abspann: alle Zeiten des Launchers, alle Namen – und wie viele Eggs du gefunden hast.",
+                        "Alle stehen in der Liste der Geheimcodes (*#0000#).",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Verstecke, die ein Wort brauchen", Icons.Rounded.Favorite, Terracotta,
+                    listOf(
+                        "Sieben Verstecke öffnen sich nicht mit Zahlen, sondern mit dem richtigen Wort im Finder – aus den Hearth-, OMEGA- und ZENITH-Jahren: ein Kamin, ein alter Code, fließendes Licht, ein paar Scherze und mehr.",
+                        "Wo sie sind, verrät nur die Easter-Egg-Karte (Über das Telefon → „made by …“ lange drücken).",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Kleine Funde überall", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Im ZENITH-Monitor, im Schutzschild, im Core Enforcer Studio und auf der Uhr des Startbildschirms stecken kleine Eggs – manche zeigen sich nur zu einer bestimmten Zeit oder bei einer bestimmten Zahl.",
+                        "Und wer den Schutzschild auf 100 von 100 bringt, bekommt dafür auch etwas.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Jetzt 54 Easter Eggs", Icons.Rounded.CheckCircle, Blue,
+                    listOf(
+                        "Zweiundzwanzig neue, insgesamt 54. Die Karte zeigt, welche du schon hast – und wo die anderen sich verstecken.",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "19.5",
             name = "Z-Sturm",
             summary = "Das große Update: Der Z-Angriff kommt jetzt überall im System – nach Updates, beim Tresor, beim Würfeln, beim Laden und per Doppeltipp. Dazu zwei Wächter, die dich warnen, elf neue Vorteile in „Warum ZENITH“ und ein neues Easter Egg.",

@@ -138,7 +138,15 @@ object HearthLabs {
 }
 
 /** The hidden menus and the codes that open them (typed into the finder). */
-enum class SecretMenu(val code: String, val title: String, val what: String) {
+enum class SecretMenu(
+    val code: String,
+    val title: String,
+    val what: String,
+    /** Words that open it from the finder (no spaces, case doesn't matter). */
+    val words: List<String> = emptyList(),
+    /** False: not in the list of codes – it has to be found. */
+    val listed: Boolean = true,
+) {
     Codes("*#0000#", "Geheimcodes", "Alle versteckten Menüs auf einen Blick"),
     Test("*#0*#", "Hardware-Test", "Display-Farben, Touch, Vibration und Sensoren"),
     Info("*#1234#", "Versionen", "ZENITH, ClaudeOS, Android und Build"),
@@ -148,15 +156,34 @@ enum class SecretMenu(val code: String, val title: String, val what: String) {
     Clawd("*#2529#", "Clawd-Studio", "Clawd in jeder Stimmung (C-L-A-W)"),
     Power("*#7697#", "Ein/Aus-Menü", "Bildschirm aus, Neustart, Ausschalten (P-O-W-R)"),
 
+    /** ZENITH 19.6: more codes, T-E-R-M, N-E-O-N, S-N-A-K, D-R-A-W, O-R-A-K, Z-A-P-P, C-R-E-D. */
+    Console("*#8376#", "Z-Konsole", "Ein Terminal mit Befehlen – tippe help"),
+    Neon("*#6366#", "Neon", "Der Regen aus Zeichen – wach auf"),
+    Snake("*#7625#", "Funken-Schlange", "Wische, friss Funken, werde lang"),
+    Draw("*#3729#", "Lichtmalerei", "Mit dem Finger Licht in die Luft malen"),
+    Oracle("*#6725#", "Ω-Orakel", "Eine Frage, ein Tipp, eine Antwort"),
+    Zapp("*#9277#", "Blitz-Test", "Wie schnell sind deine Finger?"),
+    Credits("*#2733#", "Abspann", "Alle, die mitgebaut haben"),
+
     /** Not a code: looking for "Omega" (or Ω) in the finder. Not in the code list. */
-    Omega("Ω", "Ω", "Von Alpha bis Omega"),
+    Omega("Ω", "Ω", "Von Alpha bis Omega", listOf("omega", "Ω", "ω"), listed = false),
+
+    /** ZENITH 19.6: words that open hidden screens from the finder. */
+    Hearth("hearth", "Hearth-Kamin", "Das Feuer, mit dem alles anfing", listOf("hearth", "kamin"), listed = false),
+    Konami("konami", "Der alte Code", "Hoch, hoch, runter, runter …", listOf("konami"), listed = false),
+    Fluid("fluid", "OMEGA Fluid", "Das Licht, das dem Finger folgt", listOf("fluid"), listed = false),
+    Zenith("zenith", "Zenith", "Der höchste Punkt", listOf("zenith"), listed = false),
+    Sudo("sudo", "Sudo", "Nette Idee", listOf("sudosu", "sudomakemeasandwich"), listed = false),
+    Hello("hello", "Hallo, Welt", "Das erste Programm von allen", listOf("helloworld", "hallowelt"), listed = false),
+    Pi("pi", "π", "3,14159 …", listOf("π", "3,14", "3.14"), listed = false),
     ;
 
     companion object {
         fun forCode(text: String): SecretMenu? {
             val typed = text.replace(" ", "")
-            if (typed.equals("omega", ignoreCase = true) || typed == "Ω" || typed == "ω") return Omega
-            return entries.firstOrNull { it.code == typed }
+            return entries.firstOrNull { menu ->
+                (menu.listed && menu.code == typed) || menu.words.any { it.equals(typed, ignoreCase = true) }
+            }
         }
     }
 }
@@ -177,6 +204,20 @@ fun SecretMenuScreen(menu: SecretMenu, onClose: () -> Unit) {
             SecretMenu.Clawd -> ClawdStudio(back)
             SecretMenu.Power -> PowerMenu(back)
             SecretMenu.Omega -> OmegaEgg(back)
+            SecretMenu.Console -> ZConsole(back)
+            SecretMenu.Neon -> NeonMenu(back)
+            SecretMenu.Snake -> SnakeMenu(back)
+            SecretMenu.Draw -> LightPaintMenu(back)
+            SecretMenu.Oracle -> OracleMenu(back)
+            SecretMenu.Zapp -> ZappMenu(back)
+            SecretMenu.Credits -> CreditsMenu(back)
+            SecretMenu.Hearth -> HearthKaminEgg(back)
+            SecretMenu.Konami -> KonamiEgg(back)
+            SecretMenu.Fluid -> OmegaFluidEgg(back)
+            SecretMenu.Zenith -> ZenithWordEgg(back)
+            SecretMenu.Sudo -> SudoEgg(back)
+            SecretMenu.Hello -> HelloWorldEgg(back)
+            SecretMenu.Pi -> PiEgg(back)
         }
     }
 }
@@ -186,7 +227,7 @@ fun SecretMenuScreen(menu: SecretMenu, onClose: () -> Unit) {
 // ---------------------------------------------------------------------------------------------
 
 @Composable
-private fun SecretPage(
+internal fun SecretPage(
     title: String,
     subtitle: String,
     onClose: () -> Unit,
@@ -231,7 +272,7 @@ private fun SecretPage(
 }
 
 @Composable
-private fun SecretCard(title: String? = null, content: @Composable ColumnScope.() -> Unit) {
+internal fun SecretCard(title: String? = null, content: @Composable ColumnScope.() -> Unit) {
     if (title != null) {
         Text(
             title,
@@ -254,7 +295,7 @@ private fun SecretCard(title: String? = null, content: @Composable ColumnScope.(
 }
 
 @Composable
-private fun SecretValue(label: String, value: String) {
+internal fun SecretValue(label: String, value: String) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 9.dp)) {
         Text(label, color = Color.White, fontSize = 15.sp)
         Text(value, color = Color.White.copy(alpha = 0.62f), fontSize = 13.sp)
@@ -262,7 +303,7 @@ private fun SecretValue(label: String, value: String) {
 }
 
 @Composable
-private fun SecretAction(label: String, detail: String? = null, destructive: Boolean = false, onClick: () -> Unit) {
+internal fun SecretAction(label: String, detail: String? = null, destructive: Boolean = false, onClick: () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -319,11 +360,12 @@ private fun CodesMenu(onOpen: (SecretMenu) -> Unit, onClose: () -> Unit) {
     LaunchedEffect(Unit) { EasterEggs.find(context, "codes") }
     SecretPage("Geheimcodes", "*#0000# · psst – im Finder eintippen", onClose) {
         SecretCard("Codes") {
-            SecretMenu.entries.filter { it != SecretMenu.Codes && it != SecretMenu.Omega }.forEach { menu ->
+            SecretMenu.entries.filter { it.listed && it != SecretMenu.Codes }.forEach { menu ->
                 SecretAction("${menu.code}  ·  ${menu.title}", menu.what) { onOpen(menu) }
             }
         }
         SecretCard("Weitere Verstecke") {
+            SecretValue("Wörter im Finder", "Manche Verstecke öffnen sich nicht mit Zahlen, sondern mit dem richtigen Wort. Die Easter-Egg-Karte verrät sie.")
             SecretValue("ZENITH Labs", "Über das Telefon → siebenmal auf die Build-Nummer tippen")
             SecretValue("Easter-Egg-Karte", "Über das Telefon → lange auf „made by …“ drücken")
             SecretValue("Diese Liste", "Im ZENITH-Menü lange auf den Titel drücken")
