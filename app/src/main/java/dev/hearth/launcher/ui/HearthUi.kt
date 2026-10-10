@@ -190,7 +190,9 @@ internal object HearthChangelog {
                         "Es passiert, wenn ein ZENITH-Z voll geladen ist: das Logo, das Z an Seitenpunkten, Suchleiste und Now Brief, das ZENITH-Z-Widget, das Z im ZENITH-Menü und in den Illuminati.",
                         "Systemweit: Auf Wunsch zieht das Z bei jedem Entsperren über allen Apps (Design → ZENITH → Z-Angriff systemweit, oder in den Illuminati) – über Glimmer.",
                         "Der ZENITH-Start nach dem Neustart beginnt jetzt mit dem Z-Angriff, aus dessen Licht das Metall-Z entsteht.",
-                        "Wo die Version steht – Über das Telefon und Software-Update – zeigt ZENITH sie wie ColorOS 17: das Metall-Z groß über die ganze Breite, darunter die Nummer riesig in Chrom mit grünem Glühen. In den Einstellungen ist das Z oben größer.",
+                        "Wo die Version steht – Über das Telefon und Software-Update – zeigt ZENITH sie wie ColorOS 17: das Metall-Z groß über die ganze Breite. In den Einstellungen ist das Z oben größer.",
+                        "Die 19 ist ins Z eingebaut wie in der ersten Skizze: grün, schräg mit der Diagonale, in das Metall geschnitten und leuchtend – im Logo überall im System.",
+                        "Das Z im Z-Angriff ist breiter: fast von Rand zu Rand, mit dickeren Strahlen.",
                         "Clawd · ZENITH: In ZENITH Metall ist Claudes Fenster eine Platte aus ZENITHs Metall mit abgeschnittenen Ecken, grüner Kante und dem Z im Hintergrund; alles Orange wird Zenith-Grün.",
                         "ZENITH Illuminati: grünes Licht statt Gold, zwischen den Augen das Z, darüber das Metall-Z des Ordens – „Novus Ordo Zenithorum“.",
                         "Icons aus Icon-Packs bringen ihre eigene Kachel mit und stehen wieder so da – ohne doppelten Rahmen.",
@@ -1817,7 +1819,7 @@ private fun TourHero(appear: () -> Float) {
     ) {
         Spacer(Modifier.height(20.dp))
         // ZENITH 19: its mark – hold it, it charges up.
-        ZenithLogo(size = 180.dp, caption = "ZENITH 19")
+        ZenithLogo(size = 200.dp, caption = "ZENITH")
         Spacer(Modifier.height(8.dp))
         Text(
             "auf ${ClaudeOs.full} „${ClaudeOs.CODENAME}“",

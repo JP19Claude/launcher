@@ -58,7 +58,7 @@ internal fun DrawScope.drawZenithStrike(p: Float) {
     val w = size.width
     val h = size.height
     val unit = minOf(w, h)
-    val corners = listOf(Offset(w * 0.16f, h * 0.31f), Offset(w * 0.88f, h * 0.31f), Offset(w * 0.12f, h * 0.69f), Offset(w * 0.84f, h * 0.69f))
+    val corners = listOf(Offset(w * 0.05f, h * 0.3f), Offset(w * 0.98f, h * 0.3f), Offset(w * 0.02f, h * 0.7f), Offset(w * 0.95f, h * 0.7f))
     fun along(stroke: Int, f: Float): Offset = corners[stroke] + (corners[stroke + 1] - corners[stroke]) * f
     // The dark coming in, and going.
     val dark = (p / 0.08f).coerceIn(0f, 1f) * (1f - ((p - 0.82f) / 0.18f).coerceIn(0f, 1f))
@@ -75,9 +75,9 @@ internal fun DrawScope.drawZenithStrike(p: Float) {
         val a = corners[i]
         val b = along(i, f)
         // The beam: a wide green haze, the beam, a white-hot core.
-        drawLine(ZenithGreen.copy(alpha = 0.18f * fade), a, b, strokeWidth = unit * 0.09f * swell, cap = StrokeCap.Round)
-        drawLine(Color(0xFF46EB6E).copy(alpha = 0.55f * fade), a, b, strokeWidth = unit * 0.035f * swell, cap = StrokeCap.Round)
-        drawLine(Color(0xFFE6FFEA).copy(alpha = 0.95f * fade), a, b, strokeWidth = unit * 0.012f * swell, cap = StrokeCap.Round)
+        drawLine(ZenithGreen.copy(alpha = 0.18f * fade), a, b, strokeWidth = unit * 0.12f * swell, cap = StrokeCap.Round)
+        drawLine(Color(0xFF46EB6E).copy(alpha = 0.55f * fade), a, b, strokeWidth = unit * 0.045f * swell, cap = StrokeCap.Round)
+        drawLine(Color(0xFFE6FFEA).copy(alpha = 0.95f * fade), a, b, strokeWidth = unit * 0.016f * swell, cap = StrokeCap.Round)
         // The head, while this stroke is being drawn.
         if (f < 1f) {
             val r = unit * 0.11f

@@ -104,7 +104,8 @@ val ZenithFluidColors = listOf(
 fun ZenithLogo(
     modifier: Modifier = Modifier,
     size: Dp = 150.dp,
-    @Suppress("UNUSED_PARAMETER") number: String = "19",
+    /** The version, green, set into the Z as in the first sketch ("" for none). */
+    number: String = "19",
     caption: String? = null,
     interactive: Boolean = true,
     light: Float = 1f,
@@ -155,6 +156,25 @@ fun ZenithLogo(
         }
     }
     val density = LocalDensity.current
+    // The number in the Z: heavy, slanted with the diagonal (smaller when it's longer).
+    val measurer = rememberTextMeasurer()
+    val digits = remember(number, size, density) {
+        if (number.isBlank()) {
+            null
+        } else {
+            val fit = if (number.length > 2) 0.72f else 1f
+            measurer.measure(
+                number,
+                TextStyle(
+                    fontSize = with(density) { (size * 0.9f * ZenithZAspect * 0.66f * fit).toSp() },
+                    fontWeight = FontWeight.Black,
+                    fontFamily = FontFamily.SansSerif,
+                    letterSpacing = with(density) { (size * -0.012f).toSp() },
+                    textGeometricTransform = TextGeometricTransform(skewX = -0.22f),
+                ),
+            )
+        }
+    }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Canvas(
             Modifier
@@ -180,6 +200,31 @@ fun ZenithLogo(
                 )
             }
             drawZenithZ(left, top, w, light = light, charge = c)
+            // The version, green, set into the Z across its diagonal – as in the first sketch: cut
+            // into the metal, glowing, light catching its top.
+            digits?.let { d ->
+                val zh = w * ZenithZAspect
+                // How tall the digits stand (their cap height), from the size they were set in.
+                val glyph = zh * 0.66f * (if (number.length > 2) 0.72f else 1f) * 0.71f
+                val baseline = top + zh * 0.52f + glyph / 2f
+                val tl = Offset(mid.x - d.size.width / 2f + glyph * 0.08f, baseline - d.firstBaseline)
+                val foot = d.firstBaseline
+                val head = foot - glyph
+                val glow = (0.55f + 0.45f * c) * light.coerceIn(0.25f, 1f)
+                drawText(d, color = Color(0xFF0B0D0E), topLeft = tl, drawStyle = Stroke(w * 0.024f, join = StrokeJoin.Round))
+                drawText(
+                    d,
+                    brush = Brush.verticalGradient(listOf(Color(0xFFC8FFE0), ZenithGreen, ZenithGreenDeep), startY = head, endY = foot),
+                    topLeft = tl,
+                    shadow = androidx.compose.ui.graphics.Shadow(ZenithGreen.copy(alpha = glow), Offset.Zero, w * 0.045f * (1f + c)),
+                )
+                drawText(
+                    d,
+                    brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.Transparent), startY = head, endY = head + glyph * 0.55f),
+                    topLeft = tl,
+                )
+                drawText(d, color = Color.White.copy(alpha = 0.3f), topLeft = tl, drawStyle = Stroke(w * 0.003f))
+            }
             // Full: a green shock wave in the Z's shape.
             val b = burst.value
             if (b < 1f) {
@@ -224,32 +269,13 @@ fun ZenithLogo(
 
 /**
  * Where the version is shown, as ColorOS 17 shows its own – ZENITH's colors kept: the metal Z
- * big over the screen's width with "ZENITH" under it, and under that the version number huge,
- * thin, in chrome, glowing green from behind. Held, the Z charges up and strikes; tapped as often
- * as its number, the Illuminati ([onTap]).
+ * big over the screen's width, the version set into it in green as in the first sketch, "ZENITH"
+ * under it. Held, the Z charges up and strikes; tapped as often as its number, the Illuminati
+ * ([onTap]).
  */
 @Composable
 fun ZenithVersionHero(version: String, modifier: Modifier = Modifier, onTap: (() -> Unit)? = null) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        ZenithLogo(size = 300.dp, caption = "ZENITH", onTap = onTap)
-        Text(
-            HearthUi.major(version),
-            style = TextStyle(
-                brush = Brush.verticalGradient(
-                    0f to Color(0xFFF4F6F7),
-                    0.45f to Color(0xFFA9AEB2),
-                    0.55f to Color(0xFFE8EBED),
-                    1f to Color(0xFF7C8186),
-                ),
-                fontSize = 120.sp,
-                fontWeight = FontWeight.Thin,
-                letterSpacing = (-3).sp,
-                lineHeight = 120.sp,
-                shadow = androidx.compose.ui.graphics.Shadow(ZenithGreen.copy(alpha = 0.7f), Offset(0f, 4f), 44f),
-            ),
-            modifier = Modifier.padding(top = 2.dp),
-        )
-    }
+    ZenithLogo(modifier, size = 320.dp, number = HearthUi.major(version), caption = "ZENITH", onTap = onTap)
 }
 
 /**
@@ -324,7 +350,8 @@ fun ZenithUpgrade(version: String, onDone: () -> Unit) {
             ) {
                 ZenithLogo(
                     size = 260.dp,
-                    caption = "ZENITH ${version.substringBefore('.')}",
+                    number = version.substringBefore('.'),
+                    caption = "ZENITH",
                     interactive = false,
                     // Its green edges light up once the metal is there.
                     light = ((form - 0.35f) / 0.5f).coerceIn(0f, 1f),
