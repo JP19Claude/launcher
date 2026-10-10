@@ -197,10 +197,10 @@ internal object HearthChangelog {
                     everyone,
                 ),
                 ChangeSection(
-                    "Die ZENITH-Karte in den Einstellungen", Icons.Rounded.Star, Green,
+                    "Die Versionskarte in „Über das Telefon“", Icons.Rounded.Star, Green,
                     listOf(
-                        "Tippst du in den Einstellungen einmal auf die ZENITH-Karte, wird sie so groß wie die Versionskarte bei OxygenOS: das Z mit der Version riesig, darunter dein Telefon.",
-                        "Ein Tipp auf die große Karte macht sie wieder klein. „Über das Telefon“ steht darunter.",
+                        "Tippst du dort einmal auf die ZENITH-Karte, wird sie größer – so hoch wie die Versionskarte bei OxygenOS, mit dem Z weiter unten im Bild.",
+                        "Ein Tipp auf die Karte neben dem Z macht sie wieder klein. Tippst du auf das Z selbst, bleibt sie groß – so zählen die schnellen Tipps zu den Clawd Illuminati weiter, ohne dass die Karte zuckt.",
                     ),
                     everyone,
                 ),

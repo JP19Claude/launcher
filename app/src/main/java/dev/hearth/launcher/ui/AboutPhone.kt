@@ -15,7 +15,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -324,8 +327,27 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                 if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
                     val shownVersion = groups.first().specs.first().value
                     val crystal = rememberCrystalTaps(shownVersion)
+                    // ZENITH 19.5: a tap on the card makes it grow, as tall as OxygenOS's; a tap on
+                    // the card beside the Z makes it small again (the Z itself only ever opens it, so
+                    // the quick taps for the Illuminati don't make it flicker).
+                    var big by remember { mutableStateOf(false) }
+                    val aspect by animateFloatAsState(
+                        if (big) 0.62f else 0.8f,
+                        spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow),
+                        label = "heroAspect",
+                    )
                     // ZENITH 19: as ColorOS 17 shows its version – the Z big, the number huge.
-                    ZenithVersionHero(shownVersion, Modifier.padding(top = 10.dp), onTap = crystal)
+                    ZenithVersionHero(
+                        shownVersion,
+                        Modifier
+                            .padding(top = 10.dp)
+                            .clickable(remember { MutableInteractionSource() }, indication = null) { big = !big },
+                        onTap = {
+                            crystal()
+                            big = true
+                        },
+                        aspect = aspect,
+                    )
                 } else {
                     PhoneHero()
                 }
