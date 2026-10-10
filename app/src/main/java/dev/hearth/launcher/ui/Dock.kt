@@ -134,7 +134,14 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
         DockStyle.Zenith -> androidx.compose.foundation.layout.BoxWithConstraints(
             modifier
                 .fillMaxWidth()
-                .drawBehind { drawZenithPlate(slant = size.height * 0.36f, unit = 190.dp.toPx()) },
+                .then(
+                    if (LocalGlassStyle.current.hud) {
+                        // Projekt Zenith: the dock as a hologram.
+                        Modifier.drawBehind { drawHudPlate(slant = size.height * 0.36f) }
+                    } else {
+                        Modifier.drawBehind { drawZenithPlate(slant = size.height * 0.36f, unit = 190.dp.toPx()) }
+                    },
+                ),
         ) {
             // Big icons, every one the same size, as big as fits (up to 78 dp): each takes its
             // icon plus 18 dp of cell.

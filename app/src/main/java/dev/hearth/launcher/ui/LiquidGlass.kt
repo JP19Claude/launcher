@@ -109,6 +109,8 @@ data class GlassStyle(
     val liquid: Boolean = false,
     /** ZENITH 19, "ZENITH Metall": dark metal with silver on top and green light at the foot. */
     val zenith: Boolean = false,
+    /** ZENITH 19, "Projekt Zenith": holograms – dark glass, scan lines, a green frame with brackets. */
+    val hud: Boolean = false,
 ) {
     companion object {
         fun from(s: LauncherSettings) = GlassStyle(
@@ -149,6 +151,7 @@ data class GlassStyle(
                     dispersion = 0f,
                     liquid = false,
                     zenith = true,
+                    hud = s.projectZenith,
                     lensMinDp = 100_000f,
                 )
             } else {
@@ -633,6 +636,10 @@ fun LiquidGlass(
                 .matchParentSize()
                 .drawBehind {
                     // ZENITH Metall: the logo's metal and light instead of glass.
+                    if (style.hud) {
+                        drawHudSurface(glassShape.createOutline(size, layoutDirection, this), glow, touch)
+                        return@drawBehind
+                    }
                     if (style.zenith) {
                         drawZenithSurface(glassShape.createOutline(size, layoutDirection, this), fill, glow, touch)
                         return@drawBehind

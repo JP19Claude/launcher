@@ -114,7 +114,7 @@ enum class AodTint(val label: String) {
 }
 
 /** ZENITH 19: every surface of dark metal with ZENITH's green edge light instead of glass. */
-val LauncherSettings.zenithMetal: Boolean get() = glassLook == GlassLook.Zenith
+val LauncherSettings.zenithMetal: Boolean get() = glassLook == GlassLook.Zenith || projectZenith
 
 /** OMEGA UI 18.3: OMEGA Glass in the "Liquid Glass" color – clear like Apple's. */
 val LauncherSettings.liquidOmega: Boolean get() = glassLook == GlassLook.Liquid || (omegaGlass && omegaColor == OmegaColor.Liquid)
@@ -528,6 +528,8 @@ data class LauncherSettings(
     val zenithStrike: Boolean = true,
     /** ZENITH 19: the Z-Angriff over everything, every time the phone is unlocked (through Glimmer). */
     val zenithStrikeSystem: Boolean = false,
+    /** ZENITH 19, "Projekt Zenith": the whole system futuristic – holograms, HUD, a grid horizon. */
+    val projectZenith: Boolean = false,
     /** OMEGA UI 17.1: flowing effects at a calmer rate and lighter glass – smoother, less lag. */
     val smoothMode: Boolean = true,
     /** OMEGA UI 17.5: OMEGA light between the wallpaper and the home screen's apps and widgets. */
@@ -1051,6 +1053,7 @@ class SettingsRepository(context: Context) {
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
             zenithStrike = prefs.getBoolean("zenithStrike", d.zenithStrike),
             zenithStrikeSystem = prefs.getBoolean("zenithStrikeSystem", d.zenithStrikeSystem),
+            projectZenith = prefs.getBoolean("projectZenith", d.projectZenith),
             smoothMode = prefs.getBoolean("smoothMode", d.smoothMode),
             omegaLight = prefs.getBoolean("omegaLight", d.omegaLight),
             illumination = prefs.getBoolean("illumination", d.illumination),
@@ -1232,6 +1235,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("zenithStrike", s.zenithStrike)
             .putBoolean("zenithStrikeSystem", s.zenithStrikeSystem)
+            .putBoolean("projectZenith", s.projectZenith)
             .putBoolean("smoothMode", s.smoothMode)
             .putBoolean("omegaLight", s.omegaLight)
             .putBoolean("illumination", s.illumination)
@@ -1420,7 +1424,7 @@ class SettingsRepository(context: Context) {
          * Only the switch itself and the look (black or glass, which changes the window) restart it.
          */
         val GLIMMER_LIVE_KEYS = setOf(
-            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "zenithDaylight", "zenithStrikeSystem", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "glassLook", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
+            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "zenithDaylight", "zenithStrikeSystem", "projectZenith", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "glassLook", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
             "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerPrivacy", "accent", "animations",

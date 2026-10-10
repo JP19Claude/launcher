@@ -314,6 +314,12 @@ fun SettingsScreen(
             // own section now.
             if (shows("design")) item {
                 Section("ZENITH") {
+                    SwitchRow(
+                        label = "Projekt Zenith",
+                        description = "Das ganze System futuristisch: Hologramm-Flächen mit Leuchtrahmen und Scanlinien, grüne Hologramm-Icons, Computerschrift, ein Gitter-Horizont mit dem Z als Hintergrund, eine HUD-Uhr und ein HUD-Rahmen um den Startbildschirm",
+                        checked = s.projectZenith,
+                    ) { v -> update { it.copy(projectZenith = v) } }
+                    RowDivider()
                     // OMEGA UI 18.5: OMEGA Glass or Apple's Liquid Glass, for the whole system.
                     ChoiceRow(
                         label = "Glas-Stil",

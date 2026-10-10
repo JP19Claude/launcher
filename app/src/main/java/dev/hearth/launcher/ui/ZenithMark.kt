@@ -304,71 +304,81 @@ internal fun DrawScope.drawZenithPlate(slant: Float, unit: Float, alpha: Float =
         lineTo(0f, h)
         close()
     }
-    // Green light pooling under it.
+    // A breath of green light under it.
     val pool = Offset(w * 0.6f, h)
-    scale(1f, 0.35f, pivot = pool) {
-        drawCircle(Brush.radialGradient(listOf(Color(0xFF2FD27A).copy(alpha = 0.4f), Color.Transparent), center = pool, radius = w * 0.55f), w * 0.55f, pool)
+    scale(1f, 0.3f, pivot = pool) {
+        drawCircle(Brush.radialGradient(listOf(Color(0xFF2FD27A).copy(alpha = 0.22f), Color.Transparent), center = pool, radius = w * 0.5f), w * 0.5f, pool)
     }
-    // The metal.
-    drawPath(plate, Brush.verticalGradient(listOf(Color(0xFF45494C), Color(0xFF2A2D30), Color(0xFF151719)), startY = 0f, endY = h), alpha = alpha)
-    clipPath(plate) {
-        ZenithMetal.forEach { m ->
-            if (m.len <= 0f) return@forEach
-            val at = Offset(m.x * w, m.y * h)
-            val color = if (m.light) Color.White.copy(alpha = 0.02f + m.alpha * 0.05f) else Color.Black.copy(alpha = 0.1f + m.alpha * 0.18f)
-            drawLine(color, at, at + Offset(kotlin.math.cos(m.angle) * m.len * unit * 2f, kotlin.math.sin(m.angle) * m.len * unit), strokeWidth = m.width * unit * 1.5f)
-        }
-        drawRect(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.08f), Color.Transparent), center = Offset(w * 0.3f, 0f), radius = w * 0.6f))
-        drawPath(
-            plate,
-            Brush.verticalGradient(listOf(Color(0xFFE6EBF0).copy(alpha = 0.6f), Color(0xFF787D82).copy(alpha = 0.3f), Color(0xFF141414).copy(alpha = 0.5f)), startY = 0f, endY = h),
-            style = Stroke(unit * 0.02f),
-        )
-    }
-    // Silver on its top edge and its left cut.
-    drawLine(Color(0xFFEBF0F5).copy(alpha = 0.75f), Offset(slant, 0f), Offset(w, 0f), strokeWidth = unit * 0.004f, cap = StrokeCap.Round)
-    drawLine(Color(0xFFB4B9BE).copy(alpha = 0.45f), Offset(0f, h), Offset(slant, 0f), strokeWidth = unit * 0.004f, cap = StrokeCap.Round)
-    // The green light along its foot, brightest on the right, and up its right cut.
-    rimLight(Offset(0f, h), Offset(w - slant, h), unit, 0f, 0.25f, 0.9f, 1f)
-    rimLight(Offset(w - slant, h), Offset(w, 0f), unit, 0f, 0.9f, 0.35f, 0f)
-    rimSpot(Offset((w - slant) * 0.68f, h), unit * 0.05f, 0.85f)
+    // The metal: dark, light falling from the top, a faint diagonal sheen.
+    drawPath(plate, Brush.verticalGradient(listOf(Color(0xFF3E4245), Color(0xFF26292C), Color(0xFF141618)), startY = 0f, endY = h), alpha = alpha)
+    drawPath(
+        plate,
+        Brush.linearGradient(
+            0f to Color.Transparent,
+            0.46f to Color.White.copy(alpha = 0.04f),
+            0.54f to Color.Transparent,
+            start = Offset.Zero,
+            end = Offset(w * 0.6f, h),
+        ),
+    )
+    // A silver hairline along its top and its left cut.
+    drawLine(Color.White.copy(alpha = 0.45f), Offset(slant, 0f), Offset(w, 0f), strokeWidth = unit * 0.004f, cap = StrokeCap.Round)
+    drawLine(Color.White.copy(alpha = 0.18f), Offset(0f, h), Offset(slant, 0f), strokeWidth = unit * 0.004f, cap = StrokeCap.Round)
+    // One crisp green line along its foot.
+    zenithFootLine(1f)
 }
 
 /**
- * ZENITH's edge light on a rounded plate filling this scope – the logo's light on every surface:
- * silver along the top, green light burning along the foot and up into the lower corners, a hot
- * spot on the right. [strength] dims it; [press] (0..1, while held) makes it burn brighter.
+ * ZENITH's green line along a surface's foot: one crisp line, brightest a little right of the
+ * middle and fading out towards both ends, with a soft glow – the logo's light, held back. Small
+ * surfaces (buttons, chips) don't get it; [k] is its strength.
+ */
+private fun DrawScope.zenithFootLine(k: Float) {
+    if (k <= 0f || size.minDimension < 56.dp.toPx()) return
+    val px = 1.dp.toPx()
+    val y = size.height - px * 0.6f
+    val a = Offset(size.width * 0.05f, y)
+    val b = Offset(size.width * 0.93f, y)
+    fun line(width: Float, alpha: Float, core: Color) = drawLine(
+        Brush.horizontalGradient(
+            0f to Color.Transparent,
+            0.3f to ZenithGreen.copy(alpha = (alpha * 0.6f * k).coerceIn(0f, 1f)),
+            0.68f to core.copy(alpha = (alpha * k).coerceIn(0f, 1f)),
+            1f to Color.Transparent,
+            startX = a.x,
+            endX = b.x,
+        ),
+        a,
+        b,
+        strokeWidth = width,
+    )
+    line(px * 6f, 0.1f, ZenithGreen)
+    line(px * 2f, 0.32f, ZenithGreen)
+    line(px, 0.95f, Color(0xFFC8FFD6))
+}
+
+/** A silver hairline round the top of [outline], fading out down its sides. */
+private fun DrawScope.zenithTopLine(outline: androidx.compose.ui.graphics.Outline) {
+    drawOutline(
+        outline,
+        Brush.verticalGradient(
+            0f to Color.White.copy(alpha = 0.4f),
+            0.35f to Color.White.copy(alpha = 0.04f),
+            1f to Color.Transparent,
+        ),
+        style = Stroke(1.dp.toPx()),
+    )
+}
+
+/**
+ * ZENITH's edge on a rounded plate filling this scope: a silver hairline round its top and one
+ * crisp green line along its foot. [strength] dims it; [press] (0..1, while held) brightens it.
  */
 internal fun DrawScope.drawZenithEdge(corner: Float, strength: Float = 1f, press: Float = 0f) {
     val r = corner.coerceAtMost(size.minDimension / 2f)
-    val k = (strength * (1f + 0.6f * press)).coerceIn(0f, 2f)
-    val px = 1.dp.toPx()
-    drawRoundRect(
-        Brush.verticalGradient(
-            0f to Color(0xFFE6EBF0).copy(alpha = 0.55f),
-            0.3f to Color.White.copy(alpha = 0.05f),
-            0.6f to Color.Transparent,
-        ),
-        topLeft = Offset(px / 2f, px / 2f),
-        size = Size(size.width - px, size.height - px),
-        cornerRadius = CornerRadius((r - px / 2f).coerceAtLeast(0f)),
-        style = Stroke(px),
-    )
-    fun foot(width: Float, color: Color, a: Float) = drawRoundRect(
-        Brush.verticalGradient(
-            0f to Color.Transparent,
-            0.55f to Color.Transparent,
-            1f to color.copy(alpha = (a * k).coerceIn(0f, 1f)),
-        ),
-        topLeft = Offset(width / 2f, width / 2f),
-        size = Size(size.width - width, size.height - width),
-        cornerRadius = CornerRadius((r - width / 2f).coerceAtLeast(0f)),
-        style = Stroke(width),
-    )
-    foot(px * 4f, Color(0xFF2FD25A), 0.28f)
-    foot(px * 1.6f, Color(0xFF46EB6E), 0.8f)
-    foot(px * 0.6f, Color(0xFFD2FFD7), 0.9f)
-    rimSpot(Offset(size.width * 0.68f, size.height - px), minOf(size.width * 0.18f, 26.dp.toPx()), 0.7f * k)
+    val outline = androidx.compose.ui.graphics.Outline.Rounded(RoundRect(0f, 0f, size.width, size.height, CornerRadius(r)))
+    zenithTopLine(outline)
+    zenithFootLine((strength * (1f + 0.6f * press)).coerceIn(0f, 2f))
 }
 
 /**
@@ -395,69 +405,43 @@ class ZenithCutShape(private val cut: Dp) : androidx.compose.ui.graphics.Shape {
     }
 }
 
-/** ZENITH's edge light along any [outline]: silver on top, green light along the foot (see [drawZenithEdge]). */
+/** ZENITH's edge along any [outline]: a silver hairline round its top, a crisp green line along its foot. */
 internal fun DrawScope.drawZenithOutlineEdge(outline: androidx.compose.ui.graphics.Outline, strength: Float = 1f, press: Float = 0f) {
-    val k = (strength * (1f + 0.6f * press)).coerceIn(0f, 2f)
-    val px = 1.dp.toPx()
-    drawOutline(
-        outline,
-        Brush.verticalGradient(
-            0f to Color(0xFFE6EBF0).copy(alpha = 0.6f),
-            0.3f to Color.White.copy(alpha = 0.05f),
-            0.6f to Color.Transparent,
-        ),
-        style = Stroke(px),
-    )
-    fun foot(width: Float, color: Color, a: Float) = drawOutline(
-        outline,
-        Brush.verticalGradient(
-            0f to Color.Transparent,
-            0.55f to Color.Transparent,
-            1f to color.copy(alpha = (a * k).coerceIn(0f, 1f)),
-        ),
-        style = Stroke(width),
-    )
-    foot(px * 4f, Color(0xFF2FD25A), 0.28f)
-    foot(px * 1.6f, Color(0xFF46EB6E), 0.8f)
-    foot(px * 0.6f, Color(0xFFD2FFD7), 0.9f)
-    rimSpot(Offset(size.width * 0.6f, size.height - px), minOf(size.width * 0.18f, 26.dp.toPx()), 0.7f * k)
+    zenithTopLine(outline)
+    zenithFootLine((strength * (1f + 0.6f * press)).coerceIn(0f, 2f))
 }
 
 /**
  * "ZENITH Metall": a surface of the logo's dark metal instead of glass, in [outline] (ZENITH's
- * cut shape) – smoked [fill] over the blurred background, brushed light from the top left, worn
- * scratches on the bigger plates, a green glow where it's [touch]ed ([glow] 0..1) and ZENITH's
- * edge light.
+ * cut shape) – smoked [fill] over the blurred background, light falling from the top, a faint
+ * diagonal sheen like light on brushed metal, a green glow where it's [touch]ed ([glow] 0..1)
+ * and ZENITH's edge.
  */
 internal fun DrawScope.drawZenithSurface(outline: androidx.compose.ui.graphics.Outline, fill: Color, glow: Float, touch: Offset) {
     drawOutline(outline, fill)
     drawOutline(
         outline,
-        Brush.linearGradient(
-            0f to Color.White.copy(alpha = 0.09f),
-            0.45f to Color.Transparent,
-            1f to Color.Black.copy(alpha = 0.22f),
-            start = Offset.Zero,
-            end = Offset(size.width * 0.5f, size.height),
+        Brush.verticalGradient(
+            0f to Color.White.copy(alpha = 0.07f),
+            0.4f to Color.Transparent,
+            1f to Color.Black.copy(alpha = 0.2f),
         ),
     )
-    if (size.minDimension > 80.dp.toPx()) {
-        val plate = Path().apply { addOutline(outline) }
-        val unit = 160.dp.toPx()
-        clipPath(plate) {
-            ZenithMetal.forEach { m ->
-                if (m.len <= 0f) return@forEach
-                val at = Offset(m.x * size.width, m.y * size.height)
-                val color = if (m.light) Color.White.copy(alpha = 0.015f + m.alpha * 0.04f) else Color.Black.copy(alpha = 0.06f + m.alpha * 0.12f)
-                drawLine(color, at, at + Offset(kotlin.math.cos(m.angle) * m.len * unit * 2f, kotlin.math.sin(m.angle) * m.len * unit), strokeWidth = m.width * unit * 1.5f)
-            }
-        }
-    }
+    drawOutline(
+        outline,
+        Brush.linearGradient(
+            0f to Color.Transparent,
+            0.46f to Color.White.copy(alpha = 0.035f),
+            0.54f to Color.Transparent,
+            start = Offset.Zero,
+            end = Offset(size.width, size.height),
+        ),
+    )
     if (glow > 0.01f) {
         drawOutline(
             outline,
             Brush.radialGradient(
-                0f to Color(0xFF2FD27A).copy(alpha = (0.3f * glow).coerceIn(0f, 1f)),
+                0f to ZenithGreen.copy(alpha = (0.22f * glow).coerceIn(0f, 1f)),
                 1f to Color.Transparent,
                 center = touch,
                 radius = size.minDimension.coerceAtLeast(1f),
@@ -465,4 +449,84 @@ internal fun DrawScope.drawZenithSurface(outline: androidx.compose.ui.graphics.O
         )
     }
     drawZenithOutlineEdge(outline, 1f, glow)
+}
+
+/**
+ * Projekt Zenith: a hologram frame round [outline] – a thin green line, brighter brackets at the
+ * square corners, tick marks along the top; [press] (0..1) makes it burn.
+ */
+internal fun DrawScope.drawHudFrame(outline: androidx.compose.ui.graphics.Outline, press: Float = 0f) {
+    val px = 1.dp.toPx()
+    drawOutline(outline, ZenithGreen.copy(alpha = (0.32f + 0.45f * press).coerceIn(0f, 1f)), style = Stroke(px))
+    val l = minOf(size.minDimension * 0.24f, 18.dp.toPx())
+    val bracket = Color(0xFF7DFFA8).copy(alpha = 0.95f)
+    val sw = px * 2f
+    drawLine(bracket, Offset(size.width - l, 0f), Offset(size.width, 0f), strokeWidth = sw)
+    drawLine(bracket, Offset(size.width, 0f), Offset(size.width, l), strokeWidth = sw)
+    drawLine(bracket, Offset(0f, size.height - l), Offset(0f, size.height), strokeWidth = sw)
+    drawLine(bracket, Offset(0f, size.height), Offset(l, size.height), strokeWidth = sw)
+    if (size.width > 120.dp.toPx()) {
+        for (i in 0 until 4) {
+            val x = size.width * 0.62f + i * 6.dp.toPx()
+            drawLine(ZenithGreen.copy(alpha = 0.55f), Offset(x, 0f), Offset(x, 4.dp.toPx()), strokeWidth = px)
+        }
+    }
+}
+
+/**
+ * Projekt Zenith: a hologram panel in [outline] instead of metal – dark glass with a green
+ * breath, scan lines, a green glow where it's [touch]ed ([glow] 0..1), and the hologram frame.
+ */
+internal fun DrawScope.drawHudSurface(outline: androidx.compose.ui.graphics.Outline, glow: Float, touch: Offset) {
+    val px = 1.dp.toPx()
+    drawOutline(outline, Color(0xFF020805).copy(alpha = 0.74f))
+    drawOutline(
+        outline,
+        Brush.verticalGradient(
+            0f to ZenithGreen.copy(alpha = 0.1f),
+            0.5f to Color.Transparent,
+            1f to ZenithGreen.copy(alpha = 0.06f),
+        ),
+    )
+    if (size.minDimension > 40.dp.toPx()) {
+        val panel = Path().apply { addOutline(outline) }
+        clipPath(panel) {
+            val step = 3.dp.toPx()
+            var y = 0f
+            while (y < size.height) {
+                drawLine(ZenithGreen.copy(alpha = 0.05f), Offset(0f, y), Offset(size.width, y), strokeWidth = px * 0.6f)
+                y += step
+            }
+        }
+    }
+    if (glow > 0.01f) {
+        drawOutline(
+            outline,
+            Brush.radialGradient(
+                0f to ZenithGreen.copy(alpha = (0.32f * glow).coerceIn(0f, 1f)),
+                1f to Color.Transparent,
+                center = touch,
+                radius = size.minDimension.coerceAtLeast(1f),
+            ),
+        )
+    }
+    drawHudFrame(outline, glow)
+}
+
+/** Projekt Zenith: the dock as a hologram – a slanted panel with scan lines, a green frame and brackets. */
+internal fun DrawScope.drawHudPlate(slant: Float) {
+    val w = size.width
+    val h = size.height
+    val plate = Path().apply {
+        moveTo(slant, 0f)
+        lineTo(w, 0f)
+        lineTo(w - slant, h)
+        lineTo(0f, h)
+        close()
+    }
+    val pool = Offset(w * 0.5f, h)
+    scale(1f, 0.35f, pivot = pool) {
+        drawCircle(Brush.radialGradient(listOf(ZenithGreen.copy(alpha = 0.3f), Color.Transparent), center = pool, radius = w * 0.55f), w * 0.55f, pool)
+    }
+    drawHudSurface(androidx.compose.ui.graphics.Outline.Generic(plate), 0f, Offset.Zero)
 }

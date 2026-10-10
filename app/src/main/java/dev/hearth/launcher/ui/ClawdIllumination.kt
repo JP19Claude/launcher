@@ -133,7 +133,14 @@ fun OmegaSign(
 ) {
     val s = LocalSettings.current
     val palette = fluidPalette()
-    val brush = if (s.omegaGlass) {
+    val glass = LocalGlassStyle.current
+    val brush = if (glass.hud) {
+        // Projekt Zenith: the Z as a green hologram.
+        Brush.verticalGradient(listOf(Color(0xFFB8FFC8), ZenithGreen))
+    } else if (glass.zenith) {
+        // ZENITH Metall: the Z in chrome.
+        Brush.verticalGradient(listOf(Color(0xFFF4F6F7), Color(0xFFA9AEB2), Color(0xFFE8EBED)))
+    } else if (s.omegaGlass) {
         Brush.linearGradient(listOf(Color.White, palette[0], palette[1], Color.White))
     } else {
         Brush.verticalGradient(listOf(Color.White, Color.White.copy(alpha = 0.75f)))
@@ -318,6 +325,7 @@ fun ClawdIlluminationScreen(
                 IlluminationSwitch("✨", "Atmosphäre", "Die Vorteile aus „Atmosphäre“ (Schnee, Sterne …) auch auf dem Sperrbildschirm.", settings.lockAtmosphere) { v -> onChange { it.copy(lockAtmosphere = v) } }
                 IlluminationSwitch("🔋", "Akku", "Der Akkustand als kleiner Chip.", settings.lockBattery) { v -> onChange { it.copy(lockBattery = v) } }
                 IlluminationSwitch("Ƶ", "Z-Zeichen", "Das ZENITH-Z oben auf dem Sperrbildschirm.", settings.lockOmega) { v -> onChange { it.copy(lockOmega = v) } }
+                IlluminationSwitch("◈", "Projekt Zenith", "Das ganze System futuristisch: Hologramme, HUD, Computerschrift, ein Gitter-Horizont.", settings.projectZenith) { v -> onChange { it.copy(projectZenith = v) } }
                 IlluminationSwitch("⚡", "Z-Angriff überall", "Bei jedem Entsperren zieht ein riesiges Z aus grünem Licht über den Bildschirm – wie Zygardes Kern-Vollstrecker, über allen Apps.", settings.zenithStrikeSystem) { v -> onChange { it.copy(zenithStrikeSystem = v) } }
                 LockMessageField(settings.lockMessage) { v -> onChange { it.copy(lockMessage = v) } }
                 Text(

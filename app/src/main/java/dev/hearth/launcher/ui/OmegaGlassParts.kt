@@ -111,7 +111,8 @@ internal fun OmegaHomeLight(modifier: Modifier = Modifier) {
     val s = LocalSettings.current
     // ZENITH: its own light – dark like the logo's ground, green rising from below.
     if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.Zenith && s.omegaLight && !s.has(dev.hearth.launcher.data.Perk.DayLight)) {
-        ZenithHomeLight(modifier)
+        // (Projekt Zenith brings its own light with its horizon.)
+        if (!s.projectZenith) ZenithHomeLight(modifier)
         return
     }
     if (!s.omegaGlass || !s.omegaLight || !s.fluidDesign) return

@@ -184,6 +184,36 @@ internal object HearthChangelog {
             summary = "Aus OMEGA UI wird ZENITH – die Sonne im höchsten Punkt, auf der neuen Basis ClaudeOS 6.0 „Helios“: ein neuer Name, ein neues Logo, eine neue Farbe, eine neue Uhr. Alles fühlt sich neu an, und die alten Easter Eggs bleiben.",
             sections = listOf(
                 ChangeSection(
+                    "Projekt Zenith", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Ein neuer Modus, der das ganze System futuristisch macht: Design → ZENITH → Projekt Zenith, in den Illuminati oder als Kachel im ZENITH-Menü (mit Z-Angriff beim Einschalten).",
+                        "Jede Fläche wird ein Hologramm: dunkles Glas mit grünem Hauch, Scanlinien, ein feiner grüner Rahmen mit hellen Klammern an den Ecken und Strichmarken oben.",
+                        "Alle App-Icons werden grüne Hologramme, Texte stehen in Computerschrift.",
+                        "Der Hintergrund: ein leuchtender Horizont mit einem Gitterboden, darüber das Z als Drahtgitter-Hologramm, Lichtpunkte, Scanlinien.",
+                        "Die HUD-Uhr: „ZENITH // ZEIT“, die Zeit groß in Computerziffern mit grünem Glühen, die Sekunden daneben, darunter Datum, Akku und Sonnenstand – in Klammern.",
+                        "Ein HUD-Rahmen um den Startbildschirm: Klammern in allen vier Ecken, oben eine Anzeige mit Datum und Akku, und ab und zu fährt eine Scanlinie über alles.",
+                        "Das Dock wird eine Hologramm-Platte.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Hochwertiger", Icons.Rounded.CheckCircle, Green,
+                    listOf(
+                        "ZENITH Metall ist ruhiger und edler: keine grünen Leuchtflecken mehr, keine Kratzer – eine feine silberne Linie oben, eine einzige klare grüne Linie unten, die zu den Enden ausläuft; kleine Knöpfe und Chips nur mit der silbernen Linie.",
+                        "Licht fällt von oben auf das Metall, ein feiner Glanz liegt schräg darüber; angetippt glüht es grün.",
+                        "Nur noch Grün und Silber: kein Gold und Orange mehr in Rändern, Linien und Zeichen; das Z ist überall aus Chrom.",
+                        "Das ZENITH-Dock ist glatter, ohne Kratzer und Flecken.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Hotfixes", Icons.Rounded.Refresh, Blue,
+                    listOf(
+                        "Das Software-Update findet jetzt auch Hotfixes: gleiche Version, neuere Build-Nummer – „Hotfix verfügbar (Build …)“, herunterladen und installieren wie ein Update.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
                     "Z-Angriff", Icons.Rounded.Star, Green,
                     listOf(
                         "Das Z erscheint wie Zygardes Kern-Vollstrecker: Grüne Energiestrahlen ziehen ein riesiges Z über den Bildschirm, Strich für Strich, Funken fliegen – das Z blitzt weiß auf und zerbirst in Ringen aus grünem Licht. Mit Klopfen bei jedem Strich.",

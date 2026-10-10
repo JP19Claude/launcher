@@ -318,10 +318,13 @@ fun AppIconImage(app: AppInfo, size: Dp, modifier: Modifier = Modifier) {
     // Icons keep a fixed highlight: redrawing every icon on each tilt made scrolling lag.
     val light = remember { mutableStateOf(IconLight) }
     val sheen = if (settings.iconGloss) Modifier.glassSheen(light, settings.glassSpecular) else Modifier
+    // Projekt Zenith: every icon a green hologram.
+    val hologram = if (LocalGlassStyle.current.hud) monoTint(Color(0xFF7DFFA8)) else null
     when (app.iconKind) {
         IconKind.Shaped -> Image(
             bitmap = app.icon,
             contentDescription = app.label,
+            colorFilter = hologram,
             modifier = modifier
                 .size(size)
                 .shadow(elevation = 6.dp, shape = settings.iconShape.clipShape(), clip = true)
@@ -332,6 +335,7 @@ fun AppIconImage(app: AppInfo, size: Dp, modifier: Modifier = Modifier) {
         IconKind.Free -> Image(
             bitmap = app.icon,
             contentDescription = app.label,
+            colorFilter = hologram,
             modifier = modifier
                 .size(size)
                 .then(sheen),
@@ -347,7 +351,7 @@ fun AppIconImage(app: AppInfo, size: Dp, modifier: Modifier = Modifier) {
             Image(
                 bitmap = app.icon,
                 contentDescription = app.label,
-                colorFilter = glyphFilter(settings.iconStyle, app.iconKind, settings.accent),
+                colorFilter = hologram ?: glyphFilter(settings.iconStyle, app.iconKind, settings.accent),
                 modifier = Modifier.fillMaxSize(),
             )
         }

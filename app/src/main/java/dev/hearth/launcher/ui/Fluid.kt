@@ -195,6 +195,8 @@ val GalaxyOmegaFluidColors = listOf(
 /** The OMEGA Fluid colors for these settings (Zenith, Rubin or Galaxy Omega). */
 internal fun omegaPalette(s: dev.hearth.launcher.data.LauncherSettings): List<Color> =
     when {
+        // ZENITH Metall: green and silver only – calm, no gold.
+        s.glassLook == dev.hearth.launcher.data.GlassLook.Zenith || s.projectZenith -> ZenithMetalColors
         // ZENITH 19: clear glass in ZENITH's light keeps a glint of sun and green.
         s.liquidOmega -> if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.Zenith) ZenithLiquidColors else LiquidFluidColors
         else -> when (s.omegaColor) {
@@ -204,6 +206,15 @@ internal fun omegaPalette(s: dev.hearth.launcher.data.LauncherSettings): List<Co
         else -> OmegaFluidColors
         }
     }
+
+/** ZENITH Metall's colors: ZENITH's green and the silver of its metal. */
+val ZenithMetalColors = listOf(
+    Color(0xFF2FD27A),
+    Color(0xFFE6E9EB),
+    Color(0xFF8FE3B0),
+    Color(0xFFB9C0C6),
+    Color(0xFF15965A),
+)
 
 /** OMEGA UI 18.3 "Liquid Glass": light caught in clear glass – white with a breath of rainbow. */
 val LiquidFluidColors = listOf(
@@ -246,9 +257,15 @@ fun Modifier.aiFluidEdge(
     if (LocalGlassStyle.current.zenith) {
         @Suppress("NAME_SHADOWING")
         val strength = (strength * 1.6f).coerceIn(0.45f, 1.3f)
+        val hud = LocalGlassStyle.current.hud
         return@composed this.drawWithContent {
             drawContent()
-            drawZenithEdge(corner.toPx(), strength)
+            if (hud) {
+                val r = corner.toPx().coerceAtMost(size.minDimension / 2f)
+                drawHudFrame(androidx.compose.ui.graphics.Outline.Rounded(androidx.compose.ui.geometry.RoundRect(0f, 0f, size.width, size.height, CornerRadius(r))))
+            } else {
+                drawZenithEdge(corner.toPx(), strength)
+            }
         }
     }
     // OMEGA UI 17.5, Ω-Overdrive: every rim flows, and brighter.
@@ -329,7 +346,7 @@ fun Modifier.fluidGlow(strength: Float = 1f, enabled: Boolean = true, flowing: B
         return@composed this.drawWithContent {
             val at = Offset(size.width * 0.62f, size.height * 1.05f)
             val r = size.maxDimension * 0.75f
-            drawCircle(Brush.radialGradient(listOf(ZenithGreen.copy(alpha = (0.18f * strength).coerceIn(0f, 0.4f)), Color.Transparent), center = at, radius = r), r, at)
+            drawCircle(Brush.radialGradient(listOf(ZenithGreen.copy(alpha = (0.08f * strength).coerceIn(0f, 0.2f)), Color.Transparent), center = at, radius = r), r, at)
             drawContent()
         }
     }

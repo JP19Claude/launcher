@@ -137,7 +137,7 @@ fun AppUpdateContent() {
                 when (val s = state) {
                     UpdateState.Checking -> "$name $current · suche …"
                     UpdateState.UpToDate -> "$name $current · neueste Version"
-                    is UpdateState.Newer -> "$name ${s.release.version} ist verfügbar"
+                    is UpdateState.Newer -> "$name ${s.release.label(current)} ist verfügbar"
                     is UpdateState.Failed -> "$name $current · ${s.reason}"
                     else -> "$name $current"
                 },
@@ -472,7 +472,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                     ),
                 )
                 InfoRow("Build-Nummer", buildNumber)
-                if (release != null) InfoRow("Neue Version", "${release.version} · ${megabytes(release.size)}")
+                if (release != null) InfoRow(if (release.isHotfix(current)) "Hotfix" else "Neue Version", "${release.label(current)} · ${megabytes(release.size)}")
                 InfoRow(
                     "Letzte Prüfung",
                     if (lastCheck > 0) DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(lastCheck)) else "Noch nie",
@@ -625,10 +625,11 @@ internal fun HearthVersionEgg(version: String, name: String, onClose: () -> Unit
 /** Where the check stands, in a pill under the version (a spinner while it looks). */
 @Composable
 private fun StatusPill(state: UpdateState, accent: Color) {
+    val installed = AppUpdater.currentVersion(LocalContext.current)
     val (text, ok) = when (state) {
         UpdateState.Checking -> "Suche nach Updates …" to false
         UpdateState.UpToDate -> "Dein System ist auf dem neuesten Stand" to true
-        is UpdateState.Newer -> "Neue Version ${state.release.version} verfügbar" to false
+        is UpdateState.Newer -> (if (state.release.isHotfix(installed)) "Hotfix verfügbar (Build ${state.release.build})" else "Neue Version ${state.release.version} verfügbar") to false
         is UpdateState.Downloading -> "Update wird heruntergeladen …" to false
         is UpdateState.Ready -> "Bereit zur Installation" to true
         is UpdateState.Failed -> "Suche fehlgeschlagen" to false
@@ -658,6 +659,7 @@ private fun StatusPill(state: UpdateState, accent: Color) {
 /** A newer version found: its name, size and what it brings, as ColorOS lists "Update-Details". */
 @Composable
 private fun NewVersionCard(name: String, release: AppUpdater.Release, look: UpdateLook) {
+    val installed = AppUpdater.currentVersion(LocalContext.current)
     Column(
         Modifier
             .fillMaxWidth()
@@ -667,7 +669,7 @@ private fun NewVersionCard(name: String, release: AppUpdater.Release, look: Upda
             .aiFluidEdge(26.dp, strength = 0.8f, width = 1.5.dp, enabled = LocalSettings.current.fluidDesign)
             .padding(20.dp),
     ) {
-        Text("$name ${release.version}", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
+        Text("$name ${release.label(installed)}", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
         Text("Größe: ${megabytes(release.size)}", color = look.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         if (release.notes.isNotBlank()) {
             Spacer(Modifier.height(10.dp))

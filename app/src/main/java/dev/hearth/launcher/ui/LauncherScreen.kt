@@ -544,13 +544,16 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val glassStyle = remember(settings) { GlassStyle.from(settings) }
     // ZENITH 19: ZENITH's own background – made once, off the main thread; the metal over it
     // blurs it instead of the wallpaper.
-    val zenithWall by androidx.compose.runtime.produceState<ZenithWall?>(null, settings.zenithWallpaper) {
-        value = if (settings.zenithWallpaper) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { runCatching { makeZenithWall(context) }.getOrNull() }
+    val zenithWall by androidx.compose.runtime.produceState<ZenithWall?>(null, settings.zenithWallpaper, settings.projectZenith) {
+        val project = settings.projectZenith
+        value = if (settings.zenithWallpaper || project) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { runCatching { makeZenithWall(context, project) }.getOrNull() }
         } else {
             null
         }
     }
+    // ZENITH 19: the Z-Angriff over the home screen (switching Projekt Zenith on, for one).
+    var strikeNow by remember { mutableStateOf(false) }
     // ZENITH 19: after the phone starts, the Z lights up once.
     var bootIntro by remember { mutableStateOf(settings.zenithBootIntro && dev.hearth.launcher.BuildConfig.ALL_IN_ONE && ZenithBoot.isNewStart(context)) }
     val menuBlur by animateDpAsState(
@@ -688,6 +691,13 @@ fun LauncherScreen(vm: LauncherViewModel) {
         LocalBadges provides badges,
         // OMEGA UI 18: the color world is laid over the root below, with these settings.
         LocalColorWorldApplied provides true,
+        // Projekt Zenith: a computer's typeface for the text that doesn't choose its own.
+        androidx.compose.material3.LocalTextStyle provides
+            if (settings.projectZenith) {
+                androidx.compose.material3.LocalTextStyle.current.merge(androidx.compose.ui.text.TextStyle(fontFamily = HudFont))
+            } else {
+                androidx.compose.material3.LocalTextStyle.current
+            },
         // Remembered, so icons don't all recompose whenever the home screen does.
         LocalSelection provides remember(selecting, selected) {
             SelectionState(selecting, selected) { app ->
@@ -985,6 +995,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     // along the top of the dock.
                     // OMEGA UI 18.5: a strip of glass behind the status bar.
                     GlassStatusBar()
+                    // Projekt Zenith: the HUD frame round the home screen.
+                    if (settings.projectZenith) ProjectHudFrame(Modifier.matchParentSize())
                     // OMEGA UI 18: the perks over the home screen – and Claude Mythos's banner.
                     PerkFrontLayers(settings, sparkField, if (dockBounds.height > 0f) dockBounds.top else 0f)
                     // Claude Mythos: Clawds peeking in from the edges and sitting on the dock.
@@ -1218,6 +1230,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             if (settings.galaxyClaude) drawerOpen = true else searchOpen = true
                         },
                         HubTile("Clawd", Icons.Rounded.Face, Color(0xFFD97757)) { vm.askClaude() },
+                        // ZENITH 19: Projekt Zenith on and off, with the Z-Angriff.
+                        HubTile(if (settings.projectZenith) "Projekt Zenith\naus" else "Projekt\nZenith", Icons.Rounded.Star, Color(0xFF2FD27A)) {
+                            val on = !settings.projectZenith
+                            vm.updateSettings { it.copy(projectZenith = on) }
+                            if (on && settings.zenithStrike) strikeNow = true
+                        },
                         if (dropOn) {
                             HubTile("Glimmer\nDrop", Icons.Rounded.Share, Color(0xFF5E9BFF)) {
                                 runCatching { context.startActivity(Intent(context, dev.hearth.launcher.DropActivity::class.java)) }
@@ -1291,6 +1309,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
             if (bootIntro && !showOmega) {
                 ZenithBootIntro { bootIntro = false }
             }
+            if (strikeNow) ZenithStrikeOverlay { strikeNow = false }
 
             drag?.let { d ->
                 DragOverlay(
@@ -1506,6 +1525,11 @@ private fun HomeHeader(settings: LauncherSettings, modifier: Modifier = Modifier
 
 @Composable
 private fun HomeHeaderContent(settings: LauncherSettings, modifier: Modifier = Modifier) {
+    // Projekt Zenith: the HUD clock, whatever clock was chosen.
+    if (settings.projectZenith && settings.clockStyle != ClockStyle.Hidden) {
+        ProjectHudClock(settings, modifier.padding(start = 4.dp))
+        return
+    }
     when (settings.clockStyle) {
         ClockStyle.Hidden -> Spacer(modifier)
         ClockStyle.Stacked -> StackedClock(settings, modifier.padding(start = 8.dp))
@@ -2131,13 +2155,6 @@ private fun PageDots(
                         lineTo(x + w - cut, h)
                         lineTo(x, h)
                         close()
-                    }
-                    if (near > 0.05f) {
-                        drawRect(
-                            Brush.radialGradient(listOf(ZenithGreen.copy(alpha = 0.45f * near), Color.Transparent), center = Offset(x + w / 2f, h / 2f), radius = w),
-                            topLeft = Offset(x - w / 2f, -h * 2f),
-                            size = Size(w * 2f, h * 5f),
-                        )
                     }
                     drawPath(dash, androidx.compose.ui.graphics.lerp(Color(0xFFB4B9BE).copy(alpha = 0.55f), ZenithGreen, near))
                 } else {

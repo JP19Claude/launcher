@@ -49,8 +49,19 @@ object AppUpdater {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName
     }.getOrNull().orEmpty()
 
-    /** A newer version, ready to download. */
-    class Release(val version: String, val url: String, val size: Long, val notes: String = "")
+    /** The build number of this app (hotfixes raise it, the version stays). */
+    fun currentBuild(context: Context): Long = runCatching {
+        androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(context.packageManager.getPackageInfo(context.packageName, 0))
+    }.getOrDefault(0L)
+
+    /** A newer version, ready to download – or a hotfix: the same version, a newer [build]. */
+    class Release(val version: String, val url: String, val size: Long, val notes: String = "", val build: Long = 0L) {
+        /** A hotfix for [installed]: no newer version, only a newer build. */
+        fun isHotfix(installed: String): Boolean = build > 0L && !AppUpdater.isNewer(version, installed)
+
+        /** "19.0" – or, for a hotfix, "19.0 Hotfix (Build 150)". */
+        fun label(installed: String): String = if (isHotfix(installed)) "$version Hotfix (Build $build)" else version
+    }
 
     private fun prefs(context: Context) = context.getSharedPreferences("hearth_updates", Context.MODE_PRIVATE)
 
@@ -94,7 +105,10 @@ object AppUpdater {
         // First the plain versions file every build publishes (no API limit), then the API.
         fromVersionsFile(kind.slug)?.let { newest ->
             prefs(context).edit().putLong("lastCheck", System.currentTimeMillis()).apply()
-            return@withContext if (isNewer(newest.version, current)) Check.Newer(newest) else Check.UpToDate
+            // A newer version – or, for this app itself, a hotfix: the same version, a newer build.
+            val hotfix = other == null && than == null && newest.build > 0L && !isNewer(current, newest.version) &&
+                newest.build > currentBuild(context)
+            return@withContext if (isNewer(newest.version, current) || hotfix) Check.Newer(newest) else Check.UpToDate
         }
         runCatching {
             val connection = open("https://api.github.com/repos/$REPO/releases?per_page=100")
@@ -194,7 +208,7 @@ object AppUpdater {
         val json = org.json.JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
         connection.disconnect()
         val app = json.optJSONObject(slug) ?: return@runCatching null
-        Release(app.getString("version"), app.getString("url"), app.optLong("size"), json.optString("notes"))
+        Release(app.getString("version"), app.getString("url"), app.optLong("size"), json.optString("notes"), app.optLong("build", json.optLong("build")))
     }.getOrNull()
 
     /** What's new, as the release tells it (without the build line at its end). */

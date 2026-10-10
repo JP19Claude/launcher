@@ -90,10 +90,12 @@ private fun realScreenSize(context: Context): Pair<Int, Int> {
 }
 
 /** ZENITH's background for this screen: drawn at half size for the home screen, a quarter for the blur. */
-internal fun makeZenithWall(context: Context): ZenithWall {
+internal fun makeZenithWall(context: Context, project: Boolean = false): ZenithWall {
     val (sw, sh) = realScreenSize(context)
-    val full = renderPicture(sw / 2, sh / 2) { drawZenithWallpaper() }
-    val small = renderPicture(sw / 4, sh / 4) { drawZenithWallpaper() }
+    // Projekt Zenith: the grid horizon instead.
+    val draw: DrawScope.() -> Unit = { if (project) drawProjectWallpaper() else drawZenithWallpaper() }
+    val full = renderPicture(sw / 2, sh / 2, draw)
+    val small = renderPicture(sw / 4, sh / 4, draw)
     val soft = blurred(small, radius = 9)
     val strong = blurred(small, radius = 10, downscale = 3)
     return ZenithWall(
