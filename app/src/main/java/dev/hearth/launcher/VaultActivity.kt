@@ -104,6 +104,11 @@ class VaultActivity : ComponentActivity() {
         super.onDestroy()
     }
 
+    private companion object {
+        /** "Passwort verwenden" was tapped (the platform has no public name for it). */
+        const val ERROR_NEGATIVE_BUTTON = 13
+    }
+
     @RequiresApi(Build.VERSION_CODES.R)
     private fun prompt(cipher: Cipher, title: String, done: (Cipher?, String?) -> Unit) {
         var answered = false
@@ -132,7 +137,7 @@ class VaultActivity : ComponentActivity() {
                     override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                         val quiet = errorCode == BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED ||
                             errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED ||
-                            errorCode == BiometricPrompt.BIOMETRIC_ERROR_NEGATIVE_BUTTON
+                            errorCode == ERROR_NEGATIVE_BUTTON
                         answer(null, if (quiet) null else errString.toString())
                     }
                 },
