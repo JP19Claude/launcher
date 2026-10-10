@@ -304,13 +304,14 @@ fun ZenithVersionHero(
             .clip(shape)
             .drawBehind { drawZenithCard(charge.value) },
     ) {
+        val cardWidth = maxWidth
         Column(
             Modifier.fillMaxWidth().padding(top = maxHeight * 0.1f),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // The Z, as wide as the card allows, the version set into it; held, it spreads wider still.
             ZenithLogo(
-                size = maxWidth,
+                size = cardWidth,
                 zWidth = 0.86f,
                 number = HearthUi.major(version),
                 caption = "ZENITH",
