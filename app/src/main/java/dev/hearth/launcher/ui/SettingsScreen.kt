@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -1811,7 +1812,11 @@ private fun OneUISearchField(query: String, onClawd: () -> Unit, onChange: (Stri
     }
 }
 
-/** Like the account card on top of Samsung's settings: Hearth, its version and look. */
+/**
+ * Like the account card on top of Samsung's settings: Hearth, its version and look. ZENITH 19.5:
+ * in ZENITH a tap opens it up into the big version card (as tall as OxygenOS's), a tap on that
+ * closes it again, and "Über das Telefon" waits underneath.
+ */
 @Composable
 private fun HearthCard(s: LauncherSettings) {
     val context = LocalContext.current
@@ -1823,56 +1828,107 @@ private fun HearthCard(s: LauncherSettings) {
             android.provider.Settings.Global.getString(context.contentResolver, android.provider.Settings.Global.DEVICE_NAME)
         }.getOrNull()?.takeIf { it.isNotBlank() } ?: Build.MODEL
     }
-    val product = if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) HearthUi.NAME else "Hearth"
-    LiquidGlass(
-        cornerRadius = 28.dp,
-        refraction = 16.dp,
-        blur = 20.dp,
-        modifier = Modifier
-            .padding(vertical = 8.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .aiFluidEdge(28.dp, strength = 0.8f, enabled = s.fluidDesign, flowing = false)
-            .fluidTouch(s.accent.color)
-            // Like Samsung's account card: a tap shows the phone, its specs and the versions.
-            .clickable {
-                runCatching {
-                    context.startActivity(
-                        android.content.Intent().setClassName(context.packageName, "dev.hearth.launcher.AboutPhoneActivity")
-                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-                    )
-                }
-            },
-        fluidEdge = false,
-    ) {
-        Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-            // ZENITH 19: the Z with the sun, the version through it – held, it charges up; tapped
-            // as often as its number, it's the way into the Clawd Illuminati.
-            if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
-                val crystal = rememberCrystalTaps(version)
-                ZenithLogo(size = 84.dp, number = version.substringBefore('.'), onTap = crystal)
-            } else {
-                Box(
-                    Modifier
-                        .size(58.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(Brush.linearGradient(listOf(Color(0xFFFFB494), Color(0xFFFF6FB5), Color(0xFF8E6BFF), Color(0xFF3E91FF))))
-                        .glassSheen(18.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(HearthUi.major(version), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                }
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(phone, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                Text("$product $version", color = TextSecondary, fontSize = 13.sp)
-                Text(
-                    "${dev.hearth.launcher.data.ClaudeOs.full} „${dev.hearth.launcher.data.ClaudeOs.CODENAME}“",
-                    style = androidx.compose.ui.text.TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+    val one = dev.hearth.launcher.BuildConfig.ALL_IN_ONE
+    val product = if (one) HearthUi.NAME else "Hearth"
+    var open by remember { mutableStateOf(false) }
+    // Like Samsung's account card: the phone, its specs and the versions.
+    val about: () -> Unit = {
+        runCatching {
+            context.startActivity(
+                android.content.Intent().setClassName(context.packageName, "dev.hearth.launcher.AboutPhoneActivity")
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
+    }
+    val crystal = if (one) rememberCrystalTaps(version) else null
+    androidx.compose.animation.AnimatedContent(
+        targetState = open && one,
+        transitionSpec = {
+            androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260)) togetherWith
+                androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(140))
+        },
+        label = "hearthCard",
+    ) { big ->
+        if (big) {
+            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                ZenithVersionHero(
+                    version,
+                    Modifier.clickable(remember { MutableInteractionSource() }, indication = null) { open = false },
+                    onTap = crystal,
+                    footer = phone,
+                    aspect = 0.64f,
                 )
+                LiquidGlass(
+                    cornerRadius = 22.dp,
+                    refraction = 12.dp,
+                    blur = 16.dp,
+                    modifier = Modifier
+                        .padding(top = 10.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(22.dp))
+                        .clickable(onClick = about),
+                    fluidEdge = false,
+                ) {
+                    Row(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Über das Telefon", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            Text("Daten, Versionen und Eggs", color = TextSecondary, fontSize = 13.sp)
+                        }
+                        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
+                    }
+                }
             }
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
+        } else {
+            LiquidGlass(
+                cornerRadius = 28.dp,
+                refraction = 16.dp,
+                blur = 20.dp,
+                modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(28.dp))
+                    .aiFluidEdge(28.dp, strength = 0.8f, enabled = s.fluidDesign, flowing = false)
+                    .fluidTouch(s.accent.color)
+                    // ZENITH: one tap opens the card up; Hearth keeps going straight to the phone's page.
+                    .clickable { if (one) open = true else about() },
+                fluidEdge = false,
+            ) {
+                Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // ZENITH 19: the Z with the sun, the version through it – held, it charges up; tapped
+                    // as often as its number, it's the way into the Clawd Illuminati.
+                    if (one) {
+                        ZenithLogo(
+                            size = 84.dp,
+                            number = version.substringBefore('.'),
+                            onTap = {
+                                crystal?.invoke()
+                                open = true
+                            },
+                        )
+                    } else {
+                        Box(
+                            Modifier
+                                .size(58.dp)
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(Brush.linearGradient(listOf(Color(0xFFFFB494), Color(0xFFFF6FB5), Color(0xFF8E6BFF), Color(0xFF3E91FF))))
+                                .glassSheen(18.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(HearthUi.major(version), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(phone, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                        Text("$product $version", color = TextSecondary, fontSize = 13.sp)
+                        Text(
+                            "${dev.hearth.launcher.data.ClaudeOs.full} „${dev.hearth.launcher.data.ClaudeOs.CODENAME}“",
+                            style = androidx.compose.ui.text.TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+                        )
+                    }
+                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
+                }
+            }
         }
     }
 }

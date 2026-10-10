@@ -197,6 +197,14 @@ internal object HearthChangelog {
                     everyone,
                 ),
                 ChangeSection(
+                    "Die ZENITH-Karte in den Einstellungen", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Tippst du in den Einstellungen einmal auf die ZENITH-Karte, wird sie so groß wie die Versionskarte bei OxygenOS: das Z mit der Version riesig, darunter dein Telefon.",
+                        "Ein Tipp auf die große Karte macht sie wieder klein. „Über das Telefon“ steht darunter.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
                     "Z-Momente im Core Enforcer Studio", Icons.Rounded.Edit, Green,
                     listOf(
                         "Neues Feld „Z-Momente“: Du bestimmst, wann der Z-Angriff von selbst kommt – nach Updates, beim Tresor, beim Würfeln, beim Einstecken und bei vollem Akku. Laden und voller Akku sind anfangs aus.",

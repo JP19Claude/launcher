@@ -7,6 +7,10 @@ ZENITH 19.5 „Z-Sturm“ auf ClaudeOS 6.0 „Helios“ – das große Update
 • Würfelst du im Studio einen neuen Look, kommt er mit dem Z-Angriff in seiner neuen Farbe
 • Mit Glimmer auch über allen Apps: beim Einstecken des Ladekabels und bei vollem Akku
 
+🪪 Die ZENITH-Karte in den Einstellungen
+• Ein Tipp, und sie wird so groß wie die Versionskarte bei OxygenOS – noch ein Tipp, und sie ist wieder klein
+• „Über das Telefon“ steht unter der großen Karte
+
 🛠 Z-Momente im Core Enforcer Studio
 • Du bestimmst, wann der Z-Angriff von selbst kommt: Updates, Tresor, Würfeln, Laden, voller Akku
 

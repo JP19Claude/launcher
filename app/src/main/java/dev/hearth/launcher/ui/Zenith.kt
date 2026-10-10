@@ -289,13 +289,15 @@ fun ZenithVersionHero(
     onTap: (() -> Unit)? = null,
     /** What stands at the card's foot, as "Version up to date" does on ColorOS's and OxygenOS's. */
     footer: String? = null,
+    /** Width over height: 0.8 in the update page, 0.64 as tall as OxygenOS's card. */
+    aspect: Float = 0.8f,
 ) {
     val charge = remember { Animatable(0f) }
     val shape = androidx.compose.foundation.shape.RoundedCornerShape(30.dp)
     androidx.compose.foundation.layout.BoxWithConstraints(
         modifier
             .fillMaxWidth()
-            .aspectRatio(0.8f)
+            .aspectRatio(aspect)
             .graphicsLayer {
                 val c = charge.value
                 scaleX = 1f + 0.02f * c
