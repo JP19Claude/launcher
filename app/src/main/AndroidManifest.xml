@@ -160,6 +160,12 @@
             android:exported="false"
             android:label="ZENITH-Schutzschild" />
 
+        <!-- ZENITH 19.7: Clawd's perfume shelf. -->
+        <activity
+            android:name=".PerfumeActivity"
+            android:exported="false"
+            android:label="Clawd · Duft" />
+
         <!-- ZENITH 19.6: the hidden menus, opened by touching the system. -->
         <activity
             android:name=".SecretActivity"

@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Base64
 import android.speech.tts.TextToSpeech
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -643,6 +644,90 @@ object ClaudeAssistant {
         }
         history += assistant
         return Turn(text, calls)
+    }
+
+    /**
+     * ZENITH 19.7: one question to the AI outside the chat, for features that need an answer of
+     * their own (Clawd's perfume shelf): [system] and [prompt], with [images] (JPEG bytes) if
+     * the service takes pictures. Returns the answer's text; throws a [ClaudeApiException] with
+     * a message that's fit to show.
+     */
+    suspend fun complete(system: String, prompt: String, images: List<ByteArray> = emptyList(), maxTokens: Int = 2500): String {
+        if (!::app.isInitialized) throw ClaudeApiException("Clawd ist noch nicht bereit.")
+        val s = settings.value
+        if (!s.hasKey) {
+            throw ClaudeApiException("Dafür braucht Clawd deinen API-Schlüssel – trag ihn bei „Frag Clawd“ ein.", fix = ClaudeFix.ApiKey)
+        }
+        val text = if (s.isClaude) {
+            val parts = JSONArray()
+            images.forEach { bytes ->
+                parts.put(
+                    JSONObject().put("type", "image").put(
+                        "source",
+                        JSONObject().put("type", "base64").put("media_type", "image/jpeg").put("data", Base64.encodeToString(bytes, Base64.NO_WRAP)),
+                    ),
+                )
+            }
+            parts.put(JSONObject().put("type", "text").put("text", prompt))
+            val body = JSONObject()
+                .put("model", s.modelId)
+                .put("max_tokens", maxTokens)
+                .put("system", system)
+                .put("messages", JSONArray().put(JSONObject().put("role", "user").put("content", parts)))
+                .toString()
+            val response = send(s, "${s.baseUrl}/messages", body) { connection ->
+                connection.setRequestProperty("x-api-key", s.apiKey.trim())
+                connection.setRequestProperty("anthropic-version", "2023-06-01")
+            }
+            if (response.optString("stop_reason") == "refusal") throw ClaudeApiException("Dabei kann ich leider nicht helfen.")
+            val content = response.optJSONArray("content") ?: JSONArray()
+            val out = StringBuilder()
+            for (i in 0 until content.length()) {
+                val block = content.optJSONObject(i) ?: continue
+                if (block.optString("type") == "text") out.append(block.optString("text"))
+            }
+            out.toString()
+        } else {
+            val model = s.modelId.ifBlank { availableModels(s).firstOrNull().orEmpty() }
+            if (model.isBlank()) {
+                throw ClaudeApiException("Wähl in den Einstellungen von Clawd ein Modell für ${s.provider.label}.", fix = ClaudeFix.ApiKey)
+            }
+            val user: Any = if (images.isEmpty()) {
+                prompt
+            } else {
+                JSONArray().apply {
+                    put(JSONObject().put("type", "text").put("text", prompt))
+                    images.forEach { bytes ->
+                        put(
+                            JSONObject().put("type", "image_url").put(
+                                "image_url",
+                                JSONObject().put("url", "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)),
+                            ),
+                        )
+                    }
+                }
+            }
+            val messages = JSONArray()
+                .put(JSONObject().put("role", "system").put("content", system))
+                .put(JSONObject().put("role", "user").put("content", user))
+            val body = JSONObject()
+                .put("model", model)
+                .put("messages", messages)
+                .put("max_tokens", maxTokens)
+                .put("temperature", 0.4)
+                .toString()
+            val response = send(s, "${s.baseUrl}/chat/completions", body) { connection ->
+                connection.setRequestProperty("Authorization", "Bearer ${s.apiKey.trim()}")
+                if (s.provider == AiProvider.OpenRouter) {
+                    connection.setRequestProperty("HTTP-Referer", "https://github.com/JP19Claude/launcher")
+                    connection.setRequestProperty("X-Title", "Hearth")
+                }
+            }
+            val message = response.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")
+            val raw = if (message == null || message.isNull("content")) "" else message.optString("content")
+            raw.replace(Regex("(?s)<think>.*?</think>"), "")
+        }
+        return text.trim().ifEmpty { throw ClaudeApiException("Clawd hat nichts geantwortet. Versuch es noch einmal.", retry = true) }
     }
 
     /** Sends a request, with one more try when the service is overloaded. */

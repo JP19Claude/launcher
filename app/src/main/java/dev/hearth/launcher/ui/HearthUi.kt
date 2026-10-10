@@ -181,6 +181,31 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "19.7",
+            name = "Duft",
+            summary = "Clawd kennt jetzt deine Parfüms und sucht dir jeden Tag das passende aus – nach Wetter und Geschmack. Dazu: Das vierte Icon im Dock ist nicht mehr zu klein.",
+            sections = listOf(
+                ChangeSection(
+                    "Clawd-Parfüm", Icons.Rounded.Favorite, Pink,
+                    listOf(
+                        "Neues Widget „Clawd-Parfüm“ (Widget hinzufügen → Clawd): Clawd sagt dir, welches Parfüm du heute tragen solltest, und warum.",
+                        "Antippen öffnet Clawds Duftschrank. Dort schreibst du auf, welche Parfüms du hast – oder du schickst ein Foto von einem oder mehreren Flakons. Clawd erkennt jedes, beschreibt es (Duftfamilie, Noten, Jahreszeit, passende Temperaturen, Intensität) und merkt es sich.",
+                        "Bei jedem Parfüm stellst du ein: Mag ich, Okay oder Mag ich nicht. Clawd bevorzugt, was du magst, und schlägt nie vor, was dir nicht gefällt.",
+                        "Der Tagesvorschlag nimmt das Wetter deines Ortes (Open-Meteo, ohne Anmeldung), die Jahreszeit und den Wochentag dazu und wechselt ab, damit nicht jeden Tag dasselbe kommt. „Etwas anderes“ zeigt einen weiteren, „Trage ich heute“ merkt sich das Parfüm.",
+                        "Analyse und Fotos laufen über deinen API-Schlüssel bei „Frag Clawd“ (Fotos mit Claude oder Gemini). Ohne Schlüssel merkt sich Clawd die Namen und wählt nach Temperatur und Geschmack allein.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Das Dock", Icons.Rounded.Home, Blue,
+                    listOf(
+                        "Das vierte Icon im Dock war kleiner als die anderen, weil vier große Icons nicht in die Leiste passten. Jetzt passen sich alle Icons der Breite der Leiste an – gleich groß, egal wie viele es sind.",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "19.6",
             name = "Verstecke",
             summary = "Viel mehr zu finden: sieben neue Geheimmenüs, Verstecke aus den Hearth-, OMEGA- und ZENITH-Jahren und kleine Funde überall im System – jetzt 54 Easter Eggs.",

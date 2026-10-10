@@ -365,6 +365,7 @@ private class Advantage(val title: String, val text: String, val oneUi: Boolean 
 
 private val Advantages = listOf(
     // ZENITH 19.5: what only ZENITH has.
+    Advantage("Clawd sucht dein Parfüm aus", "Schreib auf oder fotografier, welche Parfüms du hast – Clawd merkt sie sich und schlägt dir jeden Tag das passende vor, nach Wetter und Geschmack."),
     Advantage("ZENITH-Tresor", "Private Fotos, Videos, Notizen und Dateien mit AES-256 verschlüsselt – Passwort oder Fingerabdruck, nie in Screenshots.", oneUi = true, colorOs = true),
     Advantage("In den Tresor teilen", "Aus jeder App „Teilen → ZENITH-Tresor“ – verschlüsselt, ohne Umweg über die Galerie."),
     Advantage("Schutzschild", "Eine Zahl für deinen Schutz: Sperre, Sicherheitsupdate, USB-Debugging, Verschlüsselung, Tresor, Sicherung – jeder Punkt mit dem Weg zur Lösung.", oneUi = true, colorOs = true),

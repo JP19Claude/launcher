@@ -21,6 +21,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 
 @Composable
 fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier, draggingKey: String? = null) {
@@ -43,92 +44,7 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
         }
         }
     }
-    val icons: @Composable () -> Unit = { iconsSized(dockLook.iconSize) }
     when (style) {
-        // The full-width glass bar.
-        DockStyle.Glass -> LiquidGlass(
-            cornerRadius = 34.dp,
-            refraction = 22.dp,
-            interactive = true,
-            // One UI 10 Fluid: Claude's colors round the dock (standing still: it's always on screen).
-            modifier = modifier.fillMaxWidth().aiFluidEdge(34.dp, strength = 0.6f, enabled = LocalSettings.current.fluidDesign, flowing = false),
-            fluidEdge = false,
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
-            ) { icons() }
-        }
-        // A glass capsule just around the icons, floating in the middle.
-        DockStyle.Floating -> Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            LiquidGlass(
-                cornerRadius = 30.dp,
-                refraction = 20.dp,
-                interactive = true,
-                modifier = Modifier.aiFluidEdge(30.dp, strength = 0.6f, enabled = LocalSettings.current.fluidDesign, flowing = false),
-                fluidEdge = false,
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) { icons() }
-            }
-        }
-        // OMEGA UI 17: a dark glass island just around the icons, a ruby glow along its rim.
-        DockStyle.Island -> Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            val accent = LocalSettings.current.accent.color
-            LiquidGlass(
-                cornerRadius = 32.dp,
-                refraction = 20.dp,
-                interactive = true,
-                tint = Color(0xFF120A12).copy(alpha = 0.55f),
-                modifier = Modifier
-                    .drawBehind {
-                        // The glow underneath, as if the island floated on red light.
-                        drawRoundRect(
-                            Brush.radialGradient(
-                                listOf(accent.copy(alpha = 0.35f), Color.Transparent),
-                                center = Offset(size.width / 2f, size.height),
-                                radius = size.width * 0.6f,
-                            ),
-                            topLeft = Offset(-12.dp.toPx(), 0f),
-                            size = Size(size.width + 24.dp.toPx(), size.height + 18.dp.toPx()),
-                            cornerRadius = CornerRadius(40.dp.toPx()),
-                        )
-                    }
-                    .border(1.dp, Brush.horizontalGradient(listOf(accent.copy(alpha = 0.2f), accent.copy(alpha = 0.8f), accent.copy(alpha = 0.2f))), RoundedCornerShape(32.dp)),
-                fluidEdge = false,
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) { icons() }
-            }
-        }
-        // OMEGA UI 17: the full bar, tinted ruby.
-        DockStyle.Ruby -> LiquidGlass(
-            cornerRadius = 36.dp,
-            refraction = 22.dp,
-            interactive = true,
-            tint = Color(0xFFB0102C).copy(alpha = 0.28f),
-            modifier = modifier
-                .fillMaxWidth()
-                .border(1.dp, Brush.verticalGradient(listOf(Color(0xFFFF8A98).copy(alpha = 0.7f), Color(0xFFB0102C).copy(alpha = 0.2f))), RoundedCornerShape(36.dp)),
-            fluidEdge = false,
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
-            ) { icons() }
-        }
         // ZENITH 19: a slanted plate of the Z's dark metal, its ends cut like the Z's bars, green
         // light burning along its foot and pooling underneath.
         DockStyle.Zenith -> {
@@ -168,13 +84,116 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
                 }
             }
         }
-        // Just the icons, as One UI does it.
-        DockStyle.Clear -> Row(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) { icons() }
+        // The other docks: their icons are made to fit – each takes its icon plus 18 dp of cell, and
+        // four big ones in a bar this wide would squeeze the last one small.
+        else -> androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth()) {
+            val room = maxWidth
+            when (style) {
+                // The full-width glass bar.
+                DockStyle.Glass -> LiquidGlass(
+                    cornerRadius = 34.dp,
+                    refraction = 22.dp,
+                    interactive = true,
+                    // One UI 10 Fluid: Claude's colors round the dock (standing still: it's always on screen).
+                    modifier = Modifier.fillMaxWidth().aiFluidEdge(34.dp, strength = 0.6f, enabled = LocalSettings.current.fluidDesign, flowing = false),
+                    fluidEdge = false,
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 6.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) { iconsSized(fittingIconSize(room - 12.dp, apps.size, 0.dp, dockLook.iconSize)) }
+                }
+                // A glass capsule just around the icons, floating in the middle.
+                DockStyle.Floating -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    LiquidGlass(
+                        cornerRadius = 30.dp,
+                        refraction = 20.dp,
+                        interactive = true,
+                        modifier = Modifier.aiFluidEdge(30.dp, strength = 0.6f, enabled = LocalSettings.current.fluidDesign, flowing = false),
+                        fluidEdge = false,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) { iconsSized(fittingIconSize(room - 24.dp, apps.size, 10.dp, dockLook.iconSize)) }
+                    }
+                }
+                // OMEGA UI 17: a dark glass island just around the icons, a ruby glow along its rim.
+                DockStyle.Island -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    val accent = LocalSettings.current.accent.color
+                    LiquidGlass(
+                        cornerRadius = 32.dp,
+                        refraction = 20.dp,
+                        interactive = true,
+                        tint = Color(0xFF120A12).copy(alpha = 0.55f),
+                        modifier = Modifier
+                            .drawBehind {
+                                // The glow underneath, as if the island floated on red light.
+                                drawRoundRect(
+                                    Brush.radialGradient(
+                                        listOf(accent.copy(alpha = 0.35f), Color.Transparent),
+                                        center = Offset(size.width / 2f, size.height),
+                                        radius = size.width * 0.6f,
+                                    ),
+                                    topLeft = Offset(-12.dp.toPx(), 0f),
+                                    size = Size(size.width + 24.dp.toPx(), size.height + 18.dp.toPx()),
+                                    cornerRadius = CornerRadius(40.dp.toPx()),
+                                )
+                            }
+                            .border(1.dp, Brush.horizontalGradient(listOf(accent.copy(alpha = 0.2f), accent.copy(alpha = 0.8f), accent.copy(alpha = 0.2f))), RoundedCornerShape(32.dp)),
+                        fluidEdge = false,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) { iconsSized(fittingIconSize(room - 28.dp, apps.size, 12.dp, dockLook.iconSize)) }
+                    }
+                }
+                // OMEGA UI 17: the full bar, tinted ruby.
+                DockStyle.Ruby -> LiquidGlass(
+                    cornerRadius = 36.dp,
+                    refraction = 22.dp,
+                    interactive = true,
+                    tint = Color(0xFFB0102C).copy(alpha = 0.28f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, Brush.verticalGradient(listOf(Color(0xFFFF8A98).copy(alpha = 0.7f), Color(0xFFB0102C).copy(alpha = 0.2f))), RoundedCornerShape(36.dp)),
+                    fluidEdge = false,
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 6.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) { iconsSized(fittingIconSize(room - 12.dp, apps.size, 0.dp, dockLook.iconSize)) }
+                }
+                // Just the icons, as One UI does it.
+                DockStyle.Clear -> Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) { iconsSized(fittingIconSize(room - 12.dp, apps.size, 0.dp, dockLook.iconSize)) }
+                DockStyle.Zenith -> Unit
+            }
+        }
     }
+}
+
+/**
+ * The icon size at which [count] icons – each with its 18 dp of cell – fit in [room], [gap] apart;
+ * never more than [wanted], and not below 36 dp.
+ */
+private fun fittingIconSize(room: Dp, count: Int, gap: Dp, wanted: Int): Int {
+    val n = count.coerceAtLeast(1)
+    val cell = (room - gap * (n - 1)) / n
+    val fit = (cell.value - 18f).toInt()
+    return minOf(wanted, maxOf(fit, 36))
 }

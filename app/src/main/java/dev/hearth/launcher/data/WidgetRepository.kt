@@ -65,6 +65,8 @@ enum class HearthWidget(val label: String, val description: String, val spanX: I
     ClawdFashion("Clawd-Modenschau", "Clawd probiert seine Outfits und Hüte an – antippen für den nächsten Look", 2, 2, 210),
     ClawdWater("Clawd-Wasser", "Gläser Wasser heute: antippen für eins mehr, Clawd feuert dich an", 2, 2, 190),
     ClawdDice("Clawd-Würfel", "Antippen und Clawd würfelt für dich", 2, 2, 160),
+    /** ZENITH 19.7: which perfume to wear today, for the weather. */
+    ClawdPerfume("Clawd-Parfüm", "Clawd kennt deine Parfüms und sucht dir jeden Tag das passende aus – nach Wetter und Geschmack. Antippen: Parfüms hinzufügen (aufschreiben oder Foto schicken), Mag ich / Mag ich nicht einstellen", 4, 2, 190),
     ClawdMotivation("Clawd-Motivation", "Jeden Tag ein liebes Wort von Clawd", 4, 2, 160),
     ClawdWeekend("Clawd-Wochenende", "Wie lange noch bis zum Wochenende – am Wochenende tanzt er", 2, 2, 180),
     ClawdBadges("Clawd-Abzeichen", "Wie viele Abzeichen du mit Clawd gesammelt hast und welches als Nächstes kommt", 2, 2, 190),
