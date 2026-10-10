@@ -7,7 +7,7 @@ import java.security.MessageDigest
  * here; what's typed is compared without regard to case and spaces.
  */
 object ProjectZenithLock {
-    private const val HASH = "6682884128a35203924a0d6490a8fd9accf80ce663f9c7e221f5fafbe2f27f16"
+    private const val HASH = "00b90115cea6a1e6d536739f5c8747d8fd81ba861574f1e0ad954cc98cd69984"
 
     fun opens(input: String): Boolean {
         val typed = input.filterNot { it.isWhitespace() }.uppercase(java.util.Locale.ROOT)
