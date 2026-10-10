@@ -180,6 +180,24 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "19.2",
+            name = "ColorOS-Look",
+            summary = "Projekt Zenith bekommt einen weiteren Look: das ganze System im Stil von ColorOS 17.1 – und das Glas dabei frei einstellbar.",
+            sections = listOf(
+                ChangeSection(
+                    "ColorOS-17.1-Look", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Neue Option in Projekt Zenith (Illuminati → Projekt Zenith → ColorOS-17.1-Look): Das ganze System bekommt den Stil von ColorOS – Milchglas statt Hologramm, runde Squircle-Icons, die ColorOS-Uhr, das ColorOS-Schnellmenü, ein schwebendes Dock und dein eigener Hintergrund statt des Gitter-Horizonts.",
+                        "Das Glas stellst du frei ein, gleich dort unter „Glas einstellen“: Lichtbrechung, Unschärfe, Farbsäume, Glanz, Tönung und Glasfarbe – dazu fünf Looks zum Antippen (Dezent, ColorOS, Klar, Milchglas, Kristall). Dieselben Regler gibt es in den Einstellungen unter Liquid Glass.",
+                        "Nichts wird überschrieben: Der Look liegt nur über deinen Einstellungen. Schaltest du ihn aus, ist alles wieder genau so, wie du es hattest.",
+                        "Gibt es nur in den Illuminati, wenn Projekt Zenith an ist; Glas-Modus und ColorOS-Look schließen sich aus.",
+                        "Es ist ein Nachbau des Stils: ZENITH benutzt dafür keine Logos, Bilder oder Schriften von ColorOS.",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "19.1",
             name = "Zenith Glas",
             summary = "Das erste richtige Update nach ZENITH 19: Projekt Zenith aus echtem Flüssigglas, Fotos aus der Galerie direkt in den Tresor teilen, ein Tresor zum Durchwischen mit Diashow – und zwei neue Widgets, der ZENITH-Monitor und der Schutzschild.",

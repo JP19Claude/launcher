@@ -65,6 +65,8 @@ import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.liquidOmega
 import dev.hearth.launcher.data.zenithMetal
 import dev.hearth.launcher.data.WallpaperBackdrop
+import dev.hearth.launcher.data.hologram
+import dev.hearth.launcher.data.colorOsLook
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -115,7 +117,26 @@ data class GlassStyle(
     val hudGlass: Boolean = false,
 ) {
     companion object {
-        fun from(s: LauncherSettings) = GlassStyle(
+        fun from(s: LauncherSettings): GlassStyle = if (s.colorOsLook) colorOs(s) else general(s)
+
+        /**
+         * ZENITH 19.2, the ColorOS 17.1 look: frosted liquid glass in ColorOS's manner, built only
+         * from the glass settings – blur, lens, color fringes, shine, tint (its color and
+         * strength) – so every one of them can be set freely.
+         */
+        private fun colorOs(s: LauncherSettings) = GlassStyle(
+            blur = s.glassBlur,
+            refraction = s.glassRefraction,
+            dispersion = s.glassDispersion,
+            specular = s.glassSpecular,
+            tint = s.glassTint.color.copy(alpha = (s.glassTint.color.alpha * s.glassTintStrength).coerceIn(0f, 1f)),
+            interactive = s.glassInteractive,
+            dark = s.darkGlass,
+            liquid = true,
+            lensMinDp = if (s.smoothMode) maxOf(s.glassQuality.lensMinDp, 96f) else s.glassQuality.lensMinDp,
+        )
+
+        private fun general(s: LauncherSettings) = GlassStyle(
             blur = s.glassBlur,
             // OMEGA UI 17.5, Clawd Illumination "Hyperglas": glass that bends, splits and shines
             // far more than any setting allows.
@@ -147,7 +168,7 @@ data class GlassStyle(
         ).let { glass ->
             // Projekt Zenith Glas: real liquid glass, tinted green, bending more and catching
             // the light at its rim like Apple's, with Projekt Zenith's green frame on top.
-            if (s.projectZenith && s.projectZenithGlass) {
+            if (s.hologram && s.projectZenithGlass) {
                 glass.copy(
                     tint = Color(0xFF0A3A22).copy(alpha = if (s.darkGlass) 0.42f else 0.26f),
                     refraction = glass.refraction * 1.3f,
@@ -166,7 +187,7 @@ data class GlassStyle(
                     dispersion = 0f,
                     liquid = false,
                     zenith = true,
-                    hud = s.projectZenith,
+                    hud = s.hologram,
                     lensMinDp = 100_000f,
                 )
             } else {

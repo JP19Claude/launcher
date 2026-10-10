@@ -67,6 +67,7 @@ import dev.hearth.launcher.data.AodTint
 import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.ColorWorld
 import dev.hearth.launcher.data.EasterEggs
+import dev.hearth.launcher.data.GlassTint
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.zenithMetal
 import dev.hearth.launcher.data.Perk
@@ -267,12 +268,7 @@ fun ClawdIlluminationScreen(
 
             // ZENITH 19: Projekt Zenith lives only here, behind a secret password.
             IlluminationSection("◈ Projekt Zenith") {
-                ProjectZenithGate(
-                    on = settings.projectZenith,
-                    glass = settings.projectZenithGlass,
-                    animate = settings.animations,
-                    onGlass = { v -> onChange { it.copy(projectZenithGlass = v) } },
-                ) { v -> onChange { it.copy(projectZenith = v) } }
+                ProjectZenithGate(settings, onChange)
             }
             IlluminationSection("Ƶ System") {
                 IlluminationSwitch(
@@ -706,7 +702,10 @@ private fun saveAodPicture(context: android.content.Context, uri: android.net.Ur
  * Z-Angriff greets the ones who got it right); switching it off never does.
  */
 @Composable
-private fun ProjectZenithGate(on: Boolean, glass: Boolean, animate: Boolean, onGlass: (Boolean) -> Unit, onToggle: (Boolean) -> Unit) {
+private fun ProjectZenithGate(settings: LauncherSettings, onChange: ((LauncherSettings) -> LauncherSettings) -> Unit) {
+    val on = settings.projectZenith
+    val animate = settings.animations
+    val onToggle: (Boolean) -> Unit = { v -> onChange { it.copy(projectZenith = v) } }
     var asking by remember { mutableStateOf(false) }
     var typed by remember { mutableStateOf("") }
     var wrong by remember { mutableStateOf(false) }
@@ -728,8 +727,15 @@ private fun ProjectZenithGate(on: Boolean, glass: Boolean, animate: Boolean, onG
         IlluminationSwitch(
             "💧", "Glas-Modus",
             "Projekt Zenith aus echtem Flüssigglas statt Hologramm: Flächen und Dock biegen das Licht, grün getönt, mit den grünen Linien des HUD.",
-            glass,
-        ) { v -> onGlass(v) }
+            settings.projectZenithGlass,
+        ) { v -> onChange { it.copy(projectZenithGlass = v, projectColorOs = if (v) false else it.projectColorOs) } }
+        // ZENITH 19.2: the whole system as ColorOS 17.1 dresses it, the glass free to set.
+        IlluminationSwitch(
+            "◐", "ColorOS-17.1-Look",
+            "Das ganze System im Stil von ColorOS 17.1 – Milchglas, runde Squircle-Icons, die ColorOS-Uhr, das ColorOS-Schnellmenü, schwebendes Dock, dein eigener Hintergrund. Das Glas stellst du unten frei ein; ausgeschaltet ist alles wieder wie vorher.",
+            settings.projectColorOs,
+        ) { v -> onChange { it.copy(projectColorOs = v, projectZenithGlass = if (v) false else it.projectZenithGlass) } }
+        if (settings.projectColorOs || settings.projectZenithGlass) GlassTuning(settings, onChange)
     } else {
         IlluminationSwitch("🔒", "Projekt Zenith", "Gesperrt. Nur wer das geheime Passwort kennt, kann es einschalten.", false) { v ->
             if (v) {
@@ -802,6 +808,70 @@ private fun ProjectZenithGate(on: Boolean, glass: Boolean, animate: Boolean, onG
         }
     }
     if (strike) ZenithStrikeOverlay { strike = false }
+}
+
+/**
+ * ZENITH 19.2: the glass, set right here – quick looks and every slider: lens, blur, color fringes,
+ * shine, tint and its color. (The same values as in the settings' "Liquid Glass".)
+ */
+@Composable
+private fun GlassTuning(settings: LauncherSettings, onChange: ((LauncherSettings) -> LauncherSettings) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Text(
+            "✧  Glas einstellen",
+            color = Color(0xFFF3E6C8),
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+        )
+        val looks = listOf(
+            "Dezent" to listOf(0.7f, 0.8f, 0.3f, 0.7f, 1f),
+            "ColorOS" to listOf(1.3f, 1.2f, 0.6f, 1f, 1f),
+            "Klar" to listOf(1.6f, 0.6f, 0.8f, 1.2f, 0.5f),
+            "Milchglas" to listOf(0.5f, 2.2f, 0.2f, 0.8f, 2f),
+            "Kristall" to listOf(2.4f, 0.6f, 1.4f, 1.7f, 0.6f),
+        )
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp)) {
+            looks.forEach { (name, v) ->
+                val on = settings.glassRefraction == v[0] && settings.glassBlur == v[1] && settings.glassDispersion == v[2] &&
+                    settings.glassSpecular == v[3] && settings.glassTintStrength == v[4]
+                Text(
+                    name,
+                    color = if (on) Color(0xFF1A1000) else Color(0xFFF3E6C8),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (on) IlluminatiGold else Color.White.copy(alpha = 0.08f))
+                        .border(1.dp, IlluminatiGold.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                        .clickable {
+                            onChange {
+                                it.copy(
+                                    glassRefraction = v[0], glassBlur = v[1], glassDispersion = v[2],
+                                    glassSpecular = v[3], glassTintStrength = v[4],
+                                )
+                            }
+                        }
+                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                )
+            }
+        }
+        PercentSlider("Lichtbrechung", settings.glassRefraction, 0f..2.5f) { v -> onChange { it.copy(glassRefraction = v) } }
+        PercentSlider("Unschärfe", settings.glassBlur, 0f..2.5f) { v -> onChange { it.copy(glassBlur = v) } }
+        PercentSlider("Farbsäume", settings.glassDispersion, 0f..1.5f) { v -> onChange { it.copy(glassDispersion = v) } }
+        PercentSlider("Glanz", settings.glassSpecular, 0f..2f) { v -> onChange { it.copy(glassSpecular = v) } }
+        PercentSlider("Tönung", settings.glassTintStrength, 0f..2.5f) { v -> onChange { it.copy(glassTintStrength = v) } }
+        ChoiceRow(
+            label = "Glasfarbe",
+            options = GlassTint.entries,
+            selected = settings.glassTint,
+            optionLabel = { it.label },
+            swatch = { it.color },
+            onSelect = { tint -> onChange { it.copy(glassTint = tint) } },
+        )
+    }
 }
 
 /** The lock screen's own message, typed in. */

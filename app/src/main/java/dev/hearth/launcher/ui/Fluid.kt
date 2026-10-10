@@ -58,6 +58,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import dev.hearth.launcher.data.FluidRims
+import dev.hearth.launcher.data.zenithMetal
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
@@ -196,7 +197,7 @@ val GalaxyOmegaFluidColors = listOf(
 internal fun omegaPalette(s: dev.hearth.launcher.data.LauncherSettings): List<Color> =
     when {
         // ZENITH Metall: green and silver only – calm, no gold.
-        s.glassLook == dev.hearth.launcher.data.GlassLook.Zenith || s.projectZenith -> ZenithMetalColors
+        s.zenithMetal -> ZenithMetalColors
         // ZENITH 19: clear glass in ZENITH's light keeps a glint of sun and green.
         s.liquidOmega -> if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.Zenith) ZenithLiquidColors else LiquidFluidColors
         else -> when (s.omegaColor) {

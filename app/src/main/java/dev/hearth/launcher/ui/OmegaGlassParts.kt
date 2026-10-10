@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.has
 import dev.hearth.launcher.data.liquidOmega
+import dev.hearth.launcher.data.hologram
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -112,7 +113,7 @@ internal fun OmegaHomeLight(modifier: Modifier = Modifier) {
     // ZENITH: its own light – dark like the logo's ground, green rising from below.
     if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.Zenith && s.omegaLight && !s.has(dev.hearth.launcher.data.Perk.DayLight)) {
         // (Projekt Zenith brings its own light with its horizon.)
-        if (!s.projectZenith) ZenithHomeLight(modifier)
+        if (!s.hologram) ZenithHomeLight(modifier)
         return
     }
     if (!s.omegaGlass || !s.omegaLight || !s.fluidDesign) return

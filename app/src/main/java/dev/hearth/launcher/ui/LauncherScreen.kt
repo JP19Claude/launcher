@@ -168,6 +168,8 @@ import dev.hearth.launcher.data.Perk
 import dev.hearth.launcher.data.has
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.SwipeDownAction
+import dev.hearth.launcher.data.hologram
+import dev.hearth.launcher.data.withColorOsLook
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -188,7 +190,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
     val night by remember(systemDark) { derivedStateOf { storedSettings.nightActive(clock.value.hour, systemDark) } }
     // OMEGA UI 18: Claude Mythos lays its takeover over everything chosen.
-    val settings = remember(storedSettings, night) { (if (night) storedSettings.forNight() else storedSettings).mythic() }
+    val settings = remember(storedSettings, night) { (if (night) storedSettings.forNight() else storedSettings).mythic().withColorOsLook() }
     val library by vm.library.collectAsStateWithLifecycle()
     val assistantOpen by vm.assistantOpen.collectAsStateWithLifecycle()
     val appUsage by vm.appUsage.collectAsStateWithLifecycle()
@@ -544,8 +546,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val glassStyle = remember(settings) { GlassStyle.from(settings) }
     // ZENITH 19: ZENITH's own background – made once, off the main thread; the metal over it
     // blurs it instead of the wallpaper.
-    val zenithWall by androidx.compose.runtime.produceState<ZenithWall?>(null, settings.zenithWallpaper, settings.projectZenith) {
-        val project = settings.projectZenith
+    val zenithWall by androidx.compose.runtime.produceState<ZenithWall?>(null, settings.zenithWallpaper, settings.hologram) {
+        val project = settings.hologram
         value = if (settings.zenithWallpaper || project) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { runCatching { makeZenithWall(context, project) }.getOrNull() }
         } else {
@@ -691,7 +693,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
         LocalColorWorldApplied provides true,
         // Projekt Zenith: a computer's typeface for the text that doesn't choose its own.
         androidx.compose.material3.LocalTextStyle provides
-            if (settings.projectZenith) {
+            if (settings.hologram) {
                 androidx.compose.material3.LocalTextStyle.current.merge(androidx.compose.ui.text.TextStyle(fontFamily = HudFont))
             } else {
                 androidx.compose.material3.LocalTextStyle.current
@@ -1000,7 +1002,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     // OMEGA UI 18.5: a strip of glass behind the status bar.
                     GlassStatusBar()
                     // Projekt Zenith: the HUD frame round the home screen.
-                    if (settings.projectZenith) ProjectHudFrame(Modifier.matchParentSize())
+                    if (settings.hologram) ProjectHudFrame(Modifier.matchParentSize())
                     // OMEGA UI 18: the perks over the home screen – and Claude Mythos's banner.
                     PerkFrontLayers(settings, sparkField, if (dockBounds.height > 0f) dockBounds.top else 0f)
                     // Claude Mythos: Clawds peeking in from the edges and sitting on the dock.
@@ -1530,7 +1532,7 @@ private fun HomeHeader(settings: LauncherSettings, modifier: Modifier = Modifier
 @Composable
 private fun HomeHeaderContent(settings: LauncherSettings, modifier: Modifier = Modifier) {
     // Projekt Zenith: the HUD clock, whatever clock was chosen.
-    if (settings.projectZenith && settings.clockStyle != ClockStyle.Hidden) {
+    if (settings.hologram && settings.clockStyle != ClockStyle.Hidden) {
         ProjectHudClock(settings, modifier.padding(start = 4.dp))
         return
     }

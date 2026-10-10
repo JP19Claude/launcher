@@ -113,8 +113,41 @@ enum class AodTint(val label: String) {
     Gold("Gold"),
 }
 
+/**
+ * ZENITH 19.2, Projekt Zenith's "ColorOS 17.1" look is on: the whole system as ColorOS dresses it
+ * – frosted glass, round squircle icons, the ColorOS clock and quick panel – with the glass
+ * adjustable freely. (Only seen, never saved over what's chosen: see [withColorOsLook].)
+ */
+val LauncherSettings.colorOsLook: Boolean get() = projectZenith && projectColorOs
+
+/** Projekt Zenith's hologram look: on with Projekt Zenith, off in the ColorOS 17.1 look. */
+val LauncherSettings.hologram: Boolean get() = projectZenith && !projectColorOs
+
 /** ZENITH 19: every surface of dark metal with ZENITH's green edge light instead of glass. */
-val LauncherSettings.zenithMetal: Boolean get() = glassLook == GlassLook.Zenith || projectZenith
+val LauncherSettings.zenithMetal: Boolean get() = !colorOsLook && (glassLook == GlassLook.Zenith || projectZenith)
+
+/**
+ * ZENITH 19.2: the ColorOS 17.1 look laid over what's chosen, when drawing – the home screen,
+ * its menus and the settings see it, but it's never written back, so switching it off brings
+ * everything exactly as it was. The glass itself stays the user's: blur, lens, color fringes,
+ * shine and tint come from the glass settings.
+ */
+fun LauncherSettings.withColorOsLook(): LauncherSettings = if (!colorOsLook) {
+    this
+} else {
+    copy(
+        galaxyClaude = false,
+        iconStyle = IconStyle.Original,
+        iconShape = IconShape.Squircle,
+        clockStyle = ClockStyle.ColorOS,
+        dockStyle = DockStyle.Floating,
+        showGreeting = true,
+        showSearchPill = true,
+        zenithWallpaper = false,
+        omegaGlass = false,
+        glassLook = if (glassLook == GlassLook.Zenith) GlassLook.Liquid else glassLook,
+    ).withCcStyle(CcStyle.ColorOS)
+}
 
 /** OMEGA UI 18.3: OMEGA Glass in the "Liquid Glass" color – clear like Apple's. */
 val LauncherSettings.liquidOmega: Boolean get() = glassLook == GlassLook.Liquid || (omegaGlass && omegaColor == OmegaColor.Liquid)
@@ -534,6 +567,8 @@ data class LauncherSettings(
     val projectZenith: Boolean = false,
     /** ZENITH 19.1, "Projekt Zenith Glas": Projekt Zenith in real liquid glass, green and lit. */
     val projectZenithGlass: Boolean = false,
+    /** ZENITH 19.2, Projekt Zenith's "ColorOS 17.1" look: the whole system as ColorOS dresses it, glass adjustable. */
+    val projectColorOs: Boolean = false,
     /** OMEGA UI 17.1: flowing effects at a calmer rate and lighter glass – smoother, less lag. */
     val smoothMode: Boolean = true,
     /** OMEGA UI 17.5: OMEGA light between the wallpaper and the home screen's apps and widgets. */
@@ -1059,6 +1094,7 @@ class SettingsRepository(context: Context) {
             zenithStrikeSystem = prefs.getBoolean("zenithStrikeSystem", d.zenithStrikeSystem),
             projectZenith = prefs.getBoolean("projectZenith", d.projectZenith),
             projectZenithGlass = prefs.getBoolean("projectZenithGlass", d.projectZenithGlass),
+            projectColorOs = prefs.getBoolean("projectColorOs", d.projectColorOs),
             smoothMode = prefs.getBoolean("smoothMode", d.smoothMode),
             omegaLight = prefs.getBoolean("omegaLight", d.omegaLight),
             illumination = prefs.getBoolean("illumination", d.illumination),
@@ -1242,6 +1278,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("zenithStrikeSystem", s.zenithStrikeSystem)
             .putBoolean("projectZenith", s.projectZenith)
             .putBoolean("projectZenithGlass", s.projectZenithGlass)
+            .putBoolean("projectColorOs", s.projectColorOs)
             .putBoolean("smoothMode", s.smoothMode)
             .putBoolean("omegaLight", s.omegaLight)
             .putBoolean("illumination", s.illumination)
@@ -1430,7 +1467,7 @@ class SettingsRepository(context: Context) {
          * Only the switch itself and the look (black or glass, which changes the window) restart it.
          */
         val GLIMMER_LIVE_KEYS = setOf(
-            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "zenithDaylight", "zenithStrikeSystem", "projectZenith", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "glassLook", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
+            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "zenithDaylight", "zenithStrikeSystem", "projectZenith", "projectZenithGlass", "projectColorOs", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "glassLook", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
             "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerPrivacy", "accent", "animations",

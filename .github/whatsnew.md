@@ -1,4 +1,10 @@
-ZENITH 19.1 „Zenith Glas“ auf ClaudeOS 6.0 „Helios“ – das erste richtige Update nach ZENITH 19
+ZENITH 19.2 „ColorOS-Look“ auf ClaudeOS 6.0 „Helios“
+
+◐ ColorOS-17.1-Look
+• Neue Option in Projekt Zenith (Illuminati): das ganze System im Stil von ColorOS 17.1
+• Milchglas, runde Squircle-Icons, ColorOS-Uhr und -Schnellmenü, schwebendes Dock, dein eigener Hintergrund
+• Das Glas frei einstellbar: Lichtbrechung, Unschärfe, Farbsäume, Glanz, Tönung, Glasfarbe – und fünf Looks zum Antippen
+• Nichts wird überschrieben: ausgeschaltet ist alles wie vorher
 
 💧 Projekt Zenith Glas
 • Projekt Zenith aus echtem Flüssigglas: biegt den Gitter-Horizont, grün getönt, mit hellem Rand
