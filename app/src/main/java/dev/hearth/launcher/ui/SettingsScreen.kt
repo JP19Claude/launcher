@@ -315,6 +315,11 @@ fun SettingsScreen(
             if (shows("design")) item {
                 Section("ZENITH") {
                     ActionRow(
+                        label = "Core Enforcer Studio",
+                        description = "Bau dein System um: Look würfeln, Profile, Z-Angriff, Icons, Uhr, Dock, Farben und Glas",
+                    ) { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.CoreEnforcerActivity::class.java)) } }
+                    RowDivider()
+                    ActionRow(
                         label = "ZENITH-Tresor",
                         description = "Fotos, Videos, Notizen und Dateien verschlüsselt, nur mit deinem Passwort",
                     ) { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.VaultActivity::class.java)) } }

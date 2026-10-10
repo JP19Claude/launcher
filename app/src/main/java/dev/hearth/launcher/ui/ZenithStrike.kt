@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -107,7 +108,14 @@ private fun DrawScope.burn(path: Path, a: Offset, b: Offset, wa: Float, wb: Floa
  * The Z-Angriff at [p] (0..1) over this whole scope: the dark and the floor coming in, the core
  * charging, the beam burning the Z's three strokes, the flare, the eruption, the dark going.
  */
-internal fun DrawScope.drawZenithStrike(p: Float) {
+internal fun DrawScope.drawZenithStrike(p: Float, tint: Color = ZenithGreen) {
+    // The whole palette from one color: its light, brighter, mint-pale, white-hot.
+    val green = tint
+    val bright = lerp(tint, Color.White, 0.25f)
+    val mint = lerp(tint, Color.White, 0.55f)
+    val white = lerp(tint, Color.White, 0.9f)
+    val spark = lerp(tint, Color.White, 0.75f)
+    val hud = lerp(tint, Color.White, 0.45f)
     val w = size.width
     val h = size.height
     if (w <= 0f || h <= 0f) return
@@ -152,7 +160,7 @@ internal fun DrawScope.drawZenithStrike(p: Float) {
                     if (k == 0) path.moveTo(q.x, q.y) else path.lineTo(q.x, q.y)
                 }
                 path.close()
-                drawPath(path, ZenithGreen.copy(alpha = 0.22f * floor * fade), style = Stroke(unit * 0.0025f), blendMode = plus)
+                drawPath(path, green.copy(alpha = 0.22f * floor * fade), style = Stroke(unit * 0.0025f), blendMode = plus)
             }
         }
     }
@@ -165,7 +173,7 @@ internal fun DrawScope.drawZenithStrike(p: Float) {
     if (coreOn > 0f) {
         val r = unit * 0.075f * (0.4f + 0.6f * charge) * (if (firing) 1f + 0.06f * sin(p * 120f) else 1f)
         drawCircle(
-            Brush.radialGradient(listOf(ZenithGreen.copy(alpha = 0.55f * coreOn), Color.Transparent), center = core, radius = r * 3.2f),
+            Brush.radialGradient(listOf(green.copy(alpha = 0.55f * coreOn), Color.Transparent), center = core, radius = r * 3.2f),
             radius = r * 3.2f,
             center = core,
             blendMode = plus,
@@ -183,7 +191,7 @@ internal fun DrawScope.drawZenithStrike(p: Float) {
             path.close()
             drawPath(
                 path,
-                HudGreen.copy(alpha = ((0.8f - n * 0.22f) * coreOn).coerceIn(0f, 1f)),
+                hud.copy(alpha = ((0.8f - n * 0.22f) * coreOn).coerceIn(0f, 1f)),
                 style = Stroke(unit * 0.004f * (3 - n) / 2f + 1f),
                 blendMode = plus,
             )
@@ -191,7 +199,7 @@ internal fun DrawScope.drawZenithStrike(p: Float) {
         drawCircle(
             Brush.radialGradient(
                 0f to Color.White.copy(alpha = coreOn),
-                0.45f to StrikeMint.copy(alpha = 0.9f * coreOn),
+                0.45f to mint.copy(alpha = 0.9f * coreOn),
                 1f to Color.Transparent,
                 center = core,
                 radius = r,
@@ -205,7 +213,7 @@ internal fun DrawScope.drawZenithStrike(p: Float) {
             if (k <= 0f || k >= 1f) return@forEach
             val d = unit * m.distance * (1f - k)
             drawCircle(
-                Color(0xFFBEFFD2).copy(alpha = (1f - k) * 0.9f),
+                spark.copy(alpha = (1f - k) * 0.9f),
                 m.size * unit / 400f * (1f + k),
                 core + Offset(cos(m.angle) * d, sin(m.angle) * d),
                 blendMode = plus,
@@ -229,9 +237,9 @@ internal fun DrawScope.drawZenithStrike(p: Float) {
             val b = onZ(to)
             val sa = (1f + flare * 1.2f) / zDepth(from)
             val sb = (1f + flare * 1.2f) / zDepth(to)
-            burn(path, a, b, unit * 0.07f * sa, unit * 0.07f * sb, ZenithGreen.copy(alpha = 0.16f * fade))
-            burn(path, a, b, unit * 0.026f * sa, unit * 0.026f * sb, StrikeBright.copy(alpha = 0.5f * fade))
-            burn(path, a, b, unit * 0.009f * sa, unit * 0.009f * sb, StrikeWhite.copy(alpha = 0.95f * fade))
+            burn(path, a, b, unit * 0.07f * sa, unit * 0.07f * sb, green.copy(alpha = 0.16f * fade))
+            burn(path, a, b, unit * 0.026f * sa, unit * 0.026f * sb, bright.copy(alpha = 0.5f * fade))
+            burn(path, a, b, unit * 0.009f * sa, unit * 0.009f * sb, white.copy(alpha = 0.95f * fade))
             if (f < 1f) {
                 tip = b
                 tipDepth = zDepth(to)
@@ -242,12 +250,12 @@ internal fun DrawScope.drawZenithStrike(p: Float) {
     // The beam from the core to where it burns.
     val at = tip
     if (at != null && firing) {
-        drawLine(Color(0xFF3CE678).copy(alpha = 0.22f), core, at, unit * 0.05f, StrokeCap.Round, blendMode = plus)
-        drawLine(Color(0xFF3CE678).copy(alpha = 0.6f), core, at, unit * 0.018f, StrokeCap.Round, blendMode = plus)
-        drawLine(Color(0xFFF0FFF4), core, at, unit * 0.006f, StrokeCap.Round, blendMode = plus)
+        drawLine(bright.copy(alpha = 0.22f), core, at, unit * 0.05f, StrokeCap.Round, blendMode = plus)
+        drawLine(bright.copy(alpha = 0.6f), core, at, unit * 0.018f, StrokeCap.Round, blendMode = plus)
+        drawLine(white, core, at, unit * 0.006f, StrokeCap.Round, blendMode = plus)
         val r = unit * 0.13f / tipDepth
         drawCircle(
-            Brush.radialGradient(0f to Color.White, 0.3f to HudGreen.copy(alpha = 0.8f), 1f to Color.Transparent, center = at, radius = r),
+            Brush.radialGradient(0f to Color.White, 0.3f to hud.copy(alpha = 0.8f), 1f to Color.Transparent, center = at, radius = r),
             radius = r,
             center = at,
             blendMode = plus,
@@ -266,7 +274,7 @@ internal fun DrawScope.drawZenithStrike(p: Float) {
         val z = zDepth(pt)
         val d = s.speed * unit * k / z * 1.4f
         drawCircle(
-            Color(0xFFC8FFD7).copy(alpha = (1f - k) * 0.9f),
+            spark.copy(alpha = (1f - k) * 0.9f),
             s.size * unit / 400f * (1f - 0.5f * k) * 1.6f / z,
             o + Offset(cos(s.angle) * d, sin(s.angle) * d + k * k * unit * 0.05f),
             blendMode = plus,
@@ -292,8 +300,8 @@ internal fun DrawScope.drawZenithStrike(p: Float) {
             }) {
                 drawCircle(
                     Brush.radialGradient(
-                        0f to StrikeWhite.copy(alpha = 0.75f * a),
-                        0.35f to StrikeBright.copy(alpha = 0.45f * a),
+                        0f to white.copy(alpha = 0.75f * a),
+                        0.35f to bright.copy(alpha = 0.45f * a),
                         1f to Color.Transparent,
                         center = Offset.Zero,
                         radius = wide,
@@ -323,8 +331,8 @@ internal fun DrawScope.drawZenithStrike(p: Float) {
             if (j == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         path.close()
-        drawPath(path, ZenithGreen.copy(alpha = (1f - k) * 0.3f), blendMode = plus)
-        drawPath(path, StrikeMint.copy(alpha = (1f - k) * 0.9f), style = Stroke(unit * 0.003f + 0.5f), blendMode = plus)
+        drawPath(path, green.copy(alpha = (1f - k) * 0.3f), blendMode = plus)
+        drawPath(path, mint.copy(alpha = (1f - k) * 0.9f), style = Stroke(unit * 0.003f + 0.5f), blendMode = plus)
     }
 
     // The shockwave running over the floor.
@@ -336,8 +344,8 @@ internal fun DrawScope.drawZenithStrike(p: Float) {
             val q = ground(cos(a) * (0.5f + wave * 2.4f), 0.48f + sin(a) * (0.25f + wave * 1.1f))
             if (k == 0) path.moveTo(q.x, q.y) else path.lineTo(q.x, q.y)
         }
-        drawPath(path, ZenithGreen.copy(alpha = 0.25f * (1f - wave)), style = Stroke(unit * 0.05f * (1f - wave) + 1f), blendMode = plus)
-        drawPath(path, Color(0xFFC8FFD7).copy(alpha = 0.8f * (1f - wave)), style = Stroke(unit * 0.008f * (1f - wave) + 1f), blendMode = plus)
+        drawPath(path, green.copy(alpha = 0.25f * (1f - wave)), style = Stroke(unit * 0.05f * (1f - wave) + 1f), blendMode = plus)
+        drawPath(path, spark.copy(alpha = 0.8f * (1f - wave)), style = Stroke(unit * 0.008f * (1f - wave) + 1f), blendMode = plus)
     }
 
     // The flash as the Z erupts.
@@ -346,8 +354,8 @@ internal fun DrawScope.drawZenithStrike(p: Float) {
         val middle = onZ(Offset(0.5f, 0.5f))
         drawRect(
             Brush.radialGradient(
-                0f to Color(0xFFDCFFE6).copy(alpha = 0.6f * flash),
-                0.5f to ZenithGreen.copy(alpha = 0.18f * flash),
+                0f to white.copy(alpha = 0.6f * flash),
+                0.5f to green.copy(alpha = 0.18f * flash),
                 1f to Color.Transparent,
                 center = middle,
                 radius = h * 0.7f,
@@ -370,25 +378,30 @@ private object WholeWindow : PopupPositionProvider {
 fun ZenithStrikeOverlay(onDone: () -> Unit) {
     val p = remember { Animatable(0f) }
     val haptics = LocalHapticFeedback.current
+    // Core Enforcer Studio: its color and tempo.
+    val look = LocalSettings.current
+    val millis = look.strikeSpeed.millis
+    val tint = look.strikeColor.color
     LaunchedEffect(Unit) {
+        val scale = millis / StrikeMillis.toFloat()
         launch {
             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             // A tick as each stroke starts burning, a heavy knock as the Z erupts.
             for (at in listOf(432L, 312L, 384L)) {
-                delay(at)
+                delay((at * scale).toLong())
                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             }
-            delay(312)
+            delay((312 * scale).toLong())
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
         }
-        p.animateTo(1f, tween(StrikeMillis, easing = LinearEasing))
+        p.animateTo(1f, tween(millis, easing = LinearEasing))
         onDone()
     }
     Popup(
         popupPositionProvider = WholeWindow,
         properties = PopupProperties(focusable = false, dismissOnBackPress = false, dismissOnClickOutside = false, clippingEnabled = false),
     ) {
-        Canvas(Modifier.fillMaxSize()) { drawZenithStrike(p.value) }
+        Canvas(Modifier.fillMaxSize()) { drawZenithStrike(p.value, tint) }
     }
 }
 
@@ -396,12 +409,15 @@ fun ZenithStrikeOverlay(onDone: () -> Unit) {
 @Composable
 fun ZenithStrikeScreen(onDone: () -> Unit) {
     val p = remember { Animatable(0f) }
+    val look = LocalSettings.current
+    val millis = look.strikeSpeed.millis
+    val tint = look.strikeColor.color
     LaunchedEffect(Unit) {
-        p.animateTo(1f, tween(StrikeMillis, easing = LinearEasing))
+        p.animateTo(1f, tween(millis, easing = LinearEasing))
         onDone()
     }
-    Canvas(Modifier.fillMaxSize()) { drawZenithStrike(p.value) }
+    Canvas(Modifier.fillMaxSize()) { drawZenithStrike(p.value, tint) }
 }
 
-/** How long the Z-Angriff takes. */
+/** How long the Z-Angriff takes at normal tempo (the others scale from it). */
 private const val StrikeMillis = 2400

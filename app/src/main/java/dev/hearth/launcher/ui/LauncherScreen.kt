@@ -1240,6 +1240,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         HubTile("ZENITH-\nTresor", Icons.Rounded.Lock, Color(0xFF15965A)) {
                             runCatching { context.startActivity(Intent(context, dev.hearth.launcher.VaultActivity::class.java)) }
                         },
+                        HubTile("Core Enforcer\nStudio", Icons.Rounded.Edit, Color(0xFF2FD27A)) {
+                            runCatching { context.startActivity(Intent(context, dev.hearth.launcher.CoreEnforcerActivity::class.java)) }
+                        },
                         HubTile("Schutz-\nschild", Icons.Rounded.CheckCircle, Color(0xFF2FD27A)) {
                             runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ShieldActivity::class.java)) }
                         },

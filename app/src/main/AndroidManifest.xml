@@ -142,6 +142,12 @@
             android:exported="false"
             android:label="Clawd Illumination" />
 
+        <!-- ZENITH 19.3: the Core Enforcer Studio, the workshop for rebuilding the system. -->
+        <activity
+            android:name=".CoreEnforcerActivity"
+            android:exported="false"
+            android:label="Core Enforcer Studio" />
+
         <!-- ZENITH 19: the ZENITH-Tresor, photos and files encrypted with a password. -->
         <activity
             android:name=".VaultActivity"

@@ -24,7 +24,13 @@ class ZenithStrikeStage(private val service: GlimmerService) {
         val compose = ComposeView(service).apply {
             setViewTreeLifecycleOwner(service)
             setViewTreeSavedStateRegistryOwner(service)
-            setContent { ZenithStrikeScreen(onDone = { view?.post { remove() } }) }
+            // Core Enforcer Studio: its color and tempo come from the saved settings.
+            val look = dev.hearth.launcher.data.SettingsRepository(service).settings.value
+            setContent {
+                androidx.compose.runtime.CompositionLocalProvider(dev.hearth.launcher.ui.LocalSettings provides look) {
+                    ZenithStrikeScreen(onDone = { view?.post { remove() } })
+                }
+            }
         }
         val p = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,

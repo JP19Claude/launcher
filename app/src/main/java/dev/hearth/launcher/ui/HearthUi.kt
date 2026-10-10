@@ -180,6 +180,24 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "19.3",
+            name = "Core Enforcer",
+            summary = "Das Core Enforcer Studio: die Werkstatt, in der du dein System umbaust – Look würfeln, Profile speichern, den Z-Angriff in Farbe und Tempo gestalten und alles vom Icon bis zum Glas an einem Ort einstellen.",
+            sections = listOf(
+                ChangeSection(
+                    "Core Enforcer Studio", Icons.Rounded.Edit, Green,
+                    listOf(
+                        "Neu: das Studio, im ZENITH-Menü (Kachel „Core Enforcer Studio“) und in den Einstellungen unter Design → ZENITH. Alles, was du dort einstellst, gilt im ganzen System sofort.",
+                        "Würfel: wirft Akzent, Icon-Form und -Stil, Uhr, Dock, Seitenwechsel, Glas und Z-Angriff neu zusammen. Gefällt es dir nicht, holt „Zurück“ den Look davor wieder.",
+                        "Profile: speichere deinen ganzen Look unter einem Namen und hol ihn mit einem Tipp zurück. Gespeichert werden nur Optik-Einstellungen – nie App-Sperren, Glimmer oder Geheimes.",
+                        "Z-Angriff gestalten: Farbe (Zenith-Grün, Eisblau, Violett, Rubin, Gold, Weiß) und Tempo (schnell, normal, langsam), mit „Probe“ zum Ansehen. Gilt auch für den Angriff beim Entsperren und im ZENITH-Start.",
+                        "Alles an einem Ort: Icon-Form, -Stil und -Größe, Namen und ihre Größe, Uhr und ihre Schrift, Dock, Seitenwechsel, Begrüßung, Suchleiste, Akzent, Glas-Stil und -Qualität, Lichtbrechung, Unschärfe, Farbsäume, Glanz, Tönung, Glasfarbe, ZENITH-Hintergrund und Flüssig-Modus.",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "19.2",
             name = "ColorOS-Look",
             summary = "Projekt Zenith bekommt einen weiteren Look: das ganze System im Stil von ColorOS 17.1 – und das Glas dabei frei einstellbar.",

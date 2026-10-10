@@ -1,6 +1,12 @@
-ZENITH 19.2 „ColorOS-Look“ auf ClaudeOS 6.0 „Helios“
+ZENITH 19.3 „Core Enforcer“ auf ClaudeOS 6.0 „Helios“
 
-◐ ColorOS-17.1-Look
+🛠 Core Enforcer Studio
+• Die Werkstatt zum Umbauen des Systems – im ZENITH-Menü und in den Einstellungen
+• Look würfeln (mit Zurück) und Profile: deinen ganzen Look speichern und mit einem Tipp zurückholen
+• Z-Angriff gestalten: sechs Farben, drei Tempi, mit Probe
+• Icons, Uhr, Dock, Seitenwechsel, Farben und Glas an einem Ort – alles gilt sofort
+
+◐ ColorOS-17.1-Look (19.2)
 • Neue Option in Projekt Zenith (Illuminati): das ganze System im Stil von ColorOS 17.1
 • Milchglas, runde Squircle-Icons, ColorOS-Uhr und -Schnellmenü, schwebendes Dock, dein eigener Hintergrund
 • Das Glas frei einstellbar: Lichtbrechung, Unschärfe, Farbsäume, Glanz, Tönung, Glasfarbe – und fünf Looks zum Antippen
