@@ -169,6 +169,7 @@ import dev.hearth.launcher.data.has
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.SwipeDownAction
 import dev.hearth.launcher.data.hologram
+import dev.hearth.launcher.data.colorOsLook
 import dev.hearth.launcher.data.withColorOsLook
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
