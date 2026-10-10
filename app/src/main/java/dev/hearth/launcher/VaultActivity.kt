@@ -1,6 +1,8 @@
 package dev.hearth.launcher
 
+import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.hardware.biometrics.BiometricManager
 import android.hardware.biometrics.BiometricPrompt
 import android.os.Build
@@ -16,6 +18,9 @@ import androidx.annotation.RequiresApi
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.core.content.IntentCompat
 import dev.hearth.launcher.data.SettingsRepository
 import dev.hearth.launcher.data.ZenithVault
 import dev.hearth.launcher.ui.GlassStyle
@@ -33,6 +38,8 @@ import javax.crypto.Cipher
  */
 class VaultActivity : ComponentActivity() {
 
+    /** What was shared into the vault from another app, waiting for it to be unlocked. */
+    private var incoming by mutableStateOf<List<Uri>>(emptyList())
     private var keepOpen = false
     private var leftAt = 0L
     private var cancel: CancellationSignal? = null
@@ -67,6 +74,7 @@ class VaultActivity : ComponentActivity() {
         )
         // What was opened in another app last time goes now at the latest.
         if (!ZenithVault.unlocked.value) ZenithVault.wipeOpened(this)
+        if (savedInstanceState == null) take(intent)
         val repo = SettingsRepository(this)
         setContent {
             val settings by repo.settings.collectAsState()
@@ -75,10 +83,38 @@ class VaultActivity : ComponentActivity() {
                 LocalGlassStyle provides GlassStyle.from(settings),
             ) {
                 HearthTheme(dark = true) {
-                    VaultScreen(host = host, onClose = { finish() })
+                    VaultScreen(
+                        host = host,
+                        incoming = incoming,
+                        onIncomingTaken = { incoming = emptyList() },
+                        onClose = { finish() },
+                    )
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        take(intent)
+    }
+
+    /** Photos and files shared into the vault ("Teilen" → "ZENITH-Tresor"). */
+    private fun take(intent: Intent?) {
+        val uris = when (intent?.action) {
+            Intent.ACTION_SEND -> listOfNotNull(IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java))
+            Intent.ACTION_SEND_MULTIPLE -> IntentCompat.getParcelableArrayListExtra(intent, Intent.EXTRA_STREAM, Uri::class.java).orEmpty()
+            else -> emptyList()
+        }.ifEmpty {
+            val clip = intent?.clipData
+            if (intent?.action == Intent.ACTION_SEND || intent?.action == Intent.ACTION_SEND_MULTIPLE) {
+                (0 until (clip?.itemCount ?: 0)).mapNotNull { clip?.getItemAt(it)?.uri }
+            } else {
+                emptyList()
+            }
+        }
+        if (uris.isNotEmpty()) incoming = uris
     }
 
     override fun onStart() {

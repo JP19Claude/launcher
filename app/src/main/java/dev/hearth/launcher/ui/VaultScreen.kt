@@ -9,7 +9,11 @@ import android.text.format.Formatter
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContract
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import android.os.Build
+import android.provider.DocumentsContract
+import android.provider.MediaStore
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -24,7 +28,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +67,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -99,6 +107,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -164,7 +173,12 @@ private class VaultWork(val title: String, val fraction: Float)
  * photos, videos and files, encrypted on this phone.
  */
 @Composable
-fun VaultScreen(host: VaultHost, onClose: () -> Unit) {
+fun VaultScreen(
+    host: VaultHost,
+    onClose: () -> Unit,
+    incoming: List<Uri> = emptyList(),
+    onIncomingTaken: () -> Unit = {},
+) {
     val context = LocalContext.current
     val unlocked by ZenithVault.unlocked.collectAsState()
     var exists by remember { mutableStateOf(ZenithVault.exists(context)) }
@@ -174,7 +188,24 @@ fun VaultScreen(host: VaultHost, onClose: () -> Unit) {
         when {
             !exists -> VaultSetup(host, onBack = onClose, onReady = { exists = ZenithVault.exists(context) })
             !unlocked -> VaultLocked(host, onBack = onClose)
-            else -> VaultOpen(host, onBack = onClose, onGone = { exists = ZenithVault.exists(context) })
+            else -> VaultOpen(host, onBack = onClose, onGone = { exists = ZenithVault.exists(context) }, incoming = incoming, onIncomingTaken = onIncomingTaken)
+        }
+        // ZENITH 19.1: shared into the vault from another app – waiting until it's open.
+        if (incoming.isNotEmpty() && !unlocked) {
+            val shape = ZenithCutShape(10.dp)
+            Box(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp), contentAlignment = Alignment.BottomCenter) {
+                Text(
+                    if (incoming.size == 1) "1 Datei wartet – sie wird verschlüsselt, sobald der Tresor offen ist." else "${incoming.size} Dateien warten – sie werden verschlüsselt, sobald der Tresor offen ist.",
+                    color = VaultText,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .clip(shape)
+                        .background(VaultPanelHigh)
+                        .border(0.8.dp, ZenithGreen.copy(alpha = 0.5f), shape)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                )
+            }
         }
     }
 }
@@ -745,7 +776,13 @@ private fun VaultLocked(host: VaultHost, onBack: () -> Unit) {
 private class AddedBatch(val originals: List<Uri>, val failed: Int)
 
 @Composable
-private fun VaultOpen(host: VaultHost, onBack: () -> Unit, onGone: () -> Unit) {
+private fun VaultOpen(
+    host: VaultHost,
+    onBack: () -> Unit,
+    onGone: () -> Unit,
+    incoming: List<Uri> = emptyList(),
+    onIncomingTaken: () -> Unit = {},
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val entries by ZenithVault.entries.collectAsState()
@@ -802,6 +839,26 @@ private fun VaultOpen(host: VaultHost, onBack: () -> Unit, onGone: () -> Unit) {
     val addMedia = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) addAll(uris)
     }
+    // ZENITH 19.1: what was shared into the vault goes in as soon as it's open.
+    LaunchedEffect(incoming) {
+        if (incoming.isNotEmpty()) {
+            val shared = incoming
+            onIncomingTaken()
+            addAll(shared)
+        }
+    }
+    // Photos from the gallery: Android itself asks before they're deleted (Android 11+).
+    var deletedFirst by remember { mutableStateOf(0) }
+    val mediaDelete = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+        note = if (result.resultCode == Activity.RESULT_OK) {
+            "Originale gelöscht – sie liegen jetzt nur noch verschlüsselt im Tresor."
+        } else if (deletedFirst > 0) {
+            "$deletedFirst gelöscht, die übrigen Originale bleiben."
+        } else {
+            "Die Originale bleiben, wo sie sind."
+        }
+    }
+
     // The vault's camera: the photo goes straight in, encrypted; the moment's copy is wiped.
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { taken ->
         val file = shot
@@ -890,6 +947,28 @@ private fun VaultOpen(host: VaultHost, onBack: () -> Unit, onGone: () -> Unit) {
 
     val shown = entries.filter { filter == null || it.kind == filter }
     val total = entries.sumOf { it.size }
+
+    fun shareCopy(entry: ZenithVault.Entry) {
+        work = VaultWork("Entschlüssele „${entry.name}“ …", -1f)
+        scope.launch {
+            val file = withContext(Dispatchers.IO) { ZenithVault.openCopy(context, entry) }
+            work = null
+            val uri = file?.let { runCatching { FileProvider.getUriForFile(context, "${context.packageName}.files", it) }.getOrNull() }
+            if (uri == null) {
+                note = "Teilen ging nicht."
+                return@launch
+            }
+            val send = Intent(Intent.ACTION_SEND)
+                .setType(entry.mime)
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .setClipData(android.content.ClipData.newRawUri(entry.name, uri))
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            host.stayOpen()
+            runCatching { context.startActivity(Intent.createChooser(send, "„${entry.name}“ teilen")) }
+                .onSuccess { note = "Geteilt wird eine unverschlüsselte Kopie – im Tresor bleibt alles verschlüsselt." }
+                .onFailure { note = "Keine App zum Teilen gefunden." }
+        }
+    }
 
     Column(Modifier.fillMaxSize().systemBarsPadding()) {
         Box(Modifier.padding(horizontal = 14.dp)) {
@@ -1015,21 +1094,25 @@ private fun VaultOpen(host: VaultHost, onBack: () -> Unit, onGone: () -> Unit) {
         )
     }
 
-    viewing?.let { entry ->
+    viewing?.let { first ->
+        // Swiping goes through what's shown right now (notes open in their own editor).
+        val pages = shown.filter { it.kind != ZenithVault.Kind.Note }
         VaultViewer(
-            entry = entry,
-            thumb = thumbs[entry.id],
+            entries = pages,
+            start = pages.indexOfFirst { it.id == first.id }.coerceAtLeast(0),
+            thumbs = thumbs,
             onClose = { viewing = null },
-            onOpen = { openElsewhere(entry) },
-            onExport = {
+            onOpen = { openElsewhere(it) },
+            onShare = { shareCopy(it) },
+            onExport = { entry ->
                 exporting = entry
                 host.stayOpen()
                 runCatching { exportOne.launch(entry.mime to entry.name) }
             },
-            onDelete = {
+            onDelete = { entry ->
                 runCatching { ZenithVault.remove(context, entry) }
                 thumbs.remove(entry.id)
-                viewing = null
+                if (pages.size <= 1) viewing = null
                 note = "Aus dem Tresor gelöscht."
             },
         )
@@ -1051,8 +1134,21 @@ private fun VaultOpen(host: VaultHost, onBack: () -> Unit, onGone: () -> Unit) {
                 batch = null
                 work = VaultWork("Originale werden gelöscht …", -1f)
                 scope.launch {
-                    val gone = withContext(Dispatchers.IO) { added.originals.count { ZenithVault.deleteOriginal(context, it) } }
+                    // Files picked here go directly; photos shared from the gallery go after
+                    // Android has asked.
+                    val (documents, others) = added.originals.partition { DocumentsContract.isDocumentUri(context, it) }
+                    val gone = withContext(Dispatchers.IO) { documents.count { ZenithVault.deleteOriginal(context, it) } }
+                    val media = others.filter { it.authority == MediaStore.AUTHORITY }
                     work = null
+                    if (media.isNotEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        deletedFirst = gone
+                        val request = runCatching { MediaStore.createDeleteRequest(context.contentResolver, media) }.getOrNull()
+                        if (request != null) {
+                            host.stayOpen()
+                            runCatching { mediaDelete.launch(IntentSenderRequest.Builder(request.intentSender).build()) }
+                            return@launch
+                        }
+                    }
                     val left = n - gone
                     note = if (left == 0) {
                         "Originale gelöscht. Schau auch im Papierkorb der Galerie nach."
@@ -1168,94 +1264,62 @@ private fun VaultTile(entry: ZenithVault.Entry, thumbs: MutableMap<String, Image
     }
 }
 
-// ---- Looking at one ----
+// ---- Looking at them ----
 
+/**
+ * The vault's viewer: swipe from one to the next, pinch or double tap to zoom a photo, and a
+ * slideshow that moves on by itself. What it shows is [entries], starting at [start].
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun VaultViewer(
-    entry: ZenithVault.Entry,
-    thumb: ImageBitmap?,
+    entries: List<ZenithVault.Entry>,
+    start: Int,
+    thumbs: Map<String, ImageBitmap>,
     onClose: () -> Unit,
-    onOpen: () -> Unit,
-    onExport: () -> Unit,
-    onDelete: () -> Unit,
+    onOpen: (ZenithVault.Entry) -> Unit,
+    onShare: (ZenithVault.Entry) -> Unit,
+    onExport: (ZenithVault.Entry) -> Unit,
+    onDelete: (ZenithVault.Entry) -> Unit,
 ) {
-    val context = LocalContext.current
+    if (entries.isEmpty()) {
+        LaunchedEffect(Unit) { onClose() }
+        return
+    }
     var confirm by remember { mutableStateOf(false) }
-    BackHandler { if (confirm) confirm = false else onClose() }
-    val photo = entry.kind == ZenithVault.Kind.Photo && entry.size <= ZenithVault.VIEW_LIMIT
-    val picture by produceState<Pair<Boolean, ImageBitmap?>>(false to null, entry.id) {
-        value = if (!photo) {
-            true to null
-        } else {
-            true to withContext(Dispatchers.IO) {
-                ZenithVault.readAll(context, entry)?.let { ZenithVault.decode(it, 2560) }?.asImageBitmap()
-            }
+    var playing by remember { mutableStateOf(false) }
+    val pager = androidx.compose.foundation.pager.rememberPagerState(
+        initialPage = start.coerceIn(0, entries.size - 1),
+        pageCount = { entries.size },
+    )
+    BackHandler {
+        when {
+            confirm -> confirm = false
+            playing -> playing = false
+            else -> onClose()
         }
     }
-    var scale by remember { mutableFloatStateOf(1f) }
-    var pan by remember { mutableStateOf(Offset.Zero) }
+    // The slideshow: on to the next every few seconds, round and round.
+    LaunchedEffect(playing, entries.size) {
+        while (playing && entries.size > 1) {
+            delay(3200)
+            pager.animateScrollToPage((pager.currentPage + 1) % entries.size)
+        }
+    }
+    val current = entries[pager.currentPage.coerceIn(0, entries.size - 1)]
     Box(
         Modifier
             .fillMaxSize()
             .background(Color.Black)
             .pointerInput(Unit) { detectTapGestures { } },
     ) {
-        val shown = picture.second ?: thumb
-        if (photo && shown != null) {
-            Image(
-                shown,
-                contentDescription = entry.name,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(entry.id) {
-                        detectTransformGestures { _, move, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(1f, 6f)
-                            pan = if (scale > 1f) pan + move else Offset.Zero
-                        }
-                    }
-                    .pointerInput(entry.id) {
-                        detectTapGestures(onDoubleTap = {
-                            scale = if (scale > 1.1f) 1f else 2.5f
-                            pan = Offset.Zero
-                        })
-                    }
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                        translationX = pan.x
-                        translationY = pan.y
-                    },
-            )
-        } else {
-            Column(
-                Modifier.fillMaxSize().padding(28.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                if (thumb != null) {
-                    Image(
-                        thumb,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(220.dp).clip(ZenithCutShape(16.dp)),
-                    )
-                } else {
-                    VaultEmblem(120.dp, open = true, busy = !picture.first)
-                }
-                Spacer(Modifier.height(18.dp))
-                Text(entry.name, color = VaultText, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-                Text(
-                    "${sizeText(context, entry.size)} · im Tresor seit ${DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(entry.added))}",
-                    color = VaultDim,
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-                if (photo && picture.first && picture.second == null) {
-                    Text("Das Foto lässt sich hier nicht zeigen – öffne es in einer App.", color = VaultDim, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
-                }
-            }
+        androidx.compose.foundation.pager.HorizontalPager(
+            state = pager,
+            modifier = Modifier.fillMaxSize(),
+            key = { entries[it].id },
+            beyondViewportPageCount = 1,
+        ) { page ->
+            ViewerPage(entries[page], thumbs[entries[page].id])
         }
         Row(
             Modifier
@@ -1268,7 +1332,37 @@ private fun VaultViewer(
             Box(Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Zurück", tint = Color.White)
             }
-            Text(entry.name, color = Color.White, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 6.dp))
+            Column(Modifier.weight(1f).padding(start = 6.dp)) {
+                Text(current.name, color = Color.White, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (entries.size > 1) {
+                    Text("${pager.currentPage + 1} von ${entries.size}", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
+                }
+            }
+            if (entries.size > 1) {
+                val chip = ZenithCutShape(7.dp)
+                Row(
+                    Modifier
+                        .clip(chip)
+                        .background(if (playing) ZenithGreen else Color.White.copy(alpha = 0.1f))
+                        .clickable { playing = !playing }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Rounded.PlayArrow,
+                        contentDescription = null,
+                        tint = if (playing) Color(0xFF04140B) else Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        if (playing) "Stopp" else "Diashow",
+                        color = if (playing) Color(0xFF04140B) else Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
         }
         Row(
             Modifier
@@ -1276,24 +1370,121 @@ private fun VaultViewer(
                 .fillMaxWidth()
                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f))))
                 .systemBarsPadding()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = 12.dp, vertical = 12.dp),
         ) {
-            VaultButton("Öffnen", Modifier.weight(1f), primary = false, icon = Icons.Rounded.Share, onClick = onOpen)
-            Spacer(Modifier.width(8.dp))
-            VaultButton("Export", Modifier.weight(1f), primary = false, onClick = onExport)
-            Spacer(Modifier.width(8.dp))
-            VaultButton("Löschen", Modifier.weight(1f), primary = false, danger = true, onClick = { confirm = true })
+            AddTile("Öffnen", Modifier.weight(1f), glyph = { Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = it, modifier = Modifier.size(20.dp)) }) {
+                playing = false
+                onOpen(current)
+            }
+            Spacer(Modifier.width(6.dp))
+            AddTile("Teilen", Modifier.weight(1f), glyph = { Icon(Icons.Rounded.Share, contentDescription = null, tint = it, modifier = Modifier.size(20.dp)) }) {
+                playing = false
+                onShare(current)
+            }
+            Spacer(Modifier.width(6.dp))
+            AddTile("Export", Modifier.weight(1f), glyph = { Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = it, modifier = Modifier.size(20.dp)) }) {
+                playing = false
+                onExport(current)
+            }
+            Spacer(Modifier.width(6.dp))
+            AddTile("Löschen", Modifier.weight(1f), glyph = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = VaultRed, modifier = Modifier.size(20.dp)) }) {
+                playing = false
+                confirm = true
+            }
         }
         if (confirm) {
             VaultDialog("Endgültig löschen?", onDismiss = { confirm = false }) {
-                Text("„${entry.name}“ wird aus dem Tresor gelöscht. Hast du kein Original mehr, ist es danach weg.", color = VaultDim, fontSize = 15.sp, lineHeight = 20.sp)
+                Text("„${current.name}“ wird aus dem Tresor gelöscht. Hast du kein Original mehr, ist es danach weg.", color = VaultDim, fontSize = 15.sp, lineHeight = 20.sp)
                 Spacer(Modifier.height(18.dp))
                 VaultButton("Löschen", Modifier.fillMaxWidth(), danger = true) {
                     confirm = false
-                    onDelete()
+                    onDelete(current)
                 }
                 Spacer(Modifier.height(8.dp))
                 VaultButton("Abbrechen", Modifier.fillMaxWidth(), primary = false) { confirm = false }
+            }
+        }
+    }
+}
+
+/** One page of the viewer: a photo to zoom, or what the file is. */
+@Composable
+private fun ViewerPage(entry: ZenithVault.Entry, thumb: ImageBitmap?) {
+    val context = LocalContext.current
+    val photo = entry.kind == ZenithVault.Kind.Photo && entry.size <= ZenithVault.VIEW_LIMIT
+    val picture by produceState<Pair<Boolean, ImageBitmap?>>(false to null, entry.id) {
+        value = if (!photo) {
+            true to null
+        } else {
+            true to withContext(Dispatchers.IO) {
+                ZenithVault.readAll(context, entry)?.let { ZenithVault.decode(it, 2560) }?.asImageBitmap()
+            }
+        }
+    }
+    var scale by remember { mutableFloatStateOf(1f) }
+    var pan by remember { mutableStateOf(Offset.Zero) }
+    val shown = picture.second ?: thumb
+    if (photo && shown != null) {
+        Image(
+            shown,
+            contentDescription = entry.name,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .fillMaxSize()
+                // Two fingers zoom; one finger only moves a zoomed photo – otherwise it swipes on.
+                .pointerInput(entry.id) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        do {
+                            val event = awaitPointerEvent()
+                            if (event.changes.size > 1 || scale > 1.01f) {
+                                scale = (scale * event.calculateZoom()).coerceIn(1f, 6f)
+                                pan = if (scale > 1.01f) pan + event.calculatePan() else Offset.Zero
+                                event.changes.forEach { if (it.positionChanged()) it.consume() }
+                            }
+                        } while (event.changes.any { it.pressed })
+                    }
+                }
+                .pointerInput(entry.id) {
+                    detectTapGestures(onDoubleTap = {
+                        scale = if (scale > 1.1f) 1f else 2.5f
+                        pan = Offset.Zero
+                    })
+                }
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationX = pan.x
+                    translationY = pan.y
+                },
+        )
+    } else {
+        Column(
+            Modifier.fillMaxSize().padding(28.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            if (thumb != null) {
+                Image(
+                    thumb,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(220.dp).clip(ZenithCutShape(16.dp)),
+                )
+            } else {
+                VaultEmblem(120.dp, open = true, busy = !picture.first)
+            }
+            Spacer(Modifier.height(18.dp))
+            Text(entry.name, color = VaultText, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+            Text(
+                "${sizeText(context, entry.size)} · im Tresor seit ${DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(entry.added))}",
+                color = VaultDim,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            if (photo && picture.first && picture.second == null) {
+                Text("Das Foto lässt sich hier nicht zeigen – öffne es in einer App.", color = VaultDim, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
             }
         }
     }

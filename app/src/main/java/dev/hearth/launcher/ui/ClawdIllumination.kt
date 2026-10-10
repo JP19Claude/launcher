@@ -267,7 +267,12 @@ fun ClawdIlluminationScreen(
 
             // ZENITH 19: Projekt Zenith lives only here, behind a secret password.
             IlluminationSection("◈ Projekt Zenith") {
-                ProjectZenithGate(settings.projectZenith, settings.animations) { v -> onChange { it.copy(projectZenith = v) } }
+                ProjectZenithGate(
+                    on = settings.projectZenith,
+                    glass = settings.projectZenithGlass,
+                    animate = settings.animations,
+                    onGlass = { v -> onChange { it.copy(projectZenithGlass = v) } },
+                ) { v -> onChange { it.copy(projectZenith = v) } }
             }
             IlluminationSection("Ƶ System") {
                 IlluminationSwitch(
@@ -701,7 +706,7 @@ private fun saveAodPicture(context: android.content.Context, uri: android.net.Ur
  * Z-Angriff greets the ones who got it right); switching it off never does.
  */
 @Composable
-private fun ProjectZenithGate(on: Boolean, animate: Boolean, onToggle: (Boolean) -> Unit) {
+private fun ProjectZenithGate(on: Boolean, glass: Boolean, animate: Boolean, onGlass: (Boolean) -> Unit, onToggle: (Boolean) -> Unit) {
     var asking by remember { mutableStateOf(false) }
     var typed by remember { mutableStateOf("") }
     var wrong by remember { mutableStateOf(false) }
@@ -719,6 +724,12 @@ private fun ProjectZenithGate(on: Boolean, animate: Boolean, onToggle: (Boolean)
     }
     if (on) {
         IlluminationSwitch("◈", "Projekt Zenith", "An – das ganze System futuristisch. Ausschalten geht ohne Passwort.", true) { v -> if (!v) onToggle(false) }
+        // ZENITH 19.1: Projekt Zenith in glass – real liquid glass, green, with the HUD's lines.
+        IlluminationSwitch(
+            "💧", "Glas-Modus",
+            "Projekt Zenith aus echtem Flüssigglas statt Hologramm: Flächen und Dock biegen das Licht, grün getönt, mit den grünen Linien des HUD.",
+            glass,
+        ) { v -> onGlass(v) }
     } else {
         IlluminationSwitch("🔒", "Projekt Zenith", "Gesperrt. Nur wer das geheime Passwort kennt, kann es einschalten.", false) { v ->
             if (v) {

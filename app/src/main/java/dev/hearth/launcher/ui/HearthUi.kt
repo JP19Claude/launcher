@@ -180,6 +180,49 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "19.1",
+            name = "Zenith Glas",
+            summary = "Das erste richtige Update nach ZENITH 19: Projekt Zenith aus echtem Flüssigglas, Fotos aus der Galerie direkt in den Tresor teilen, ein Tresor zum Durchwischen mit Diashow – und zwei neue Widgets, der ZENITH-Monitor und der Schutzschild.",
+            sections = listOf(
+                ChangeSection(
+                    "Projekt Zenith Glas", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Projekt Zenith bekommt einen Glas-Modus: Statt Hologramm-Flächen echtes Flüssigglas, das den Gitter-Horizont dahinter biegt und Farben spaltet – grün getönt, mit hellem Rand wie bei Apple.",
+                        "Die grünen Linien des HUD liegen im Glas: ein grüner Rand, der beim Antippen aufleuchtet, feine Scanlinien, grünes Licht von unten, Strichmarken oben.",
+                        "Auch das Dock wird eine Platte aus grünem Flüssigglas.",
+                        "Zu finden dort, wo Projekt Zenith wohnt: in den Illuminati, sobald Projekt Zenith an ist.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "In den Tresor teilen", Icons.Rounded.Share, Green,
+                    listOf(
+                        "In jeder App unter „Teilen“: ZENITH-Tresor. Fotos, Videos und Dateien gehen direkt verschlüsselt in den Tresor – erst nach deinem Passwort oder Fingerabdruck.",
+                        "Danach fragt Android selbst, ob die Originale aus der Galerie gelöscht werden sollen – dann liegen sie nur noch im Tresor.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Der Tresor zum Durchwischen", Icons.Rounded.Lock, Green,
+                    listOf(
+                        "Im Tresor von einem Foto zum nächsten wischen, mit „1 von 12“ oben.",
+                        "Diashow: Die Fotos laufen von selbst weiter, immer im Kreis.",
+                        "Zoomen mit zwei Fingern oder Doppeltippen – mit einem Finger wird weitergewischt.",
+                        "Teilen direkt aus dem Tresor (als Kopie – im Tresor bleibt alles verschlüsselt).",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Neue Widgets", Icons.Rounded.Add, Green,
+                    listOf(
+                        "ZENITH-Monitor: das Innere des Handys als HUD – Akku mit Temperatur und Spannung, Arbeitsspeicher, Speicher und Laufzeit, live mit grünen Balken.",
+                        "Schutzschild: deine Schutz-Punkte als Bogen um das Metall-Z; antippen öffnet den Schutzschild.",
+                    ),
+                    hearth,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "19.0",
             name = "ZENITH",
             summary = "Aus OMEGA UI wird ZENITH – die Sonne im höchsten Punkt, auf der neuen Basis ClaudeOS 6.0 „Helios“: ein neuer Name, ein neues Logo, eine neue Farbe, eine neue Uhr. Alles fühlt sich neu an, und die alten Easter Eggs bleiben.",

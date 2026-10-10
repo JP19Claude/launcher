@@ -532,6 +532,8 @@ data class LauncherSettings(
     val zenithStrikeSystem: Boolean = false,
     /** ZENITH 19, "Projekt Zenith": the whole system futuristic – holograms, HUD, a grid horizon. */
     val projectZenith: Boolean = false,
+    /** ZENITH 19.1, "Projekt Zenith Glas": Projekt Zenith in real liquid glass, green and lit. */
+    val projectZenithGlass: Boolean = false,
     /** OMEGA UI 17.1: flowing effects at a calmer rate and lighter glass – smoother, less lag. */
     val smoothMode: Boolean = true,
     /** OMEGA UI 17.5: OMEGA light between the wallpaper and the home screen's apps and widgets. */
@@ -1056,6 +1058,7 @@ class SettingsRepository(context: Context) {
             zenithStrike = prefs.getBoolean("zenithStrike", d.zenithStrike),
             zenithStrikeSystem = prefs.getBoolean("zenithStrikeSystem", d.zenithStrikeSystem),
             projectZenith = prefs.getBoolean("projectZenith", d.projectZenith),
+            projectZenithGlass = prefs.getBoolean("projectZenithGlass", d.projectZenithGlass),
             smoothMode = prefs.getBoolean("smoothMode", d.smoothMode),
             omegaLight = prefs.getBoolean("omegaLight", d.omegaLight),
             illumination = prefs.getBoolean("illumination", d.illumination),
@@ -1238,6 +1241,7 @@ class SettingsRepository(context: Context) {
             .putBoolean("zenithStrike", s.zenithStrike)
             .putBoolean("zenithStrikeSystem", s.zenithStrikeSystem)
             .putBoolean("projectZenith", s.projectZenith)
+            .putBoolean("projectZenithGlass", s.projectZenithGlass)
             .putBoolean("smoothMode", s.smoothMode)
             .putBoolean("omegaLight", s.omegaLight)
             .putBoolean("illumination", s.illumination)

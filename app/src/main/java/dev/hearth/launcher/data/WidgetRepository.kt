@@ -42,6 +42,10 @@ data class HomeWidget(
 enum class HearthWidget(val label: String, val description: String, val spanX: Int, val spanY: Int, val pageHeight: Int) {
     /** ZENITH 19: the metal Z, big – its green light is the battery; tap it, hold it. */
     Zenith("ZENITH-Z", "Das Metall-Z groß: sein grünes Licht zeigt den Akku – antippen lädt es auf, halten öffnet Claude, 19-mal tippen die Illuminati", 2, 2, 210),
+    /** ZENITH 19.1: the phone's insides as a HUD. */
+    Monitor("ZENITH-Monitor", "Akku mit Temperatur und Spannung, Arbeitsspeicher, Speicher und Laufzeit – live, wie ein HUD", 4, 2, 180),
+    /** ZENITH 19.1: the Schutzschild's score round the Z. */
+    Shield("Schutzschild", "Deine Schutz-Punkte als Bogen um das Metall-Z – antippen öffnet den Schutzschild", 2, 2, 200),
     Photos("Fotos", "Deine Bilder als Diashow auf Glas", 2, 2, 220),
     Clock("Glas-Uhr", "Analoge Uhr mit Sekundenzeiger, wie aus Glas", 2, 2, 200),
     Battery("Akku", "Akkustand als Ring, grün beim Laden", 2, 2, 170),

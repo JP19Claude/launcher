@@ -99,6 +99,26 @@
     </queries>
 
     <application>
+        <!-- ZENITH 19.1: "ZENITH-Tresor" in Android's share sheet – photos, videos and files
+             straight into the vault (it asks for the password first). -->
+        <activity
+            android:name=".VaultActivity"
+            android:exported="true"
+            android:label="ZENITH-Tresor"
+            android:launchMode="singleTop"
+            tools:replace="android:exported">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+
         <!-- Glimmer Drop: hold two phones together and share; also in Android's share sheet. -->
         <activity
             android:name=".DropActivity"

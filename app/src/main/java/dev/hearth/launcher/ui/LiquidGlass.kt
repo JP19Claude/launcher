@@ -111,6 +111,8 @@ data class GlassStyle(
     val zenith: Boolean = false,
     /** ZENITH 19, "Projekt Zenith": holograms – dark glass, scan lines, a green frame with brackets. */
     val hud: Boolean = false,
+    /** ZENITH 19.1, "Projekt Zenith Glas": Projekt Zenith in real liquid glass – a lens, green light. */
+    val hudGlass: Boolean = false,
 ) {
     companion object {
         fun from(s: LauncherSettings) = GlassStyle(
@@ -143,8 +145,21 @@ data class GlassStyle(
             // Flüssig-Modus: the lens only on big glass; small glass gets the drawn edge (much lighter).
             lensMinDp = if (s.smoothMode) maxOf(s.glassQuality.lensMinDp, 96f) else s.glassQuality.lensMinDp,
         ).let { glass ->
-            // ZENITH Metall: smoked dark metal over the blurred wallpaper – no lens at all.
-            if (s.zenithMetal) {
+            // Projekt Zenith Glas: real liquid glass, tinted green, bending more and catching
+            // the light at its rim like Apple's, with Projekt Zenith's green frame on top.
+            if (s.projectZenith && s.projectZenithGlass) {
+                glass.copy(
+                    tint = Color(0xFF0A3A22).copy(alpha = if (s.darkGlass) 0.42f else 0.26f),
+                    refraction = glass.refraction * 1.3f,
+                    dispersion = maxOf(glass.dispersion, 0.9f),
+                    specular = glass.specular * 1.3f,
+                    liquid = true,
+                    zenith = true,
+                    hud = true,
+                    hudGlass = true,
+                )
+            } else if (s.zenithMetal) {
+                // ZENITH Metall: smoked dark metal over the blurred wallpaper – no lens at all.
                 glass.copy(
                     tint = Color(0xFF14161A).copy(alpha = if (s.darkGlass) 0.8f else 0.68f),
                     refraction = 0.3f,
@@ -466,7 +481,8 @@ fun LiquidGlass(
     val light = LocalGlassLight.current
     val backdrop = LocalBackdrop.current
     // ZENITH Metall: ZENITH's own shape – two corners cut off like the ends of the Z's bars.
-    val glassShape: androidx.compose.ui.graphics.Shape = if (style.zenith) ZenithCutShape(cornerRadius * 0.7f) else RoundedCornerShape(cornerRadius)
+    // Projekt Zenith Glas keeps the round shape: the lens bends it at its rounded rim.
+    val glassShape: androidx.compose.ui.graphics.Shape = if (style.zenith && !style.hudGlass) ZenithCutShape(cornerRadius * 0.7f) else RoundedCornerShape(cornerRadius)
     val density = LocalDensity.current
     val radiusPx = with(density) { cornerRadius.toPx() }
     val refractionPx = with(density) { refraction.toPx() } * style.refraction
@@ -636,11 +652,11 @@ fun LiquidGlass(
                 .matchParentSize()
                 .drawBehind {
                     // ZENITH Metall: the logo's metal and light instead of glass.
-                    if (style.hud) {
+                    if (style.hud && !style.hudGlass) {
                         drawHudSurface(glassShape.createOutline(size, layoutDirection, this), glow, touch)
                         return@drawBehind
                     }
-                    if (style.zenith) {
+                    if (style.zenith && !style.hudGlass) {
                         drawZenithSurface(glassShape.createOutline(size, layoutDirection, this), fill, glow, touch)
                         return@drawBehind
                     }
@@ -743,6 +759,8 @@ fun LiquidGlass(
                             style = Stroke(width = rimPx * 1.3f),
                         )
                     }
+                    // Projekt Zenith Glas: the hologram's green frame and scan lines in the glass.
+                    if (style.hudGlass) drawHudGlass(outline, glow)
                     if (!lensOn && glow > 0.01f) {
                         drawOutline(
                             outline,

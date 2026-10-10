@@ -513,6 +513,49 @@ internal fun DrawScope.drawHudSurface(outline: androidx.compose.ui.graphics.Outl
     drawHudFrame(outline, glow)
 }
 
+/**
+ * ZENITH 19.1, Projekt Zenith Glas: the hologram's marks in real glass – green light rising from
+ * the foot, faint scan lines, a green line round the rim that burns brighter when pressed
+ * ([glow] 0..1), tick marks along the top.
+ */
+internal fun DrawScope.drawHudGlass(outline: androidx.compose.ui.graphics.Outline, glow: Float) {
+    val px = 1.dp.toPx()
+    drawOutline(
+        outline,
+        Brush.verticalGradient(
+            0f to Color.Transparent,
+            0.55f to Color.Transparent,
+            1f to ZenithGreen.copy(alpha = 0.16f + 0.14f * glow),
+        ),
+    )
+    if (size.minDimension > 40.dp.toPx()) {
+        clipPath(Path().apply { addOutline(outline) }) {
+            val step = 4.dp.toPx()
+            var y = 0f
+            while (y < size.height) {
+                drawLine(Color(0xFF7DFFA8).copy(alpha = 0.035f), Offset(0f, y), Offset(size.width, y), strokeWidth = px * 0.6f)
+                y += step
+            }
+        }
+    }
+    drawOutline(
+        outline,
+        Brush.verticalGradient(
+            listOf(
+                Color(0xFF7DFFA8).copy(alpha = (0.5f + 0.4f * glow).coerceIn(0f, 1f)),
+                ZenithGreen.copy(alpha = (0.22f + 0.4f * glow).coerceIn(0f, 1f)),
+            ),
+        ),
+        style = Stroke(px * 1.2f),
+    )
+    if (size.width > 120.dp.toPx()) {
+        for (i in 0 until 4) {
+            val x = size.width * 0.62f + i * 6.dp.toPx()
+            drawLine(Color(0xFF7DFFA8).copy(alpha = 0.5f), Offset(x, 0f), Offset(x, 4.dp.toPx()), strokeWidth = px)
+        }
+    }
+}
+
 /** Projekt Zenith: the dock as a hologram – a slanted panel with scan lines, a green frame and brackets. */
 internal fun DrawScope.drawHudPlate(slant: Float) {
     val w = size.width

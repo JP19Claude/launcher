@@ -131,30 +131,42 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
         }
         // ZENITH 19: a slanted plate of the Z's dark metal, its ends cut like the Z's bars, green
         // light burning along its foot and pooling underneath.
-        DockStyle.Zenith -> androidx.compose.foundation.layout.BoxWithConstraints(
-            modifier
-                .fillMaxWidth()
-                .then(
-                    if (LocalGlassStyle.current.hud) {
-                        // Projekt Zenith: the dock as a hologram.
-                        Modifier.drawBehind { drawHudPlate(slant = size.height * 0.36f) }
-                    } else {
-                        Modifier.drawBehind { drawZenithPlate(slant = size.height * 0.36f, unit = 190.dp.toPx()) }
-                    },
-                ),
-        ) {
-            // Big icons, every one the same size, as big as fits (up to 78 dp): each takes its
-            // icon plus 18 dp of cell.
-            val inner = maxWidth - 28.dp
-            val fit = ((inner / apps.size.coerceAtLeast(1)).value - 20f).toInt()
-            val iconSize = fit.coerceIn(36, 78)
-            Row(
-                modifier = Modifier
+        DockStyle.Zenith -> {
+            val glassHud = LocalGlassStyle.current.hudGlass
+            val hud = LocalGlassStyle.current.hud
+            androidx.compose.foundation.layout.BoxWithConstraints(
+                modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 7.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
-            ) { iconsSized(iconSize) }
+                    .then(
+                        when {
+                            // Projekt Zenith Glas: the dock is a slab of green liquid glass (below).
+                            glassHud -> Modifier
+                            // Projekt Zenith: the dock as a hologram.
+                            hud -> Modifier.drawBehind { drawHudPlate(slant = size.height * 0.36f) }
+                            else -> Modifier.drawBehind { drawZenithPlate(slant = size.height * 0.36f, unit = 190.dp.toPx()) }
+                        },
+                    ),
+            ) {
+                // Big icons, every one the same size, as big as fits (up to 78 dp): each takes its
+                // icon plus 18 dp of cell.
+                val inner = maxWidth - 28.dp
+                val fit = ((inner / apps.size.coerceAtLeast(1)).value - 20f).toInt()
+                val iconSize = fit.coerceIn(36, 78)
+                val row: @Composable () -> Unit = {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 7.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) { iconsSized(iconSize) }
+                }
+                if (glassHud) {
+                    LiquidGlass(cornerRadius = 30.dp, refraction = 22.dp, modifier = Modifier.fillMaxWidth(), fluidEdge = false) { row() }
+                } else {
+                    row()
+                }
+            }
         }
         // Just the icons, as One UI does it.
         DockStyle.Clear -> Row(
