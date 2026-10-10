@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Home
@@ -184,6 +185,14 @@ internal object HearthChangelog {
             name = "Core Enforcer",
             summary = "Das Core Enforcer Studio: die Werkstatt, in der du dein System umbaust – Look würfeln, Profile speichern, den Z-Angriff in Farbe und Tempo gestalten und alles vom Icon bis zum Glas an einem Ort einstellen.",
             sections = listOf(
+                ChangeSection(
+                    "Die Versionskarte", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Wo die Version steht (Software-Update, Telefoninfo), liegt das Z jetzt auf einer großen Karte wie bei OxygenOS und ColorOS: ein Verlauf aus Tiefgrün in Smaragd mit Lichtbögen, oben das riesige Z mit der Version, darunter „ZENITH“, unten „Version aktuell“.",
+                        "Das Z ist breiter und größer als vorher; hältst du es gedrückt, schwillt es in die Breite, die Karte leuchtet auf – und beim Loslassen federt es zurück.",
+                    ),
+                    everyone,
+                ),
                 ChangeSection(
                     "Core Enforcer Studio", Icons.Rounded.Edit, Green,
                     listOf(

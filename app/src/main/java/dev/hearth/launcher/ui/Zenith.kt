@@ -2,6 +2,7 @@ package dev.hearth.launcher.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.spring
@@ -18,6 +19,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -114,6 +118,10 @@ fun ZenithLogo(
     onCharged: (() -> Unit)? = null,
     /** Fully charged, it also strikes: a giant Z across the screen (the Z-Angriff), if it's on. */
     strike: Boolean = true,
+    /** How much of its width the Z takes (the version card sets it wider). */
+    zWidth: Float = 0.9f,
+    /** The charge (0..1), shared when something around the logo should answer to it (the version card). */
+    chargeState: Animatable<Float, AnimationVector1D> = remember { Animatable(0f) },
 ) {
     val charged by androidx.compose.runtime.rememberUpdatedState(onCharged)
     val strikes by androidx.compose.runtime.rememberUpdatedState(strike && LocalSettings.current.zenithStrike)
@@ -121,7 +129,7 @@ fun ZenithLogo(
     if (striking) ZenithStrikeOverlay { striking = false }
     val haptics = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
-    val charge = remember { Animatable(0f) }
+    val charge = chargeState
     val burst = remember { Animatable(1f) }
     val holdModifier = if (!interactive && onTap == null) {
         Modifier
@@ -158,7 +166,7 @@ fun ZenithLogo(
     val density = LocalDensity.current
     // The number in the Z: heavy, slanted with the diagonal (smaller when it's longer).
     val measurer = rememberTextMeasurer()
-    val digits = remember(number, size, density) {
+    val digits = remember(number, size, density, zWidth) {
         if (number.isBlank()) {
             null
         } else {
@@ -166,7 +174,7 @@ fun ZenithLogo(
             measurer.measure(
                 number,
                 TextStyle(
-                    fontSize = with(density) { (size * 0.9f * ZenithZAspect * 0.66f * fit).toSp() },
+                    fontSize = with(density) { (size * zWidth * ZenithZAspect * 0.66f * fit).toSp() },
                     fontWeight = FontWeight.Black,
                     fontFamily = FontFamily.SansSerif,
                     letterSpacing = with(density) { (size * -0.012f).toSp() },
@@ -182,11 +190,12 @@ fun ZenithLogo(
                 .then(holdModifier)
                 .graphicsLayer {
                     val c = charge.value
-                    scaleX = 1f + 0.05f * c
-                    scaleY = 1f + 0.05f * c
+                    // Held, the Z swells and spreads wide.
+                    scaleX = 1f + 0.12f * c
+                    scaleY = 1f + 0.06f * c
                 },
         ) {
-            val w = this.size.width * 0.9f
+            val w = this.size.width * zWidth
             val left = (this.size.width - w) / 2f
             val top = (this.size.height - w * ZenithZAspect) / 2f
             val c = charge.value
@@ -274,8 +283,91 @@ fun ZenithLogo(
  * ([onTap]).
  */
 @Composable
-fun ZenithVersionHero(version: String, modifier: Modifier = Modifier, onTap: (() -> Unit)? = null) {
-    ZenithLogo(modifier, size = 320.dp, number = HearthUi.major(version), caption = "ZENITH", onTap = onTap)
+fun ZenithVersionHero(
+    version: String,
+    modifier: Modifier = Modifier,
+    onTap: (() -> Unit)? = null,
+    /** What stands at the card's foot, as "Version up to date" does on ColorOS's and OxygenOS's. */
+    footer: String? = null,
+) {
+    val charge = remember { Animatable(0f) }
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(30.dp)
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        modifier
+            .fillMaxWidth()
+            .aspectRatio(0.8f)
+            .graphicsLayer {
+                val c = charge.value
+                scaleX = 1f + 0.02f * c
+                scaleY = 1f + 0.02f * c
+            }
+            .clip(shape)
+            .drawBehind { drawZenithCard(charge.value) },
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(top = maxHeight * 0.1f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // The Z, as wide as the card allows, the version set into it; held, it spreads wider still.
+            ZenithLogo(
+                size = maxWidth,
+                zWidth = 0.86f,
+                number = HearthUi.major(version),
+                caption = "ZENITH",
+                onTap = onTap,
+                chargeState = charge,
+            )
+            Text(
+                "ZENITH $version · ${ClaudeOs.full}",
+                color = Color.White.copy(alpha = 0.78f),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Light,
+                letterSpacing = 1.sp,
+                modifier = Modifier.padding(top = 10.dp),
+            )
+        }
+        if (footer != null) {
+            Text(
+                footer,
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = maxHeight * 0.1f),
+            )
+        }
+    }
+}
+
+/**
+ * The version card's background, as on OxygenOS's and ColorOS's update pages but in ZENITH's colors:
+ * deep green into emerald with a warm glow in one corner and a cool one in the other, big arcs of
+ * light sweeping across, a pale disc rising from below. [charge] (0..1, the Z held) brightens it.
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawZenithCard(charge: Float) {
+    val w = size.width
+    val h = size.height
+    drawRect(
+        Brush.linearGradient(
+            listOf(Color(0xFF07150F), Color(0xFF0C3D29), Color(0xFF1C9463)),
+            start = Offset.Zero,
+            end = Offset(w, h),
+        ),
+    )
+    drawRect(Brush.radialGradient(listOf(ZenithSun.copy(alpha = 0.16f + 0.1f * charge), Color.Transparent), center = Offset(0f, 0f), radius = w * 0.9f))
+    drawRect(Brush.radialGradient(listOf(ZenithSky.copy(alpha = 0.24f + 0.1f * charge), Color.Transparent), center = Offset(w, h), radius = w * 1.0f))
+    // A pale disc rising from the foot.
+    val disc = Offset(w * 0.35f, h * 1.12f)
+    drawCircle(
+        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f + 0.08f * charge), Color(0xFF7DFFC8).copy(alpha = 0.05f)), startY = h * 0.55f, endY = h),
+        radius = w * 0.82f,
+        center = disc,
+    )
+    // Arcs of light.
+    val arc = Stroke(width = w * 0.004f)
+    drawCircle(Color.White.copy(alpha = 0.2f + 0.2f * charge), radius = w * 1.05f, center = Offset(-w * 0.32f, h * 0.62f), style = arc)
+    drawCircle(Color.White.copy(alpha = 0.12f + 0.15f * charge), radius = w * 0.82f, center = Offset(w * 1.12f, h * 0.98f), style = arc)
+    drawCircle(ZenithGreen.copy(alpha = 0.18f + 0.3f * charge), radius = w * 0.62f, center = Offset(w * 0.06f, h * 0.1f), style = arc)
 }
 
 /**

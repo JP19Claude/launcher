@@ -1,5 +1,9 @@
 ZENITH 19.3 „Core Enforcer“ auf ClaudeOS 6.0 „Helios“
 
+🪪 Die Versionskarte
+• Das Z auf einer großen Karte wie bei OxygenOS und ColorOS: Verlauf mit Lichtbögen, riesiges Z mit der Version, „Version aktuell“ unten
+• Das Z ist breiter; gedrückt gehalten schwillt es in die Breite, beim Loslassen federt es zurück
+
 🛠 Core Enforcer Studio
 • Die Werkstatt zum Umbauen des Systems – im ZENITH-Menü und in den Einstellungen
 • Look würfeln (mit Zurück) und Profile: deinen ganzen Look speichern und mit einem Tipp zurückholen

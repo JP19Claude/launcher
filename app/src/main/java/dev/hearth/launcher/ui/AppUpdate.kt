@@ -365,7 +365,18 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                     UpdateHero.Number -> if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
                         val crystal = rememberCrystalTaps(current)
                         // ZENITH 19: as ColorOS 17 shows its version – the Z big, the number huge.
-                        ZenithVersionHero(shown, Modifier.padding(top = 16.dp, bottom = 6.dp), onTap = crystal)
+                        ZenithVersionHero(
+                            shown,
+                            Modifier.padding(top = 8.dp, bottom = 6.dp),
+                            onTap = crystal,
+                            footer = when (s) {
+                                is UpdateState.Newer, is UpdateState.Ready -> "Update verfügbar"
+                                is UpdateState.Downloading -> "Wird geladen …"
+                                is UpdateState.Failed -> "Prüfen fehlgeschlagen"
+                                UpdateState.Checking -> "Suche nach Updates …"
+                                UpdateState.UpToDate -> "Version aktuell"
+                            },
+                        )
                     } else {
                         VersionArtwork(HearthUi.major(shown), look.number, height = 220.dp)
                     }
