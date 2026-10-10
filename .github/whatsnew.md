@@ -1,5 +1,12 @@
 ZENITH 19 auf ClaudeOS 6.0 „Helios“ – aus OMEGA UI wird ZENITH, die Sonne im höchsten Punkt
 
+⚡ Z-Angriff
+• Das Z erscheint wie Zygardes Kern-Vollstrecker: grüne Strahlen ziehen ein riesiges Z, es blitzt und zerbirst
+• Bei jedem voll geladenen Z – und auf Wunsch systemweit bei jedem Entsperren
+• Versionsanzeige wie bei ColorOS 17: das Z groß, die Nummer riesig
+• Clawd · ZENITH und ZENITH Illuminati
+• Icons aus Icon-Packs ohne doppelten Rahmen
+
 🆕 Ein neues Produkt
 • ZENITHs eigene Form: alle Flächen mit zwei schräg abgeschnittenen Ecken wie das Z
 • ZENITHs eigener Hintergrund: schwarzes Metall, das Z mit grünem Licht

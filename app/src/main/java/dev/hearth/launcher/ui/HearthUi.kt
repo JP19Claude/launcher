@@ -184,6 +184,20 @@ internal object HearthChangelog {
             summary = "Aus OMEGA UI wird ZENITH – die Sonne im höchsten Punkt, auf der neuen Basis ClaudeOS 6.0 „Helios“: ein neuer Name, ein neues Logo, eine neue Farbe, eine neue Uhr. Alles fühlt sich neu an, und die alten Easter Eggs bleiben.",
             sections = listOf(
                 ChangeSection(
+                    "Z-Angriff", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Das Z erscheint wie Zygardes Kern-Vollstrecker: Grüne Energiestrahlen ziehen ein riesiges Z über den Bildschirm, Strich für Strich, Funken fliegen – das Z blitzt weiß auf und zerbirst in Ringen aus grünem Licht. Mit Klopfen bei jedem Strich.",
+                        "Es passiert, wenn ein ZENITH-Z voll geladen ist: das Logo, das Z an Seitenpunkten, Suchleiste und Now Brief, das ZENITH-Z-Widget, das Z im ZENITH-Menü und in den Illuminati.",
+                        "Systemweit: Auf Wunsch zieht das Z bei jedem Entsperren über allen Apps (Design → ZENITH → Z-Angriff systemweit, oder in den Illuminati) – über Glimmer.",
+                        "Der ZENITH-Start nach dem Neustart beginnt jetzt mit dem Z-Angriff, aus dessen Licht das Metall-Z entsteht.",
+                        "Wo die Version steht – Über das Telefon und Software-Update – zeigt ZENITH sie wie ColorOS 17: das Metall-Z groß über die ganze Breite, darunter die Nummer riesig in Chrom mit grünem Glühen. In den Einstellungen ist das Z oben größer.",
+                        "Clawd · ZENITH: In ZENITH Metall ist Claudes Fenster eine Platte aus ZENITHs Metall mit abgeschnittenen Ecken, grüner Kante und dem Z im Hintergrund; alles Orange wird Zenith-Grün.",
+                        "ZENITH Illuminati: grünes Licht statt Gold, zwischen den Augen das Z, darüber das Metall-Z des Ordens – „Novus Ordo Zenithorum“.",
+                        "Icons aus Icon-Packs bringen ihre eigene Kachel mit und stehen wieder so da – ohne doppelten Rahmen.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
                     "Ein neues Produkt", Icons.Rounded.Star, Green,
                     listOf(
                         "ZENITHs eigene Form: Jede Fläche aus Metall – Widgets, Karten, App-Icons, Menüs, Knöpfe, Einstellungen – hat jetzt zwei schräg abgeschnittene Ecken, oben links und unten rechts, wie die Enden der Balken im Z.",

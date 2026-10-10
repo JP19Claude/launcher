@@ -130,7 +130,7 @@ internal object ZenithBoot {
 internal fun ZenithBootIntro(onDone: () -> Unit) {
     val t = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
-        t.animateTo(1f, tween(2800, easing = LinearEasing))
+        t.animateTo(1f, tween(3600, easing = LinearEasing))
         onDone()
     }
     BackHandler(onBack = onDone)
@@ -143,17 +143,21 @@ internal fun ZenithBootIntro(onDone: () -> Unit) {
             .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onDone),
         contentAlignment = Alignment.Center,
     ) {
+        // First the Z-Angriff draws the giant Z in green light and bursts …
+        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) { drawZenithStrike((p / 0.5f).coerceIn(0f, 1f)) }
+        // … and out of its light the metal Z comes, its green edges lighting up.
         ZenithLogo(
             Modifier.graphicsLayer {
-                alpha = (p / 0.15f).coerceIn(0f, 1f)
-                val k = 0.92f + 0.08f * (p / 0.5f).coerceIn(0f, 1f)
+                alpha = ((p - 0.4f) / 0.12f).coerceIn(0f, 1f)
+                val k = 0.92f + 0.08f * ((p - 0.4f) / 0.3f).coerceIn(0f, 1f)
                 scaleX = k
                 scaleY = k
             },
             size = 260.dp,
             caption = "ZENITH",
             interactive = false,
-            light = ((p - 0.15f) / 0.4f).coerceIn(0f, 1f),
+            light = ((p - 0.48f) / 0.3f).coerceIn(0f, 1f),
+            strike = false,
         )
     }
 }

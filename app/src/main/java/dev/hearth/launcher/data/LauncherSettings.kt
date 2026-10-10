@@ -524,6 +524,10 @@ data class LauncherSettings(
     val zenithWallpaper: Boolean = false,
     /** ZENITH 19: after the phone starts, the Z lights up once before the home screen. */
     val zenithBootIntro: Boolean = true,
+    /** ZENITH 19, Z-Angriff: a fully charged Z draws a giant Z across the screen, like Zygarde's Core Enforcer. */
+    val zenithStrike: Boolean = true,
+    /** ZENITH 19: the Z-Angriff over everything, every time the phone is unlocked (through Glimmer). */
+    val zenithStrikeSystem: Boolean = false,
     /** OMEGA UI 17.1: flowing effects at a calmer rate and lighter glass – smoother, less lag. */
     val smoothMode: Boolean = true,
     /** OMEGA UI 17.5: OMEGA light between the wallpaper and the home screen's apps and widgets. */
@@ -1045,6 +1049,8 @@ class SettingsRepository(context: Context) {
             zenithDaylight = prefs.getBoolean("zenithDaylight", d.zenithDaylight),
             zenithWallpaper = prefs.getBoolean("zenithWallpaper", d.zenithWallpaper),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
+            zenithStrike = prefs.getBoolean("zenithStrike", d.zenithStrike),
+            zenithStrikeSystem = prefs.getBoolean("zenithStrikeSystem", d.zenithStrikeSystem),
             smoothMode = prefs.getBoolean("smoothMode", d.smoothMode),
             omegaLight = prefs.getBoolean("omegaLight", d.omegaLight),
             illumination = prefs.getBoolean("illumination", d.illumination),
@@ -1224,6 +1230,8 @@ class SettingsRepository(context: Context) {
             .putBoolean("zenithDaylight", s.zenithDaylight)
             .putBoolean("zenithWallpaper", s.zenithWallpaper)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
+            .putBoolean("zenithStrike", s.zenithStrike)
+            .putBoolean("zenithStrikeSystem", s.zenithStrikeSystem)
             .putBoolean("smoothMode", s.smoothMode)
             .putBoolean("omegaLight", s.omegaLight)
             .putBoolean("illumination", s.illumination)
@@ -1412,7 +1420,7 @@ class SettingsRepository(context: Context) {
          * Only the switch itself and the look (black or glass, which changes the window) restart it.
          */
         val GLIMMER_LIVE_KEYS = setOf(
-            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "zenithDaylight", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "glassLook", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
+            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "zenithDaylight", "zenithStrikeSystem", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "glassLook", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
             "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerPrivacy", "accent", "animations",

@@ -34,7 +34,11 @@ class IlluminationActivity : ComponentActivity() {
         if (!repo.settings.value.illumination) repo.update { it.copy(illumination = true) }
         setContent {
             val settings by repo.settings.collectAsState()
-            CompositionLocalProvider(LocalSettings provides settings) {
+            // ZENITH 19: the Illuminati in the system's own look too (ZENITH Metall).
+            CompositionLocalProvider(
+                LocalSettings provides settings,
+                dev.hearth.launcher.ui.LocalGlassStyle provides dev.hearth.launcher.ui.GlassStyle.from(settings),
+            ) {
                 HearthTheme(dark = true) {
                     ClawdIlluminationScreen(
                         settings = settings,

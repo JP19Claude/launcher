@@ -364,13 +364,8 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                     // up like ColorOS's logo; tapped as often as its number, the Illuminati.
                     UpdateHero.Number -> if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
                         val crystal = rememberCrystalTaps(current)
-                        ZenithLogo(
-                            Modifier.padding(top = 20.dp, bottom = 6.dp),
-                            size = 180.dp,
-                            number = shown.substringBefore('.'),
-                            caption = "ZENITH ${HearthUi.major(shown)}",
-                            onTap = crystal,
-                        )
+                        // ZENITH 19: as ColorOS 17 shows its version – the Z big, the number huge.
+                        ZenithVersionHero(shown, Modifier.padding(top = 16.dp, bottom = 6.dp), onTap = crystal)
                     } else {
                         VersionArtwork(HearthUi.major(shown), look.number, height = 220.dp)
                     }

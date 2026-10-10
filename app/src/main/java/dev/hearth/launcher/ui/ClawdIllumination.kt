@@ -67,6 +67,7 @@ import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.ColorWorld
 import dev.hearth.launcher.data.EasterEggs
 import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.data.zenithMetal
 import dev.hearth.launcher.data.Perk
 import dev.hearth.launcher.data.has
 import kotlin.math.PI
@@ -159,11 +160,18 @@ fun ClawdIlluminationScreen(
         settings.omegaRain || settings.weightless || settings.clawdParade || settings.omegaZeros ||
         settings.clawdHalo || settings.giantClawd || settings.allSeeingEye || settings.perks.isNotEmpty() || settings.mythos
     val glow by animateFloatAsState(if (anyOn) 1f else 0.6f, spring(stiffness = 120f), label = "illuminationGlow")
+    // ZENITH 19: the ZENITH edition – green light and the Z instead of gold, in ZENITH Metall.
+    val zenith = settings.zenithMetal || settings.omegaColor == dev.hearth.launcher.data.OmegaColor.Zenith
+    val sigil = if (zenith) ZenithGreen else IlluminatiGold
 
     Box(
         Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF050305), Color(0xFF0D0608), Color(0xFF030203)))),
+            .background(
+                Brush.verticalGradient(
+                    if (zenith) listOf(Color(0xFF030504), Color(0xFF07120C), Color(0xFF020302)) else listOf(Color(0xFF050305), Color(0xFF0D0608), Color(0xFF030203)),
+                ),
+            ),
     ) {
         // OMEGA UI 17.6: hidden symbols in the dark – faint eye-pyramids all over the wall.
         Canvas(Modifier.fillMaxSize()) {
@@ -172,9 +180,16 @@ fun ClawdIlluminationScreen(
             var y = -step / 3f
             while (y < size.height) {
                 var x = if (row % 2 == 0) step / 4f else step * 0.75f
+                var n = row
                 while (x < size.width + step) {
-                    drawEyePyramid(Offset(x, y), step * 0.5f, IlluminatiGold.copy(alpha = 0.06f), glow = 0.3f)
+                    // ZENITH edition: the Z between the eyes.
+                    if (zenith && n % 2 == 1) {
+                        drawZenithMarkAt(Offset(x, y), step * 0.42f, ZenithGreen, alpha = 0.07f)
+                    } else {
+                        drawEyePyramid(Offset(x, y), step * 0.5f, sigil.copy(alpha = 0.06f), glow = 0.3f)
+                    }
                     x += step
+                    n++
                 }
                 y += step * 0.8f
                 row++
@@ -196,13 +211,22 @@ fun ClawdIlluminationScreen(
                     .fillMaxWidth()
                     .height(300.dp)
                     .clip(RoundedCornerShape(28.dp))
-                    .border(1.dp, IlluminatiGold.copy(alpha = 0.35f * glow + 0.1f), RoundedCornerShape(28.dp)),
+                    .border(1.dp, sigil.copy(alpha = 0.35f * glow + 0.1f), RoundedCornerShape(28.dp)),
             )
+            if (zenith) {
+                // The Z of the order: hold it until it strikes.
+                Spacer(Modifier.height(12.dp))
+                ZenithLogo(size = 170.dp)
+            }
             Spacer(Modifier.height(16.dp))
             Text(
-                "CLAWD ILLUMINATI",
+                if (zenith) "ZENITH ILLUMINATI" else "CLAWD ILLUMINATI",
                 style = TextStyle(
-                    brush = Brush.linearGradient(listOf(Color(0xFFFFEDB0), IlluminatiGold, Color(0xFF9C7A1E))),
+                    brush = if (zenith) {
+                        Brush.verticalGradient(listOf(Color(0xFFF4F6F7), Color(0xFFA9AEB2), Color(0xFFE8EBED), Color(0xFF7C8186)))
+                    } else {
+                        Brush.linearGradient(listOf(Color(0xFFFFEDB0), IlluminatiGold, Color(0xFF9C7A1E)))
+                    },
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
@@ -211,8 +235,8 @@ fun ClawdIlluminationScreen(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "△  Novus Ordo Clawdorum  △",
-                color = IlluminatiGold.copy(alpha = 0.6f),
+                if (zenith) "△  Novus Ordo Zenithorum  △" else "△  Novus Ordo Clawdorum  △",
+                color = sigil.copy(alpha = 0.6f),
                 fontSize = 12.sp,
                 fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
                 letterSpacing = 2.sp,
@@ -294,6 +318,7 @@ fun ClawdIlluminationScreen(
                 IlluminationSwitch("✨", "Atmosphäre", "Die Vorteile aus „Atmosphäre“ (Schnee, Sterne …) auch auf dem Sperrbildschirm.", settings.lockAtmosphere) { v -> onChange { it.copy(lockAtmosphere = v) } }
                 IlluminationSwitch("🔋", "Akku", "Der Akkustand als kleiner Chip.", settings.lockBattery) { v -> onChange { it.copy(lockBattery = v) } }
                 IlluminationSwitch("Ƶ", "Z-Zeichen", "Das ZENITH-Z oben auf dem Sperrbildschirm.", settings.lockOmega) { v -> onChange { it.copy(lockOmega = v) } }
+                IlluminationSwitch("⚡", "Z-Angriff überall", "Bei jedem Entsperren zieht ein riesiges Z aus grünem Licht über den Bildschirm – wie Zygardes Kern-Vollstrecker, über allen Apps.", settings.zenithStrikeSystem) { v -> onChange { it.copy(zenithStrikeSystem = v) } }
                 LockMessageField(settings.lockMessage) { v -> onChange { it.copy(lockMessage = v) } }
                 Text(
                     "Alles hier zeichnet Glimmer über Sperrbildschirm und Always On Display – Glimmer muss dafür an sein.",

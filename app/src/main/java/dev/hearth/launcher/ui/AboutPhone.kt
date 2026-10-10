@@ -324,13 +324,8 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                 if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
                     val shownVersion = groups.first().specs.first().value
                     val crystal = rememberCrystalTaps(shownVersion)
-                    ZenithLogo(
-                        Modifier.padding(top = 10.dp),
-                        size = 170.dp,
-                        number = shownVersion.substringBefore('.'),
-                        caption = "ZENITH ${HearthUi.major(shownVersion)}",
-                        onTap = crystal,
-                    )
+                    // ZENITH 19: as ColorOS 17 shows its version – the Z big, the number huge.
+                    ZenithVersionHero(shownVersion, Modifier.padding(top = 10.dp), onTap = crystal)
                 } else {
                     PhoneHero()
                 }

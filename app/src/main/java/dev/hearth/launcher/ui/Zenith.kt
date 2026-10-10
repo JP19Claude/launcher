@@ -111,8 +111,13 @@ fun ZenithLogo(
     onTap: (() -> Unit)? = null,
     /** Held until it's fully charged: this happens (after the knock and the wave). */
     onCharged: (() -> Unit)? = null,
+    /** Fully charged, it also strikes: a giant Z across the screen (the Z-Angriff), if it's on. */
+    strike: Boolean = true,
 ) {
     val charged by androidx.compose.runtime.rememberUpdatedState(onCharged)
+    val strikes by androidx.compose.runtime.rememberUpdatedState(strike && LocalSettings.current.zenithStrike)
+    var striking by remember { mutableStateOf(false) }
+    if (striking) ZenithStrikeOverlay { striking = false }
     val haptics = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val charge = remember { Animatable(0f) }
@@ -130,6 +135,7 @@ fun ZenithLogo(
                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         charge.animateTo(1f, tween(1100, easing = FastOutSlowInEasing))
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        if (strikes) striking = true
                         charged?.invoke()
                         burst.snapTo(0f)
                         burst.animateTo(1f, tween(800, easing = LinearEasing))
@@ -213,6 +219,36 @@ fun ZenithLogo(
                 )
             }
         }
+    }
+}
+
+/**
+ * Where the version is shown, as ColorOS 17 shows its own – ZENITH's colors kept: the metal Z
+ * big over the screen's width with "ZENITH" under it, and under that the version number huge,
+ * thin, in chrome, glowing green from behind. Held, the Z charges up and strikes; tapped as often
+ * as its number, the Illuminati ([onTap]).
+ */
+@Composable
+fun ZenithVersionHero(version: String, modifier: Modifier = Modifier, onTap: (() -> Unit)? = null) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        ZenithLogo(size = 300.dp, caption = "ZENITH", onTap = onTap)
+        Text(
+            HearthUi.major(version),
+            style = TextStyle(
+                brush = Brush.verticalGradient(
+                    0f to Color(0xFFF4F6F7),
+                    0.45f to Color(0xFFA9AEB2),
+                    0.55f to Color(0xFFE8EBED),
+                    1f to Color(0xFF7C8186),
+                ),
+                fontSize = 120.sp,
+                fontWeight = FontWeight.Thin,
+                letterSpacing = (-3).sp,
+                lineHeight = 120.sp,
+                shadow = androidx.compose.ui.graphics.Shadow(ZenithGreen.copy(alpha = 0.7f), Offset(0f, 4f), 44f),
+            ),
+            modifier = Modifier.padding(top = 2.dp),
+        )
     }
 }
 

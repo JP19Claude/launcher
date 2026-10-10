@@ -87,6 +87,9 @@ class GlimmerController(private val service: GlimmerService) {
 
     /** OMEGA UI 18.1: the stage over the lock screen and the full Always On Display. */
     private val stage = LockStage(service) { raiseWindow() }
+
+    /** ZENITH 19: the Z-Angriff over everything when the phone is unlocked (if it's on). */
+    private val strikeStage = ZenithStrikeStage(service)
     private val media = MediaRepository(service)
 
     private val expanded = MutableStateFlow(false)
@@ -547,6 +550,7 @@ class GlimmerController(private val service: GlimmerService) {
                         // unless it was already shown for this wake-up.
                         Intent.ACTION_USER_PRESENT -> {
                             greetOnUnlock()
+                            if (settings.zenithStrikeSystem) strikeStage.play()
                             if (settings.glimmerUnlock == GlimmerUnlock.Off || keyguard()?.isDeviceSecure != true) {
                                 if (settings.glimmerIdlePill) openPadlock()
                             }
@@ -833,6 +837,7 @@ class GlimmerController(private val service: GlimmerService) {
         if (receiverRegistered) runCatching { service.unregisterReceiver(systemReceiver) }
         receiverRegistered = false
         stage.stop()
+        strikeStage.remove()
         scope?.cancel()
         scope = null
         expanded.value = false

@@ -328,36 +328,14 @@ fun AppIconImage(app: AppInfo, size: Dp, modifier: Modifier = Modifier) {
                 .then(sheen),
         )
 
-        // ZENITH Metall: an icon with its own outline sits on a tile of the metal like the others,
-        // filling it, so every icon is the same size.
-        IconKind.Free -> if (LocalGlassStyle.current.zenith) {
-            LiquidGlass(
-                cornerRadius = settings.iconShape.glassCorner(size),
-                refraction = size * 0.2f,
-                blur = 10.dp,
-                modifier = modifier.size(size),
-                darkens = false,
-            ) {
-                Image(
-                    bitmap = app.icon,
-                    contentDescription = app.label,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            scaleX = 1.12f
-                            scaleY = 1.12f
-                        },
-                )
-            }
-        } else {
-            Image(
-                bitmap = app.icon,
-                contentDescription = app.label,
-                modifier = modifier
-                    .size(size)
-                    .then(sheen),
-            )
-        }
+        // Icons from a pack bring their own tile: drawn as they are (never on a second one).
+        IconKind.Free -> Image(
+            bitmap = app.icon,
+            contentDescription = app.label,
+            modifier = modifier
+                .size(size)
+                .then(sheen),
+        )
 
         IconKind.Glyph, IconKind.MonoGlyph -> LiquidGlass(
             cornerRadius = settings.iconShape.glassCorner(size),

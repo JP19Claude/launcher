@@ -390,6 +390,16 @@ fun SettingsScreen(
                         description = "Nach jedem Neustart des Handys leuchtet einmal das Metall-Z auf, bevor der Startbildschirm kommt",
                         checked = s.zenithBootIntro,
                     ) { v -> update { it.copy(zenithBootIntro = v) } }
+                    SwitchRow(
+                        label = "Z-Angriff",
+                        description = "Ist ein Z voll geladen, zieht es wie Zygardes Kern-Vollstrecker ein riesiges Z aus grünem Licht über den Bildschirm, das aufblitzt und zerbirst",
+                        checked = s.zenithStrike,
+                    ) { v -> update { it.copy(zenithStrike = v) } }
+                    SwitchRow(
+                        label = "Z-Angriff systemweit",
+                        description = "Bei jedem Entsperren über allen Apps – braucht Glimmer (Bedienungshilfe an)",
+                        checked = s.zenithStrikeSystem,
+                    ) { v -> update { it.copy(zenithStrikeSystem = v) } }
                     RowDivider()
                     SwitchRow(
                         label = "ZENITH-Licht",
@@ -1806,7 +1816,7 @@ private fun HearthCard(s: LauncherSettings) {
             // as often as its number, it's the way into the Clawd Illuminati.
             if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
                 val crystal = rememberCrystalTaps(version)
-                ZenithLogo(size = 58.dp, number = version.substringBefore('.'), onTap = crystal)
+                ZenithLogo(size = 84.dp, number = version.substringBefore('.'), onTap = crystal)
             } else {
                 Box(
                     Modifier

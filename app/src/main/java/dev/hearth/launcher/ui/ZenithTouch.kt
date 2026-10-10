@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -58,6 +59,9 @@ fun ZenithSign(
     // The newest actions, without starting the touch over each time they're made anew.
     val tap by rememberUpdatedState(onTap)
     val hold by rememberUpdatedState(onHold)
+    val strikes by rememberUpdatedState(LocalSettings.current.zenithStrike)
+    var striking by remember { androidx.compose.runtime.mutableStateOf(false) }
+    if (striking) ZenithStrikeOverlay { striking = false }
     val touch = if (!active) {
         Modifier
     } else {
@@ -76,6 +80,7 @@ fun ZenithSign(
                             burst.snapTo(0f)
                             burst.animateTo(1f, tween(650, easing = LinearEasing))
                         }
+                        if (strikes) striking = true
                         held()
                     }
                 }

@@ -69,6 +69,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -100,7 +101,11 @@ import dev.hearth.launcher.data.ClaudeAssistant
 import dev.hearth.launcher.data.ClaudeFix
 import dev.hearth.launcher.data.ClaudeModel
 
-private val Terracotta = Color(0xFFD97757)
+private val ClaudeTerracotta = Color(0xFFD97757)
+
+/** Claude's color here – ZENITH's green in ZENITH Metall (the ZENITH edition of the sheet). */
+private val Terracotta: Color
+    @Composable @androidx.compose.runtime.ReadOnlyComposable get() = if (LocalGlassStyle.current.zenith) ZenithGreen else ClaudeTerracotta
 private val SheetTop = Color(0xF21B1A1D)
 private val SheetBottom = Color(0xF70F0F11)
 private val Ok = Color(0xFF6FD08C)
@@ -141,6 +146,8 @@ fun ClaudeAssistantSheet(
     onOpenSettings: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    // ZENITH 19: the ZENITH edition in ZENITH Metall.
+    val zenith = LocalGlassStyle.current.zenith
     val items by ClaudeAssistant.items.collectAsStateWithLifecycle()
     val busy by ClaudeAssistant.busy.collectAsStateWithLifecycle()
     val settings by ClaudeAssistant.settings.collectAsStateWithLifecycle()
@@ -231,9 +238,25 @@ fun ClaudeAssistantSheet(
                     .widthIn(max = 640.dp)
                     .fillMaxWidth()
                     .heightIn(max = maxSheet)
-                    .clip(RoundedCornerShape(30.dp))
-                    .background(Brush.verticalGradient(listOf(SheetTop, SheetBottom)))
-                    .border(0.8.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(30.dp))
+                    .then(
+                        if (zenith) {
+                            // ZENITH edition: a plate of ZENITH's metal in its cut shape, its
+                            // green light along the foot, the Z faint behind the chat.
+                            Modifier
+                                .clip(ZenithCutShape(28.dp))
+                                .background(Brush.verticalGradient(listOf(Color(0xFF26292C), Color(0xFF101213))))
+                                .drawBehind {
+                                    val zw = size.width * 0.9f
+                                    drawZenithMark((size.width - zw) / 2f, size.height * 0.34f, zw, SolidColor(Color.White), alpha = 0.035f)
+                                    drawZenithSurface(ZenithCutShape(28.dp).createOutline(size, layoutDirection, this), Color.Transparent, 0f, Offset.Zero)
+                                }
+                        } else {
+                            Modifier
+                                .clip(RoundedCornerShape(30.dp))
+                                .background(Brush.verticalGradient(listOf(SheetTop, SheetBottom)))
+                                .border(0.8.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(30.dp))
+                        },
+                    )
                     // Taps on the sheet stay on the sheet.
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
             ) {
@@ -245,7 +268,7 @@ fun ClaudeAssistantSheet(
                 ) {
                     val mood by ClaudeAssistant.clawdMood.collectAsStateWithLifecycle()
                     Header(
-                        title = "Clawd",
+                        title = if (zenith) "Clawd · ZENITH" else "Clawd",
                         mood = if (busy) ClawdMood.Thinking else mood,
                         subtitle = if (settings.hasKey) settings.modelLabel else "Offline-Befehle",
                         canClear = items.isNotEmpty(),
@@ -522,6 +545,7 @@ private fun ProblemLine(text: String, fix: ClaudeFix?, onFix: (ClaudeFix) -> Uni
 private fun Thinking(onStop: () -> Unit) {
     val t = rememberInfiniteTransition(label = "thinking")
     val phase by t.animateFloat(0f, 3f, infiniteRepeatable(tween(1100), RepeatMode.Restart), label = "dots")
+    val dots = Terracotta
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Clawd(Modifier.size(22.dp), mood = ClawdMood.Thinking)
         Spacer(Modifier.width(9.dp))
@@ -529,7 +553,7 @@ private fun Thinking(onStop: () -> Unit) {
             for (i in 0 until 3) {
                 val lit = (phase - i).let { if (it < 0) it + 3 else it } < 1f
                 drawCircle(
-                    color = Terracotta.copy(alpha = if (lit) 1f else 0.35f),
+                    color = dots.copy(alpha = if (lit) 1f else 0.35f),
                     radius = size.height / 2.4f,
                     center = Offset(size.height / 2 + i * size.width / 3, size.height / 2),
                 )
