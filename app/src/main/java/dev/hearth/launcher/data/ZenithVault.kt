@@ -54,7 +54,7 @@ import javax.crypto.spec.GCMParameterSpec
  */
 object ZenithVault {
 
-    enum class Kind { Photo, Video, File }
+    enum class Kind { Photo, Video, Note, File }
 
     data class Entry(
         val id: String,
@@ -69,6 +69,7 @@ object ZenithVault {
             get() = when {
                 mime.startsWith("image/") -> Kind.Photo
                 mime.startsWith("video/") -> Kind.Video
+                mime.startsWith("text/plain") -> Kind.Note
                 else -> Kind.File
             }
     }
@@ -203,6 +204,7 @@ object ZenithVault {
 
     fun wipeOpened(context: Context) {
         runCatching { openedDir(context).deleteRecursively() }
+        runCatching { cameraDir(context).deleteRecursively() }
     }
 
     /** Leftovers of an add that never finished (the phone switched off halfway). */
@@ -400,6 +402,46 @@ object ZenithVault {
             Added(uri, null, source.name)
         }
     }
+
+    /**
+     * Puts [bytes] (a note) into the vault as [name] – encrypted and read back like any file.
+     * [replacing] an older version, that one goes once the new one is safe.
+     */
+    fun putBytes(context: Context, name: String, mime: String, bytes: ByteArray, replacing: Entry? = null): Entry? {
+        val key = runCatching { currentKey() }.getOrNull() ?: return null
+        val id = hex(ZenithCrypto.randomBytes(16))
+        val data = dataFile(context, id)
+        return try {
+            val inDigest = MessageDigest.getInstance("SHA-256")
+            val written = BufferedOutputStream(FileOutputStream(data), 1 shl 16).use { out ->
+                encryptInto(key, id, bytes.inputStream(), out, inDigest) { }
+            }
+            val sha = inDigest.digest()
+            val outDigest = MessageDigest.getInstance("SHA-256")
+            val read = decryptFrom(key, id, data) { b, n -> outDigest.update(b, 0, n) }
+            if (read != written || !outDigest.digest().contentEquals(sha)) throw IOException("check failed")
+            val entry = Entry(id, name, mime, written, System.currentTimeMillis(), hex(sha), false)
+            synchronized(guard) {
+                if (vaultKey == null) throw IOException("locked meanwhile")
+                _entries.value = listOf(entry) + _entries.value.filterNot { it.id == replacing?.id }
+                saveIndex(context)
+            }
+            if (replacing != null) {
+                dataFile(context, replacing.id).delete()
+                thumbFile(context, replacing.id).delete()
+            }
+            entry
+        } catch (e: Throwable) {
+            data.delete()
+            null
+        }
+    }
+
+    /** A note's text, decrypted. */
+    fun readText(context: Context, entry: Entry): String? = readAll(context, entry)?.toString(Charsets.UTF_8)
+
+    /** Where a photo just taken goes for the moment, before it's encrypted (wiped right after). */
+    fun cameraDir(context: Context): File = File(context.cacheDir, "vault-cam")
 
     /** Deletes the original of a file that's now safely in the vault (if its app allows it). */
     fun deleteOriginal(context: Context, uri: Uri): Boolean =

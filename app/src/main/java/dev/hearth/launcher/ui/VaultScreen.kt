@@ -59,6 +59,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -136,7 +137,7 @@ interface VaultHost {
     fun askFingerprint(cipher: Cipher, title: String, done: (Cipher?, String?) -> Unit)
 }
 
-private val VaultBg = Color(0xFF060809)
+internal val VaultBg = Color(0xFF060809)
 internal val VaultPanel = Color(0xFF111518)
 internal val VaultPanelHigh = Color(0xFF181D21)
 internal val VaultText = Color(0xFFE9EEF0)
@@ -181,7 +182,7 @@ fun VaultScreen(host: VaultHost, onClose: () -> Unit) {
 // ---- Look ----
 
 @Composable
-private fun VaultBackdrop() {
+internal fun VaultBackdrop() {
     Canvas(Modifier.fillMaxSize()) {
         drawRect(
             Brush.radialGradient(
@@ -264,7 +265,7 @@ private fun VaultEmblem(size: Dp, open: Boolean, busy: Boolean, modifier: Modifi
 }
 
 @Composable
-private fun VaultTopBar(onBack: () -> Unit, actions: @Composable () -> Unit = {}) {
+internal fun VaultTopBar(onBack: () -> Unit, title: String = "TRESOR", actions: @Composable () -> Unit = {}) {
     Row(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onBack),
@@ -275,7 +276,7 @@ private fun VaultTopBar(onBack: () -> Unit, actions: @Composable () -> Unit = {}
         Spacer(Modifier.width(6.dp))
         ZenithMark(color = ZenithGreen, width = 22.dp)
         Spacer(Modifier.width(10.dp))
-        Text("TRESOR", color = VaultText, fontSize = 15.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
+        Text(title, color = VaultText, fontSize = 15.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
         Spacer(Modifier.weight(1f))
         actions()
     }
@@ -756,6 +757,10 @@ private fun VaultOpen(host: VaultHost, onBack: () -> Unit, onGone: () -> Unit) {
     var note by remember { mutableStateOf<String?>(null) }
     var exporting by remember { mutableStateOf<ZenithVault.Entry?>(null) }
     val thumbs = remember { mutableStateMapOf<String, ImageBitmap>() }
+    // A note being written: the entry (null for a new one); writing at all.
+    var noteEntry by remember { mutableStateOf<ZenithVault.Entry?>(null) }
+    var writing by remember { mutableStateOf(false) }
+    var shot by remember { mutableStateOf<java.io.File?>(null) }
 
     LaunchedEffect(note) {
         if (note != null) {
@@ -796,6 +801,43 @@ private fun VaultOpen(host: VaultHost, onBack: () -> Unit, onGone: () -> Unit) {
 
     val addMedia = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) addAll(uris)
+    }
+    // The vault's camera: the photo goes straight in, encrypted; the moment's copy is wiped.
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { taken ->
+        val file = shot
+        shot = null
+        if (file != null) {
+            if (taken && file.length() > 0L) {
+                work = VaultWork("Foto wird verschlüsselt …", -1f)
+                scope.launch {
+                    val added = withContext(Dispatchers.IO) {
+                        val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+                        ZenithVault.add(context, uri).also { file.delete() }
+                    }
+                    work = null
+                    note = if (added.entry != null) "Foto verschlüsselt im Tresor – es liegt nirgends sonst." else "Das Foto ging nicht in den Tresor."
+                }
+            } else {
+                file.delete()
+            }
+        }
+    }
+
+    fun takePhoto() {
+        val folder = ZenithVault.cameraDir(context).apply { mkdirs() }
+        val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.ROOT).format(Date())
+        val file = java.io.File(folder, "ZENITH_$stamp.jpg")
+        val uri = runCatching { FileProvider.getUriForFile(context, "${context.packageName}.files", file) }.getOrNull()
+        if (uri == null) {
+            note = "Die Kamera geht gerade nicht."
+            return
+        }
+        shot = file
+        host.stayOpen()
+        runCatching { camera.launch(uri) }.onFailure {
+            shot = null
+            note = "Keine Kamera-App gefunden."
+        }
     }
     val exportOne = rememberLauncherForActivityResult(CreateTyped()) { uri ->
         val entry = exporting
@@ -888,12 +930,19 @@ private fun VaultOpen(host: VaultHost, onBack: () -> Unit, onGone: () -> Unit) {
                         VaultEmblem(64.dp, open = true, busy = false)
                     }
                     Row(Modifier.fillMaxWidth()) {
-                        VaultButton("Fotos & Videos", Modifier.weight(1f), icon = Icons.Rounded.Add) {
+                        AddTile("Fotos", Modifier.weight(1f), primary = true, glyph = { GlyphIcon(Glyph.Tiles, it, Modifier.size(22.dp)) }) {
                             host.stayOpen()
                             runCatching { addMedia.launch(arrayOf("image/*", "video/*")) }
                         }
-                        Spacer(Modifier.width(8.dp))
-                        VaultButton("Dateien", Modifier.weight(1f), primary = false, icon = Icons.Rounded.Add) {
+                        Spacer(Modifier.width(6.dp))
+                        AddTile("Kamera", Modifier.weight(1f), glyph = { GlyphIcon(Glyph.Camera, it, Modifier.size(22.dp)) }) { takePhoto() }
+                        Spacer(Modifier.width(6.dp))
+                        AddTile("Notiz", Modifier.weight(1f), glyph = { Icon(Icons.Rounded.Edit, contentDescription = null, tint = it, modifier = Modifier.size(22.dp)) }) {
+                            noteEntry = null
+                            writing = true
+                        }
+                        Spacer(Modifier.width(6.dp))
+                        AddTile("Dateien", Modifier.weight(1f), glyph = { Icon(Icons.Rounded.Add, contentDescription = null, tint = it, modifier = Modifier.size(22.dp)) }) {
                             host.stayOpen()
                             runCatching { addMedia.launch(arrayOf("*/*")) }
                         }
@@ -901,13 +950,14 @@ private fun VaultOpen(host: VaultHost, onBack: () -> Unit, onGone: () -> Unit) {
                     Row(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 14.dp, bottom = 8.dp),
                     ) {
-                        val kinds = listOf(null, ZenithVault.Kind.Photo, ZenithVault.Kind.Video, ZenithVault.Kind.File)
+                        val kinds = listOf(null, ZenithVault.Kind.Photo, ZenithVault.Kind.Video, ZenithVault.Kind.Note, ZenithVault.Kind.File)
                         kinds.forEach { kind ->
                             val count = entries.count { kind == null || it.kind == kind }
                             val label = when (kind) {
                                 null -> "Alle"
                                 ZenithVault.Kind.Photo -> "Fotos"
                                 ZenithVault.Kind.Video -> "Videos"
+                                ZenithVault.Kind.Note -> "Notizen"
                                 ZenithVault.Kind.File -> "Dateien"
                             }
                             val on = filter == kind
@@ -930,7 +980,14 @@ private fun VaultOpen(host: VaultHost, onBack: () -> Unit, onGone: () -> Unit) {
                 }
             }
             items(shown, key = { it.id }) { entry ->
-                VaultTile(entry, thumbs) { viewing = entry }
+                VaultTile(entry, thumbs) {
+                    if (entry.kind == ZenithVault.Kind.Note) {
+                        noteEntry = entry
+                        writing = true
+                    } else {
+                        viewing = entry
+                    }
+                }
             }
             if (shown.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
@@ -945,6 +1002,17 @@ private fun VaultOpen(host: VaultHost, onBack: () -> Unit, onGone: () -> Unit) {
                 }
             }
         }
+    }
+
+    if (writing) {
+        NoteEditor(
+            entry = noteEntry,
+            onDone = { message ->
+                writing = false
+                noteEntry = null
+                if (message != null) note = message
+            },
+        )
     }
 
     viewing?.let { entry ->
@@ -1058,6 +1126,20 @@ private fun VaultTile(entry: ZenithVault.Entry, thumbs: MutableMap<String, Image
     ) {
         if (picture != null) {
             Image(picture, contentDescription = entry.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        } else if (entry.kind == ZenithVault.Kind.Note) {
+            Column(Modifier.fillMaxSize().padding(10.dp)) {
+                Text("NOTIZ", color = ZenithGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, fontFamily = FontFamily.Monospace)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    entry.name.removeSuffix(".txt"),
+                    color = VaultText,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 18.sp,
+                )
+            }
         } else {
             Column(
                 Modifier.fillMaxSize().padding(10.dp),
@@ -1348,4 +1430,168 @@ private fun MenuRow(label: String, description: String, danger: Boolean = false,
         Text(label, color = if (danger) VaultRed else VaultText, fontSize = 16.sp, fontWeight = FontWeight.Medium)
         Text(description, color = VaultDim, fontSize = 13.sp)
     }
+}
+
+/** One of the ways to put something into the vault: a sign and a word. */
+@Composable
+private fun AddTile(label: String, modifier: Modifier = Modifier, primary: Boolean = false, glyph: @Composable (Color) -> Unit, onClick: () -> Unit) {
+    val shape = ZenithCutShape(10.dp)
+    val tint = if (primary) Color(0xFF04140B) else ZenithGreen
+    Column(
+        modifier
+            .clip(shape)
+            .background(
+                if (primary) {
+                    Brush.linearGradient(listOf(Color(0xFF3FE08C), ZenithGreenDeep))
+                } else {
+                    Brush.linearGradient(listOf(Color(0xFF22282C), Color(0xFF15191C)))
+                },
+            )
+            .border(0.8.dp, Color.White.copy(alpha = if (primary) 0.3f else 0.12f), shape)
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        glyph(tint)
+        Spacer(Modifier.height(6.dp))
+        Text(label, color = if (primary) tint else VaultText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
+// ---- Notes ----
+
+/**
+ * A note in the vault: written here, kept encrypted like everything else. [entry] is the note
+ * to change, null for a new one; [onDone] gets what to tell (null: nothing happened).
+ */
+@Composable
+private fun NoteEditor(entry: ZenithVault.Entry?, onDone: (String?) -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val fresh = remember { "Notiz " + DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date()) }
+    var title by remember(entry?.id) { mutableStateOf(entry?.name?.removeSuffix(".txt") ?: "") }
+    var body by remember(entry?.id) { mutableStateOf("") }
+    // What the note said when opened (null while it's still being decrypted).
+    var original by remember(entry?.id) { mutableStateOf<String?>(if (entry == null) "" else null) }
+    var saving by remember { mutableStateOf(false) }
+    var confirm by remember { mutableStateOf(false) }
+    LaunchedEffect(entry?.id) {
+        if (entry != null) {
+            val text = withContext(Dispatchers.IO) { ZenithVault.readText(context, entry) }
+            body = text ?: ""
+            original = text ?: ""
+        }
+    }
+
+    fun close() {
+        if (saving) return
+        val loaded = original ?: return onDone(null)
+        val name = title.trim().ifEmpty { fresh }.replace('/', '-').take(80) + ".txt"
+        val changed = body != loaded || (entry != null && name != entry.name)
+        if (!changed || (entry == null && body.isBlank() && title.isBlank())) {
+            onDone(null)
+            return
+        }
+        saving = true
+        scope.launch {
+            val saved = withContext(Dispatchers.IO) {
+                ZenithVault.putBytes(context, name, "text/plain", body.toByteArray(Charsets.UTF_8), replacing = entry)
+            }
+            saving = false
+            onDone(if (saved != null) "Notiz verschlüsselt gespeichert." else "Speichern ging nicht.")
+        }
+    }
+
+    BackHandler { if (confirm) confirm = false else close() }
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(VaultBg)
+            .pointerInput(Unit) { detectTapGestures { } }
+            .systemBarsPadding()
+            .imePadding()
+            .padding(horizontal = 16.dp),
+    ) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(44.dp).clip(CircleShape).clickable { close() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Zurück", tint = VaultText)
+            }
+            Spacer(Modifier.width(6.dp))
+            ZenithMark(color = ZenithGreen, width = 20.dp)
+            Spacer(Modifier.width(10.dp))
+            Text("NOTIZ", color = VaultText, fontSize = 15.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
+            Spacer(Modifier.weight(1f))
+            if (entry != null) {
+                Box(Modifier.size(44.dp).clip(CircleShape).clickable { confirm = true }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Delete, contentDescription = "Löschen", tint = VaultRed)
+                }
+            }
+            Box(Modifier.size(44.dp).clip(CircleShape).clickable { close() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Check, contentDescription = "Fertig", tint = ZenithGreen)
+            }
+        }
+        BasicTextField(
+            value = title,
+            onValueChange = { title = it.take(80) },
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(color = VaultText, fontSize = 24.sp, fontWeight = FontWeight.Bold),
+            cursorBrush = SolidColor(ZenithGreen),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            decorationBox = { inner ->
+                Box {
+                    if (title.isEmpty()) Text(fresh, color = VaultDim.copy(alpha = 0.6f), fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    inner()
+                }
+            },
+        )
+        Box(
+            Modifier
+                .padding(vertical = 12.dp)
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(Brush.horizontalGradient(listOf(ZenithGreen.copy(alpha = 0.7f), Color.Transparent))),
+        )
+        BasicTextField(
+            value = body,
+            onValueChange = { body = it },
+            enabled = original != null,
+            textStyle = androidx.compose.ui.text.TextStyle(color = VaultText, fontSize = 17.sp, lineHeight = 25.sp),
+            cursorBrush = SolidColor(ZenithGreen),
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            decorationBox = { inner ->
+                Box {
+                    if (body.isEmpty()) {
+                        Text(
+                            if (original == null) "Wird entschlüsselt …" else "Schreib etwas – nur du kannst es lesen.",
+                            color = VaultDim.copy(alpha = 0.6f),
+                            fontSize = 17.sp,
+                        )
+                    }
+                    inner()
+                }
+            },
+        )
+        Text(
+            "Verschlüsselt mit AES-256 · nur in deinem Tresor",
+            color = VaultDim.copy(alpha = 0.6f),
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace,
+            modifier = Modifier.padding(vertical = 10.dp),
+        )
+    }
+    if (confirm && entry != null) {
+        VaultDialog("Notiz löschen?", onDismiss = { confirm = false }) {
+            Text("„${entry.name.removeSuffix(".txt")}“ wird endgültig gelöscht.", color = VaultDim, fontSize = 15.sp, lineHeight = 20.sp)
+            Spacer(Modifier.height(18.dp))
+            VaultButton("Löschen", Modifier.fillMaxWidth(), danger = true) {
+                confirm = false
+                runCatching { ZenithVault.remove(context, entry) }
+                onDone("Notiz gelöscht.")
+            }
+            Spacer(Modifier.height(8.dp))
+            VaultButton("Abbrechen", Modifier.fillMaxWidth(), primary = false) { confirm = false }
+        }
+    }
+    if (saving) WorkOverlay(VaultWork("Wird verschlüsselt …", -1f))
 }

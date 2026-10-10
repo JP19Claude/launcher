@@ -148,6 +148,12 @@
             android:exported="false"
             android:label="ZENITH-Tresor" />
 
+        <!-- ZENITH 19: the ZENITH-Schutzschild, how well the phone is protected. -->
+        <activity
+            android:name=".ShieldActivity"
+            android:exported="false"
+            android:label="ZENITH-Schutzschild" />
+
         <!-- "Telefoninfo": the phone, its specs, Hearth and ClaudeOS. -->
         <activity
             android:name=".AboutPhoneActivity"

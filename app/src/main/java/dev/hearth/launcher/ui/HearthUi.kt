@@ -185,6 +185,16 @@ internal object HearthChangelog {
             summary = "Aus OMEGA UI wird ZENITH – die Sonne im höchsten Punkt, auf der neuen Basis ClaudeOS 6.0 „Helios“: ein neuer Name, ein neues Logo, eine neue Farbe, eine neue Uhr. Alles fühlt sich neu an, und die alten Easter Eggs bleiben.",
             sections = listOf(
                 ChangeSection(
+                    "ZENITH-Schutzschild", Icons.Rounded.CheckCircle, Green,
+                    listOf(
+                        "Neu: der Schutzschild zeigt, wie gut dein Handy geschützt ist – eine Anzeige um das Metall-Z mit Punkten von 0 bis 100.",
+                        "Geprüft werden Bildschirmsperre, Alter des Sicherheitsupdates, Entwickleroptionen und USB-Debugging, Verschlüsselung, ZENITH-Tresor, App-Sperre und Sicherung – jeweils mit dem Weg, es zu beheben.",
+                        "„Wer darf was“: welche Apps Kamera, Mikrofon, Standort (auch immer), Kontakte, SMS, Anrufliste, Kalender und mehr dürfen – nach Recht gefiltert, ein Tipp führt zur App, um ihr etwas wegzunehmen.",
+                        "Der Schutzschild schaut nur nach; ZENITH ändert nichts von selbst. Im ZENITH-Menü, unter Design → ZENITH und unter Datenschutz.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "ZENITH-Tresor", Icons.Rounded.Lock, Green,
                     listOf(
                         "Neu: der ZENITH-Tresor für Fotos, Videos und Dateien – verschlüsselt mit AES-256 und einem Passwort, das nur du kennst. Im ZENITH-Menü, unter Design → ZENITH und unter Datenschutz.",
@@ -194,6 +204,9 @@ internal object HearthChangelog {
                         "Keine Screenshots, unsichtbar in den letzten Apps, sperrt sich beim Verlassen; nach falschen Passwörtern wird gewartet.",
                         "Fotos direkt im Tresor ansehen (mit Zoom), alles andere öffnen oder exportieren.",
                         "Den ganzen Tresor sichern: eine verschlüsselte Datei mit demselben Passwort – für die Cloud oder ein neues Handy.",
+                        "Notizen im Tresor: schreiben, ändern, löschen – verschlüsselt wie alles andere.",
+                        "Die Tresor-Kamera: Ein Foto geht direkt verschlüsselt in den Tresor und liegt nirgends sonst – nicht in der Galerie.",
+                        "Doppeltippen auf den Startbildschirm kann jetzt den Tresor oder den Schutzschild öffnen (Einstellungen → Homescreen → Doppeltippen).",
                         "Wichtig: Wer das Passwort vergisst, verliert den Inhalt. Niemand kann es zurückholen – auch ZENITH nicht.",
                     ),
                     hearth,

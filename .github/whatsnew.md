@@ -1,7 +1,14 @@
 ZENITH 19 auf ClaudeOS 6.0 „Helios“ – aus OMEGA UI wird ZENITH, die Sonne im höchsten Punkt
 
+🛡 ZENITH-Schutzschild
+• Wie gut dein Handy geschützt ist: Punkte von 0 bis 100 um das Metall-Z
+• Bildschirmsperre, Sicherheitsupdate, USB-Debugging, Verschlüsselung, Tresor, App-Sperre, Sicherung
+• Wer darf was: welche Apps Kamera, Mikrofon, Standort & Co. dürfen
+
 🔒 ZENITH-Tresor
 • Fotos, Videos und Dateien verschlüsselt mit AES-256 und deinem Passwort – nur auf diesem Handy
+• Neu: verschlüsselte Notizen und die Tresor-Kamera (Fotos direkt in den Tresor)
+• Doppeltippen kann den Tresor oder den Schutzschild öffnen
 • Originale erst löschen, wenn die Kopie geprüft ist; auf Wunsch mit Fingerabdruck
 • Keine Screenshots, sperrt sich beim Verlassen; den ganzen Tresor verschlüsselt sichern
 • Passwort vergessen = Inhalt verloren

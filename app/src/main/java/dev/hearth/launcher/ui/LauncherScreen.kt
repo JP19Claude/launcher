@@ -851,6 +851,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                             HomeGesture.Torch -> vm.controls.setTorch(!vm.controls.torchOn.value)
                                             HomeGesture.Menu -> hubOpen = true
                                             HomeGesture.Power -> secret = SecretMenu.Power
+                                            HomeGesture.Vault -> runCatching {
+                                                context.startActivity(Intent(context, dev.hearth.launcher.VaultActivity::class.java))
+                                            }
+                                            HomeGesture.Shield -> runCatching {
+                                                context.startActivity(Intent(context, dev.hearth.launcher.ShieldActivity::class.java))
+                                            }
                                         }
                                         Unit
                                     },
@@ -1239,6 +1245,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         // ZENITH 19: the ZENITH-Tresor.
                         HubTile("ZENITH-\nTresor", Icons.Rounded.Lock, Color(0xFF15965A)) {
                             runCatching { context.startActivity(Intent(context, dev.hearth.launcher.VaultActivity::class.java)) }
+                        },
+                        HubTile("Schutz-\nschild", Icons.Rounded.CheckCircle, Color(0xFF2FD27A)) {
+                            runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ShieldActivity::class.java)) }
                         },
                         if (dropOn) {
                             HubTile("Glimmer\nDrop", Icons.Rounded.Share, Color(0xFF5E9BFF)) {

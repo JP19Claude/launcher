@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- What Hearth hands to other apps: copies of APKs to share ("APK teilen") and a file from the
-     ZENITH-Tresor opened in another app (decrypted only for that moment, wiped when it locks). -->
+<!-- What Hearth hands to other apps: copies of APKs to share ("APK teilen"), a file from the
+     ZENITH-Tresor opened in another app (decrypted only for that moment, wiped when it locks)
+     and where the camera puts a photo for the vault (encrypted and wiped right after). -->
 <paths>
     <cache-path name="apks" path="apks/" />
     <cache-path name="vault" path="vault-open/" />
+    <cache-path name="vaultcam" path="vault-cam/" />
 </paths>

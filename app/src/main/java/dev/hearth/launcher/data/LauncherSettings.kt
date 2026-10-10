@@ -344,6 +344,8 @@ enum class HomeGesture(val label: String) {
     Torch("Taschenlampe"),
     Menu("ZENITH-Menü"),
     Power("Ein/Aus-Menü"),
+    Vault("ZENITH-Tresor"),
+    Shield("ZENITH-Schutzschild"),
 }
 
 /** The home clock's typeface. */

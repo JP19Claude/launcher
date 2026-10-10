@@ -316,8 +316,13 @@ fun SettingsScreen(
                 Section("ZENITH") {
                     ActionRow(
                         label = "ZENITH-Tresor",
-                        description = "Fotos, Videos und Dateien verschlüsselt, nur mit deinem Passwort",
+                        description = "Fotos, Videos, Notizen und Dateien verschlüsselt, nur mit deinem Passwort",
                     ) { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.VaultActivity::class.java)) } }
+                    RowDivider()
+                    ActionRow(
+                        label = "ZENITH-Schutzschild",
+                        description = "Dein Schutz auf einen Blick",
+                    ) { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ShieldActivity::class.java)) } }
                     RowDivider()
                     SwitchRow(
                         label = "Projekt Zenith",
@@ -851,11 +856,16 @@ fun SettingsScreen(
 
             // ZENITH 19: the ZENITH-Tresor – photos, videos and files, encrypted with a password.
             if (shows("privacy")) item {
-                Section("ZENITH-Tresor") {
+                Section("ZENITH-Tresor & Schutzschild") {
                     ActionRow(
                         label = "ZENITH-Tresor öffnen",
-                        description = "Fotos, Videos und Dateien mit deinem Passwort verschlüsseln (AES-256) – auf Wunsch mit Fingerabdruck",
+                        description = "Fotos, Videos, Notizen und Dateien mit deinem Passwort verschlüsseln (AES-256) – auf Wunsch mit Fingerabdruck",
                     ) { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.VaultActivity::class.java)) } }
+                    RowDivider()
+                    ActionRow(
+                        label = "ZENITH-Schutzschild",
+                        description = "Wie gut dein Handy geschützt ist – und welche Apps Kamera, Mikrofon und Standort dürfen",
+                    ) { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ShieldActivity::class.java)) } }
                 }
             }
 
