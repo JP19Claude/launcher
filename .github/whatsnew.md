@@ -1,44 +1,25 @@
-ZENITH 19.3 „Core Enforcer“ auf ClaudeOS 6.0 „Helios“
+ZENITH 19.5 „Z-Sturm“ auf ClaudeOS 6.0 „Helios“ – das große Update
 
-◐ ColorOS-Look: Uhr und Dock frei
-• Uhr und Dock im ColorOS-Look frei wählbar – in den Illuminati, den Einstellungen und im Studio
+⚡ Der Z-Angriff, überall im System
+• Nach jedem ZENITH-Update begrüßt dich der Z-Angriff einmal
+• Der ZENITH-Tresor geht mit dem Z-Angriff auf
+• Neu beim Doppeltippen auf den Startbildschirm: „Z-Angriff“ – und eine eigene Kachel im ZENITH-Menü
+• Würfelst du im Studio einen neuen Look, kommt er mit dem Z-Angriff in seiner neuen Farbe
+• Mit Glimmer auch über allen Apps: beim Einstecken des Ladekabels und bei vollem Akku
 
-⚡ Der Z-Angriff, mächtiger
-• Der Strahl brennt das echte ZENITH-Z in den Boden – breit und schwer wie im Logo
-• Danach steigt das Metall-Z riesig aus dem Boden auf, mit Lichtband und Schockwellen in Z-Form
+🛠 Z-Momente im Core Enforcer Studio
+• Du bestimmst, wann der Z-Angriff von selbst kommt: Updates, Tresor, Würfeln, Laden, voller Akku
 
-🪪 Die Versionskarte
-• Das Z auf einer großen Karte wie bei OxygenOS und ColorOS: Verlauf mit Lichtbögen, riesiges Z mit der Version, „Version aktuell“ unten
-• Das Z ist breiter; gedrückt gehalten schwillt es in die Breite, beim Loslassen federt es zurück
+🛡 Die Wächter (im Schutzschild)
+• Neue-App-Wächter: nach jeder Installation zeigt die Glimmer-Insel, was die neue App will
+• Akku-Wächter: Bescheid beim Laden, sobald deine Grenze (70–95 %) erreicht ist – schont den Akku
+• Sie schauen nur und sagen Bescheid, ändern tun sie nichts
 
-🛠 Core Enforcer Studio
-• Die Werkstatt zum Umbauen des Systems – im ZENITH-Menü und in den Einstellungen
-• Look würfeln (mit Zurück) und Profile: deinen ganzen Look speichern und mit einem Tipp zurückholen
-• Z-Angriff gestalten: sechs Farben, drei Tempi, mit Probe
-• Icons, Uhr, Dock, Seitenwechsel, Farben und Glas an einem Ort – alles gilt sofort
+✅ Warum ZENITH: jetzt 26 Vorteile
+• Neu: Tresor, In den Tresor teilen, Schutzschild, beide Wächter, Sicherungen mit Passwort, Core Enforcer Studio, Z-Angriff, Projekt Zenith, ZENITH-Monitor, ein Spiel in jeder Version
 
-◐ ColorOS-17.1-Look (19.2)
-• Neue Option in Projekt Zenith (Illuminati): das ganze System im Stil von ColorOS 17.1
-• Milchglas, runde Squircle-Icons, ColorOS-Uhr und -Schnellmenü, schwebendes Dock, dein eigener Hintergrund
-• Das Glas frei einstellbar: Lichtbrechung, Unschärfe, Farbsäume, Glanz, Tönung, Glasfarbe – und fünf Looks zum Antippen
-• Die Einstellungen sehen dabei aus wie bei Galaxy × Zenith (One-UI-Aufbau, ZENITH-Metall)
-• Nichts wird überschrieben: ausgeschaltet ist alles wie vorher
+🥚 Neues Easter Egg: Z-Sturm
+• Fünfmal auf die Version tippen: fünf Kerne, fünf Farben, fünf Angriffe – und zum Schluss der weiße Z-Sturm
 
-💧 Projekt Zenith Glas
-• Projekt Zenith aus echtem Flüssigglas: biegt den Gitter-Horizont, grün getönt, mit hellem Rand
-• Die grünen HUD-Linien im Glas, das Dock als Platte aus grünem Glas
-• In den Illuminati, sobald Projekt Zenith an ist
-
-🔒 In den Tresor teilen
-• In jeder App unter „Teilen“: ZENITH-Tresor – direkt verschlüsselt
-• Danach fragt Android, ob die Originale aus der Galerie gelöscht werden
-
-🖼 Der Tresor zum Durchwischen
-• Von Foto zu Foto wischen, Diashow, Zoom mit zwei Fingern
-• Teilen direkt aus dem Tresor
-
-🧩 Neue Widgets
-• ZENITH-Monitor: Akku, Temperatur, Arbeitsspeicher, Speicher, Laufzeit – live als HUD
-• Schutzschild: deine Schutz-Punkte um das Metall-Z
-
-Seit 19.0: ZENITH-Tresor, ZENITH-Schutzschild, Sicherungen mit Passwort, der neue Kern-Vollstrecker
+Seit 19.3: Core Enforcer Studio, ColorOS-Look mit freier Uhr und freiem Dock, die Versionskarte, der mächtigere Z-Angriff
+Seit 19.0: ZENITH-Tresor, ZENITH-Schutzschild, Sicherungen mit Passwort

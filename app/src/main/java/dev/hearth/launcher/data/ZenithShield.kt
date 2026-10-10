@@ -50,6 +50,23 @@ object ZenithShield {
 
     class AppAccess(val packageName: String, val label: String, val access: Set<Access>)
 
+    /**
+     * ZENITH 19.5, the Neue-App-Wächter: what a newly installed app asks for (not yet granted –
+     * Android asks when it wants it).
+     */
+    fun requested(context: Context, packageName: String): Set<Access> = runCatching {
+        @Suppress("DEPRECATION")
+        val info = context.packageManager.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS)
+        val wanted = info.requestedPermissions?.toSet().orEmpty()
+        Access.entries.filter { a -> a.permissions.any { it in wanted } }.toSet()
+    }.getOrDefault(emptySet())
+
+    /** An app's name, or its package if it has none. */
+    fun label(context: Context, packageName: String): String = runCatching {
+        val pm = context.packageManager
+        pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
+    }.getOrDefault(packageName)
+
     private fun settings(action: String): Intent = Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     /** The app's page in Android's settings (to take permissions back). */

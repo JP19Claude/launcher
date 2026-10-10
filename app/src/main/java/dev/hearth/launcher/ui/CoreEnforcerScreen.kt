@@ -122,6 +122,8 @@ fun CoreEnforcerScreen(repo: SettingsRepository, onClose: () -> Unit) {
                             undo = CoreProfiles.snapshot(repo)
                             update { CoreProfiles.rolled(it) }
                             note = "Neuer Look gewürfelt."
+                            // ZENITH 19.5: the new look arrives with the Z-Angriff in its new color.
+                            if (s.strikeOnDice) testing = true
                         }
                         Spacer(Modifier.width(8.dp))
                         VaultButton("Zurück", Modifier.weight(1f), primary = false, enabled = undo != null) {
@@ -197,6 +199,25 @@ fun CoreEnforcerScreen(repo: SettingsRepository, onClose: () -> Unit) {
                         checked = s.zenithStrikeSystem,
                     ) { v -> update { it.copy(zenithStrikeSystem = v) } }
                     SwitchRow(label = "ZENITH-Start nach dem Neustart", checked = s.zenithBootIntro) { v -> update { it.copy(zenithBootIntro = v) } }
+                }
+            }
+
+            // ZENITH 19.5: the moments the Z-Angriff comes on its own.
+            item {
+                StudioPanel("Z-Momente", "Wann der Z-Angriff von selbst kommt. Doppeltippen auf den Startbildschirm kann ihn auch auslösen (Einstellungen → Startbildschirm).") {
+                    SwitchRow(label = "Nach jedem ZENITH-Update", checked = s.strikeOnUpdate) { v -> update { it.copy(strikeOnUpdate = v) } }
+                    SwitchRow(label = "Wenn der Tresor aufgeht", checked = s.strikeOnVault) { v -> update { it.copy(strikeOnVault = v) } }
+                    SwitchRow(label = "Beim Würfeln", checked = s.strikeOnDice) { v -> update { it.copy(strikeOnDice = v) } }
+                    SwitchRow(
+                        label = "Beim Einstecken des Ladekabels",
+                        description = "Über allen Apps (braucht Glimmer)",
+                        checked = s.strikeOnCharge,
+                    ) { v -> update { it.copy(strikeOnCharge = v) } }
+                    SwitchRow(
+                        label = "Wenn der Akku voll ist",
+                        description = "Über allen Apps (braucht Glimmer)",
+                        checked = s.strikeOnFull,
+                    ) { v -> update { it.copy(strikeOnFull = v) } }
                 }
             }
 
@@ -283,7 +304,7 @@ fun CoreEnforcerScreen(repo: SettingsRepository, onClose: () -> Unit) {
 
 /** A panel of the studio: a title in green, the controls on dark metal, a line of explanation under it. */
 @Composable
-private fun StudioPanel(title: String, hint: String? = null, content: @Composable ColumnScope.() -> Unit) {
+internal fun StudioPanel(title: String, hint: String? = null, content: @Composable ColumnScope.() -> Unit) {
     val shape = ZenithCutShape(14.dp)
     Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
         Text(

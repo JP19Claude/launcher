@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.ZenithShield
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -76,10 +77,11 @@ private fun scoreColor(score: Int): Color = when {
 /**
  * ZENITH 19, the Schutzschild: a gauge round the metal Z for how well the phone is protected,
  * every point checked with the way to fix it, and which apps may use what. Checked afresh
- * each time it comes back to the front.
+ * each time it comes back to the front. ZENITH 19.5: with the Wächter, which speak up on the
+ * Glimmer island when an app is installed and when the battery has charged far enough.
  */
 @Composable
-fun ShieldScreen(onClose: () -> Unit) {
+fun ShieldScreen(onClose: () -> Unit, onUpdate: (((LauncherSettings) -> LauncherSettings) -> Unit)? = null) {
     val context = LocalContext.current
     var checks by remember { mutableStateOf<List<ZenithShield.Check>?>(null) }
     var apps by remember { mutableStateOf<List<ZenithShield.AppAccess>?>(null) }
@@ -136,6 +138,31 @@ fun ShieldScreen(onClose: () -> Unit) {
             }
             item { ShieldHeader("Prüfungen") }
             items(found.orEmpty()) { check -> CheckCard(check) }
+            if (onUpdate != null && dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
+                item {
+                    val s = LocalSettings.current
+                    Column(Modifier.padding(top = 14.dp)) {
+                        StudioPanel(
+                            "Wächter",
+                            "Die Wächter melden sich auf der Glimmer-Insel – dafür muss Glimmer an sein. Sie schauen nur und sagen Bescheid; ändern tun sie nichts.",
+                        ) {
+                            SwitchRow(
+                                label = "Neue-App-Wächter",
+                                description = "Nach jeder Installation: was die neue App will – Kamera, Mikrofon, Standort …",
+                                checked = s.newAppGuard,
+                            ) { v -> onUpdate { it.copy(newAppGuard = v) } }
+                            SwitchRow(
+                                label = "Akku-Wächter",
+                                description = "Sagt beim Laden Bescheid, wenn die Grenze erreicht ist – früher abziehen schont den Akku",
+                                checked = s.chargeGuard,
+                            ) { v -> onUpdate { it.copy(chargeGuard = v) } }
+                            if (s.chargeGuard) {
+                                IntSlider("Grenze", s.chargeLimit, 70..95, " %") { v -> onUpdate { it.copy(chargeLimit = v) } }
+                            }
+                        }
+                    }
+                }
+            }
             item {
                 Column {
                     ShieldHeader("Wer darf was")

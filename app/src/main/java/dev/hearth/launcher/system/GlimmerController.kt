@@ -131,7 +131,29 @@ class GlimmerController(private val service: GlimmerService) {
     private var lastOrder: List<String> = emptyList()
 
     private var batteryFull = false
+    /** ZENITH 19.5, Akku-Wächter: already told about the limit while this charge lasts. */
+    private var chargeGuarded = false
     private var dndOn: Boolean? = null
+
+    /** ZENITH 19.5, Neue-App-Wächter: a newly installed app, in the island, with what it wants. */
+    private val packageReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (!settings.newAppGuard || intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) return
+            val pkg = intent.data?.schemeSpecificPart ?: return
+            if (pkg == service.packageName) return
+            val wants = dev.hearth.launcher.data.ZenithShield.requested(service, pkg)
+            val name = dev.hearth.launcher.data.ZenithShield.label(service, pkg)
+            flash(
+                IslandContent.Alert(
+                    Glyph.Lock,
+                    "Neue App: $name",
+                    if (wants.isEmpty()) "will nichts Heikles" else "will " + wants.take(3).joinToString(" · ") { it.label },
+                    if (wants.isEmpty()) GREEN else ORANGE,
+                ),
+            )
+        }
+    }
+    private var packageReceiverRegistered = false
 
     /** Earbuds and headphones coming and going (the first report lists what's already there). */
     private var audioCallback: AudioDeviceCallback? = null
@@ -570,11 +592,17 @@ class GlimmerController(private val service: GlimmerService) {
                 Intent.ACTION_POWER_CONNECTED -> {
                     val level = batteryLevel()
                     flash(IslandContent.Alert(Glyph.Spark, "Lädt", "$level %", GREEN, level / 100f))
+                    chargeGuarded = level >= settings.chargeLimit
+                    // ZENITH 19.5, Z-Momente: the Z-Angriff as the charger goes in.
+                    if (settings.strikeOnCharge) strikeStage.play()
                 }
                 // Unplugged: how full it got, briefly, like One UI's charging toast.
-                Intent.ACTION_POWER_DISCONNECTED -> if (settings.glimmerAlerts) {
-                    val level = batteryLevel()
-                    flash(IslandContent.Alert(Glyph.Battery, "Ladekabel getrennt", "$level %", Color.White, level / 100f))
+                Intent.ACTION_POWER_DISCONNECTED -> {
+                    chargeGuarded = false
+                    if (settings.glimmerAlerts) {
+                        val level = batteryLevel()
+                        flash(IslandContent.Alert(Glyph.Battery, "Ladekabel getrennt", "$level %", Color.White, level / 100f))
+                    }
                 }
                 // A new alarm was set: when it rings, so you know it took.
                 AlarmManager.ACTION_NEXT_ALARM_CLOCK_CHANGED -> if (settings.glimmerAlerts) {
@@ -597,6 +625,15 @@ class GlimmerController(private val service: GlimmerService) {
                     if (full && !batteryFull && settings.glimmerAlerts) {
                         flash(IslandContent.Alert(Glyph.Battery, "Vollständig geladen", "100 %", GREEN, 1f))
                     }
+                    // ZENITH 19.5, Z-Momente: the Z-Angriff when it's full.
+                    if (full && !batteryFull && settings.strikeOnFull) strikeStage.play()
+                    // ZENITH 19.5, Akku-Wächter: once per charge, when the limit is reached.
+                    val percent = level * 100 / scale
+                    if (plugged && settings.chargeGuard && !chargeGuarded && percent >= settings.chargeLimit) {
+                        chargeGuarded = true
+                        flash(IslandContent.Alert(Glyph.Battery, "Akku-Wächter", "$percent % – Kabel ziehen schont den Akku", GREEN, percent / 100f))
+                    }
+                    if (!plugged) chargeGuarded = false
                     batteryFull = full
                 }
                 PowerManager.ACTION_POWER_SAVE_MODE_CHANGED -> if (settings.glimmerAlerts) {
@@ -741,6 +778,14 @@ class GlimmerController(private val service: GlimmerService) {
         updateDozing()
         ContextCompat.registerReceiver(service, systemReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         receiverRegistered = true
+        packageReceiverRegistered = runCatching {
+            ContextCompat.registerReceiver(
+                service,
+                packageReceiver,
+                IntentFilter(Intent.ACTION_PACKAGE_ADDED).apply { addDataScheme("package") },
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+        }.isSuccess
         stage.start(settingsState, locked, dozing)
         scope = MainScope().also { s ->
             s.launch {
@@ -836,6 +881,8 @@ class GlimmerController(private val service: GlimmerService) {
         media.stop()
         if (receiverRegistered) runCatching { service.unregisterReceiver(systemReceiver) }
         receiverRegistered = false
+        if (packageReceiverRegistered) runCatching { service.unregisterReceiver(packageReceiver) }
+        packageReceiverRegistered = false
         stage.stop()
         strikeStage.remove()
         scope?.cancel()

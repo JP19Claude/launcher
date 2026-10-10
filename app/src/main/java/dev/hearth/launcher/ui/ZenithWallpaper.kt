@@ -121,6 +121,16 @@ internal object ZenithBoot {
         prefs.edit().putLong("bootAt", bootAt).apply()
         return true
     }
+
+    /** ZENITH 19.5: true once after ZENITH was updated (not after the very first install). */
+    fun isNewVersion(context: Context): Boolean {
+        val prefs = context.getSharedPreferences("zenith_boot", Context.MODE_PRIVATE)
+        val now = dev.hearth.launcher.BuildConfig.VERSION_CODE
+        val last = prefs.getInt("version", -1)
+        if (last == now) return false
+        prefs.edit().putInt("version", now).apply()
+        return last != -1 || HearthUi.omegaSeen(context)
+    }
 }
 
 /**

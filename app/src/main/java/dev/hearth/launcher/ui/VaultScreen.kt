@@ -182,6 +182,14 @@ fun VaultScreen(
     val context = LocalContext.current
     val unlocked by ZenithVault.unlocked.collectAsState()
     var exists by remember { mutableStateOf(ZenithVault.exists(context)) }
+    // ZENITH 19.5: the vault opens with the Z-Angriff.
+    val strikeOn = LocalSettings.current.strikeOnVault && dev.hearth.launcher.BuildConfig.ALL_IN_ONE
+    var strike by remember { mutableStateOf(false) }
+    var wasLocked by remember { mutableStateOf(!unlocked) }
+    LaunchedEffect(unlocked) {
+        if (unlocked && wasLocked && strikeOn) strike = true
+        wasLocked = !unlocked
+    }
     BackHandler { onClose() }
     Box(Modifier.fillMaxSize().background(VaultBg)) {
         VaultBackdrop()
@@ -207,6 +215,7 @@ fun VaultScreen(
                 )
             }
         }
+        if (strike) ZenithStrikeOverlay { strike = false }
     }
 }
 

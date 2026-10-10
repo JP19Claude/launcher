@@ -181,6 +181,55 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "19.5",
+            name = "Z-Sturm",
+            summary = "Das große Update: Der Z-Angriff kommt jetzt überall im System – nach Updates, beim Tresor, beim Würfeln, beim Laden und per Doppeltipp. Dazu zwei Wächter, die dich warnen, elf neue Vorteile in „Warum ZENITH“ und ein neues Easter Egg.",
+            sections = listOf(
+                ChangeSection(
+                    "Der Z-Angriff, überall im System", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Nach jedem ZENITH-Update begrüßt dich der Z-Angriff einmal – in deiner Farbe und deinem Tempo aus dem Core Enforcer Studio.",
+                        "Der ZENITH-Tresor geht mit dem Z-Angriff auf, sobald Passwort oder Fingerabdruck stimmen.",
+                        "Neu beim Doppeltippen auf den Startbildschirm: „Z-Angriff“ (Einstellungen → Startbildschirm) – und eine eigene Kachel „Z-Angriff“ im ZENITH-Menü.",
+                        "Würfelst du im Studio einen neuen Look, kommt er mit dem Z-Angriff in seiner neuen Farbe.",
+                        "Mit Glimmer auch über allen Apps: beim Einstecken des Ladekabels und wenn der Akku voll ist.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Z-Momente im Core Enforcer Studio", Icons.Rounded.Edit, Green,
+                    listOf(
+                        "Neues Feld „Z-Momente“: Du bestimmst, wann der Z-Angriff von selbst kommt – nach Updates, beim Tresor, beim Würfeln, beim Einstecken und bei vollem Akku. Laden und voller Akku sind anfangs aus.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Die Wächter", Icons.Rounded.Lock, Orange,
+                    listOf(
+                        "Neue-App-Wächter: Nach jeder Installation sagt dir die Glimmer-Insel, was die neue App will – Kamera, Mikrofon, Standort, Kontakte, SMS … oder dass sie nichts Heikles will.",
+                        "Akku-Wächter: Erreicht der Akku beim Laden deine Grenze (70–95 %), sagt die Glimmer-Insel einmal Bescheid. Früher abziehen schont den Akku auf Dauer.",
+                        "Beide im Schutzschild unter „Wächter“. Sie schauen nur und sagen Bescheid – ändern tun sie nichts.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Warum ZENITH: jetzt 26 Vorteile", Icons.Rounded.CheckCircle, Blue,
+                    listOf(
+                        "Die Seite „Warum ZENITH“ in den Einstellungen zeigt jetzt 26 Dinge, die One UI und ColorOS so nicht können. Neu dabei: ZENITH-Tresor, In den Tresor teilen, Schutzschild, Neue-App-Wächter, Akku-Wächter, Sicherungen mit Passwort, Core Enforcer Studio, Z-Angriff, Projekt Zenith, ZENITH-Monitor und ein Spiel in jeder Version.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Ein neues Easter Egg: Z-Sturm", Icons.Rounded.Favorite, Violet,
+                    listOf(
+                        "Fünfmal schnell auf die Version tippen: Fünf Kerne schweben im Dunkeln, jeder in einer Farbe des Z-Angriffs. Tippe sie an – jeder schlägt in seiner Farbe zu, und zum Schluss kommt der weiße Z-Sturm.",
+                        "Auch in der Ruhmeshalle (Version lange drücken).",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "19.3",
             name = "Core Enforcer",
             summary = "Das Core Enforcer Studio: die Werkstatt, in der du dein System umbaust – Look würfeln, Profile speichern, den Z-Angriff in Farbe und Tempo gestalten und alles vom Icon bis zum Glas an einem Ort einstellen.",

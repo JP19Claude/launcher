@@ -364,6 +364,18 @@ internal fun PrivacyCheck(shizukuReady: Boolean) {
 private class Advantage(val title: String, val text: String, val oneUi: Boolean = false, val colorOs: Boolean = false)
 
 private val Advantages = listOf(
+    // ZENITH 19.5: what only ZENITH has.
+    Advantage("ZENITH-Tresor", "Private Fotos, Videos, Notizen und Dateien mit AES-256 verschlüsselt – Passwort oder Fingerabdruck, nie in Screenshots.", oneUi = true, colorOs = true),
+    Advantage("In den Tresor teilen", "Aus jeder App „Teilen → ZENITH-Tresor“ – verschlüsselt, ohne Umweg über die Galerie."),
+    Advantage("Schutzschild", "Eine Zahl für deinen Schutz: Sperre, Sicherheitsupdate, USB-Debugging, Verschlüsselung, Tresor, Sicherung – jeder Punkt mit dem Weg zur Lösung.", oneUi = true, colorOs = true),
+    Advantage("Neue-App-Wächter", "Nach jeder Installation sagt dir die Glimmer-Insel, was die neue App will – Kamera, Mikrofon, Standort und mehr."),
+    Advantage("Akku-Wächter", "Erinnert beim Laden an deine eigene Grenze (70–95 %) – früher abziehen schont den Akku.", oneUi = true, colorOs = true),
+    Advantage("Sicherungen mit Passwort", "Deine Einstellungen als Datei, mit AES-256 verschlüsselt – ohne dein Passwort liest sie niemand."),
+    Advantage("Core Enforcer Studio", "Den ganzen Look würfeln, als Profil speichern und mit einem Tipp wechseln – Icons, Uhr, Dock, Glas, Farben.", oneUi = true),
+    Advantage("Z-Angriff", "Die ZENITH-Animation in deiner Farbe und deinem Tempo – nach Updates, beim Tresor, beim Laden oder per Doppeltipp."),
+    Advantage("Projekt Zenith", "Ein verstecktes System im System – mit eigenem Glas-Modus und einem ColorOS-17.1-Look zum Einstellen."),
+    Advantage("ZENITH-Monitor", "Akku mit Temperatur und Spannung, Arbeitsspeicher, Speicher und Laufzeit live als Widget."),
+    Advantage("Ein Spiel in jeder Version", "Jede ZENITH-Version versteckt ihr eigenes Easter Egg – samt Ruhmeshalle aller Funde.", oneUi = true, colorOs = true),
     Advantage("Werbeblocker fürs ganze Handy", "Ein Tipp, und AdGuard blockt Werbung und Tracker in allen Apps – ohne extra App."),
     Advantage("Vorinstallierte Apps entfernen", "Facebook-Dienste, Samsung Free, OneDrive & Co. weg – ohne Root, jederzeit zurückholbar."),
     Advantage("Turbo", "Hintergrund-Apps beenden und alle Caches leeren mit einem Tipp – samt Anzeige, wie viel frei wurde."),
@@ -380,6 +392,9 @@ private val Advantages = listOf(
     Advantage("Bildschirm beim Laden anlassen", "Als Nachttisch-Uhr oder beim Navigieren – ohne Entwickleroptionen."),
     Advantage("Updates direkt aus der App", "Mit ausführlichem Änderungsprotokoll – und alle Neuerungen für jedes Handy, nicht nur für neue Modelle."),
 )
+
+/** How many points "Warum ZENITH" lists. */
+internal val AdvantageCount: Int get() = Advantages.size
 
 /** "Warum Hearth UI": what it does that One UI and ColorOS don't. */
 @Composable

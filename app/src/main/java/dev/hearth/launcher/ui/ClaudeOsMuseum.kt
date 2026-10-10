@@ -157,6 +157,7 @@ internal val SystemEras = listOf(
     SystemEra("18.0", "OMEGA UI", "Mythos", "Schmiede: mit achtzehn Hammerschlägen wird der Stein zum Ω-Rubin."),
     SystemEra("18.5", "OMEGA UI", "Liquid", "Lupe: eine Linse aus Liquid Glass über das Lichterfeld schieben und sechs winzige Clawds finden."),
     SystemEra("19.0", "ZENITH", "ZENITH", "Sonnenlauf: die Sonne bis in den Zenit schieben und neunzehn Clawds wecken."),
+    SystemEra("19.5", "ZENITH", "Z-Sturm", "Z-Sturm: fünf Kerne antippen, jeder schlägt in seiner Farbe zu – bis der weiße Z-Angriff kommt."),
 )
 
 /** The big version a [version] belongs to (the newest one not newer than it). */

@@ -33,7 +33,7 @@ class ShieldActivity : ComponentActivity() {
                 LocalGlassStyle provides GlassStyle.from(settings),
             ) {
                 HearthTheme(dark = true) {
-                    ShieldScreen(onClose = { finish() })
+                    ShieldScreen(onClose = { finish() }, onUpdate = { change -> repo.update(change) })
                 }
             }
         }

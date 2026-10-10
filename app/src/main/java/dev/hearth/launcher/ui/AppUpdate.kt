@@ -616,6 +616,7 @@ internal fun HearthVersionEgg(version: String, name: String, onClose: () -> Unit
     val look = remember { lookFor(context.packageName) }
     val number = versionNumber(version)
     when {
+        number >= 19.5f -> ZStormEgg(version, name, onClose)
         number >= 19f -> SunRunEgg(version, name, onClose)
         number >= 18.5f -> LensEgg(version, name, onClose)
         number >= 18f -> ForgeEgg(version, name, onClose)

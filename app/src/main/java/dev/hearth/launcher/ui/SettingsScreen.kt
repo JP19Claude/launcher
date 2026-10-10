@@ -1761,8 +1761,8 @@ internal val SettingsCategories = listOf(
     SettingsCategory("cloud", "ZENITH Cloud", "Sicherung über dein Google-Konto und als Datei", Icons.Rounded.Share, Color(0xFFE5243F),
         "cloud omega sicherung backup google drive konto wiederherstellen datei export import"),
     // Hearth UI 14.5: what Hearth UI does that One UI and ColorOS don't.
-    SettingsCategory("vorteile", "Warum ZENITH", "15 Dinge, die One UI und ColorOS nicht können", Icons.Rounded.Star, Color(0xFF34C759),
-        "vorteile warum zenith omega hearth ui one ui coloros vergleich werbeblocker entrümpeln turbo datenschutz"),
+    SettingsCategory("vorteile", "Warum ZENITH", "$AdvantageCount Dinge, die One UI und ColorOS so nicht können", Icons.Rounded.Star, Color(0xFF34C759),
+        "vorteile warum zenith omega hearth ui one ui coloros vergleich werbeblocker entrümpeln turbo datenschutz tresor schutzschild wächter"),
     // Hearth UI 14.1: the phone's own settings, inside Hearth's.
     SettingsCategory("system", "System", "Helligkeit, Töne, WLAN, Bluetooth, Akku, Apps, Sicherheit …", Icons.Rounded.Phone, Color(0xFF5E6C84),
         "system wlan wifi bluetooth mobile daten flugmodus hotspot nfc vpn helligkeit drehen timeout bildschirm lautstärke " +

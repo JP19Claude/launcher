@@ -408,6 +408,7 @@ enum class HomeGesture(val label: String) {
     Power("Ein/Aus-Menü"),
     Vault("ZENITH-Tresor"),
     Shield("ZENITH-Schutzschild"),
+    Strike("Z-Angriff"),
 }
 
 /** The home clock's typeface. */
@@ -595,6 +596,17 @@ data class LauncherSettings(
     /** ZENITH 19.3, Core Enforcer Studio: the color and tempo of the Z-Angriff. */
     val strikeColor: StrikeColor = StrikeColor.Green,
     val strikeSpeed: StrikeSpeed = StrikeSpeed.Normal,
+    /** ZENITH 19.5, Z-Momente: where else the Z-Angriff comes – after an update, opening the vault, rolling the die, plugging in, full. */
+    val strikeOnUpdate: Boolean = true,
+    val strikeOnVault: Boolean = true,
+    val strikeOnDice: Boolean = true,
+    val strikeOnCharge: Boolean = false,
+    val strikeOnFull: Boolean = false,
+    /** ZENITH 19.5, Akku-Wächter: a word in the island when charging reaches [chargeLimit] %, to spare the battery. */
+    val chargeGuard: Boolean = false,
+    val chargeLimit: Int = 85,
+    /** ZENITH 19.5, Neue-App-Wächter: a newly installed app shows in the island with what it wants to use. */
+    val newAppGuard: Boolean = true,
     /** ZENITH 19, "Projekt Zenith": the whole system futuristic – holograms, HUD, a grid horizon. */
     val projectZenith: Boolean = false,
     /** ZENITH 19.1, "Projekt Zenith Glas": Projekt Zenith in real liquid glass, green and lit. */
@@ -1129,6 +1141,14 @@ class SettingsRepository(context: Context) {
             zenithStrikeSystem = prefs.getBoolean("zenithStrikeSystem", d.zenithStrikeSystem),
             strikeColor = enumOf("strikeColor", d.strikeColor),
             strikeSpeed = enumOf("strikeSpeed", d.strikeSpeed),
+            strikeOnUpdate = prefs.getBoolean("strikeOnUpdate", d.strikeOnUpdate),
+            strikeOnVault = prefs.getBoolean("strikeOnVault", d.strikeOnVault),
+            strikeOnDice = prefs.getBoolean("strikeOnDice", d.strikeOnDice),
+            strikeOnCharge = prefs.getBoolean("strikeOnCharge", d.strikeOnCharge),
+            strikeOnFull = prefs.getBoolean("strikeOnFull", d.strikeOnFull),
+            chargeGuard = prefs.getBoolean("chargeGuard", d.chargeGuard),
+            chargeLimit = prefs.getInt("chargeLimit", d.chargeLimit),
+            newAppGuard = prefs.getBoolean("newAppGuard", d.newAppGuard),
             projectZenith = prefs.getBoolean("projectZenith", d.projectZenith),
             projectZenithGlass = prefs.getBoolean("projectZenithGlass", d.projectZenithGlass),
             projectColorOs = prefs.getBoolean("projectColorOs", d.projectColorOs),
@@ -1317,6 +1337,14 @@ class SettingsRepository(context: Context) {
             .putBoolean("zenithStrikeSystem", s.zenithStrikeSystem)
             .putString("strikeColor", s.strikeColor.name)
             .putString("strikeSpeed", s.strikeSpeed.name)
+            .putBoolean("strikeOnUpdate", s.strikeOnUpdate)
+            .putBoolean("strikeOnVault", s.strikeOnVault)
+            .putBoolean("strikeOnDice", s.strikeOnDice)
+            .putBoolean("strikeOnCharge", s.strikeOnCharge)
+            .putBoolean("strikeOnFull", s.strikeOnFull)
+            .putBoolean("chargeGuard", s.chargeGuard)
+            .putInt("chargeLimit", s.chargeLimit)
+            .putBoolean("newAppGuard", s.newAppGuard)
             .putBoolean("projectZenith", s.projectZenith)
             .putBoolean("projectZenithGlass", s.projectZenithGlass)
             .putBoolean("projectColorOs", s.projectColorOs)
@@ -1510,7 +1538,7 @@ class SettingsRepository(context: Context) {
          * Only the switch itself and the look (black or glass, which changes the window) restart it.
          */
         val GLIMMER_LIVE_KEYS = setOf(
-            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "zenithDaylight", "zenithStrikeSystem", "strikeColor", "strikeSpeed", "projectZenith", "projectZenithGlass", "projectColorOs", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "glassLook", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
+            "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "zenithDaylight", "zenithStrikeSystem", "strikeColor", "strikeSpeed", "strikeOnCharge", "strikeOnFull", "chargeGuard", "chargeLimit", "newAppGuard", "projectZenith", "projectZenithGlass", "projectColorOs", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "glassLook", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
             "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerPrivacy", "accent", "animations",

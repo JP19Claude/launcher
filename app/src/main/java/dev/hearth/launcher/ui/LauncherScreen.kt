@@ -557,6 +557,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
     }
     // ZENITH 19: after the phone starts, the Z lights up once.
     var bootIntro by remember { mutableStateOf(settings.zenithBootIntro && dev.hearth.launcher.BuildConfig.ALL_IN_ONE && ZenithBoot.isNewStart(context)) }
+    // ZENITH 19.5: the Z-Angriff – after an update, on a double tap or from the ZENITH menu.
+    var strikeNow by remember {
+        mutableStateOf(dev.hearth.launcher.BuildConfig.ALL_IN_ONE && ZenithBoot.isNewVersion(context) && settings.strikeOnUpdate)
+    }
     val menuBlur by animateDpAsState(
         targetValue = when {
             controlOpen -> 24.dp
@@ -858,6 +862,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                             HomeGesture.Shield -> runCatching {
                                                 context.startActivity(Intent(context, dev.hearth.launcher.ShieldActivity::class.java))
                                             }
+                                            HomeGesture.Strike -> strikeNow = true
                                         }
                                         Unit
                                     },
@@ -1264,6 +1269,11 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         HubTile("Schutz-\nschild", Icons.Rounded.CheckCircle, Color(0xFF2FD27A)) {
                             runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ShieldActivity::class.java)) }
                         },
+                        if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
+                            HubTile("Z-Angriff", Icons.Rounded.Star, Color(0xFF00E676)) { strikeNow = true }
+                        } else {
+                            null
+                        },
                         if (dropOn) {
                             HubTile("Glimmer\nDrop", Icons.Rounded.Share, Color(0xFF5E9BFF)) {
                                 runCatching { context.startActivity(Intent(context, dev.hearth.launcher.DropActivity::class.java)) }
@@ -1336,6 +1346,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
             // ZENITH 19: the Z lights up once after the phone starts.
             if (bootIntro && !showOmega) {
                 ZenithBootIntro { bootIntro = false }
+            }
+            // ZENITH 19.5: the Z-Angriff, after the start and the tours.
+            if (strikeNow && !bootIntro && !showOmega && !showIntro) {
+                ZenithStrikeOverlay { strikeNow = false }
             }
 
             drag?.let { d ->
