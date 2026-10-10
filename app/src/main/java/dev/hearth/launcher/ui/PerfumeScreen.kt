@@ -1,5 +1,7 @@
 package dev.hearth.launcher.ui
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -55,12 +57,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.hearth.launcher.data.AiProvider
 import dev.hearth.launcher.data.ClaudeAssistant
 import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.Perfume
-import dev.hearth.launcher.data.PerfumeHelper
 import dev.hearth.launcher.data.PerfumeImageHit
 import dev.hearth.launcher.data.PerfumeImages
 import dev.hearth.launcher.data.PerfumeShelf
@@ -89,7 +93,7 @@ fun PerfumeScreen(onClose: () -> Unit) {
     val pick by PerfumeShelf.pick.collectAsState()
     val city by PerfumeShelf.city.collectAsState()
     val choosing by PerfumeShelf.busy.collectAsState()
-    val helper by PerfumeShelf.helper.collectAsState()
+    val look by PerfumeShelf.look.collectAsState()
     val fetching by PerfumeShelf.fetching.collectAsState()
     val ai by ClaudeAssistant.settings.collectAsState()
     val hasKey = ai.hasKey
@@ -99,6 +103,7 @@ fun PerfumeScreen(onClose: () -> Unit) {
     var message by remember { mutableStateOf<String?>(null) }
     var open by remember { mutableStateOf<String?>(null) }
     var photoFor by remember { mutableStateOf<String?>(null) }
+    var keyText by remember(ai.provider) { mutableStateOf("") }
     // The pictures the web found for one perfume, to choose from.
     var findFor by remember { mutableStateOf<String?>(null) }
     var hits by remember { mutableStateOf<List<PerfumeImageHit>>(emptyList()) }
@@ -113,7 +118,7 @@ fun PerfumeScreen(onClose: () -> Unit) {
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
         scope.launch {
             working = true
-            message = "${helper.display} schaut sich ${if (uris.size == 1) "das Foto" else "die ${minOf(uris.size, 6)} Fotos"} an …"
+            message = "${look.display} schaut sich ${if (uris.size == 1) "das Foto" else "die ${minOf(uris.size, 6)} Fotos"} an …"
             val images = withContext(Dispatchers.IO) { uris.take(6).mapNotNull { PerfumeShelf.readPhoto(context, it) } }
             val result = PerfumeShelf.addFromPhotos(images, text)
             message = result.message
@@ -154,7 +159,7 @@ fun PerfumeScreen(onClose: () -> Unit) {
         if (!working && text.isNotBlank()) {
             scope.launch {
                 working = true
-                message = "${helper.display} schaut sich das an …"
+                message = "${look.display} schaut sich das an …"
                 val result = PerfumeShelf.addFromText(text)
                 message = result.message
                 if (result.added.isNotEmpty()) text = ""
@@ -170,17 +175,19 @@ fun PerfumeScreen(onClose: () -> Unit) {
             Modifier.fillMaxSize().systemBarsPadding().imePadding(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
         ) {
-            item { VaultTopBar(onClose, title = "${helper.display.uppercase()} · DUFT") }
+            item { VaultTopBar(onClose, title = "${look.display.uppercase()} · DUFT") }
             item {
                 Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PerfumeHelperFigure(
-                        helper,
-                        if (working || choosing) ClawdMood.Thinking else ClawdMood.Idle,
-                        Modifier.size(width = 84.dp, height = 72.dp),
-                    )
-                    Spacer(Modifier.width(14.dp))
+                    if (look.clawd || look.zenith) {
+                        PerfumeHelperFigure(
+                            look,
+                            if (working || choosing) ClawdMood.Thinking else ClawdMood.Idle,
+                            Modifier.size(width = (84 * ((if (look.clawd) 1 else 0) + (if (look.zenith) 1 else 0))).dp, height = 72.dp),
+                        )
+                        Spacer(Modifier.width(14.dp))
+                    }
                     Column {
-                        Text(helper.cupboard, color = VaultText, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(look.cupboard, color = VaultText, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         Text(
                             "Sag ihm, welche Parfüms du hast – er sucht dir jeden Tag das passende aus.",
                             color = VaultDim,
@@ -192,12 +199,9 @@ fun PerfumeScreen(onClose: () -> Unit) {
             }
 
             item {
-                StudioPanel("Wer berät dich?", "Wer neben dem Vorschlag steht – im Widget und hier.") {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PerfumeHelper.entries.forEach { option ->
-                            TasteChip(option.label, helper == option, if (option == PerfumeHelper.Clawd) Color(0xFFD97757) else ZenithGreen) { PerfumeShelf.setHelper(option) }
-                        }
-                    }
+                StudioPanel("Wer steht daneben?", "Clawd und das ZENITH-Z lassen sich einzeln ein- und ausschalten – im Widget und hier. Beide aus gibt dem Namen am meisten Platz.") {
+                    SwitchRow(label = "Clawd zeigen", checked = look.clawd) { PerfumeShelf.setLook(it, look.zenith) }
+                    SwitchRow(label = "ZENITH-Z zeigen", checked = look.zenith) { PerfumeShelf.setLook(look.clawd, it) }
                 }
             }
 
@@ -209,7 +213,7 @@ fun PerfumeScreen(onClose: () -> Unit) {
                             shelf.isEmpty() -> Text("Noch kein Parfüm im Schrank. Schreib mir unten, welche du hast – oder schick mir ein Foto.", color = VaultDim, fontSize = 14.sp, lineHeight = 19.sp)
                             shelf.none { it.taste != PerfumeTaste.Dislike } -> Text("Alle deine Parfüms stehen auf „Mag ich nicht“. Such mir wenigstens eins aus, das du magst.", color = VaultDim, fontSize = 14.sp, lineHeight = 19.sp)
                             chosen == null -> {
-                                Text(if (choosing) "${helper.display} überlegt …" else "Für heute gibt es noch keinen Vorschlag.", color = VaultDim, fontSize = 14.sp)
+                                Text(if (choosing) "${look.display} überlegt …" else "Für heute gibt es noch keinen Vorschlag.", color = VaultDim, fontSize = 14.sp)
                                 if (!choosing) {
                                     Spacer(Modifier.height(10.dp))
                                     VaultButton("Vorschlag holen", Modifier.fillMaxWidth()) { scope.launch { PerfumeShelf.refreshToday(force = true) } }
@@ -234,7 +238,7 @@ fun PerfumeScreen(onClose: () -> Unit) {
                                 Row(Modifier.fillMaxWidth()) {
                                     VaultButton("Trage ich heute", Modifier.weight(1f)) {
                                         PerfumeShelf.markWorn(chosen.id)
-                                        message = "Schön! ${helper.display} merkt es sich und wechselt morgen ab."
+                                        message = "Schön! ${look.display} merkt es sich und wechselt morgen ab."
                                     }
                                     Spacer(Modifier.width(8.dp))
                                     VaultButton("Etwas anderes", Modifier.weight(1f), primary = false, enabled = !choosing) {
@@ -250,14 +254,14 @@ fun PerfumeScreen(onClose: () -> Unit) {
             item {
                 StudioPanel(
                     "Parfüms hinzufügen",
-                    "Schreib die Namen (mit Komma) oder schick Fotos von einem oder mehreren Flakons – ${helper.display} erkennt sie, merkt sie sich, beschreibt jedes und nimmt das Bild vom Flakon dazu." +
-                        if (hasKey) " Fotos klappen mit Claude oder Gemini." else " Für Analyse, Fotos und kluge Tipps trag deinen API-Schlüssel bei „Frag Clawd“ ein – ohne ihn merkt sich ${helper.display} nur die Namen.",
+                    "Schreib die Namen (mit Komma) oder schick Fotos von einem oder mehreren Flakons – ${look.display} erkennt sie, merkt sie sich, beschreibt jedes und nimmt das Bild vom Flakon dazu." +
+                        if (hasKey) " Fotos klappen mit Claude oder Gemini." else " Für Analyse, Fotos und kluge Tipps trag deinen API-Schlüssel bei „Frag Clawd“ ein – ohne ihn merkt sich ${look.display} nur die Namen.",
                 ) {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
                         PerfumeField(text, { text = it }, "z. B. Bleu de Chanel, Sauvage, Black Opium", Modifier.fillMaxWidth().heightIn(min = 76.dp), singleLine = false)
                         Spacer(Modifier.height(10.dp))
                         Row(Modifier.fillMaxWidth()) {
-                            VaultButton("${helper.display}, schau dir das an", Modifier.weight(1f), enabled = !working && text.isNotBlank(), onClick = addText)
+                            VaultButton("${look.display}, schau dir das an", Modifier.weight(1f), enabled = !working && text.isNotBlank(), onClick = addText)
                             Spacer(Modifier.width(8.dp))
                             VaultButton("Foto schicken", Modifier.weight(1f), primary = false, enabled = !working && hasKey) { photos.launch("image/*") }
                         }
@@ -270,7 +274,7 @@ fun PerfumeScreen(onClose: () -> Unit) {
             }
 
             item {
-                StudioPanel("Wetter", "Für den Tagesvorschlag. Ohne Ort rät ${helper.display} nach der Jahreszeit.") {
+                StudioPanel("Wetter", "Für den Tagesvorschlag. Ohne Ort rät ${look.display} nach der Jahreszeit.") {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
                         if (city.isNotBlank()) Text("Aktuell: $city", color = VaultText, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp, start = 4.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -294,14 +298,58 @@ fun PerfumeScreen(onClose: () -> Unit) {
 
             item {
                 StudioPanel(
+                    "KI für Analyse und Fotos",
+                    "Der Schlüssel bleibt auf diesem Handy. Fotos von Flakons brauchen Claude oder Gemini. Derselbe Schlüssel gilt für Clawd im ZENITH-Launcher.",
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AiProvider.entries.filter { it != AiProvider.Custom }.forEach { option ->
+                                TasteChip(option.label, ai.provider == option, ZenithGreen) { ClaudeAssistant.updateSettings { s -> s.copy(provider = option) } }
+                            }
+                        }
+                        Text(
+                            if (hasKey) "Schlüssel für ${ai.provider.label}: gespeichert (…${ai.apiKey.takeLast(4)})" else "Für ${ai.provider.label} ist noch kein Schlüssel gespeichert.",
+                            color = if (hasKey) PerfumeLove else VaultDim,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(top = 10.dp, bottom = 8.dp),
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            PerfumeField(keyText, { keyText = it }, ai.provider.keyHint, Modifier.weight(1f), singleLine = true, secret = true) {
+                                if (keyText.isNotBlank()) {
+                                    ClaudeAssistant.updateSettings { s -> s.withKey(keyText) }
+                                    keyText = ""
+                                    message = "Der Schlüssel ist gespeichert."
+                                }
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            VaultButton("Speichern", enabled = keyText.isNotBlank()) {
+                                ClaudeAssistant.updateSettings { s -> s.withKey(keyText) }
+                                keyText = ""
+                                message = "Der Schlüssel ist gespeichert."
+                            }
+                        }
+                        if (ai.provider.keyUrl.isNotBlank()) {
+                            Spacer(Modifier.height(8.dp))
+                            VaultButton("Schlüssel besorgen", Modifier.fillMaxWidth(), primary = false) {
+                                runCatching {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ai.provider.keyUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                StudioPanel(
                     "Deine Sammlung · ${shelf.size}",
-                    "Tippe auf ein Parfüm für die Einzelheiten. „Mag ich“ bevorzugt ${helper.display}, „Mag ich nicht“ schlägt er nie vor.",
+                    "Tippe auf ein Parfüm für die Einzelheiten. „Mag ich“ bevorzugt ${look.display}, „Mag ich nicht“ schlägt er nie vor.",
                 ) {
                     if (shelf.isEmpty()) {
                         Text("Noch leer.", color = VaultDim, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp))
                     }
                     if (fetching) {
-                        Text("${helper.display} sucht die Bilder der Flakons im Netz …", color = PerfumeLove, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp))
+                        Text("${look.display} sucht die Bilder der Flakons im Netz …", color = PerfumeLove, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp))
                     } else if (shelf.any { !it.photo }) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
                             VaultButton("Fehlende Bilder suchen", Modifier.fillMaxWidth(), primary = false) { PerfumeShelf.searchPictures(again = true) }
@@ -329,7 +377,7 @@ fun PerfumeScreen(onClose: () -> Unit) {
                             VaultButton("Unbekannte genauer ansehen", Modifier.fillMaxWidth(), primary = false, enabled = !working) {
                                 scope.launch {
                                     working = true
-                                    message = "${helper.display} schaut genauer hin …"
+                                    message = "${look.display} schaut genauer hin …"
                                     message = PerfumeShelf.analyseNames().message
                                     working = false
                                 }
@@ -349,11 +397,13 @@ private fun PerfumeField(
     hint: String,
     modifier: Modifier = Modifier,
     singleLine: Boolean,
+    secret: Boolean = false,
     onDone: () -> Unit = {},
 ) {
     val shape = RoundedCornerShape(12.dp)
     BasicTextField(
         value = value,
+        visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
         onValueChange = { onChange(it.take(600)) },
         singleLine = singleLine,
         textStyle = TextStyle(color = VaultText, fontSize = 15.sp, lineHeight = 21.sp),

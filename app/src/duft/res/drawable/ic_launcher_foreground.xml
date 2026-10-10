@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- A perfume bottle: silver cap, amber glass, a label -->
+    <path android:fillColor="#D8DDE0" android:pathData="M44,26h20v10h-20z" />
+    <path android:fillColor="#B9772E" android:pathData="M50,36h8v6h-8z" />
+    <path android:fillColor="#E39A3B" android:pathData="M34,42h40a6,6 0 0 1 6,6v30a6,6 0 0 1 -6,6h-40a6,6 0 0 1 -6,-6v-30a6,6 0 0 1 6,-6z" />
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.3" android:pathData="M36,48h4v30h-4z" />
+    <path android:fillColor="#F5F1E8" android:pathData="M40,56h28v14h-28z" />
+    <path android:fillColor="#2B2A27" android:pathData="M44,60h20v2h-20zM47,65h14v2h-14z" />
+</vector>

@@ -181,6 +181,30 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "19.8",
+            name = "Duftschrank",
+            summary = "Der Parfüm-Berater ist jetzt auch eine App für sich: der Duftschrank – mit eigenem Widget für jeden Launcher. Im Widget steht der ganze Name des Parfüms, und Clawd und das ZENITH-Z lassen sich ausschalten.",
+            sections = listOf(
+                ChangeSection(
+                    "Der Duftschrank als eigene App", Icons.Rounded.Favorite, Pink,
+                    listOf(
+                        "Neu: die App „Duftschrank“ (Clawds Parfüm-Berater, ohne den Rest des Launchers) zum Herunterladen bei den Releases. Sie kann alles, was der Berater in ZENITH kann: Parfüms aufschreiben oder fotografieren, echte Flakon-Bilder, Mag ich / Mag ich nicht, jeden Tag das passende nach Wetter.",
+                        "Dazu ein Widget für jeden Launcher (auch Samsungs One UI Home): heutiges Parfüm mit Bild, ganzem Namen und Begründung. Antippen öffnet den Duftschrank.",
+                        "Den API-Schlüssel trägst du im Duftschrank selbst ein (Claude, Gemini und andere); in ZENITH gilt derselbe Schlüssel wie bei Clawd.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Lesbarer, und Clawd oder ZENITH weg", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Der Name des Parfüms steht jetzt ganz da, über bis zu drei Zeilen, mit „Heute“ darüber – nicht mehr abgeschnitten. Doppelte Markennamen („Emporio Armani Armani …“) werden zusammengefasst.",
+                        "Clawd und das ZENITH-Z lassen sich einzeln ein- und ausschalten. Beide aus gibt dem Namen und der Begründung am meisten Platz.",
+                    ),
+                    everyone,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "19.7",
             name = "Duft",
             summary = "Clawd kennt jetzt deine Parfüms und sucht dir jeden Tag das passende aus – nach Wetter und Geschmack. Dazu: Das vierte Icon im Dock ist nicht mehr zu klein.",

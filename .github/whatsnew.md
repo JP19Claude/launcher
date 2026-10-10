@@ -1,19 +1,16 @@
-ZENITH 19.7 „Duft“ auf ClaudeOS 6.0 „Helios“
+ZENITH 19.8 „Duftschrank“ auf ClaudeOS 6.0 „Helios“
 
-🧴 Clawd-Parfüm
-• Neues Widget „Clawd-Parfüm“ (Widget hinzufügen → Clawd): Clawd sagt dir, welches Parfüm du heute tragen solltest – und warum
-• Antippen öffnet Clawds Duftschrank: Schreib auf, welche Parfüms du hast, oder schick ein Foto von einem oder mehreren Flakons – Clawd erkennt jedes, beschreibt es und merkt es sich
-• Pro Parfüm: Mag ich, Okay oder Mag ich nicht – Clawd bevorzugt, was du magst, und schlägt nie vor, was dir nicht gefällt
-• Echte Bilder der Flakons: Clawd sucht zu jedem Parfüm von selbst ein Produktbild im Netz (es geht nur der Name hinaus) – neben dem Vorschlag in Widget und Duftschrank und in der Sammlung; bei einem Foto schneidet er deinen Flakon aus
-• Passt ein Bild nicht: „Bild suchen“ und ein anderes wählen – oder ein eigenes Foto nehmen
-• Wer berät dich? Du wählst, ob Clawd oder das ZENITH-Z neben dem Vorschlag steht
-• Der Tagesvorschlag nimmt das Wetter deines Ortes, die Jahreszeit und den Wochentag dazu und wechselt ab
-• Analyse und Fotos über deinen API-Schlüssel bei „Frag Clawd“ (Fotos mit Claude oder Gemini); ohne Schlüssel wählt Clawd nach Temperatur und Geschmack allein
+🧴 Der Duftschrank als eigene App
+• Neu: die App „Duftschrank“ (Clawds Parfüm-Berater, ohne den Rest des Launchers) – zum Herunterladen bei den Releases
+• Parfüms aufschreiben oder fotografieren, echte Flakon-Bilder, Mag ich / Mag ich nicht, jeden Tag das passende nach Wetter
+• Mit Widget für jeden Launcher (auch Samsungs One UI Home): heutiges Parfüm mit Bild, ganzem Namen und Begründung
+• Den API-Schlüssel trägst du im Duftschrank selbst ein (Claude, Gemini und andere)
 
-⬜ Das Dock
-• Das vierte Icon im Dock ist nicht mehr kleiner als die anderen: alle Icons passen sich der Breite der Leiste an
+👁 Lesbarer
+• Der Name des Parfüms steht ganz da, bis zu drei Zeilen – nicht mehr abgeschnitten
+• Clawd und das ZENITH-Z einzeln ein- und ausschaltbar; beide aus gibt dem Text am meisten Platz
 
-Seit 19.6: sieben neue Geheimmenüs, Verstecke aus den Hearth-, OMEGA- und ZENITH-Jahren – im System selbst zu finden, 54 Easter Eggs
+Seit 19.7: Clawd-Parfüm-Widget mit echten Flakon-Bildern, das Dock mit gleich großen Icons
+Seit 19.6: sieben neue Geheimmenüs, Verstecke im System selbst, 54 Easter Eggs
 Seit 19.5: der Z-Angriff überall im System, die Wächter im Schutzschild, 26 Vorteile in „Warum ZENITH“
-Seit 19.3: Core Enforcer Studio, ColorOS-Look mit freier Uhr und freiem Dock
 Seit 19.0: ZENITH-Tresor, ZENITH-Schutzschild, Sicherungen mit Passwort

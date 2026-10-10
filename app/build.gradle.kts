@@ -12,9 +12,9 @@ android {
         applicationId = "dev.hearth.launcher"
         minSdk = 28
         targetSdk = 35
-        versionCode = 168
+        versionCode = 169
         // Small updates (fixes, little things) +0.1, big ones (many features, redesign) +0.5.
-        versionName = "19.7"
+        versionName = "19.8"
         // Hearth One (everything in one app) says so; the separate apps don't.
         buildConfigField("boolean", "ALL_IN_ONE", "false")
     }
@@ -29,8 +29,9 @@ android {
         }
     }
 
-    // Three apps from one code base: Hearth (the launcher), Glimmer (the island, lock screen) and
-    // Clawd (his widgets for any launcher). They talk through a signature-protected bridge.
+    // Four apps from one code base: Hearth (the launcher), Glimmer (the island, lock screen),
+    // Clawd (his widgets for any launcher) and the Duftschrank (his perfume advisor). They talk
+    // through a signature-protected bridge.
     // (The separate control center app is discontinued; Hearth keeps its own.)
     flavorDimensions += "app"
     productFlavors {
@@ -46,6 +47,12 @@ android {
         create("clawd") {
             dimension = "app"
             applicationId = "dev.hearth.clawd"
+        }
+        // Duftschrank: Clawd's perfume advisor on its own – your perfumes, today's choice for the
+        // weather, a widget for any launcher.
+        create("duft") {
+            dimension = "app"
+            applicationId = "dev.hearth.duft"
         }
         // Hearth One: Hearth with Glimmer and Clawd built in, one app. The same package as
         // Hearth, so it installs over it as an update and keeps everything.

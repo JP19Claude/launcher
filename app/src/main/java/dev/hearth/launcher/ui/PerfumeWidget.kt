@@ -43,15 +43,16 @@ internal fun ClawdPerfumeWidget(modifier: Modifier) {
     val shelf by PerfumeShelf.shelf.collectAsState()
     val pick by PerfumeShelf.pick.collectAsState()
     val choosing by PerfumeShelf.busy.collectAsState()
-    val helper by PerfumeShelf.helper.collectAsState()
+    val look by PerfumeShelf.look.collectAsState()
     LaunchedEffect(shelf.size) {
         PerfumeShelf.refreshToday()
         PerfumeShelf.searchPictures()
     }
     val perfume = pick?.let { p -> shelf.firstOrNull { it.id == p.perfumeId } }
+    val figures = (if (look.clawd) 1 else 0) + (if (look.zenith) 1 else 0)
     Row(
         modifier
-            .padding(12.dp)
+            .padding(horizontal = 10.dp, vertical = 10.dp)
             .clickable(remember { MutableInteractionSource() }, indication = null) {
                 runCatching {
                     context.startActivity(Intent(context, dev.hearth.launcher.PerfumeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -59,23 +60,25 @@ internal fun ClawdPerfumeWidget(modifier: Modifier) {
             },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Clawd – or, if you chose it, the ZENITH Z.
-        PerfumeHelperFigure(
-            helper,
-            when {
-                choosing -> ClawdMood.Thinking
-                perfume != null -> ClawdMood.Love
-                else -> ClawdMood.Idle
-            },
-            Modifier.fillMaxHeight(0.6f).width(60.dp),
-        )
-        Spacer(Modifier.width(8.dp))
+        // Clawd, the ZENITH Z, both or nobody – as chosen (nobody leaves the most room for the name).
+        if (figures > 0) {
+            PerfumeHelperFigure(
+                look,
+                when {
+                    choosing -> ClawdMood.Thinking
+                    perfume != null -> ClawdMood.Love
+                    else -> ClawdMood.Idle
+                },
+                Modifier.fillMaxHeight(0.5f).width((46 * figures).dp),
+            )
+            Spacer(Modifier.width(6.dp))
+        }
         Box(
             Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 20.dp, bottomEnd = 20.dp, bottomStart = 20.dp))
                 .background(Color.White.copy(alpha = 0.92f))
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = 12.dp, vertical = 9.dp),
         ) {
             Column {
                 when {
@@ -88,21 +91,25 @@ internal fun ClawdPerfumeWidget(modifier: Modifier) {
                         overflow = TextOverflow.Ellipsis,
                     )
                     perfume != null -> {
+                        Text("HEUTE", color = Color(0xFF6B675F), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.5.sp)
+                        // The whole name, over as many lines as it needs.
                         Text(
-                            "Heute: ${perfume.title}",
+                            perfume.title,
                             color = Color(0xFF2B2A27),
-                            fontSize = 14.sp,
+                            fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
-                            maxLines = 1,
+                            lineHeight = 18.sp,
+                            maxLines = 3,
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
                             pick?.reason.orEmpty(),
-                            color = Color(0xFF2B2A27),
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                            maxLines = 4,
+                            color = Color(0xFF4A4740),
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp,
+                            maxLines = 3,
                             overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 3.dp),
                         )
                     }
                     else -> Text(
@@ -119,7 +126,7 @@ internal fun ClawdPerfumeWidget(modifier: Modifier) {
         // The picture of the perfume beside it.
         if (perfume != null) {
             Spacer(Modifier.width(8.dp))
-            PerfumePicture(perfume, Modifier.size(76.dp))
+            PerfumePicture(perfume, Modifier.size(88.dp))
         }
     }
 }

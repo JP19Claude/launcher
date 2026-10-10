@@ -23,13 +23,14 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build debug APKs (Hearth, Glimmer, Clawd, Hearth UI)
+      - name: Build debug APKs (Hearth, Glimmer, Clawd, Duftschrank, Hearth UI)
         run: |
           chmod +x gradlew
-          ./gradlew assembleHearthDebug assembleGlimmerDebug assembleClawdDebug assembleOneDebug
+          ./gradlew assembleHearthDebug assembleGlimmerDebug assembleClawdDebug assembleDuftDebug assembleOneDebug
           cp app/build/outputs/apk/hearth/debug/app-hearth-debug.apk Hearth.apk
           cp app/build/outputs/apk/glimmer/debug/app-glimmer-debug.apk Glimmer.apk
           cp app/build/outputs/apk/clawd/debug/app-clawd-debug.apk Clawd.apk
+          cp app/build/outputs/apk/duft/debug/app-duft-debug.apk Duft.apk
           cp app/build/outputs/apk/one/debug/app-one-debug.apk HearthUI.apk
 
       - uses: actions/upload-artifact@v4
@@ -39,6 +40,7 @@ jobs:
             Hearth.apk
             Glimmer.apk
             Clawd.apk
+            Duft.apk
             HearthUI.apk
 
       # Once: every earlier version of every app as its own release (oldest first, so they
@@ -98,6 +100,7 @@ jobs:
           for entry in "Hearth.apk|hearth|Hearth|Hearth|der Launcher" \
                        "Glimmer.apk|glimmer|Glimmer|Glimmer|die Insel um die Kamera" \
                        "Clawd.apk|clawd|Clawd|Clawd|Clawds Widgets für jeden Launcher, sein Tamagotchi und Chat" \
+                       "Duft.apk|duft|Duftschrank|Duftschrank|Clawds Parfüm-Berater als eigene App: deine Parfüms, das passende für heute, Widget für jeden Launcher" \
                        "HearthUI.apk|hearthone|ZENITH|ZENITH|Launcher, Glimmer und Clawd in einer App"; do
             IFS='|' read -r file slug name title what <<< "$entry"
             tag="$slug-v$v"
@@ -135,12 +138,12 @@ jobs:
           notes = open(".github/whatsnew.md").read().strip() if os.path.exists(".github/whatsnew.md") else ""
           base = f"https://github.com/{repo}/releases/download/{tag}/"
           out = {"version": v, "build": build, "notes": notes}
-          for slug, file in [("hearth", "Hearth.apk"), ("glimmer", "Glimmer.apk"), ("clawd", "Clawd.apk"), ("hearthone", "HearthUI.apk")]:
+          for slug, file in [("hearth", "Hearth.apk"), ("glimmer", "Glimmer.apk"), ("clawd", "Clawd.apk"), ("duft", "Duft.apk"), ("hearthone", "HearthUI.apk")]:
               out[slug] = {"version": v, "build": build, "url": base + file, "size": os.path.getsize(file)}
           json.dump(out, open("versions.json", "w"), ensure_ascii=False, indent=1)
           PY
-          gh release create "build-${{ github.run_number }}" Hearth.apk Glimmer.apk Clawd.apk HearthUI.apk versions.json \
+          gh release create "build-${{ github.run_number }}" Hearth.apk Glimmer.apk Clawd.apk Duft.apk HearthUI.apk versions.json \
             --target "${{ github.sha }}" \
             --title "Hearth Build ${{ github.run_number }}" \
-            --notes "HearthUI.apk (ZENITH: alles in einer App), Hearth.apk (Launcher), Glimmer.apk (Insel) und Clawd.apk (Clawds Widgets für jeden Launcher). Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
+            --notes "HearthUI.apk (ZENITH: alles in einer App), Hearth.apk (Launcher), Glimmer.apk (Insel), Clawd.apk (Clawds Widgets für jeden Launcher) und Duft.apk (der Duftschrank, Clawds Parfüm-Berater). Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
             --latest

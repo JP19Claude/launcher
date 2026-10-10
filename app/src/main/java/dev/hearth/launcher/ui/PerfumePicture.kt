@@ -4,6 +4,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -21,7 +24,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.Perfume
-import dev.hearth.launcher.data.PerfumeHelper
+import dev.hearth.launcher.data.PerfumeLook
 import dev.hearth.launcher.data.PerfumeShelf
 
 /*
@@ -31,7 +34,7 @@ import dev.hearth.launcher.data.PerfumeShelf
  */
 
 /** The colour of a perfume's scent family and notes, for its drawn bottle. */
-private fun perfumeTone(p: Perfume): Color {
+internal fun perfumeTone(p: Perfume): Color {
     val text = (p.family + " " + p.notes.joinToString(" ")).lowercase()
     fun has(vararg words: String) = words.any { it in text }
     return when {
@@ -99,15 +102,20 @@ internal fun PerfumePicture(perfume: Perfume, modifier: Modifier = Modifier, cor
     }
 }
 
-/** Who stands beside the advice: Clawd in his mood, or the ZENITH Z (it dims while it thinks). */
+/**
+ * Who stands beside the advice: Clawd in his mood, the ZENITH Z (it dims while it thinks), both side
+ * by side – or nobody, when both are switched off.
+ */
 @Composable
-internal fun PerfumeHelperFigure(helper: PerfumeHelper, mood: ClawdMood, modifier: Modifier = Modifier) {
-    if (helper == PerfumeHelper.Clawd) {
-        Clawd(modifier, mood = mood)
-    } else {
-        Canvas(modifier) {
-            val w = size.width * 0.9f
-            drawZenithZ((size.width - w) / 2f, (size.height - w * ZenithZAspect) / 2f, w, light = if (mood == ClawdMood.Thinking) 0.55f else 1f)
+internal fun PerfumeHelperFigure(look: PerfumeLook, mood: ClawdMood, modifier: Modifier = Modifier) {
+    if (!look.clawd && !look.zenith) return
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        if (look.clawd) Clawd(Modifier.weight(1f).fillMaxHeight(), mood = mood)
+        if (look.zenith) {
+            Canvas(Modifier.weight(1f).fillMaxHeight()) {
+                val w = size.width * 0.9f
+                drawZenithZ((size.width - w) / 2f, (size.height - w * ZenithZAspect) / 2f, w, light = if (mood == ClawdMood.Thinking) 0.55f else 1f)
+            }
         }
     }
 }

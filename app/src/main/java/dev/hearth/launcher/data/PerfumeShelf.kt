@@ -1,6 +1,7 @@
 package dev.hearth.launcher.data
 
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -37,10 +38,18 @@ enum class PerfumeTaste(val label: String, val key: String) {
     Dislike("Mag ich nicht", "dislike"),
 }
 
-/** Who stands beside the advice: Clawd, or the ZENITH mark. */
-enum class PerfumeHelper(val label: String, val display: String, val cupboard: String) {
-    Clawd("Clawd", "Clawd", "Clawds Duftschrank"),
-    Zenith("ZENITH", "ZENITH", "ZENITH-Duftschrank"),
+/** Who stands beside the advice: Clawd, the ZENITH Z, both – or nobody (more room for the text). */
+data class PerfumeLook(val clawd: Boolean = true, val zenith: Boolean = false) {
+    /** How the texts call the one who advises. */
+    val display: String get() = if (zenith && !clawd) "ZENITH" else "Clawd"
+
+    /** The shelf's name. */
+    val cupboard: String
+        get() = when {
+            clawd && !zenith -> "Clawds Duftschrank"
+            zenith && !clawd -> "ZENITH-Duftschrank"
+            else -> "Duftschrank"
+        }
 }
 
 /** One perfume of the collection, as Clawd knows it. */
@@ -72,8 +81,14 @@ data class Perfume(
     /** Whether Clawd has looked at it yet (without a key he only keeps the name). */
     val analysed: Boolean get() = family.isNotBlank() || summary.isNotBlank()
 
-    /** House and name, once. */
-    val title: String get() = if (house.isNotBlank() && !name.contains(house, ignoreCase = true)) "$house $name" else name
+    /** House and name, each once ("Emporio Armani" + "Armani Stronger With You" is one Armani). */
+    val title: String
+        get() {
+            if (house.isBlank() || name.contains(house, ignoreCase = true)) return name
+            val last = house.substringAfterLast(' ')
+            val rest = if (name.startsWith("$last ", ignoreCase = true)) name.substring(last.length + 1) else name
+            return "$house $rest"
+        }
 
     fun toJson(): JSONObject = JSONObject()
         .put("id", id).put("name", name).put("house", house).put("family", family)
@@ -167,6 +182,9 @@ object PerfumeShelf {
 
     private const val PREFS = "hearth_perfume"
 
+    /** Sent to the app itself whenever the shelf or today's choice changes. */
+    const val REFRESH_ACTION = "dev.hearth.perfume.REFRESH"
+
     private lateinit var prefs: SharedPreferences
     private lateinit var app: Context
 
@@ -181,12 +199,12 @@ object PerfumeShelf {
     /** The city the weather comes from ("" until one is set). */
     val city: StateFlow<String> = _city.asStateFlow()
 
-    private val _helper = MutableStateFlow(PerfumeHelper.Clawd)
+    private val _look = MutableStateFlow(PerfumeLook())
 
-    /** Who stands beside the advice (the widget and the shelf show Clawd or the ZENITH mark). */
-    val helper: StateFlow<PerfumeHelper> = _helper.asStateFlow()
+    /** Who stands beside the advice (the widget and the shelf show Clawd, the ZENITH Z, both or nobody). */
+    val look: StateFlow<PerfumeLook> = _look.asStateFlow()
 
-    private val who: String get() = _helper.value.display
+    private val who: String get() = _look.value.display
 
     private val _busy = MutableStateFlow(false)
 
@@ -212,7 +230,13 @@ object PerfumeShelf {
         ClaudeAssistant.init(context)
         app = context.applicationContext
         prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        _helper.value = PerfumeHelper.entries.firstOrNull { it.name == prefs.getString("helper", null) } ?: PerfumeHelper.Clawd
+        // Earlier there was one choice, "helper": Clawd or Zenith.
+        val legacy = prefs.getString("helper", null)
+        _look.value = if (prefs.contains("lookClawd")) {
+            PerfumeLook(prefs.getBoolean("lookClawd", true), prefs.getBoolean("lookZenith", false))
+        } else {
+            PerfumeLook(clawd = legacy != "Zenith", zenith = legacy == "Zenith")
+        }
         _shelf.value = runCatching {
             val array = JSONArray(prefs.getString("shelf", "[]"))
             (0 until array.length()).mapNotNull { array.optJSONObject(it)?.let(Perfume::fromJson) }
@@ -227,8 +251,14 @@ object PerfumeShelf {
         }
     }
 
+    /** Tells the app's own home screen widget (the Duftschrank app) to draw itself again. */
+    private fun changed() {
+        runCatching { app.sendBroadcast(Intent(REFRESH_ACTION).setPackage(app.packageName)) }
+    }
+
     private fun saveShelf() {
         prefs.edit().putString("shelf", JSONArray(_shelf.value.map { it.toJson() }).toString()).apply()
+        changed()
     }
 
     private fun savePick() {
@@ -239,6 +269,7 @@ object PerfumeShelf {
             .putString("pickWhy", p?.reason)
             .putString("pickWeather", p?.weather)
             .apply()
+        changed()
     }
 
     private fun today(): String = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
@@ -259,9 +290,10 @@ object PerfumeShelf {
         }
     }
 
-    fun setHelper(helper: PerfumeHelper) {
-        _helper.value = helper
-        prefs.edit().putString("helper", helper.name).apply()
+    fun setLook(clawd: Boolean, zenith: Boolean) {
+        _look.value = PerfumeLook(clawd, zenith)
+        prefs.edit().putBoolean("lookClawd", clawd).putBoolean("lookZenith", zenith).apply()
+        changed()
     }
 
     fun remove(id: String) {
