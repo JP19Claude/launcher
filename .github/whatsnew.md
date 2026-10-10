@@ -1,5 +1,9 @@
 ZENITH 19.3 „Core Enforcer“ auf ClaudeOS 6.0 „Helios“
 
+⚡ Der Z-Angriff, mächtiger
+• Der Strahl brennt das echte ZENITH-Z in den Boden – breit und schwer wie im Logo
+• Danach steigt das Metall-Z riesig aus dem Boden auf, mit Lichtband und Schockwellen in Z-Form
+
 🪪 Die Versionskarte
 • Das Z auf einer großen Karte wie bei OxygenOS und ColorOS: Verlauf mit Lichtbögen, riesiges Z mit der Version, „Version aktuell“ unten
 • Das Z ist breiter; gedrückt gehalten schwillt es in die Breite, beim Loslassen federt es zurück

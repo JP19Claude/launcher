@@ -186,6 +186,14 @@ internal object HearthChangelog {
             summary = "Das Core Enforcer Studio: die Werkstatt, in der du dein System umbaust – Look würfeln, Profile speichern, den Z-Angriff in Farbe und Tempo gestalten und alles vom Icon bis zum Glas an einem Ort einstellen.",
             sections = listOf(
                 ChangeSection(
+                    "Der Z-Angriff, mächtiger", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Der Strahl brennt jetzt das echte ZENITH-Z in den Boden – Balken für Balken, so breit und schwer wie im Logo, statt dünner Linien.",
+                        "Dann steigt das Metall-Z riesig aus dem Boden auf, fast so breit wie der Bildschirm, mit grünem Licht an den Kanten; ein Lichtband läuft darüber, Schockwellen in Z-Form breiten sich aus, und am Ende schwillt es an und verglüht.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
                     "Die Versionskarte", Icons.Rounded.Star, Green,
                     listOf(
                         "Wo die Version steht (Software-Update, Telefoninfo), liegt das Z jetzt auf einer großen Karte wie bei OxygenOS und ColorOS: ein Verlauf aus Tiefgrün in Smaragd mit Lichtbögen, oben das riesige Z mit der Version, darunter „ZENITH“, unten „Version aktuell“.",

@@ -13,7 +13,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -46,6 +49,17 @@ import kotlin.random.Random
 
 /** The Z's three strokes on the floor (in the Z's own 0..1 box): top bar, diagonal, bottom bar. */
 private val StrikeTrace = listOf(Offset(0.13f, 0.1f), Offset(0.86f, 0.1f), Offset(0.15f, 0.883f), Offset(0.92f, 0.883f))
+
+/**
+ * The ZENITH Z's three bars on the floor (in the Z's own 0..1 box, as its logo): for each, where
+ * its one side starts and ends and where its other side starts and ends – the beam burns it
+ * from start to end.
+ */
+private val StrikeBars = listOf(
+    listOf(Offset(0.2f, 0f), Offset(0.91f, 0f), Offset(0.08f, 0.199f), Offset(0.766f, 0.199f)),
+    listOf(Offset(0.535f, 0.199f), Offset(0.161f, 0.766f), Offset(0.766f, 0.199f), Offset(0.355f, 0.766f)),
+    listOf(Offset(0.161f, 0.766f), Offset(1f, 0.766f), Offset(0.007f, 1f), Offset(0.823f, 1f)),
+)
 
 /** When each stroke is burnt in (fractions of the whole). */
 private val StrikeStrokes = listOf(0.18f to 0.31f, 0.31f to 0.47f, 0.47f to 0.6f)
@@ -221,7 +235,9 @@ internal fun DrawScope.drawZenithStrike(p: Float, tint: Color = ZenithGreen) {
         }
     }
 
-    // The Z burnt into the floor: a wide haze, the green line, a white-hot core.
+    // The ZENITH Z burnt into the floor, bar by bar, as wide and heavy as the logo's: each bar
+    // fills from where the beam starts to where it is, a haze round it, a bright rim, and a
+    // white-hot front where the beam burns.
     val fade = 1f - span(p, 0.64f, 0.84f)
     val flare = span(p, 0.58f, 0.62f) * (1f - span(p, 0.62f, 0.78f))
     var tip: Offset? = null
@@ -231,18 +247,24 @@ internal fun DrawScope.drawZenithStrike(p: Float, tint: Color = ZenithGreen) {
             val (t0, t1) = StrikeStrokes[i]
             val f = span(p, t0, t1)
             if (f <= 0f) continue
-            val from = trace(i, 0f)
-            val to = trace(i, f)
-            val a = onZ(from)
-            val b = onZ(to)
-            val sa = (1f + flare * 1.2f) / zDepth(from)
-            val sb = (1f + flare * 1.2f) / zDepth(to)
-            burn(path, a, b, unit * 0.07f * sa, unit * 0.07f * sb, green.copy(alpha = 0.16f * fade))
-            burn(path, a, b, unit * 0.026f * sa, unit * 0.026f * sb, bright.copy(alpha = 0.5f * fade))
-            burn(path, a, b, unit * 0.009f * sa, unit * 0.009f * sb, white.copy(alpha = 0.95f * fade))
+            val bar = StrikeBars[i]
+            val s0 = bar[0]
+            val e0 = bar[1]
+            val s1 = bar[2]
+            val e1 = bar[3]
+            val front0 = s0 + (e0 - s0) * f
+            val front1 = s1 + (e1 - s1) * f
+            val corners = listOf(onZ(s0), onZ(front0), onZ(front1), onZ(s1))
+            path.reset()
+            corners.forEachIndexed { k, c -> if (k == 0) path.moveTo(c.x, c.y) else path.lineTo(c.x, c.y) }
+            path.close()
+            drawPath(path, green.copy(alpha = 0.14f * fade), style = Stroke(unit * 0.05f, join = StrokeJoin.Round), blendMode = plus)
+            drawPath(path, green.copy(alpha = ((0.28f + 0.3f * flare) * fade).coerceIn(0f, 1f)), blendMode = plus)
+            drawPath(path, mint.copy(alpha = 0.8f * fade), style = Stroke(unit * 0.008f, join = StrokeJoin.Round), blendMode = plus)
             if (f < 1f) {
-                tip = b
-                tipDepth = zDepth(to)
+                drawLine(white, corners[1], corners[2], unit * 0.012f, StrokeCap.Round, blendMode = plus)
+                tip = (corners[1] + corners[2]) / 2f
+                tipDepth = (zDepth(front0) + zDepth(front1)) / 2f
             }
         }
     }
@@ -333,6 +355,56 @@ internal fun DrawScope.drawZenithStrike(p: Float, tint: Color = ZenithGreen) {
         path.close()
         drawPath(path, green.copy(alpha = (1f - k) * 0.3f), blendMode = plus)
         drawPath(path, mint.copy(alpha = (1f - k) * 0.9f), style = Stroke(unit * 0.003f + 0.5f), blendMode = plus)
+    }
+
+    // The ZENITH Z rises out of the floor, huge – the logo's metal Z with its green light, nearly
+    // as wide as the screen; a band of light runs over it, Z-shaped shock waves spread from it,
+    // and at the end it swells and fades.
+    val rise = span(p, 0.58f, 0.7f)
+    if (rise > 0f) {
+        val ending = span(p, 0.86f, 1f)
+        val shown = (rise * (1f - ending)).coerceIn(0f, 1f)
+        val eased = 1f - (1f - rise) * (1f - rise) * (1f - rise)
+        val zw = minOf(w * 0.94f, h * 0.55f / ZenithZAspect)
+        val zh = zw * ZenithZAspect
+        val floorY = onZ(Offset(0.5f, 0.5f)).y
+        val restY = h * 0.42f
+        val midY = floorY + (restY - floorY) * eased
+        val middle = Offset(w / 2f, midY)
+        val swell = 1f + 0.12f * ending
+        drawCircle(
+            Brush.radialGradient(listOf(green.copy(alpha = 0.35f * shown), Color.Transparent), center = middle, radius = zw * 0.75f),
+            radius = zw * 0.75f,
+            center = middle,
+            blendMode = plus,
+        )
+        withTransform({
+            scale((0.7f + 0.3f * eased) * swell, (0.15f + 0.85f * eased) * swell, middle)
+        }) {
+            val layer = Paint().apply { alpha = shown }
+            drawContext.canvas.saveLayer(Rect(0f, 0f, w, h), layer)
+            drawZenithZ(w / 2f - zw / 2f, midY - zh / 2f, zw, light = 1f, charge = span(p, 0.62f, 0.86f))
+            drawContext.canvas.restore()
+            // Its edges in the Z-Angriff's color (green, or what the studio chose).
+            drawPath(
+                zenithZPath(w / 2f - zw / 2f, midY - zh / 2f, zw),
+                hud.copy(alpha = 0.55f * shown),
+                style = Stroke(zw * 0.006f, join = StrokeJoin.Round),
+                blendMode = plus,
+            )
+        }
+        for (start in listOf(0.68f, 0.76f)) {
+            val q = span(p, start, start + 0.25f)
+            if (q <= 0f || q >= 1f) continue
+            withTransform({ scale(1f + 0.5f * q, 1f + 0.5f * q, Offset(w / 2f, restY)) }) {
+                drawPath(
+                    zenithZPath(w / 2f - zw / 2f, restY - zh / 2f, zw),
+                    hud.copy(alpha = 0.7f * (1f - q)),
+                    style = Stroke((unit * 0.01f * (1f - q) + 1f) / (1f + 0.5f * q)),
+                    blendMode = plus,
+                )
+            }
+        }
     }
 
     // The shockwave running over the floor.
