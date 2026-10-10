@@ -316,8 +316,8 @@ fun ClawdIlluminationScreen(
             }
             IlluminationSection("Uhr & Clawd") {
                 IlluminationSwitch(
-                    "🕛", "Sonnen-Ziffern",
-                    "Jede Null in den Uhren wird zur Sonne – 1☉:☉5.",
+                    "🕛", "Ω-Ziffern",
+                    "Jede Null in den Uhren wird zum Ω – 1Ω:Ω5. Ein Stück OMEGA in ZENITH.",
                     settings.omegaZeros,
                 ) { v -> onChange { it.copy(omegaZeros = v) } }
                 IlluminationSwitch(

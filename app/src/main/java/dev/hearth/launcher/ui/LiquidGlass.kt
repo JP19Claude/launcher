@@ -462,7 +462,8 @@ fun LiquidGlass(
     val style = LocalGlassStyle.current
     val light = LocalGlassLight.current
     val backdrop = LocalBackdrop.current
-    val glassShape = RoundedCornerShape(cornerRadius)
+    // ZENITH Metall: ZENITH's own shape – two corners cut off like the ends of the Z's bars.
+    val glassShape: androidx.compose.ui.graphics.Shape = if (style.zenith) ZenithCutShape(cornerRadius * 0.7f) else RoundedCornerShape(cornerRadius)
     val density = LocalDensity.current
     val radiusPx = with(density) { cornerRadius.toPx() }
     val refractionPx = with(density) { refraction.toPx() } * style.refraction
@@ -633,7 +634,7 @@ fun LiquidGlass(
                 .drawBehind {
                     // ZENITH Metall: the logo's metal and light instead of glass.
                     if (style.zenith) {
-                        drawZenithSurface(min(radiusPx, size.minDimension / 2f), fill, glow, touch)
+                        drawZenithSurface(glassShape.createOutline(size, layoutDirection, this), fill, glow, touch)
                         return@drawBehind
                     }
                     val outline = glassShape.createOutline(size, layoutDirection, this)

@@ -520,6 +520,10 @@ data class LauncherSettings(
     val omegaColor: OmegaColor = OmegaColor.Zenith,
     /** ZENITH 19: Zenith's colors follow the sun – gold in the morning, green at noon, glow at dusk, moon blue at night. */
     val zenithDaylight: Boolean = true,
+    /** ZENITH 19: ZENITH's own background on the home screen instead of the wallpaper. */
+    val zenithWallpaper: Boolean = false,
+    /** ZENITH 19: after the phone starts, the Z lights up once before the home screen. */
+    val zenithBootIntro: Boolean = true,
     /** OMEGA UI 17.1: flowing effects at a calmer rate and lighter glass – smoother, less lag. */
     val smoothMode: Boolean = true,
     /** OMEGA UI 17.5: OMEGA light between the wallpaper and the home screen's apps and widgets. */
@@ -915,7 +919,7 @@ data class LauncherSettings(
         const val MAX_DOCK = 6
 
         /** Current default look; installs with a lower [designVersion] get it once. */
-        const val DESIGN_VERSION = 11
+        const val DESIGN_VERSION = 12
     }
 }
 
@@ -1039,6 +1043,8 @@ class SettingsRepository(context: Context) {
             omegaGlass = prefs.getBoolean("omegaGlass", d.omegaGlass),
             omegaColor = enumOf("omegaColor", d.omegaColor),
             zenithDaylight = prefs.getBoolean("zenithDaylight", d.zenithDaylight),
+            zenithWallpaper = prefs.getBoolean("zenithWallpaper", d.zenithWallpaper),
+            zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
             smoothMode = prefs.getBoolean("smoothMode", d.smoothMode),
             omegaLight = prefs.getBoolean("omegaLight", d.omegaLight),
             illumination = prefs.getBoolean("illumination", d.illumination),
@@ -1216,6 +1222,8 @@ class SettingsRepository(context: Context) {
             .putBoolean("omegaGlass", s.omegaGlass)
             .putString("omegaColor", s.omegaColor.name)
             .putBoolean("zenithDaylight", s.zenithDaylight)
+            .putBoolean("zenithWallpaper", s.zenithWallpaper)
+            .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("smoothMode", s.smoothMode)
             .putBoolean("omegaLight", s.omegaLight)
             .putBoolean("illumination", s.illumination)

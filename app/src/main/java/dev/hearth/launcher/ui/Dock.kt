@@ -134,7 +134,7 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
         DockStyle.Zenith -> androidx.compose.foundation.layout.BoxWithConstraints(
             modifier
                 .fillMaxWidth()
-                .drawBehind { drawZenithPlate(slant = size.height * 0.3f, unit = 190.dp.toPx()) },
+                .drawBehind { drawZenithPlate(slant = size.height * 0.36f, unit = 190.dp.toPx()) },
         ) {
             // Big icons, every one the same size, as big as fits (up to 78 dp): each takes its
             // icon plus 18 dp of cell.
@@ -144,7 +144,7 @@ fun Dock(apps: List<AppInfo>, actions: AppActions, modifier: Modifier = Modifier
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 17.dp),
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) { iconsSized(iconSize) }

@@ -542,6 +542,17 @@ fun LauncherScreen(vm: LauncherViewModel) {
 
     val light = rememberGlassLight(settings.glassMotion)
     val glassStyle = remember(settings) { GlassStyle.from(settings) }
+    // ZENITH 19: ZENITH's own background – made once, off the main thread; the metal over it
+    // blurs it instead of the wallpaper.
+    val zenithWall by androidx.compose.runtime.produceState<ZenithWall?>(null, settings.zenithWallpaper) {
+        value = if (settings.zenithWallpaper) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { runCatching { makeZenithWall(context) }.getOrNull() }
+        } else {
+            null
+        }
+    }
+    // ZENITH 19: after the phone starts, the Z lights up once.
+    var bootIntro by remember { mutableStateOf(settings.zenithBootIntro && dev.hearth.launcher.BuildConfig.ALL_IN_ONE && ZenithBoot.isNewStart(context)) }
     val menuBlur by animateDpAsState(
         targetValue = when {
             controlOpen -> 24.dp
@@ -669,7 +680,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     }
 
     CompositionLocalProvider(
-        LocalBackdrop provides backdrop,
+        LocalBackdrop provides (zenithWall?.backdrop ?: backdrop),
         LocalSettings provides settings,
         LocalGlassStyle provides glassStyle,
         LocalGlassLight provides light,
@@ -743,6 +754,15 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             onSwipeDown = onSwipeDown,
                         ),
                 ) {
+                    // ZENITH 19: ZENITH's own background instead of the wallpaper.
+                    zenithWall?.let { wall ->
+                        androidx.compose.foundation.Image(
+                            bitmap = wall.image,
+                            contentDescription = null,
+                            modifier = Modifier.matchParentSize(),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        )
+                    }
                     // OMEGA UI 17.5: OMEGA light between the wallpaper and the apps and widgets.
                     OmegaHomeLight(Modifier.matchParentSize())
                     // OMEGA UI 18: the perks behind the apps and widgets (and Claude Mythos's Clawd).
@@ -1266,6 +1286,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     HearthUi.markOmegaSeen(context)
                     showOmega = false
                 }
+            }
+            // ZENITH 19: the Z lights up once after the phone starts.
+            if (bootIntro && !showOmega) {
+                ZenithBootIntro { bootIntro = false }
             }
 
             drag?.let { d ->

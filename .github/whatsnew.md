@@ -1,5 +1,11 @@
 ZENITH 19 auf ClaudeOS 6.0 „Helios“ – aus OMEGA UI wird ZENITH, die Sonne im höchsten Punkt
 
+🆕 Ein neues Produkt
+• ZENITHs eigene Form: alle Flächen mit zwei schräg abgeschnittenen Ecken wie das Z
+• ZENITHs eigener Hintergrund: schwarzes Metall, das Z mit grünem Licht
+• ZENITH-Start: nach dem Neustart leuchtet das Metall-Z einmal auf
+• Flacheres Dock, Ω-Ziffern bleiben in den Illuminati
+
 ✊ Das Z zum Anfassen
 • Überall antwortet das ZENITH-Z: drücken lässt es grün glühen, tippen und halten machen verschiedene Dinge
 • Seitenpunkte, Suchleiste, Now Brief und ZENITH-Menü: ZENITH-Menü, Claude, geheime Codes

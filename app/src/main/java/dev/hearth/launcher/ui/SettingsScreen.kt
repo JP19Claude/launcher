@@ -380,6 +380,16 @@ fun SettingsScreen(
                             checked = s.zenithDaylight,
                         ) { v -> update { it.copy(zenithDaylight = v) } }
                     }
+                    SwitchRow(
+                        label = "ZENITH-Hintergrund",
+                        description = "ZENITHs eigener Hintergrund auf dem Startbildschirm: das Metall-Z mit seinem grünen Licht – statt deines Hintergrundbilds",
+                        checked = s.zenithWallpaper,
+                    ) { v -> update { it.copy(zenithWallpaper = v) } }
+                    SwitchRow(
+                        label = "ZENITH-Start",
+                        description = "Nach jedem Neustart des Handys leuchtet einmal das Metall-Z auf, bevor der Startbildschirm kommt",
+                        checked = s.zenithBootIntro,
+                    ) { v -> update { it.copy(zenithBootIntro = v) } }
                     RowDivider()
                     SwitchRow(
                         label = "ZENITH-Licht",

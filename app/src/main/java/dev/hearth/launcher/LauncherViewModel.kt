@@ -275,6 +275,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 if (s.designVersion < 11 && s.galaxyClaude) {
                     s = s.copy(glassLook = dev.hearth.launcher.data.GlassLook.Zenith)
                 }
+                // 12: ZENITH as a product of its own – its own background on the home screen.
+                if (s.designVersion < 12 && s.galaxyClaude) {
+                    s = s.copy(zenithWallpaper = true)
+                }
                 s.copy(designVersion = LauncherSettings.DESIGN_VERSION)
             }
         }

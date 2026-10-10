@@ -265,5 +265,5 @@ internal fun ClawdParade(modifier: Modifier = Modifier) {
     }
 }
 
-/** Sonnen-Ziffern (once Ω-Ziffern): the zeros of a clock as suns. */
-internal fun omegaDigits(text: String, on: Boolean): String = if (on) text.replace('0', '☉') else text
+/** Ω-Ziffern: the zeros of a clock as Ω – OMEGA's, kept in ZENITH. */
+internal fun omegaDigits(text: String, on: Boolean): String = if (on) text.replace('0', 'Ω') else text

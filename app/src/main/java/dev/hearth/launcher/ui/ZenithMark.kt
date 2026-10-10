@@ -12,6 +12,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.addOutline
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -370,14 +372,67 @@ internal fun DrawScope.drawZenithEdge(corner: Float, strength: Float = 1f, press
 }
 
 /**
- * "ZENITH Metall": a surface of the logo's dark metal instead of glass, filling this scope –
- * smoked [fill] over the blurred wallpaper, brushed light from the top left, worn scratches on
- * the bigger plates, a green glow where it's [touch]ed ([glow] 0..1) and ZENITH's edge light.
+ * ZENITH's shape: a plate with two corners cut off at a slant – the top left and the bottom
+ * right, like the ends of the Z's bars – the other two square. [cut] is how much is cut off.
  */
-internal fun DrawScope.drawZenithSurface(corner: Float, fill: Color, glow: Float, touch: Offset) {
-    val r = CornerRadius(corner)
-    drawRoundRect(fill, cornerRadius = r)
-    drawRoundRect(
+class ZenithCutShape(private val cut: Dp) : androidx.compose.ui.graphics.Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        density: androidx.compose.ui.unit.Density,
+    ): androidx.compose.ui.graphics.Outline {
+        val c = with(density) { cut.toPx() }.coerceIn(0f, minOf(size.width, size.height) * 0.4f)
+        val path = Path().apply {
+            moveTo(c, 0f)
+            lineTo(size.width, 0f)
+            lineTo(size.width, size.height - c)
+            lineTo(size.width - c, size.height)
+            lineTo(0f, size.height)
+            lineTo(0f, c)
+            close()
+        }
+        return androidx.compose.ui.graphics.Outline.Generic(path)
+    }
+}
+
+/** ZENITH's edge light along any [outline]: silver on top, green light along the foot (see [drawZenithEdge]). */
+internal fun DrawScope.drawZenithOutlineEdge(outline: androidx.compose.ui.graphics.Outline, strength: Float = 1f, press: Float = 0f) {
+    val k = (strength * (1f + 0.6f * press)).coerceIn(0f, 2f)
+    val px = 1.dp.toPx()
+    drawOutline(
+        outline,
+        Brush.verticalGradient(
+            0f to Color(0xFFE6EBF0).copy(alpha = 0.6f),
+            0.3f to Color.White.copy(alpha = 0.05f),
+            0.6f to Color.Transparent,
+        ),
+        style = Stroke(px),
+    )
+    fun foot(width: Float, color: Color, a: Float) = drawOutline(
+        outline,
+        Brush.verticalGradient(
+            0f to Color.Transparent,
+            0.55f to Color.Transparent,
+            1f to color.copy(alpha = (a * k).coerceIn(0f, 1f)),
+        ),
+        style = Stroke(width),
+    )
+    foot(px * 4f, Color(0xFF2FD25A), 0.28f)
+    foot(px * 1.6f, Color(0xFF46EB6E), 0.8f)
+    foot(px * 0.6f, Color(0xFFD2FFD7), 0.9f)
+    rimSpot(Offset(size.width * 0.6f, size.height - px), minOf(size.width * 0.18f, 26.dp.toPx()), 0.7f * k)
+}
+
+/**
+ * "ZENITH Metall": a surface of the logo's dark metal instead of glass, in [outline] (ZENITH's
+ * cut shape) – smoked [fill] over the blurred background, brushed light from the top left, worn
+ * scratches on the bigger plates, a green glow where it's [touch]ed ([glow] 0..1) and ZENITH's
+ * edge light.
+ */
+internal fun DrawScope.drawZenithSurface(outline: androidx.compose.ui.graphics.Outline, fill: Color, glow: Float, touch: Offset) {
+    drawOutline(outline, fill)
+    drawOutline(
+        outline,
         Brush.linearGradient(
             0f to Color.White.copy(alpha = 0.09f),
             0.45f to Color.Transparent,
@@ -385,10 +440,9 @@ internal fun DrawScope.drawZenithSurface(corner: Float, fill: Color, glow: Float
             start = Offset.Zero,
             end = Offset(size.width * 0.5f, size.height),
         ),
-        cornerRadius = r,
     )
     if (size.minDimension > 80.dp.toPx()) {
-        val plate = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, r)) }
+        val plate = Path().apply { addOutline(outline) }
         val unit = 160.dp.toPx()
         clipPath(plate) {
             ZenithMetal.forEach { m ->
@@ -400,15 +454,15 @@ internal fun DrawScope.drawZenithSurface(corner: Float, fill: Color, glow: Float
         }
     }
     if (glow > 0.01f) {
-        drawRoundRect(
+        drawOutline(
+            outline,
             Brush.radialGradient(
                 0f to Color(0xFF2FD27A).copy(alpha = (0.3f * glow).coerceIn(0f, 1f)),
                 1f to Color.Transparent,
                 center = touch,
                 radius = size.minDimension.coerceAtLeast(1f),
             ),
-            cornerRadius = r,
         )
     }
-    drawZenithEdge(corner, 1f, glow)
+    drawZenithOutlineEdge(outline, 1f, glow)
 }

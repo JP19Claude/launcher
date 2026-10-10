@@ -184,6 +184,17 @@ internal object HearthChangelog {
             summary = "Aus OMEGA UI wird ZENITH – die Sonne im höchsten Punkt, auf der neuen Basis ClaudeOS 6.0 „Helios“: ein neuer Name, ein neues Logo, eine neue Farbe, eine neue Uhr. Alles fühlt sich neu an, und die alten Easter Eggs bleiben.",
             sections = listOf(
                 ChangeSection(
+                    "Ein neues Produkt", Icons.Rounded.Star, Green,
+                    listOf(
+                        "ZENITHs eigene Form: Jede Fläche aus Metall – Widgets, Karten, App-Icons, Menüs, Knöpfe, Einstellungen – hat jetzt zwei schräg abgeschnittene Ecken, oben links und unten rechts, wie die Enden der Balken im Z.",
+                        "ZENITHs eigener Hintergrund: fast schwarz mit einem Hauch Grün, gebürstetes Metall, groß das Metall-Z mit seinem grünen Licht und grünes Licht am unteren Rand – das Metall darüber verschwimmt mit ihm. Abschaltbar unter Design → ZENITH → ZENITH-Hintergrund.",
+                        "ZENITH-Start: Nach jedem Neustart des Handys kommt das Metall-Z aus dem Dunkel, seine grünen Kanten leuchten nacheinander auf, dann der Startbildschirm. (Die echte Boot-Animation von Samsung lässt sich ohne Root nicht ändern.)",
+                        "Das ZENITH-Dock ist flacher, so breit wie zuvor.",
+                        "Die Ω-Ziffern bleiben: In den Illuminati wird jede Null in den Uhren weiter zum Ω.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
                     "Das Z zum Anfassen", Icons.Rounded.Favorite, Green,
                     listOf(
                         "Das ZENITH-Z antwortet jetzt überall: Drückst du es, sammelt sich grünes Licht dahinter und es wächst; kurz tippen macht eins, halten, bis es geladen ist – ein Klopfen und eine grüne Welle in Form des Z –, macht etwas anderes.",
@@ -214,7 +225,7 @@ internal object HearthChangelog {
                         "Ein neues Logo: ein schräges Z aus dunklem, gezeichnetem Metall mit schräg geschnittenen Enden, silberner Kante und grünem Licht an seinen unteren Kanten – darunter „ZENITH“ in weiten Chrom-Buchstaben.",
                         "Gedrückt halten: Das grüne Licht brennt heller und flutet das Metall, ein Lichtband läuft darüber – voll geladen klopft es und eine grüne Welle in Form des Z geht davon aus.",
                         "Alles, was OMEGA hieß, heißt jetzt ZENITH: ZENITH Labs, ZENITH Cloud, ZENITH-Menü, ZENITH-Insel, ZENITH Glass, ZENITH-Uhr, ZENITH-Rand, ZENITH-Abzeichen – und wo „Hearth“ stand, steht ZENITH.",
-                        "Die Ω-Zeichen im System sind jetzt das ZENITH-Z: in Menüs, vor den Seitenpunkten, an der Suchleiste, auf dem Sperrbildschirm, als Wasserzeichen, auf Clawds Brust, im Z-Regen und bei der Clawd-Parade. Aus den Ω-Ziffern werden Sonnen-Ziffern (1☉:☉5).",
+                        "Die Ω-Zeichen im System sind jetzt das ZENITH-Z: in Menüs, vor den Seitenpunkten, an der Suchleiste, auf dem Sperrbildschirm, als Wasserzeichen, auf Clawds Brust, im Z-Regen und bei der Clawd-Parade. Nur die Ω-Ziffern bleiben: In den Illuminati wird jede Null weiter zum Ω (1Ω:Ω5).",
                         "Ein neuer Startbildschirm: das ZENITH-Dock – eine schräge Platte aus dem Metall des Z mit grünem Licht an ihrem Fuß –, ZENITHs eigenes Licht (dunkler Himmel, ein grüner Strahl entlang der Diagonale, grünes Licht von unten), Seitenstriche schräg wie die Balken des Z und die Uhr in Chrom mit grünem Glühen.",
                         "Der Übergang beim ersten Start zeigt das neue Logo: Aus der Nacht steigt ein grünes Licht, und das Metall-Z leuchtet Kante für Kante auf.",
                     ),
