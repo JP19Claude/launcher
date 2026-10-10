@@ -1,5 +1,18 @@
 ZENITH 19 auf ClaudeOS 6.0 „Helios“ – aus OMEGA UI wird ZENITH, die Sonne im höchsten Punkt
 
+🔒 ZENITH-Tresor
+• Fotos, Videos und Dateien verschlüsselt mit AES-256 und deinem Passwort – nur auf diesem Handy
+• Originale erst löschen, wenn die Kopie geprüft ist; auf Wunsch mit Fingerabdruck
+• Keine Screenshots, sperrt sich beim Verlassen; den ganzen Tresor verschlüsselt sichern
+• Passwort vergessen = Inhalt verloren
+
+🔐 Sicherung mit Passwort
+• Einstellungen-Sicherungen auf Wunsch mit AES-256 verschlüsselt
+
+⚡ Der neue Kern-Vollstrecker
+• Ein sechseckiger Kern lädt sich auf und brennt mit einem Strahl ein riesiges Z in einen Boden aus Sechsecken
+• Das Z bricht in grünen Lichtflammen aus, Sechseck-Splitter, Schockwelle
+
 ◈ Projekt Zenith
 • Neuer Modus: das ganze System futuristisch – Hologramm-Flächen, grüne Hologramm-Icons, Computerschrift
 • Gitter-Horizont mit Z-Hologramm als Hintergrund, HUD-Uhr, HUD-Rahmen mit Scanlinie

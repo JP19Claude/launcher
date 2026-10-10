@@ -77,12 +77,6 @@ internal fun OmegaCloudSection(vm: LauncherViewModel) {
             ?.firstOrNull { it.trim().startsWith("*") }
             ?.let { if ("google" in it.lowercase()) "Google-Konto (Google Drive)" else it.trim().removePrefix("*").trim() }
     }
-    val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        if (uri != null) status = if (vm.exportSettings(uri)) "Als Datei gesichert." else "Sichern ging nicht."
-    }
-    val restore = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) status = if (vm.importSettings(uri)) "Wiederhergestellt." else "Diese Datei ist keine ZENITH-Sicherung."
-    }
 
     Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         CloudMark()
@@ -145,15 +139,15 @@ internal fun OmegaCloudSection(vm: LauncherViewModel) {
         Note("Gesichert werden Einstellungen, Startbildschirm, Widgets, Clawd, Glimmer und die Easter Eggs – verschlüsselt mit deiner Bildschirmsperre. Auf einem neuen Handy mit deinem Google-Konto holt Android sie beim Installieren zurück.")
     }
     Section("Als Datei") {
-        ActionRow(
-            label = "In Datei sichern",
-            description = "Alle Einstellungen als Datei (ohne API-Schlüssel)",
-        ) { runCatching { save.launch("ZENITH-Sicherung.json") } }
-        RowDivider()
-        ActionRow(
-            label = "Aus Datei wiederherstellen",
-            description = "Auch auf einem neuen Handy",
-        ) { runCatching { restore.launch(arrayOf("application/json", "text/plain", "*/*")) } }
+        // ZENITH 19: with a password, if wanted (the file is then encrypted).
+        SecureBackupRows(
+            vm = vm,
+            fileName = "ZENITH-Sicherung",
+            saveLabel = "In Datei sichern",
+            saveDescription = "Alle Einstellungen als Datei (ohne API-Schlüssel) – auf Wunsch mit Passwort verschlüsselt",
+            restoreLabel = "Aus Datei wiederherstellen",
+            restoreDescription = "Auch auf einem neuen Handy; verschlüsselte Sicherungen fragen nach ihrem Passwort",
+        )
     }
     status?.let { Note(it) }
 }

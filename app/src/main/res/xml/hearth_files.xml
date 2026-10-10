@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- What Hearth hands to other apps: copies of APKs to share ("APK teilen"). -->
+<!-- What Hearth hands to other apps: copies of APKs to share ("APK teilen") and a file from the
+     ZENITH-Tresor opened in another app (decrypted only for that moment, wiped when it locks). -->
 <paths>
     <cache-path name="apks" path="apks/" />
+    <cache-path name="vault" path="vault-open/" />
 </paths>

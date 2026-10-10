@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Phone
@@ -183,6 +184,39 @@ internal object HearthChangelog {
             name = "ZENITH",
             summary = "Aus OMEGA UI wird ZENITH – die Sonne im höchsten Punkt, auf der neuen Basis ClaudeOS 6.0 „Helios“: ein neuer Name, ein neues Logo, eine neue Farbe, eine neue Uhr. Alles fühlt sich neu an, und die alten Easter Eggs bleiben.",
             sections = listOf(
+                ChangeSection(
+                    "ZENITH-Tresor", Icons.Rounded.Lock, Green,
+                    listOf(
+                        "Neu: der ZENITH-Tresor für Fotos, Videos und Dateien – verschlüsselt mit AES-256 und einem Passwort, das nur du kennst. Im ZENITH-Menü, unter Design → ZENITH und unter Datenschutz.",
+                        "Jede Datei wird Stück für Stück einzeln versiegelt; auch die Liste, was drin ist, und die Vorschaubilder sind verschlüsselt. Alles bleibt auf dem Handy.",
+                        "Originale löschen erst, wenn die verschlüsselte Kopie gelesen und mit dem Original verglichen wurde.",
+                        "Auf Wunsch auch mit Fingerabdruck – über den Hardware-Schlüsselspeicher des Handys; das Passwort bleibt der Generalschlüssel.",
+                        "Keine Screenshots, unsichtbar in den letzten Apps, sperrt sich beim Verlassen; nach falschen Passwörtern wird gewartet.",
+                        "Fotos direkt im Tresor ansehen (mit Zoom), alles andere öffnen oder exportieren.",
+                        "Den ganzen Tresor sichern: eine verschlüsselte Datei mit demselben Passwort – für die Cloud oder ein neues Handy.",
+                        "Wichtig: Wer das Passwort vergisst, verliert den Inhalt. Niemand kann es zurückholen – auch ZENITH nicht.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Sicherung mit Passwort", Icons.Rounded.Lock, Blue,
+                    listOf(
+                        "Einstellungen sichern (Einstellungen und ZENITH Cloud → Als Datei) geht jetzt auch mit Passwort: die Datei wird mit AES-256 verschlüsselt.",
+                        "Beim Wiederherstellen fragt ZENITH nach dem Passwort, wenn die Sicherung eins hat.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Der neue Kern-Vollstrecker", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Der Z-Angriff ganz neu, näher an Zygardes Kern-Vollstrecker: Es wird dunkel, ein Boden aus Sechsecken leuchtet auf.",
+                        "Oben lädt sich ein sechseckiger Kern auf und zieht Lichtpunkte an – dann feuert er einen Strahl auf den Boden.",
+                        "Der Strahl brennt ein riesiges Z in den Boden, Strich für Strich, Funken sprühen.",
+                        "Das Z glüht weiß auf und bricht aus: grüne Lichtflammen schießen entlang des Z nach oben, Sechseck-Splitter fliegen, eine Schockwelle läuft über den Boden.",
+                        "Mit Klopfen bei jedem Strich und einem kräftigen beim Ausbruch – auch systemweit beim Entsperren und im ZENITH-Start.",
+                    ),
+                    everyone,
+                ),
                 ChangeSection(
                     "Projekt Zenith", Icons.Rounded.Star, Green,
                     listOf(

@@ -314,6 +314,11 @@ fun SettingsScreen(
             // own section now.
             if (shows("design")) item {
                 Section("ZENITH") {
+                    ActionRow(
+                        label = "ZENITH-Tresor",
+                        description = "Fotos, Videos und Dateien verschlüsselt, nur mit deinem Passwort",
+                    ) { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.VaultActivity::class.java)) } }
+                    RowDivider()
                     SwitchRow(
                         label = "Projekt Zenith",
                         description = "Das ganze System futuristisch: Hologramm-Flächen mit Leuchtrahmen und Scanlinien, grüne Hologramm-Icons, Computerschrift, ein Gitter-Horizont mit dem Z als Hintergrund, eine HUD-Uhr und ein HUD-Rahmen um den Startbildschirm",
@@ -843,6 +848,16 @@ fun SettingsScreen(
 
             // Without One UI's start page, updates sit with the general settings.
             if (!oneUi) item { Section("Updates") { AppUpdateContent() } }
+
+            // ZENITH 19: the ZENITH-Tresor – photos, videos and files, encrypted with a password.
+            if (shows("privacy")) item {
+                Section("ZENITH-Tresor") {
+                    ActionRow(
+                        label = "ZENITH-Tresor öffnen",
+                        description = "Fotos, Videos und Dateien mit deinem Passwort verschlüsseln (AES-256) – auf Wunsch mit Fingerabdruck",
+                    ) { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.VaultActivity::class.java)) } }
+                }
+            }
 
             if (shows("privacy")) item {
                 Section("App-Sperre") {
@@ -1895,23 +1910,16 @@ private fun OneUICategoryCard(categories: List<SettingsCategory>, onOpen: (Setti
 /** Saving all launcher settings to a file and bringing them back (also onto a new phone). */
 @Composable
 private fun BackupSection(vm: LauncherViewModel) {
-    var status by remember { mutableStateOf<String?>(null) }
-    val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        if (uri != null) status = if (vm.exportSettings(uri)) "Gesichert." else "Sichern ging nicht."
-    }
-    val restore = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) status = if (vm.importSettings(uri)) "Wiederhergestellt." else "Diese Datei ist keine ${dev.hearth.launcher.data.Brand.name}-Sicherung."
-    }
     Section("Sichern & Wiederherstellen") {
-        ActionRow(
-            label = "Einstellungen sichern",
-            description = "Alle Launcher-Einstellungen als Datei (ohne API-Schlüssel)",
-        ) { runCatching { save.launch("${dev.hearth.launcher.data.Brand.name}-Einstellungen.json") } }
-        ActionRow(
-            label = "Einstellungen wiederherstellen",
-            description = "Aus einer gesicherten Datei, auch auf einem neuen Handy",
-        ) { runCatching { restore.launch(arrayOf("application/json", "text/plain", "*/*")) } }
-        status?.let { Note(it) }
+        // ZENITH 19: with a password, if wanted (the file is then encrypted).
+        SecureBackupRows(
+            vm = vm,
+            fileName = "${dev.hearth.launcher.data.Brand.name}-Einstellungen",
+            saveLabel = "Einstellungen sichern",
+            saveDescription = "Alle Launcher-Einstellungen als Datei (ohne API-Schlüssel) – auf Wunsch mit Passwort verschlüsselt",
+            restoreLabel = "Einstellungen wiederherstellen",
+            restoreDescription = "Aus einer gesicherten Datei, auch auf einem neuen Handy",
+        )
     }
 }
 

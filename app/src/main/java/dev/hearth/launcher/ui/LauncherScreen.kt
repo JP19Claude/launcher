@@ -1236,6 +1236,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             vm.updateSettings { it.copy(projectZenith = on) }
                             if (on && settings.zenithStrike) strikeNow = true
                         },
+                        // ZENITH 19: the ZENITH-Tresor.
+                        HubTile("ZENITH-\nTresor", Icons.Rounded.Lock, Color(0xFF15965A)) {
+                            runCatching { context.startActivity(Intent(context, dev.hearth.launcher.VaultActivity::class.java)) }
+                        },
                         if (dropOn) {
                             HubTile("Glimmer\nDrop", Icons.Rounded.Share, Color(0xFF5E9BFF)) {
                                 runCatching { context.startActivity(Intent(context, dev.hearth.launcher.DropActivity::class.java)) }

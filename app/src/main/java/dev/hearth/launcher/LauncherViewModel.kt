@@ -651,19 +651,38 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun applyPreset(preset: DesignPreset) = settingsRepo.update { it.withPreset(preset) }
 
-    /** Saves all launcher settings into the chosen file. */
-    fun exportSettings(uri: android.net.Uri): Boolean = runCatching {
-        val json = settingsRepo.exportJson()
-        val out = getApplication<Application>().contentResolver.openOutputStream(uri, "wt") ?: error("no stream")
-        out.use { it.write(json.toByteArray(Charsets.UTF_8)) }
-    }.isSuccess
+    /**
+     * Saves all launcher settings into the chosen file. ZENITH 19: with a [password], the file
+     * is encrypted (AES-256-GCM) and only opens with it again.
+     */
+    suspend fun exportSettings(uri: android.net.Uri, password: String? = null): Boolean = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        runCatching {
+            val json = settingsRepo.exportJson()
+            val bytes = if (password.isNullOrEmpty()) {
+                json.toByteArray(Charsets.UTF_8)
+            } else {
+                dev.hearth.launcher.data.ZenithCrypto.sealBackup(json, password.toCharArray())
+            }
+            val out = getApplication<Application>().contentResolver.openOutputStream(uri, "wt") ?: error("no stream")
+            out.use { it.write(bytes) }
+        }.isSuccess
+    }
 
-    /** Restores settings from a file made by [exportSettings]. */
-    fun importSettings(uri: android.net.Uri): Boolean = runCatching {
-        val text = getApplication<Application>().contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
-            ?: error("no stream")
-        settingsRepo.importJson(text)
-    }.getOrDefault(false)
+    /** How bringing back a settings file went. */
+    enum class Restore { Ok, NeedsPassword, WrongPassword, Invalid }
+
+    /** Restores settings from a file made by [exportSettings] (asking for its password if it has one). */
+    suspend fun importSettings(uri: android.net.Uri, password: String? = null): Restore = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        val bytes = runCatching { getApplication<Application>().contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+            ?: return@withContext Restore.Invalid
+        val text = if (dev.hearth.launcher.data.ZenithCrypto.isSealedBackup(bytes)) {
+            if (password.isNullOrEmpty()) return@withContext Restore.NeedsPassword
+            dev.hearth.launcher.data.ZenithCrypto.openBackup(bytes, password.toCharArray()) ?: return@withContext Restore.WrongPassword
+        } else {
+            bytes.toString(Charsets.UTF_8)
+        }
+        if (runCatching { settingsRepo.importJson(text) }.getOrDefault(false)) Restore.Ok else Restore.Invalid
+    }
 
     fun openWallpaperPicker() {
         val pick = Intent(Intent.ACTION_SET_WALLPAPER)
