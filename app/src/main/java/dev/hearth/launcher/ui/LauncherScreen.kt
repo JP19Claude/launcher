@@ -1117,12 +1117,29 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     enter = fadeIn(tween(200)) + scaleIn(tween(260), initialScale = 0.94f),
                     exit = fadeOut(tween(180)) + scaleOut(tween(200), targetScale = 0.94f),
                 ) {
-                    SettingsScreen(
-                        vm = vm,
-                        needsWallpaperAccess = needsWallpaperAccess,
-                        onRequestWallpaperAccess = requestWallpaperAccess,
-                        onClose = { settingsOpen = false },
-                    )
+                    // ColorOS 17.1 look: the settings keep the look of Galaxy × Zenith – One UI's
+                    // layout with its category cards, ZENITH's metal – while the rest is ColorOS.
+                    val settingsLook = if (settings.colorOsLook) {
+                        settings.copy(
+                            galaxyClaude = true,
+                            projectZenith = false,
+                            projectColorOs = false,
+                            glassLook = dev.hearth.launcher.data.GlassLook.Zenith,
+                        )
+                    } else {
+                        null
+                    }
+                    CompositionLocalProvider(
+                        LocalSettings provides (settingsLook ?: LocalSettings.current),
+                        LocalGlassStyle provides (settingsLook?.let { GlassStyle.from(it) } ?: LocalGlassStyle.current),
+                    ) {
+                        SettingsScreen(
+                            vm = vm,
+                            needsWallpaperAccess = needsWallpaperAccess,
+                            onRequestWallpaperAccess = requestWallpaperAccess,
+                            onClose = { settingsOpen = false },
+                        )
+                    }
                 }
             }
 

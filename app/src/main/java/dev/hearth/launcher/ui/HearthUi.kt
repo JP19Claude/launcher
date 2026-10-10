@@ -216,6 +216,7 @@ internal object HearthChangelog {
                     listOf(
                         "Neue Option in Projekt Zenith (Illuminati → Projekt Zenith → ColorOS-17.1-Look): Das ganze System bekommt den Stil von ColorOS – Milchglas statt Hologramm, runde Squircle-Icons, die ColorOS-Uhr, das ColorOS-Schnellmenü, ein schwebendes Dock und dein eigener Hintergrund statt des Gitter-Horizonts.",
                         "Das Glas stellst du frei ein, gleich dort unter „Glas einstellen“: Lichtbrechung, Unschärfe, Farbsäume, Glanz, Tönung und Glasfarbe – dazu fünf Looks zum Antippen (Dezent, ColorOS, Klar, Milchglas, Kristall). Dieselben Regler gibt es in den Einstellungen unter Liquid Glass.",
+                        "Die Einstellungen behalten im ColorOS-Look das Aussehen von Galaxy × Zenith: One UIs Aufbau mit den Kategorie-Karten, dazu ZENITHs Metall.",
                         "Nichts wird überschrieben: Der Look liegt nur über deinen Einstellungen. Schaltest du ihn aus, ist alles wieder genau so, wie du es hattest.",
                         "Gibt es nur in den Illuminati, wenn Projekt Zenith an ist; Glas-Modus und ColorOS-Look schließen sich aus.",
                         "Es ist ein Nachbau des Stils: ZENITH benutzt dafür keine Logos, Bilder oder Schriften von ColorOS.",

@@ -14,6 +14,7 @@ ZENITH 19.3 „Core Enforcer“ auf ClaudeOS 6.0 „Helios“
 • Neue Option in Projekt Zenith (Illuminati): das ganze System im Stil von ColorOS 17.1
 • Milchglas, runde Squircle-Icons, ColorOS-Uhr und -Schnellmenü, schwebendes Dock, dein eigener Hintergrund
 • Das Glas frei einstellbar: Lichtbrechung, Unschärfe, Farbsäume, Glanz, Tönung, Glasfarbe – und fünf Looks zum Antippen
+• Die Einstellungen sehen dabei aus wie bei Galaxy × Zenith (One-UI-Aufbau, ZENITH-Metall)
 • Nichts wird überschrieben: ausgeschaltet ist alles wie vorher
 
 💧 Projekt Zenith Glas
