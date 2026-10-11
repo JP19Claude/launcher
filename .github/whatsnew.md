@@ -2,6 +2,7 @@ ZENITH 20 „Jubiläum“ auf ClaudeOS 7.0 „Apex“
 
 ✨ Neu im Hotfix
 • Eine eigene Versionskarte für ZENITH 20: Mitternachtsblau in Gold, Polarlicht, Sterne, eingefrorene Feuerwerke, die 20 und das Randlicht des Z in Gold – anders als die grüne Karte von ZENITH 19
+• Vorschau vor dem Installieren wie bei ColorOS: das Software-Update zeigt die Karte einer angebotenen Version schon vor dem Installieren (ab ZENITH 20 für jedes künftige Update)
 • Jedes Egg hat eine Jubiläums-Edition: beim ersten Mal in ZENITH 20 ein goldenes Feuerwerk, ein goldenes „✦ 20“ auf der Easter-Egg-Karte
 • Die Eggs älterer Versionen, die ClaudeOS-Eggs und alle Geheimmenüs liegen jetzt in Gold (Polarlicht, Goldstaub, Abzeichen)
 • Zwölf neue Jubiläums-Eggs (jetzt 69): in der Uhr, im Finder, im Polarlicht, in der Z-Nacht und in der Zentrale

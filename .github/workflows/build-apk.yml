@@ -138,6 +138,9 @@ jobs:
           notes = open(".github/whatsnew.md").read().strip() if os.path.exists(".github/whatsnew.md") else ""
           base = f"https://github.com/{repo}/releases/download/{tag}/"
           out = {"version": v, "build": build, "notes": notes}
+          # The newest version's card (colors, label), so an installed ZENITH can draw it before the update is installed.
+          if os.path.exists(".github/card.json"):
+              out["card"] = json.load(open(".github/card.json"))
           for slug, file in [("hearth", "Hearth.apk"), ("glimmer", "Glimmer.apk"), ("clawd", "Clawd.apk"), ("duft", "Duft.apk"), ("hearthone", "HearthUI.apk")]:
               out[slug] = {"version": v, "build": build, "url": base + file, "size": os.path.getsize(file)}
           json.dump(out, open("versions.json", "w"), ensure_ascii=False, indent=1)

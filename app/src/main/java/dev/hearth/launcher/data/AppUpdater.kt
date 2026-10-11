@@ -55,7 +55,15 @@ object AppUpdater {
     }.getOrDefault(0L)
 
     /** A newer version, ready to download – or a hotfix: the same version, a newer [build]. */
-    class Release(val version: String, val url: String, val size: Long, val notes: String = "", val build: Long = 0L) {
+    class Release(
+        val version: String,
+        val url: String,
+        val size: Long,
+        val notes: String = "",
+        val build: Long = 0L,
+        /** The release's own version card as JSON (ZENITH 20: the update screen draws it before installing); "" for none. */
+        val card: String = "",
+    ) {
         /** A hotfix for [installed]: no newer version, only a newer build. */
         fun isHotfix(installed: String): Boolean = build > 0L && !AppUpdater.isNewer(version, installed)
 
@@ -208,7 +216,14 @@ object AppUpdater {
         val json = org.json.JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
         connection.disconnect()
         val app = json.optJSONObject(slug) ?: return@runCatching null
-        Release(app.getString("version"), app.getString("url"), app.optLong("size"), json.optString("notes"), app.optLong("build", json.optLong("build")))
+        Release(
+            app.getString("version"),
+            app.getString("url"),
+            app.optLong("size"),
+            json.optString("notes"),
+            app.optLong("build", json.optLong("build")),
+            json.optJSONObject("card")?.toString().orEmpty(),
+        )
     }.getOrNull()
 
     /** What's new, as the release tells it (without the build line at its end). */

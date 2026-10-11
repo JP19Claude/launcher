@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.random.Random
@@ -92,15 +93,17 @@ internal val ZenithMetal: List<MetalMark> = Random(19).let { r ->
 
 private val RimColors = listOf(Color(0xFF2FD25A), Color(0xFF46EB6E), Color(0xFFD2FFD7))
 
-/** ZENITH 20, the jubilee: the same edge light in gold. */
-private val RimColorsGold = listOf(Color(0xFFFFB82E), Color(0xFFFFD34D), Color(0xFFFFF4D2))
+/** The edge light's haze, line and core: ZENITH's green, or – for a version's own card – the card's [tint]. */
+private fun rimPalette(tint: Color?): List<Color> =
+    if (tint == null) RimColors else listOf(tint, lerp(tint, Color.White, 0.3f), lerp(tint, Color.White, 0.85f))
 private val RimWidths = floatArrayOf(0.03f, 0.012f, 0.004f)
 private val RimAlphas = floatArrayOf(0.22f, 0.55f, 0.95f)
 
 /** Green light along the edge [a]→[b]: a wide haze, a line, a white-hot core; [k] its strength at start, middle, end. */
-private fun DrawScope.rimLight(a: Offset, b: Offset, w: Float, grow: Float, k0: Float, k1: Float, k2: Float, gold: Boolean = false) {
+private fun DrawScope.rimLight(a: Offset, b: Offset, w: Float, grow: Float, k0: Float, k1: Float, k2: Float, tint: Color? = null) {
+    val palette = rimPalette(tint)
     for (i in 0..2) {
-        val c = (if (gold) RimColorsGold else RimColors)[i]
+        val c = palette[i]
         val base = RimAlphas[i]
         drawLine(
             Brush.linearGradient(
@@ -121,14 +124,14 @@ private fun DrawScope.rimLight(a: Offset, b: Offset, w: Float, grow: Float, k0: 
 }
 
 /** A hot spot of green light at [p]. */
-private fun DrawScope.rimSpot(p: Offset, r: Float, a: Float, gold: Boolean = false) {
+private fun DrawScope.rimSpot(p: Offset, r: Float, a: Float, tint: Color? = null) {
     if (r <= 0f || a <= 0f) return
     val al = a.coerceIn(0f, 1f)
     drawCircle(
         Brush.radialGradient(
-            0f to (if (gold) Color(0xFFFFF8E0) else Color(0xFFEBFFEB)).copy(alpha = al),
-            0.25f to (if (gold) Color(0xFFFFC94D) else Color(0xFF50F078)).copy(alpha = al * 0.6f),
-            1f to (if (gold) Color(0x00FFB020) else Color(0x0028C85A)),
+            0f to (if (tint != null) lerp(tint, Color.White, 0.9f) else Color(0xFFEBFFEB)).copy(alpha = al),
+            0.25f to (tint ?: Color(0xFF50F078)).copy(alpha = al * 0.6f),
+            1f to (tint?.copy(alpha = 0f) ?: Color(0x0028C85A)),
             center = p,
             radius = r,
         ),
@@ -143,7 +146,7 @@ private fun DrawScope.rimSpot(p: Offset, r: Float, a: Float, gold: Boolean = fal
  * the green (0 = none, 1 = as in the logo); [charge] (0..1, held) makes it burn brighter and
  * runs a band of green light over the metal.
  */
-internal fun DrawScope.drawZenithZ(left: Float, top: Float, w: Float, light: Float = 1f, charge: Float = 0f, gold: Boolean = false) {
+internal fun DrawScope.drawZenithZ(left: Float, top: Float, w: Float, light: Float = 1f, charge: Float = 0f, tint: Color? = null) {
     val h = w * ZenithZAspect
     val z = zenithZPath(left, top, w)
     val p = List(8) { zCorner(it, left, top, w) }
@@ -175,11 +178,11 @@ internal fun DrawScope.drawZenithZ(left: Float, top: Float, w: Float, light: Flo
         )
         if (charge > 0.01f) {
             // Held: green light floods the metal and a bright band runs over it.
-            drawRect((if (gold) Color(0xFFFFC94D) else Color(0xFF2FD27A)).copy(alpha = 0.12f * charge), Offset(left, top), Size(w, h))
+            drawRect((tint ?: Color(0xFF2FD27A)).copy(alpha = 0.12f * charge), Offset(left, top), Size(w, h))
             val band = left + w * (-0.2f + 1.4f * charge)
             drawRect(
                 Brush.linearGradient(
-                    if (gold) listOf(Color(0x00FFD070), Color(0xFFFFE9A0).copy(alpha = 0.35f), Color(0x00FFD070)) else listOf(Color(0x0078FFA0), Color(0xFFA0FFBE).copy(alpha = 0.35f), Color(0x0078FFA0)),
+                    if (tint != null) listOf(tint.copy(alpha = 0f), lerp(tint, Color.White, 0.6f).copy(alpha = 0.35f), tint.copy(alpha = 0f)) else listOf(Color(0x0078FFA0), Color(0xFFA0FFBE).copy(alpha = 0.35f), Color(0x0078FFA0)),
                     start = Offset(band - w * 0.12f, top),
                     end = Offset(band + w * 0.12f, top + h),
                 ),
@@ -205,13 +208,13 @@ internal fun DrawScope.drawZenithZ(left: Float, top: Float, w: Float, light: Flo
     // The green light along its lower edges.
     val k = light * (0.6f + 0.8f * charge)
     if (k > 0.01f) {
-        rimLight(p[7], p[6], w, charge, 1f * k, 0.7f * k, 0.15f * k, gold)
-        rimLight(p[5], p[6], w, charge, 0.35f * k, 1f * k, 0.6f * k, gold)
-        rimLight(p[2], p[3], w, charge, 0.25f * k, 0.9f * k, 1f * k, gold)
-        rimLight(p[5], p[4], w, charge, 0f, 0.1f * k, 0.8f * k, gold)
-        rimSpot(p[5] + (p[6] - p[5]) * 0.35f, w * 0.05f * (1f + charge), 0.9f * k, gold)
-        rimSpot(Offset(p[2].x + (p[3].x - p[2].x) * 0.62f, p[2].y), w * 0.045f * (1f + charge), 0.9f * k, gold)
-        rimSpot(p[7] + Offset(w * 0.02f, 0f), w * 0.03f * (1f + charge), 0.7f * k, gold)
+        rimLight(p[7], p[6], w, charge, 1f * k, 0.7f * k, 0.15f * k, tint)
+        rimLight(p[5], p[6], w, charge, 0.35f * k, 1f * k, 0.6f * k, tint)
+        rimLight(p[2], p[3], w, charge, 0.25f * k, 0.9f * k, 1f * k, tint)
+        rimLight(p[5], p[4], w, charge, 0f, 0.1f * k, 0.8f * k, tint)
+        rimSpot(p[5] + (p[6] - p[5]) * 0.35f, w * 0.05f * (1f + charge), 0.9f * k, tint)
+        rimSpot(Offset(p[2].x + (p[3].x - p[2].x) * 0.62f, p[2].y), w * 0.045f * (1f + charge), 0.9f * k, tint)
+        rimSpot(p[7] + Offset(w * 0.02f, 0f), w * 0.03f * (1f + charge), 0.7f * k, tint)
     }
 }
 

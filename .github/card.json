@@ -1,0 +1,11 @@
+{
+  "bg": ["#080612", "#241506", "#B8780F"],
+  "glowA": "#7C5CFF",
+  "glowB": "#FFC94D",
+  "accent": "#FFC94D",
+  "label": "J U B I L Ä U M",
+  "os": "ClaudeOS 7.0",
+  "aurora": "Gold",
+  "stars": true,
+  "fireworks": true
+}

@@ -365,10 +365,13 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                     UpdateHero.Number -> if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
                         val crystal = rememberCrystalTaps(current)
                         // ZENITH 19: as ColorOS 17 shows its version – the Z big, the number huge.
+                        // ZENITH 20: when a newer version is offered, its card – as its update file
+                        // carries it – shows before it is installed, like ColorOS's.
                         ZenithVersionHero(
                             shown,
                             Modifier.padding(top = 8.dp, bottom = 6.dp),
                             onTap = crystal,
+                            spec = release?.let { ZenithCardSpec.parse(it.card) },
                             footer = when (s) {
                                 is UpdateState.Newer, is UpdateState.Ready -> "Update verfügbar"
                                 is UpdateState.Downloading -> "Wird geladen …"
