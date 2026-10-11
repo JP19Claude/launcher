@@ -206,6 +206,8 @@ internal object HearthChangelog {
                     listOf(
                         "Die Versionskarte (Software-Update, Über das Telefon) sieht in ZENITH 20 anders aus als in 19 – wie bei ColorOS, wo jede Version ihre eigene Karte hat: Mitternachtsblau läuft in Gold, das Polarlicht zieht darüber, Sterne funkeln, drei Feuerwerke stehen eingefroren am Himmel, und die 20 und das Randlicht des Z leuchten in Gold, darunter „J U B I L Ä U M“.",
                         "Die Karte von ZENITH 19 bleibt grün. Jede kommende Version bekommt eine eigene.",
+                        "Hältst du auf der Karte das Z gedrückt, kommt weiterhin der Z-Angriff (Core Enforcer) – und auf der Karte von 20 steigt dazu ein Feuerwerk auf, wie bei ColorOS 16.",
+                        "Überall im System, wo das Z mit seiner Nummer steht (Illuminati, Willkommens-Tour, Jubiläums-Feuerwerk, Einstellungen), steht jetzt die 20 statt der 19.",
                         "Vorschau vor dem Installieren, wie bei ColorOS: Wird im Software-Update eine neuere Version angeboten, zeigt es schon ihre Karte – die neue Version bringt Farben und Beschriftung ihrer Karte in der Update-Datei mit. Das gilt ab ZENITH 20 für jedes künftige Update (eine ältere App wie 19.8 kennt es noch nicht und malt ihre grüne Karte).",
                     ),
                     hearth,

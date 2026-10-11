@@ -75,7 +75,7 @@ internal val EggSpots = listOf(
     EggSpot("codes", "Codeknacker", "Im Finder *#0000# eintippen – die Liste aller Geheimcodes. (Oder lange auf den großen Titel „Einstellungen“ drücken.)"),
     EggSpot("omega", "Von Alpha bis Omega", "Im Finder nach „Omega“ (oder Ω) suchen und alle griechischen Buchstaben um das Ω kreisen lassen."),
     EggSpot("labs", "ZENITH Labs", "Über das Telefon: siebenmal auf die Build-Nummer tippen."),
-    EggSpot("illumination", "Clawd Illumination", "So oft auf das ZENITH-Logo tippen, wie ZENITH Nummer hat (19)."),
+    EggSpot("illumination", "Clawd Illumination", "So oft auf das ZENITH-Logo tippen, wie ZENITH Nummer hat (jetzt 20)."),
     // ZENITH 19.6: more hidden menus (codes in the finder) …
     EggSpot("console", "Z-Konsole", "Ein Terminal – tippe help und probier auch Befehle, die nicht in der Liste stehen. Über das Telefon: fünfmal schnell auf „Kernel“ tippen · Core Enforcer Studio: den Titel lange drücken · Startbildschirm: genau um 13:37 auf die Uhr tippen · oder im Finder *#8376# (T-E-R-M)."),
     EggSpot("neon", "Neon", "Der Regen aus Zeichen. Über das Telefon: fünfmal schnell auf „Auflösung“ tippen · oder im Finder *#6366# (N-E-O-N)."),

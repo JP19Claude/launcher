@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.ClaudeOs
 import dev.hearth.launcher.data.ZenithPalette
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -117,8 +118,8 @@ val ZenithFluidColors: List<Color>
 fun ZenithLogo(
     modifier: Modifier = Modifier,
     size: Dp = 150.dp,
-    /** The version, green, set into the Z as in the first sketch ("" for none). */
-    number: String = "19",
+    /** The version, green, set into the Z as in the first sketch ("" for none) – the running ZENITH's number by default. */
+    number: String = HearthUi.major(dev.hearth.launcher.BuildConfig.VERSION_NAME),
     caption: String? = null,
     interactive: Boolean = true,
     light: Float = 1f,
@@ -315,6 +316,18 @@ fun ZenithVersionHero(
     // 20, the aurora moving in it, the number and the Z's edge light in the card's color; the card
     // of ZENITH 19 stays green. A newer version brings its card in the update file.
     val look = spec ?: if (versionNumber(version) >= 20f) ZenithCardSpec.Jubilee else null
+    // Held until it's charged, the Z strikes as ever (the Core Enforcer) – and on a version's own card
+    // fireworks go up over it, like ColorOS 16's.
+    val scope = rememberCoroutineScope()
+    val fire = remember { Animatable(0f) }
+    val goFireworks: () -> Unit = {
+        scope.launch {
+            fire.snapTo(0f)
+            delay(800)
+            fire.animateTo(1f, tween(5200, easing = LinearEasing))
+            fire.snapTo(0f)
+        }
+    }
     val shape = androidx.compose.foundation.shape.RoundedCornerShape(30.dp)
     androidx.compose.foundation.layout.BoxWithConstraints(
         modifier
@@ -343,6 +356,7 @@ fun ZenithVersionHero(
                 onTap = onTap,
                 chargeState = charge,
                 cardTint = look?.accent,
+                onCharged = if (look != null) goFireworks else null,
             )
             Text(
                 "ZENITH $version · ${look?.os.orEmpty().ifBlank { ClaudeOs.full }}",
@@ -361,6 +375,20 @@ fun ZenithVersionHero(
                     letterSpacing = 3.sp,
                     modifier = Modifier.padding(top = 6.dp),
                 )
+            }
+        }
+        // The fireworks, over the card.
+        if (look != null) {
+            Canvas(Modifier.matchParentSize()) {
+                val p = fire.value
+                if (p > 0f && p < 1f) {
+                    val palette = listOf(look.accent, Color.White, lerp(look.accent, Color.White, 0.6f), lerp(look.glowA, Color.White, 0.5f))
+                    for (k in 0 until 10) {
+                        val r = kotlin.random.Random(k * 17 + 3)
+                        val at = Offset(size.width * (0.12f + 0.76f * r.nextFloat()), size.height * (0.1f + 0.5f * r.nextFloat()))
+                        drawBurst(at, (p - k * 0.06f) / 0.4f, palette[k % palette.size], size.minDimension * 0.34f, k * 331 + 9)
+                    }
+                }
             }
         }
         if (footer != null) {
