@@ -117,7 +117,7 @@ private fun categoryIcon(category: LibraryCategory): ImageVector = when (categor
 
 private fun categoryLabel(category: LibraryCategory): String = when (category) {
     LibraryCategory.Social -> "Social"
-    LibraryCategory.Productivity -> "Arbeit"
+    LibraryCategory.Productivity -> "Produktiv"
     LibraryCategory.Entertainment -> "Medien"
     LibraryCategory.Creativity -> "Kreativ"
     LibraryCategory.Information -> "News"
@@ -443,8 +443,9 @@ internal fun SmartSection(settings: LauncherSettings, onChange: ((LauncherSettin
         PercentSlider("Glanz", settings.smartSpecular, 0f..2f) { v -> onChange { it.copy(smartSpecular = v) } }
         PercentSlider("Tönung", settings.smartTint, 0f..2.5f) { v -> onChange { it.copy(smartTint = v) } }
         SmartNote(
-            "Frosted ist milchig und weich: Es verwischt, was dahinter liegt, und biegt es kaum. Liquid ist klar mit einer Linse: " +
-                "Es bricht und spiegelt es und fängt das Licht an seinem Rand. Mit der Wahl springen die Regler auf die Werte des Glases – danach sind sie frei.",
+            "Die drei Gläser des Smart Launchers 6: Frosted ist milchig und weich, es verwischt, was dahinter liegt. Opaque ist am festesten, damit alles auf jedem " +
+                "Hintergrund lesbar bleibt, und folgt Hell und Dunkel. Liquid ist klar mit einer Linse, es bricht und spiegelt das Dahinter und fängt das Licht an " +
+                "seinem Rand. Mit der Wahl springen die Regler auf die Werte des Glases – danach sind sie frei.",
         )
     }
 
@@ -536,9 +537,9 @@ private fun SmartCard(on: Boolean, onToggle: (Boolean) -> Unit) {
         }
         Spacer(Modifier.height(10.dp))
         Text(
-            "Nach dem Vorbild des Smart Launchers: runde Icons, seine Uhr mit dem Wetter, ein Dock aus Glas und ein App-Drawer mit Kategorie-Leiste, " +
-                "den du nach oben wischst – alles in Frosted oder Liquid Glass. Apps öffnen sich ohne Verzögerung. Die eigenen Looks und Effekte von " +
-                "ZENITH treten solange zurück. Aus: alles wie vorher.",
+            "Nach dem Vorbild von Smart Launcher 6: runde Icons, seine Uhr mit Wecker und Wetter, ein Dock aus Glas, ein App-Drawer mit Kategorie-Leiste " +
+                "und die Suche mit Vorschlägen beim Wischen nach unten – alles in Frosted, Opaque oder Liquid Glass. Apps öffnen sich ohne Verzögerung. Die " +
+                "eigenen Looks und Effekte von ZENITH treten solange zurück. Aus: alles wie vorher.",
             color = Color.White.copy(alpha = 0.65f),
             fontSize = 12.sp,
             lineHeight = 16.sp,

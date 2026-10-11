@@ -191,9 +191,10 @@ fun LauncherSettings.withColorOsLook(): LauncherSettings = if (!colorOsLook) {
 }
 
 /**
- * ZENITH 20.5, "Be Smarter": the glass of the Smart Launcher look. Frosted is milky and soft (it
- * blurs what lies behind it, hardly bends it), Liquid is clear with a lens (it bends it and
- * catches the light at its rim). Choosing one sets the four sliders; they stay free after.
+ * ZENITH 20.5, "Be Smarter": the three glasses of Smart Launcher 6 (6.5 and 6.6). Frosted is milky
+ * and soft (it blurs what lies behind it, hardly bends it), Opaque is the most solid – for
+ * readability on any wallpaper – and follows light and dark, Liquid is clear with a lens (it bends
+ * it and catches the light at its rim). Choosing one sets the four sliders; they stay free after.
  */
 enum class SmartGlass(
     val label: String,
@@ -204,6 +205,7 @@ enum class SmartGlass(
     val tint: Float,
 ) {
     Frosted("Frosted Glass", blur = 2.1f, refraction = 0.4f, dispersion = 0.1f, specular = 0.7f, tint = 1.7f),
+    Opaque("Opaque Glass", blur = 2.5f, refraction = 0.15f, dispersion = 0f, specular = 0.4f, tint = 2.4f),
     Liquid("Liquid Glass", blur = 0.7f, refraction = 1.7f, dispersion = 0.9f, specular = 1.4f, tint = 0.6f),
 }
 
@@ -259,7 +261,14 @@ fun LauncherSettings.withSmartLook(): LauncherSettings = if (!beSmarter) {
         showAppLibrary = false,
         animations = true,
         glassLook = if (smartGlass == SmartGlass.Liquid) GlassLook.Liquid else GlassLook.Omega,
-        glassTint = if (smartGlass == SmartGlass.Liquid) GlassTint.Clear else GlassTint.Light,
+        // Opaque Glass follows light and dark; Frosted is a soft white veil; Liquid hardly any color.
+        glassTint = when (smartGlass) {
+            SmartGlass.Liquid -> GlassTint.Clear
+            SmartGlass.Opaque -> if (darkGlass) GlassTint.Dark else GlassTint.Light
+            SmartGlass.Frosted -> GlassTint.Light
+        },
+        // Swiping down from the middle brings the search and the apps you might want next.
+        swipeDownAction = SwipeDownAction.Search,
         glassBlur = smartBlur,
         glassRefraction = smartRefraction,
         glassDispersion = smartGlass.dispersion,

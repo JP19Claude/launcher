@@ -1,10 +1,15 @@
 ZENITH 20.5 „Be Smarter“ auf ClaudeOS 7.0 „Apex“
 
+✨ Neu im Hotfix
+• Näher an Smart Launcher 6 (Fassungen 6.5 und 6.6): das dritte Glas „Opaque Glass“ neben Frosted und Liquid, jedes mit vier Reglern
+• Die Smart-Uhr zeigt auch den nächsten Wecker; Wischen nach unten bringt die Suche mit Vorschlägen
+• Ehrlich: Seiten und Bilder von Smart Launcher 6 waren nicht erreichbar, was nicht beschrieben ist, ist geschätzt – mit Bildschirmfotos lässt es sich angleichen
+
 ✨ Neu in 20.5
 • Be Smarter: ein Modus im Clawd Illuminati (Versionsnummer in „Über das Telefon“ antippen), der aus dem Launcher einen Smart Launcher macht – nach dessen Vorbild, ohne dass etwas von dem überschrieben wird, was du gewählt hast. Aus: alles wie vorher
 • Der Look: runde Icons, die Smart-Uhr mit dem Wetter, die Suchleiste, das Dock aus Glas; ZENITHs eigene Effekte treten solange zurück
 • Der Smart-Drawer: nach oben wischen, die Apps nach Kategorien (Alle, Favoriten, Social, Arbeit, Medien …) mit der Kategorie-Leiste auf Glas, seitlich wischen wechselt, nach unten ziehen schließt
-• Frosted und Liquid Glass zur Wahl, je mit Reglern für Unschärfe, Lichtbrechung, Glanz und Tönung – für jede Glasfläche des Launchers
+• Frosted, Opaque und Liquid Glass zur Wahl, je mit Reglern für Unschärfe, Lichtbrechung, Glanz und Tönung – für jede Glasfläche des Launchers
 • Ohne Verzögerung: Apps öffnen sich im Moment des Tippens (kein Fluid-Spritzer, keine Feder, nur ein kurzes Einblenden); aus, klappt die App wie beim Smart Launcher aus ihrem Icon auf
 • Glimmer ins System binden: ein Schalter für Glimmer, sein Schließ-Fly-in für alle Launcher und das Verdecken der Launcher-Animation – mit dem neuen Stil „Smart Launcher“: die App schrumpft in einer weichen Bewegung zurück in ihr Icon
 

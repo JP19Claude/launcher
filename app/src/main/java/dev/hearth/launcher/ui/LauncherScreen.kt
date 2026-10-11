@@ -1752,6 +1752,14 @@ private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier
     }
     val weather = rememberWeather()
     val context = LocalContext.current
+    // The clock widget of Smart Launcher 6 also shows the next alarm.
+    val alarm = remember(now) {
+        runCatching {
+            context.getSystemService(android.app.AlarmManager::class.java)?.nextAlarmClock?.triggerTime?.let { at ->
+                java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("EEE HH:mm", locale))
+            }
+        }.getOrNull()
+    }
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             ClockDigits(
@@ -1772,6 +1780,17 @@ private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier
                 style = OnWallpaperText,
                 modifier = Modifier.clickable { openCalendar(context) },
             )
+            if (alarm != null) {
+                Text(
+                    text = "⏰ $alarm",
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 13.sp,
+                    style = OnWallpaperText,
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .clickable { openAlarms(context) },
+                )
+            }
         }
         weather?.let { w ->
             Column(

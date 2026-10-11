@@ -193,6 +193,17 @@ internal object HearthChangelog {
             summary = "Das große Update: Im Illuminati gibt es jetzt „Be Smarter“ – ein Modus, der aus dem Launcher einen Smart Launcher macht, nach dessen Vorbild: seine Uhr mit dem Wetter, sein Dock, sein Drawer mit der Kategorie-Leiste, dazu Frosted und Liquid Glass zum Einstellen, Apps ohne Verzögerung und Glimmer als Teil des ganzen Systems.",
             sections = listOf(
                 ChangeSection(
+                    "Näher an Smart Launcher 6 (Hotfix)", Icons.Rounded.CheckCircle, Green,
+                    listOf(
+                        "Vorbild ist ausdrücklich Smart Launcher 6 – in den Fassungen 6.5 und 6.6 –, nicht irgendein Smart Launcher.",
+                        "Das dritte Glas: Dort heißen die Gläser Frosted Glass, Opaque Glass (seit 6.5: das festeste, damit alles auf jedem Hintergrund lesbar bleibt, es folgt Hell und Dunkel) und Liquid Glass (seit 6.6: Lichtbrechung, einstellbar). „Be Smarter“ hat jetzt alle drei, jedes mit den vier Reglern.",
+                        "Die Uhr zeigt wie die des Smart Launchers auch den nächsten Wecker; ein Tipp darauf öffnet die Wecker.",
+                        "Wischen nach unten auf dem Startbildschirm bringt die Suche mit den Apps, die du als Nächstes brauchst – wie dort. In „Be Smarter“ ist das fest eingestellt.",
+                        "Ehrlich dazu: Die Seiten und Bilder von Smart Launcher 6 waren von hier aus nicht zu erreichen. Was nicht beschrieben ist, ist geschätzt – wo es abweicht, gleiche ich es mit Bildschirmfotos an.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Be Smarter", Icons.Rounded.Star, Blue,
                     listOf(
                         "Zu finden im Clawd Illuminati (Versionsnummer in „Über das Telefon“ antippen): ganz oben die Karte „Be Smarter“. Ein Tipp, und ZENITH sieht aus wie der Smart Launcher – und ein Tipp zurück, und alles ist wieder wie vorher. Der Modus legt sich nur über das, was du gewählt hast; geschrieben wird nichts.",
@@ -214,7 +225,7 @@ internal object HearthChangelog {
                 ChangeSection(
                     "Frosted und Liquid Glass", Icons.Rounded.Info, Violet,
                     listOf(
-                        "Zwei Gläser zur Wahl, beide mit eigenen Reglern: Frosted – milchig und weich, es verwischt, was dahinter liegt – und Liquid – klar mit einer Linse, es bricht das Dahinter und fängt das Licht am Rand.",
+                        "Drei Gläser zur Wahl, alle mit eigenen Reglern: Frosted – milchig und weich, es verwischt, was dahinter liegt –, Opaque – am festesten, immer lesbar – und Liquid – klar mit einer Linse, es bricht das Dahinter und fängt das Licht am Rand.",
                         "Vier Regler pro Glas: Unschärfe, Lichtbrechung, Glanz und Tönung. Die Wahl des Glases stellt sie auf dessen Werte, danach sind sie frei. Sie gelten für jede Glasfläche des Launchers: Suche, Drawer, Dock, Menüs, Widgets.",
                         "Die Glas-Einstellungen von ZENITH selbst bleiben unberührt – beim Ausschalten ist alles wie vorher.",
                     ),
