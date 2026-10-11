@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.ClaudeOs
+import dev.hearth.launcher.data.ZenithPalette
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -81,8 +82,12 @@ import kotlin.math.sin
  */
 
 /** ZENITH's colors: the green of its number, the sun, the sky. */
-internal val ZenithGreen = Color(0xFF2FD27A)
-internal val ZenithGreenDeep = Color(0xFF15965A)
+/**
+ * ZENITH 20.1: the green is ZENITH's color, and the color can be changed system-wide (green, gold, ice,
+ * violet, ruby) – these read the live [ZenithPalette], so everything drawn with them follows.
+ */
+internal val ZenithGreen: Color get() = ZenithPalette.tint.main
+internal val ZenithGreenDeep: Color get() = ZenithPalette.tint.deep
 internal val ZenithSun = Color(0xFFFFD34D)
 internal val ZenithSky = Color(0xFF5CC8FF)
 
@@ -90,13 +95,14 @@ internal val ZenithSky = Color(0xFF5CC8FF)
 internal val ZenithGold = Color(0xFFFFC94D)
 
 /** ZENITH's fluid: green, sun, sky, mint and white light. */
-val ZenithFluidColors = listOf(
-    ZenithGreen,
-    ZenithSun,
-    ZenithSky,
-    Color(0xFFB8F5C8),
-    Color(0xFFFFF6D6),
-)
+val ZenithFluidColors: List<Color>
+    get() = listOf(
+        ZenithGreen,
+        ZenithSun,
+        ZenithSky,
+        ZenithPalette.other?.let { lerp(it, Color.White, 0.7f) } ?: Color(0xFFB8F5C8),
+        Color(0xFFFFF6D6),
+    )
 
 /**
  * The ZENITH mark, as in its logo: a slanted Z of dark, worn metal with cut ends, a silver bevel
@@ -128,9 +134,11 @@ fun ZenithLogo(
     /** A version's own card tints the number, the edge light and the charge (null: ZENITH's green). */
     cardTint: Color? = null,
 ) {
-    val tint = cardTint ?: ZenithGreen
-    val tintDeep = if (cardTint != null) lerp(cardTint, Color.Black, 0.4f) else ZenithGreenDeep
-    val tintLight = if (cardTint != null) lerp(cardTint, Color.White, 0.75f) else Color(0xFFC8FFE0)
+    // The card's own color, else the system's ZENITH color (green as it always was, unless it was changed).
+    val custom = cardTint ?: ZenithPalette.other
+    val tint = custom ?: ZenithGreen
+    val tintDeep = if (custom != null) lerp(custom, Color.Black, 0.4f) else ZenithGreenDeep
+    val tintLight = if (custom != null) lerp(custom, Color.White, 0.75f) else Color(0xFFC8FFE0)
     val charged by androidx.compose.runtime.rememberUpdatedState(onCharged)
     val strikes by androidx.compose.runtime.rememberUpdatedState(strike && LocalSettings.current.zenithStrike)
     var striking by remember { mutableStateOf(false) }

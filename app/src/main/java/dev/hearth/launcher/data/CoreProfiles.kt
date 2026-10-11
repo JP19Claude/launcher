@@ -21,7 +21,8 @@ object CoreProfiles {
         "clockStyle", "clockFont", "dockStyle", "pageTransition",
         "accent", "glassLook", "glassTint", "glassTintStrength", "glassBlur", "glassRefraction",
         "glassDispersion", "glassSpecular", "glassQuality", "omegaGlass", "omegaColor",
-        "fluidDesign", "zenithWallpaper", "zenithAurora", "auroraLook", "zenithDaylight", "smoothMode",
+        "fluidDesign", "zenithWallpaper", "zenithAurora", "auroraLook", "auroraStrength", "auroraSpeed", "zenithDaylight", "smoothMode",
+        "zenithTint", "homeLightStrength", "homeLightColor", "homeLightBeam", "homeLightGlint", "homeLightFloor",
         "showGreeting", "showSearchPill", "galaxyClaude", "ccStyle",
         "strikeColor", "strikeSpeed", "zenithStrike", "colorOsClock", "colorOsDock",
     )
@@ -67,13 +68,9 @@ object CoreProfiles {
      * ZENITH 20, the jubilee's look in one tap: the aurora in gold, warm gold glass and accent, ZENITH's
      * own background and a golden Z-Angriff.
      */
-    fun jubileeLook(s: LauncherSettings): LauncherSettings = s.copy(
+    fun jubileeLook(s: LauncherSettings): LauncherSettings = s.withZenithTint(ZenithTint.Gold).copy(
         zenithAurora = true,
-        auroraLook = AuroraLook.Gold,
         zenithWallpaper = true,
-        accent = AccentColor.Ochre,
-        glassTint = GlassTint.Warm,
-        strikeColor = StrikeColor.Gold,
     )
 
     /** A look rolled at random – bold, but always something that works. */
@@ -95,6 +92,7 @@ object CoreProfiles {
             strikeColor = StrikeColor.entries.random(r),
             zenithAurora = r.nextBoolean(),
             auroraLook = AuroraLook.entries.random(r),
+            zenithTint = ZenithTint.entries.random(r),
         ).withClock(clock).withDock(dock)
     }
 }

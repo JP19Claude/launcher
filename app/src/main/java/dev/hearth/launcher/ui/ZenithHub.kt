@@ -63,7 +63,9 @@ import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.PerfumeShelf
 import dev.hearth.launcher.data.ZenithBrief
 import dev.hearth.launcher.data.ZenithShield
+import dev.hearth.launcher.data.ZenithTint
 import dev.hearth.launcher.data.ZenithWeather
+import dev.hearth.launcher.data.withZenithTint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -377,8 +379,17 @@ fun ZentraleScreen(onClose: () -> Unit, onUpdate: ((LauncherSettings) -> Launche
                         description = "Bewegt sich hinter den Apps und Widgets",
                         checked = settings.zenithAurora,
                     ) { v -> onUpdate { it.copy(zenithAurora = v) } }
+                    // ZENITH 20.1: ZENITH's color, system-wide.
                     ChoiceRow(
-                        label = "Farben",
+                        label = "ZENITH-Farbe (ganzes System)",
+                        options = ZenithTint.entries,
+                        selected = settings.zenithTint,
+                        optionLabel = { it.label },
+                        swatch = { it.main },
+                        onSelect = { v -> onUpdate { it.withZenithTint(v) } },
+                    )
+                    ChoiceRow(
+                        label = "Farben des Polarlichts",
                         options = AuroraLook.entries,
                         selected = settings.auroraLook,
                         optionLabel = { it.label },

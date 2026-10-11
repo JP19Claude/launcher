@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.lerp
+import dev.hearth.launcher.data.ZenithPalette
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.random.Random
@@ -94,8 +95,10 @@ internal val ZenithMetal: List<MetalMark> = Random(19).let { r ->
 private val RimColors = listOf(Color(0xFF2FD25A), Color(0xFF46EB6E), Color(0xFFD2FFD7))
 
 /** The edge light's haze, line and core: ZENITH's green, or – for a version's own card – the card's [tint]. */
-private fun rimPalette(tint: Color?): List<Color> =
-    if (tint == null) RimColors else listOf(tint, lerp(tint, Color.White, 0.3f), lerp(tint, Color.White, 0.85f))
+private fun rimPalette(tint: Color?): List<Color> {
+    val t = tint ?: ZenithPalette.other
+    return if (t == null) RimColors else listOf(t, lerp(t, Color.White, 0.3f), lerp(t, Color.White, 0.85f))
+}
 private val RimWidths = floatArrayOf(0.03f, 0.012f, 0.004f)
 private val RimAlphas = floatArrayOf(0.22f, 0.55f, 0.95f)
 
@@ -127,11 +130,12 @@ private fun DrawScope.rimLight(a: Offset, b: Offset, w: Float, grow: Float, k0: 
 private fun DrawScope.rimSpot(p: Offset, r: Float, a: Float, tint: Color? = null) {
     if (r <= 0f || a <= 0f) return
     val al = a.coerceIn(0f, 1f)
+    val t = tint ?: ZenithPalette.other
     drawCircle(
         Brush.radialGradient(
-            0f to (if (tint != null) lerp(tint, Color.White, 0.9f) else Color(0xFFEBFFEB)).copy(alpha = al),
-            0.25f to (tint ?: Color(0xFF50F078)).copy(alpha = al * 0.6f),
-            1f to (tint?.copy(alpha = 0f) ?: Color(0x0028C85A)),
+            0f to (if (t != null) lerp(t, Color.White, 0.9f) else Color(0xFFEBFFEB)).copy(alpha = al),
+            0.25f to (t ?: Color(0xFF50F078)).copy(alpha = al * 0.6f),
+            1f to (t?.copy(alpha = 0f) ?: Color(0x0028C85A)),
             center = p,
             radius = r,
         ),
@@ -150,6 +154,8 @@ internal fun DrawScope.drawZenithZ(left: Float, top: Float, w: Float, light: Flo
     val h = w * ZenithZAspect
     val z = zenithZPath(left, top, w)
     val p = List(8) { zCorner(it, left, top, w) }
+    // A version card's own color, else the system's ZENITH color when it isn't the green.
+    val own = tint ?: ZenithPalette.other
     // The metal.
     drawPath(
         z,
@@ -178,11 +184,11 @@ internal fun DrawScope.drawZenithZ(left: Float, top: Float, w: Float, light: Flo
         )
         if (charge > 0.01f) {
             // Held: green light floods the metal and a bright band runs over it.
-            drawRect((tint ?: Color(0xFF2FD27A)).copy(alpha = 0.12f * charge), Offset(left, top), Size(w, h))
+            drawRect((own ?: Color(0xFF2FD27A)).copy(alpha = 0.12f * charge), Offset(left, top), Size(w, h))
             val band = left + w * (-0.2f + 1.4f * charge)
             drawRect(
                 Brush.linearGradient(
-                    if (tint != null) listOf(tint.copy(alpha = 0f), lerp(tint, Color.White, 0.6f).copy(alpha = 0.35f), tint.copy(alpha = 0f)) else listOf(Color(0x0078FFA0), Color(0xFFA0FFBE).copy(alpha = 0.35f), Color(0x0078FFA0)),
+                    if (own != null) listOf(own.copy(alpha = 0f), lerp(own, Color.White, 0.6f).copy(alpha = 0.35f), own.copy(alpha = 0f)) else listOf(Color(0x0078FFA0), Color(0xFFA0FFBE).copy(alpha = 0.35f), Color(0x0078FFA0)),
                     start = Offset(band - w * 0.12f, top),
                     end = Offset(band + w * 0.12f, top + h),
                 ),
@@ -313,7 +319,7 @@ internal fun DrawScope.drawZenithPlate(slant: Float, unit: Float, alpha: Float =
     // A breath of green light under it.
     val pool = Offset(w * 0.6f, h)
     scale(1f, 0.3f, pivot = pool) {
-        drawCircle(Brush.radialGradient(listOf(Color(0xFF2FD27A).copy(alpha = 0.22f), Color.Transparent), center = pool, radius = w * 0.5f), w * 0.5f, pool)
+        drawCircle(Brush.radialGradient(listOf(ZenithGreen.copy(alpha = 0.22f), Color.Transparent), center = pool, radius = w * 0.5f), w * 0.5f, pool)
     }
     // The metal: dark, light falling from the top, a faint diagonal sheen.
     drawPath(plate, Brush.verticalGradient(listOf(Color(0xFF3E4245), Color(0xFF26292C), Color(0xFF141618)), startY = 0f, endY = h), alpha = alpha)
@@ -360,7 +366,7 @@ private fun DrawScope.zenithFootLine(k: Float) {
     )
     line(px * 6f, 0.1f, ZenithGreen)
     line(px * 2f, 0.32f, ZenithGreen)
-    line(px, 0.95f, Color(0xFFC8FFD6))
+    line(px, 0.95f, ZenithPalette.other?.let { lerp(it, Color.White, 0.8f) } ?: Color(0xFFC8FFD6))
 }
 
 /** A silver hairline round the top of [outline], fading out down its sides. */

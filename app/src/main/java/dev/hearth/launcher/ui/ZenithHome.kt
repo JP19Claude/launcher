@@ -32,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.data.ZenithPalette
+import dev.hearth.launcher.data.ZenithTint
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.PI
@@ -57,9 +59,10 @@ val ZenithLiquidColors = listOf(
     Color(0xFFFFFBEF),
 )
 
-private val ZenithDawnColors = listOf(ZenithSun, Color(0xFFFF9A5A), ZenithGreen, Color(0xFFFFD6B0), Color(0xFFFFF6D6))
-private val ZenithDuskColors = listOf(Color(0xFFFF8A4C), ZenithSun, Color(0xFFFF6F91), ZenithGreen, Color(0xFFFFE0B8))
-private val ZenithNightColors = listOf(ZenithSky, Color(0xFF7F8CFF), ZenithGreen, Color(0xFFB8F5C8), Color(0xFFDDEEFF))
+// (Getters: ZENITH's color can be changed, and the lists follow.)
+private val ZenithDawnColors: List<Color> get() = listOf(ZenithSun, Color(0xFFFF9A5A), ZenithGreen, Color(0xFFFFD6B0), Color(0xFFFFF6D6))
+private val ZenithDuskColors: List<Color> get() = listOf(Color(0xFFFF8A4C), ZenithSun, Color(0xFFFF6F91), ZenithGreen, Color(0xFFFFE0B8))
+private val ZenithNightColors: List<Color> get() = listOf(ZenithSky, Color(0xFF7F8CFF), ZenithGreen, Color(0xFFB8F5C8), Color(0xFFDDEEFF))
 
 /**
  * "Farben nach Sonnenstand": Zenith's colors for the hour – gold and peach in the morning, green
@@ -234,24 +237,43 @@ internal fun ZenithArc(day: Boolean, along: Float, modifier: Modifier = Modifier
  */
 @Composable
 internal fun ZenithHomeLight(modifier: Modifier = Modifier) {
-    val power = if (LocalGlassStyle.current.dark) 0.7f else 1f
+    val s = LocalSettings.current
+    // ZENITH 20.1: the light can be adjusted – how strong, in which color, and which parts shine.
+    val power = (if (LocalGlassStyle.current.dark) 0.7f else 1f) * s.homeLightStrength
+    val chosen = s.homeLightColor.tint
+    val light = chosen?.main ?: ZenithGreen
+    val floor = if (chosen == null && ZenithPalette.other == null || chosen == ZenithTint.Green) {
+        Color(0xFF06331C)
+    } else {
+        lerp(chosen?.deep ?: ZenithGreenDeep, Color.Black, 0.6f)
+    }
+    val beam = s.homeLightBeam
+    val glintOn = s.homeLightGlint
+    val floorOn = s.homeLightFloor
+    fun alpha(a: Float) = a.coerceIn(0f, 1f)
     Canvas(modifier) {
         val w = size.width
         val h = size.height
-        drawRect(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.4f * power), 0.34f to Color.Transparent))
-        // The beam along the diagonal, soft at its sides.
-        val from = Offset(w * 0.84f, -h * 0.05f)
-        val to = Offset(-w * 0.04f, h * 1.05f)
-        listOf(0.62f to 0.022f, 0.36f to 0.028f, 0.12f to 0.035f).forEach { (width, alpha) ->
-            drawLine(ZenithGreen.copy(alpha = alpha * power), from, to, strokeWidth = w * width)
+        drawRect(Brush.verticalGradient(0f to Color.Black.copy(alpha = alpha(0.4f * power.coerceAtMost(1f))), 0.34f to Color.Transparent))
+        if (beam) {
+            // The beam along the diagonal, soft at its sides.
+            val from = Offset(w * 0.84f, -h * 0.05f)
+            val to = Offset(-w * 0.04f, h * 1.05f)
+            listOf(0.62f to 0.022f, 0.36f to 0.028f, 0.12f to 0.035f).forEach { (width, a) ->
+                drawLine(light.copy(alpha = alpha(a * power)), from, to, strokeWidth = w * width)
+            }
         }
-        val glint = Offset(w * 0.86f, h * 0.05f)
-        drawCircle(Brush.radialGradient(listOf(ZenithGreen.copy(alpha = 0.22f * power), Color.Transparent), center = glint, radius = w * 0.5f), w * 0.5f, glint)
-        // The floor: dark green, a pool of green light behind the dock.
-        drawRect(Brush.verticalGradient(0.6f to Color.Transparent, 1f to Color(0xFF06331C).copy(alpha = 0.6f * power)))
-        val pool = Offset(w * 0.6f, h * 1.02f)
-        scale(1f, 0.45f, pivot = pool) {
-            drawCircle(Brush.radialGradient(listOf(ZenithGreen.copy(alpha = 0.4f * power), Color.Transparent), center = pool, radius = w * 0.85f), w * 0.85f, pool)
+        if (glintOn) {
+            val glint = Offset(w * 0.86f, h * 0.05f)
+            drawCircle(Brush.radialGradient(listOf(light.copy(alpha = alpha(0.22f * power)), Color.Transparent), center = glint, radius = w * 0.5f), w * 0.5f, glint)
+        }
+        if (floorOn) {
+            // The floor: dark, a pool of light behind the dock.
+            drawRect(Brush.verticalGradient(0.6f to Color.Transparent, 1f to floor.copy(alpha = alpha(0.6f * power))))
+            val pool = Offset(w * 0.6f, h * 1.02f)
+            scale(1f, 0.45f, pivot = pool) {
+                drawCircle(Brush.radialGradient(listOf(light.copy(alpha = alpha(0.4f * power)), Color.Transparent), center = pool, radius = w * 0.85f), w * 0.85f, pool)
+            }
         }
     }
 }

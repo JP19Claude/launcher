@@ -51,6 +51,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.input.pointer.pointerInput
 import dev.hearth.launcher.data.AppInfo
+import dev.hearth.launcher.data.withZenithTint
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
@@ -401,6 +402,16 @@ fun SettingsScreen(
                             }
                         },
                     )
+                    // ZENITH 20.1: ZENITH's color, system-wide – the green, or the jubilee's gold and others.
+                    ChoiceRow(
+                        label = "ZENITH-Farbe",
+                        options = dev.hearth.launcher.data.ZenithTint.entries,
+                        selected = s.zenithTint,
+                        optionLabel = { it.label },
+                        swatch = { it.main },
+                        onSelect = { v -> update { it.withZenithTint(v) } },
+                    )
+                    Note("Die Farbe des Z-Lichts, der Zahl, der Karten und der Texte im ganzen System. Polarlicht, Z-Angriff, Akzent und Glas werden dazu passend gesetzt – danach kannst du sie einzeln ändern. „Jubiläums-Gold“ ist die Farbe der Karte von ZENITH 20.")
                     if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.Zenith) {
                         SwitchRow(
                             label = "Farben nach Sonnenstand",
@@ -427,6 +438,8 @@ fun SettingsScreen(
                             swatch = { it.colors.first() },
                             onSelect = { v -> update { it.copy(auroraLook = v) } },
                         )
+                        PercentSlider("Stärke des Polarlichts", s.auroraStrength, 0.3f..1.5f) { v -> update { it.copy(auroraStrength = v) } }
+                        PercentSlider("Tempo des Polarlichts", s.auroraSpeed, 0.3f..2.5f) { v -> update { it.copy(auroraSpeed = v) } }
                     }
                     SwitchRow(
                         label = "ZENITH-Start",
@@ -449,6 +462,33 @@ fun SettingsScreen(
                         description = "Auf dem Startbildschirm leuchtet Fluid in der Systemfarbe zwischen Hintergrundbild und Apps und Widgets – im Dark Mode gedämpft",
                         checked = s.omegaLight,
                     ) { v -> update { it.copy(omegaLight = v, omegaGlass = if (v) true else it.omegaGlass) } }
+                    if (s.omegaLight) {
+                        // ZENITH 20.1: the home screen's light can be adjusted.
+                        PercentSlider("Stärke des Lichts", s.homeLightStrength, 0f..2f) { v -> update { it.copy(homeLightStrength = v) } }
+                        ChoiceRow(
+                            label = "Farbe des Lichts",
+                            options = dev.hearth.launcher.data.HomeLightColor.entries,
+                            selected = s.homeLightColor,
+                            optionLabel = { it.label },
+                            swatch = { it.tint?.main ?: s.zenithTint.main },
+                            onSelect = { v -> update { it.copy(homeLightColor = v) } },
+                        )
+                        SwitchRow(
+                            label = "Lichtstrahl",
+                            description = "Der weiche Strahl entlang der Diagonale des Z (nur im ZENITH-Licht)",
+                            checked = s.homeLightBeam,
+                        ) { v -> update { it.copy(homeLightBeam = v) } }
+                        SwitchRow(
+                            label = "Funkeln oben rechts",
+                            description = "Das Leuchten in der Ecke hinter der Uhr (nur im ZENITH-Licht)",
+                            checked = s.homeLightGlint,
+                        ) { v -> update { it.copy(homeLightGlint = v) } }
+                        SwitchRow(
+                            label = "Bodenlicht",
+                            description = "Das Licht, das hinter dem Dock aufsteigt (nur im ZENITH-Licht)",
+                            checked = s.homeLightFloor,
+                        ) { v -> update { it.copy(homeLightFloor = v) } }
+                    }
                     RowDivider()
                     SwitchRow(
                         label = "Flüssig-Modus",

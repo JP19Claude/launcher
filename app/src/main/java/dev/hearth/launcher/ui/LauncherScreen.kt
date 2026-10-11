@@ -547,7 +547,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val glassStyle = remember(settings) { GlassStyle.from(settings) }
     // ZENITH 19: ZENITH's own background – made once, off the main thread; the metal over it
     // blurs it instead of the wallpaper.
-    val zenithWall by androidx.compose.runtime.produceState<ZenithWall?>(null, settings.zenithWallpaper, settings.hologram) {
+    val zenithWall by androidx.compose.runtime.produceState<ZenithWall?>(null, settings.zenithWallpaper, settings.hologram, settings.zenithTint) {
         val project = settings.hologram
         value = if (settings.zenithWallpaper || project) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { runCatching { makeZenithWall(context, project) }.getOrNull() }
@@ -781,7 +781,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         )
                     }
                     // ZENITH 20: the aurora, curtains of light drifting behind the apps and widgets.
-                    if (settings.zenithAurora) ZenithAurora(settings.auroraLook, Modifier.matchParentSize(), strength = 0.85f)
+                    if (settings.zenithAurora) ZenithAurora(settings.auroraLook, Modifier.matchParentSize(), strength = settings.auroraStrength, speed = settings.auroraSpeed)
                     // OMEGA UI 17.5: OMEGA light between the wallpaper and the apps and widgets.
                     OmegaHomeLight(Modifier.matchParentSize())
                     // OMEGA UI 18: the perks behind the apps and widgets (and Claude Mythos's Clawd).

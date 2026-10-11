@@ -228,9 +228,26 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "ZENITH-Farbe im ganzen System", Icons.Rounded.Edit, Green,
+                    listOf(
+                        "Das Gold der Jubiläumskarte gibt es jetzt für das ganze System – und nicht nur Gold: Einstellungen → ZENITH → „ZENITH-Farbe“ (auch im Core Enforcer Studio und in der Zentrale) tauscht das Zenith-Grün gegen Jubiläums-Gold, Eisblau, Violett oder Rubin.",
+                        "Die Farbe gilt überall, wo ZENITH grün leuchtet: das Randlicht des Z, die Zahl im Z, Karten, Rahmen, Tresor, Schutzschild, Monitor und die Texte im HUD-Stil. Das Polarlicht, der Z-Angriff, der Akzent und das Glas werden passend gesetzt und lassen sich danach einzeln ändern.",
+                        "Die Farbe wird beim Würfeln im Studio mitgewürfelt und im Profil gespeichert.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Hintergrundbeleuchtung einstellbar", Icons.Rounded.Settings, Orange,
+                    listOf(
+                        "Das ZENITH-Licht auf dem Startbildschirm hat jetzt Regler: Stärke (von aus bis doppelt so hell), Farbe (wie die ZENITH-Farbe oder eine eigene) und drei Teile zum Ein- und Ausschalten – der Lichtstrahl entlang der Z-Diagonale, das Funkeln oben rechts und das Bodenlicht hinter dem Dock. Zu finden unter Einstellungen → ZENITH und im Core Enforcer Studio.",
+                        "Das Polarlicht hat Stärke und Tempo zum Einstellen.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Jubiläums-Look", Icons.Rounded.Favorite, Pink,
                     listOf(
-                        "Ein Tipp im Core Enforcer Studio (oder in der Zentrale): goldenes Polarlicht, warmes Gold bei Akzent und Glas, der ZENITH-Hintergrund und ein goldener Z-Angriff. Beim Würfel geht es mit „Zurück“ wieder weg.",
+                        "Ein Tipp im Core Enforcer Studio (oder in der Zentrale): ZENITH-Farbe Jubiläums-Gold mit goldenem Polarlicht, Akzent, Glas und Z-Angriff, dazu der ZENITH-Hintergrund. Beim Würfel geht es mit „Zurück“ wieder weg.",
                     ),
                     hearth,
                 ),

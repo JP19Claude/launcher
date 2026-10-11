@@ -23,10 +23,10 @@ import kotlin.math.sin
  * ZENITH 20, Aurora: curtains of light drifting over a dark sky with a few stars twinkling –
  * the home screen's moving background (and the Zentrale's). Three curtains in the colors of [look],
  * each a soft wave with a bright middle that fades out above and below. Drawn at about thirty
- * frames a second (and still, with animations off).
+ * frames a second (and still, with animations off). [strength] brightens or dims it, [speed] runs it faster or slower.
  */
 @Composable
-fun ZenithAurora(look: AuroraLook, modifier: Modifier = Modifier, strength: Float = 1f) {
+fun ZenithAurora(look: AuroraLook, modifier: Modifier = Modifier, strength: Float = 1f, speed: Float = 1f) {
     val animate = LocalSettings.current.animations
     var time by remember { mutableLongStateOf(0L) }
     LaunchedEffect(animate) {
@@ -45,7 +45,7 @@ fun ZenithAurora(look: AuroraLook, modifier: Modifier = Modifier, strength: Floa
         val w = size.width
         val h = size.height
         if (w <= 0f || h <= 0f) return@Canvas
-        val t = time / 1000f
+        val t = time / 1000f * speed
         val colors = look.colors
         // A glow high on the left and low on the right, as if the light had a source.
         drawRect(Brush.radialGradient(listOf(colors[0].copy(alpha = 0.16f * strength), Color.Transparent), center = Offset(w * 0.2f, h * 0.15f), radius = w * 0.95f))

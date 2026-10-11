@@ -8,6 +8,8 @@ ZENITH 20 „Jubiläum“ auf ClaudeOS 7.0 „Apex“
 • Zwölf neue Jubiläums-Eggs (jetzt 69): in der Uhr, im Finder, im Polarlicht, in der Z-Nacht und in der Zentrale
 • Jubiläums-Galerie in der Zentrale: alle Versionen von Hearth 11 bis ZENITH 20 und alle ClaudeOS auf einmal
 • Jubiläums-Look mit einem Tipp (Core Enforcer Studio, Zentrale): goldenes Polarlicht, Gold bei Akzent und Glas
+• ZENITH-Farbe fürs ganze System: das Gold der Karte (oder Eisblau, Violett, Rubin) statt Zenith-Grün – Randlicht des Z, Zahl, Karten, Tresor, Schutzschild, HUD-Texte; Polarlicht, Z-Angriff, Akzent und Glas passen sich an
+• Hintergrundbeleuchtung einstellbar: Stärke, Farbe, Lichtstrahl, Funkeln und Bodenlicht des ZENITH-Lichts; Polarlicht mit Stärke und Tempo
 
 🎆 Die Jubiläums-Zeremonie
 • Einmal nach dem Update: die Zahlen laufen von 1 bis 20, die 20 rastet in Gold ein, ein Feuerwerk in den Farben des Z-Angriffs beginnt

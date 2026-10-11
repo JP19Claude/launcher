@@ -40,7 +40,7 @@ import kotlin.random.Random
  */
 
 /** Projekt Zenith's light green, for brackets and readouts. */
-internal val HudGreen = Color(0xFF7DFFA8)
+internal val HudGreen: Color get() = dev.hearth.launcher.data.ZenithPalette.tint.hud
 
 /** The HUD's typeface: a computer's. */
 internal val HudFont = FontFamily.Monospace

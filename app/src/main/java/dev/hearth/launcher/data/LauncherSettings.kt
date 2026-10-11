@@ -132,6 +132,18 @@ enum class AuroraLook(val label: String, val colors: List<Color>) {
     Rubin("Rubin", listOf(Color(0xFFFF4155), Color(0xFFFF9A3D), Color(0xFFFF6FB5))),
 }
 
+/**
+ * ZENITH 20.1: ZENITH's color [tint] in one tap, system-wide – the Z's light, the HUD and the cards
+ * follow it, and the aurora, the Z-Angriff, the system accent and the glass are set to match.
+ */
+fun LauncherSettings.withZenithTint(tint: ZenithTint): LauncherSettings = copy(
+    zenithTint = tint,
+    auroraLook = tint.aurora,
+    strikeColor = tint.strike,
+    accent = tint.accent,
+    glassTint = tint.glass,
+)
+
 /** ZENITH 19.3, Core Enforcer Studio: the color of the Z-Angriff's light. */
 enum class StrikeColor(val label: String, val color: Color) {
     Green("Zenith-Grün", Color(0xFF2FD27A)),
@@ -602,6 +614,17 @@ data class LauncherSettings(
     /** ZENITH 20, Aurora: curtains of light drift over the home screen's background. */
     val zenithAurora: Boolean = false,
     val auroraLook: AuroraLook = AuroraLook.Zenith,
+    /** The aurora's strength (0.3–1.5) and speed (0.3–2.5). */
+    val auroraStrength: Float = 0.85f,
+    val auroraSpeed: Float = 1f,
+    /** ZENITH 20.1: ZENITH's color, system-wide (the green of the Z's light, the HUD, the cards – or gold, ice, violet, ruby). */
+    val zenithTint: ZenithTint = ZenithTint.Green,
+    /** ZENITH 20.1, the home screen's light: how strong (0–2), in which color, and which parts shine. */
+    val homeLightStrength: Float = 1f,
+    val homeLightColor: HomeLightColor = HomeLightColor.Follow,
+    val homeLightBeam: Boolean = true,
+    val homeLightGlint: Boolean = true,
+    val homeLightFloor: Boolean = true,
     /** ZENITH 19: after the phone starts, the Z lights up once before the home screen. */
     val zenithBootIntro: Boolean = true,
     /** ZENITH 19, Z-Angriff: a fully charged Z draws a giant Z across the screen, like Zygarde's Core Enforcer. */
@@ -1049,6 +1072,7 @@ class SettingsRepository(context: Context) {
         rereadPending = false
         val now = read()
         if (now != _settings.value) _settings.value = now
+        syncPalette(now)
     }
     private val onPrefsChanged = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
         if (!rereadPending) {
@@ -1059,10 +1083,17 @@ class SettingsRepository(context: Context) {
 
     init {
         prefs.registerOnSharedPreferenceChangeListener(onPrefsChanged)
+        syncPalette(_settings.value)
+    }
+
+    /** ZENITH 20.1: the color ZENITH is in follows the setting, in every screen. */
+    private fun syncPalette(s: LauncherSettings) {
+        if (ZenithPalette.tint != s.zenithTint) ZenithPalette.tint = s.zenithTint
     }
 
     fun update(transform: (LauncherSettings) -> LauncherSettings) {
         _settings.update(transform)
+        syncPalette(_settings.value)
         write(_settings.value)
         // ZENITH 20: every color of the aurora tried is remembered (all five is an egg).
         _settings.value.let { if (it.zenithAurora) JubileeTrail.sawAurora(appContext, it.auroraLook) }
@@ -1156,6 +1187,14 @@ class SettingsRepository(context: Context) {
             zenithWallpaper = prefs.getBoolean("zenithWallpaper", d.zenithWallpaper),
             zenithAurora = prefs.getBoolean("zenithAurora", d.zenithAurora),
             auroraLook = enumOf("auroraLook", d.auroraLook),
+            auroraStrength = prefs.getFloat("auroraStrength", d.auroraStrength),
+            auroraSpeed = prefs.getFloat("auroraSpeed", d.auroraSpeed),
+            zenithTint = enumOf("zenithTint", d.zenithTint),
+            homeLightStrength = prefs.getFloat("homeLightStrength", d.homeLightStrength),
+            homeLightColor = enumOf("homeLightColor", d.homeLightColor),
+            homeLightBeam = prefs.getBoolean("homeLightBeam", d.homeLightBeam),
+            homeLightGlint = prefs.getBoolean("homeLightGlint", d.homeLightGlint),
+            homeLightFloor = prefs.getBoolean("homeLightFloor", d.homeLightFloor),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
             zenithStrike = prefs.getBoolean("zenithStrike", d.zenithStrike),
             zenithStrikeSystem = prefs.getBoolean("zenithStrikeSystem", d.zenithStrikeSystem),
@@ -1354,6 +1393,14 @@ class SettingsRepository(context: Context) {
             .putBoolean("zenithWallpaper", s.zenithWallpaper)
             .putBoolean("zenithAurora", s.zenithAurora)
             .putString("auroraLook", s.auroraLook.name)
+            .putFloat("auroraStrength", s.auroraStrength)
+            .putFloat("auroraSpeed", s.auroraSpeed)
+            .putString("zenithTint", s.zenithTint.name)
+            .putFloat("homeLightStrength", s.homeLightStrength)
+            .putString("homeLightColor", s.homeLightColor.name)
+            .putBoolean("homeLightBeam", s.homeLightBeam)
+            .putBoolean("homeLightGlint", s.homeLightGlint)
+            .putBoolean("homeLightFloor", s.homeLightFloor)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("zenithStrike", s.zenithStrike)
             .putBoolean("zenithStrikeSystem", s.zenithStrikeSystem)

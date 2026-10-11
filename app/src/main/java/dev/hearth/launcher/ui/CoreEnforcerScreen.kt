@@ -48,6 +48,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.AccentColor
 import dev.hearth.launcher.data.AuroraLook
+import dev.hearth.launcher.data.HomeLightColor
+import dev.hearth.launcher.data.ZenithTint
+import dev.hearth.launcher.data.withZenithTint
 import dev.hearth.launcher.data.ClockFont
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.CoreProfile
@@ -274,6 +277,15 @@ fun CoreEnforcerScreen(repo: SettingsRepository, onClose: () -> Unit) {
 
             item {
                 StudioPanel("Farbe & Glas") {
+                    // ZENITH 20.1: ZENITH's color, system-wide; the aurora, the Z-Angriff, the accent and the glass follow.
+                    ChoiceRow(
+                        label = "ZENITH-Farbe",
+                        options = ZenithTint.entries,
+                        selected = s.zenithTint,
+                        optionLabel = { it.label },
+                        swatch = { it.main },
+                        onSelect = { v -> update { it.withZenithTint(v) } },
+                    )
                     ChoiceRow(
                         label = "Akzent",
                         options = AccentColor.entries,
@@ -318,6 +330,26 @@ fun CoreEnforcerScreen(repo: SettingsRepository, onClose: () -> Unit) {
                             swatch = { it.colors.first() },
                             onSelect = { v -> update { it.copy(auroraLook = v) } },
                         )
+                        PercentSlider("Stärke des Polarlichts", s.auroraStrength, 0.3f..1.5f) { v -> update { it.copy(auroraStrength = v) } }
+                        PercentSlider("Tempo des Polarlichts", s.auroraSpeed, 0.3f..2.5f) { v -> update { it.copy(auroraSpeed = v) } }
+                    }
+                    // ZENITH 20.1: the home screen's light, adjustable.
+                    SwitchRow(label = "ZENITH-Licht", description = "Das Licht hinter Uhr, Apps und Dock", checked = s.omegaLight) { v ->
+                        update { it.copy(omegaLight = v, omegaGlass = if (v) true else it.omegaGlass) }
+                    }
+                    if (s.omegaLight) {
+                        PercentSlider("Stärke des Lichts", s.homeLightStrength, 0f..2f) { v -> update { it.copy(homeLightStrength = v) } }
+                        ChoiceRow(
+                            label = "Farbe des Lichts",
+                            options = HomeLightColor.entries,
+                            selected = s.homeLightColor,
+                            optionLabel = { it.label },
+                            swatch = { it.tint?.main ?: s.zenithTint.main },
+                            onSelect = { v -> update { it.copy(homeLightColor = v) } },
+                        )
+                        SwitchRow(label = "Lichtstrahl", checked = s.homeLightBeam) { v -> update { it.copy(homeLightBeam = v) } }
+                        SwitchRow(label = "Funkeln oben rechts", checked = s.homeLightGlint) { v -> update { it.copy(homeLightGlint = v) } }
+                        SwitchRow(label = "Bodenlicht", checked = s.homeLightFloor) { v -> update { it.copy(homeLightFloor = v) } }
                     }
                     SwitchRow(label = "Fließende Ränder", description = "Claudes Farben fließen um jede Fläche", checked = s.fluidDesign) { v -> update { it.copy(fluidDesign = v) } }
                     SwitchRow(label = "Flüssig-Modus", description = "Leichter und ruckelfreier", checked = s.smoothMode) { v -> update { it.copy(smoothMode = v) } }

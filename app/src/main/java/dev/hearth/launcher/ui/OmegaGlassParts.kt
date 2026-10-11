@@ -119,15 +119,21 @@ internal fun OmegaHomeLight(modifier: Modifier = Modifier) {
     if (!s.omegaGlass || !s.omegaLight || !s.fluidDesign) return
     // OMEGA UI 18, Tageszeit-Licht: the light follows the day.
     val hour = if (s.has(dev.hearth.launcher.data.Perk.DayLight)) java.time.LocalTime.now().hour else -1
+    val chosenLight = s.homeLightColor.tint
     val palette = when (hour) {
-        -1 -> fluidPalette()
+        -1 -> if (chosenLight != null) {
+            // ZENITH 20.1: a color chosen for the home screen's light.
+            listOf(chosenLight.main, chosenLight.deep, androidx.compose.ui.graphics.lerp(chosenLight.main, Color.White, 0.35f), chosenLight.main, androidx.compose.ui.graphics.lerp(chosenLight.main, Color.White, 0.7f))
+        } else {
+            fluidPalette()
+        }
         in 5..10 -> listOf(Color(0xFFFFC46B), Color(0xFFFF9F45), Color(0xFFFFE0A3), Color(0xFFFFB86B), Color(0xFFFFF1D0))
         in 11..16 -> listOf(Color(0xFF9CD8FF), Color(0xFFFFF2B3), Color(0xFFBDE8FF), Color(0xFFFFFFFF), Color(0xFFE6F6FF))
         in 17..20 -> listOf(Color(0xFFFF5A3C), Color(0xFFC8102E), Color(0xFFFF8A5C), Color(0xFFFF4F7A), Color(0xFFFFC2A8))
         else -> listOf(Color(0xFF2F4BFF), Color(0xFF14206B), Color(0xFF5C7CFF), Color(0xFF8E6BFF), Color(0xFFBFD0FF))
     }
     val dark = LocalGlassStyle.current.dark
-    val power = (if (dark) 0.6f else 1f) * (if (s.omegaOverdrive) 1.3f else 1f) * (if (s.liquidOmega) 0.5f else 1f)
+    val power = (if (dark) 0.6f else 1f) * (if (s.omegaOverdrive) 1.3f else 1f) * (if (s.liquidOmega) 0.5f else 1f) * s.homeLightStrength
     // OMEGA UI 18.3: the light stands still (only Ω-Overdrive lets it drift) – drifting, it
     // redrew the whole home screen and every glass on it, frame after frame.
     val flow = flowPhase(30_000, s.animations && s.omegaOverdrive)

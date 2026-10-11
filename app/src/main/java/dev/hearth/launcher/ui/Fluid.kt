@@ -32,6 +32,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
+import dev.hearth.launcher.data.ZenithPalette
 import dev.hearth.launcher.data.liquidOmega
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithCache
@@ -209,13 +210,14 @@ internal fun omegaPalette(s: dev.hearth.launcher.data.LauncherSettings): List<Co
     }
 
 /** ZENITH Metall's colors: ZENITH's green and the silver of its metal. */
-val ZenithMetalColors = listOf(
-    Color(0xFF2FD27A),
-    Color(0xFFE6E9EB),
-    Color(0xFF8FE3B0),
-    Color(0xFFB9C0C6),
-    Color(0xFF15965A),
-)
+val ZenithMetalColors: List<Color>
+    get() = listOf(
+        ZenithGreen,
+        Color(0xFFE6E9EB),
+        ZenithPalette.other?.let { androidx.compose.ui.graphics.lerp(it, Color.White, 0.45f) } ?: Color(0xFF8FE3B0),
+        Color(0xFFB9C0C6),
+        ZenithGreenDeep,
+    )
 
 /** OMEGA UI 18.3 "Liquid Glass": light caught in clear glass – white with a breath of rainbow. */
 val LiquidFluidColors = listOf(
