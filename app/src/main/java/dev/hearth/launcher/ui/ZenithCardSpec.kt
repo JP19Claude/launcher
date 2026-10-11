@@ -20,7 +20,7 @@ import kotlin.random.Random
  * release carries its card in the update file (versions.json, "card"), and the Software-Update of
  * any installed ZENITH from 20.0 on draws it before the update is installed. The colors are "#RRGGBB".
  */
-internal class ZenithCardSpec(
+class ZenithCardSpec(
     /** The card's ground, from the top left to the bottom right (two to four colors). */
     val bg: List<Color>,
     /** A glow high on the left and one low on the right. */
