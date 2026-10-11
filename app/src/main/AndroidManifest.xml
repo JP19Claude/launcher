@@ -160,6 +160,18 @@
             android:exported="false"
             android:label="ZENITH-Schutzschild" />
 
+        <!-- ZENITH 20: the Zentrale, the day at a glance – weather, brief, the phone, the shortcuts. -->
+        <activity
+            android:name=".ZentraleActivity"
+            android:exported="false"
+            android:label="ZENITH-Zentrale" />
+
+        <!-- ZENITH 20: the Z-Nacht, the nightstand clock under the aurora. -->
+        <activity
+            android:name=".NightstandActivity"
+            android:exported="false"
+            android:label="Z-Nacht" />
+
         <!-- ZENITH 19.7: Clawd's perfume shelf. -->
         <activity
             android:name=".PerfumeActivity"

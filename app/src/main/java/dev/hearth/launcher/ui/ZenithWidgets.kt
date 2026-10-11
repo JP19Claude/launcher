@@ -50,7 +50,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /** One reading of the phone for the ZENITH-Monitor. */
-private class MonitorReading(
+internal class MonitorReading(
     val battery: Int,
     val charging: Boolean,
     val temperature: Float,
@@ -62,7 +62,7 @@ private class MonitorReading(
     val uptimeMinutes: Long,
 )
 
-private fun readMonitor(context: Context): MonitorReading {
+internal fun readMonitor(context: Context): MonitorReading {
     val battery = runCatching { context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) }.getOrNull()
     val level = battery?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
     val scale = (battery?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100).coerceAtLeast(1)
@@ -87,7 +87,7 @@ private fun readMonitor(context: Context): MonitorReading {
     )
 }
 
-private fun gigabytes(bytes: Long): String = "%.1f".format(bytes / 1_073_741_824.0)
+internal fun gigabytes(bytes: Long): String = "%.1f".format(bytes / 1_073_741_824.0)
 
 /**
  * ZENITH 19.1, the ZENITH-Monitor: the phone's insides as a HUD – battery with temperature and
@@ -177,7 +177,7 @@ internal fun ZenithMonitorWidget(modifier: Modifier) {
 }
 
 @Composable
-private fun MonitorBar(label: String, value: String, fill: Float, color: Color) {
+internal fun MonitorBar(label: String, value: String, fill: Float, color: Color) {
     Column(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label, color = HudGreen.copy(alpha = 0.8f), fontSize = 10.sp, fontFamily = HudFont, letterSpacing = 1.5.sp, modifier = Modifier.width(76.dp))

@@ -22,9 +22,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -143,21 +140,7 @@ class PerfumeWeather(
     val wind: Double,
 ) {
     /** The sky in words, from the WMO weather code. */
-    val sky: String
-        get() = when (code) {
-            0 -> "klar"
-            1 -> "überwiegend klar"
-            2 -> "wechselhaft bewölkt"
-            3 -> "bedeckt"
-            45, 48 -> "neblig"
-            in 51..57 -> "Nieselregen"
-            in 61..67 -> "Regen"
-            in 71..77 -> "Schnee"
-            in 80..82 -> "Regenschauer"
-            85, 86 -> "Schneeschauer"
-            in 95..99 -> "Gewitter"
-            else -> "wechselhaft"
-        }
+    val sky: String get() = ZenithWeather.skyOf(code)
 
     /** "Köln · 18 °C (gefühlt 16), bis 21 °C, wechselhaft bewölkt, Regen 20 %". */
     val line: String
@@ -194,10 +177,8 @@ object PerfumeShelf {
     private val _pick = MutableStateFlow<PerfumePick?>(null)
     val pick: StateFlow<PerfumePick?> = _pick.asStateFlow()
 
-    private val _city = MutableStateFlow("")
-
-    /** The city the weather comes from ("" until one is set). */
-    val city: StateFlow<String> = _city.asStateFlow()
+    /** The city the weather comes from ("" until one is set) – the same one the ZENITH weather uses. */
+    val city: StateFlow<String> get() = ZenithWeather.city
 
     private val _look = MutableStateFlow(PerfumeLook())
 
@@ -211,8 +192,6 @@ object PerfumeShelf {
     /** Clawd is working out today's choice. */
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
 
-    private var lat = Double.NaN
-    private var lon = Double.NaN
     @Volatile
     private var lastTry = 0L
     private val picking = Mutex()
@@ -241,9 +220,7 @@ object PerfumeShelf {
             val array = JSONArray(prefs.getString("shelf", "[]"))
             (0 until array.length()).mapNotNull { array.optJSONObject(it)?.let(Perfume::fromJson) }
         }.getOrDefault(emptyList())
-        _city.value = prefs.getString("city", "").orEmpty()
-        lat = prefs.getString("lat", null)?.toDoubleOrNull() ?: Double.NaN
-        lon = prefs.getString("lon", null)?.toDoubleOrNull() ?: Double.NaN
+        ZenithWeather.init(app)
         val day = prefs.getString("pickDay", null)
         val id = prefs.getString("pickId", null)
         if (day != null && id != null) {
@@ -556,57 +533,21 @@ object PerfumeShelf {
 
     // ---- Weather and today's choice -------------------------------------------------------------
 
-    private suspend fun getJson(url: String): JSONObject = withContext(Dispatchers.IO) {
-        val connection = URL(url).openConnection() as HttpURLConnection
-        try {
-            connection.connectTimeout = 10_000
-            connection.readTimeout = 15_000
-            val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
-            JSONObject(stream.bufferedReader(Charsets.UTF_8).use { it.readText() })
-        } finally {
-            connection.disconnect()
-        }
-    }
-
     /** Sets the city the weather comes from (null: it worked; else why not). */
-    suspend fun setCity(query: String): String? {
-        val q = query.trim()
-        if (q.length < 2) return "Schreib einen Ort, zum Beispiel „Köln“."
-        return try {
-            val json = getJson("https://geocoding-api.open-meteo.com/v1/search?name=${URLEncoder.encode(q, "UTF-8")}&count=1&language=de&format=json")
-            val hit = json.optJSONArray("results")?.optJSONObject(0) ?: return "Den Ort „$q“ kenne ich nicht."
-            val name = hit.optString("name").ifBlank { q }
-            val country = hit.optString("country")
-            lat = hit.getDouble("latitude")
-            lon = hit.getDouble("longitude")
-            _city.value = if (country.isBlank()) name else "$name, $country"
-            prefs.edit().putString("city", _city.value).putString("lat", lat.toString()).putString("lon", lon.toString()).apply()
-            null
-        } catch (e: Exception) {
-            "Das Wetter-Verzeichnis ist gerade nicht erreichbar. Prüf das Internet."
-        }
-    }
+    suspend fun setCity(query: String): String? = ZenithWeather.setCity(query)
 
     private suspend fun fetchWeather(): PerfumeWeather? {
-        if (lat.isNaN() || lon.isNaN()) return null
-        val json = getJson(
-            "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon" +
-                "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m" +
-                "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=1",
-        )
-        val current = json.optJSONObject("current") ?: return null
-        val daily = json.optJSONObject("daily") ?: return null
-        val now = current.optDouble("temperature_2m", Double.NaN)
-        if (now.isNaN()) return null
+        ZenithWeather.refresh()
+        val r = ZenithWeather.report.value ?: return null
         return PerfumeWeather(
-            city = _city.value.substringBefore(','),
-            now = now,
-            feels = current.optDouble("apparent_temperature", now),
-            max = daily.optJSONArray("temperature_2m_max")?.optDouble(0, now) ?: now,
-            min = daily.optJSONArray("temperature_2m_min")?.optDouble(0, now) ?: now,
-            rainChance = daily.optJSONArray("precipitation_probability_max")?.optInt(0) ?: 0,
-            code = current.optInt("weather_code", 3),
-            wind = current.optDouble("wind_speed_10m", 0.0),
+            city = r.city,
+            now = r.now,
+            feels = r.feels,
+            max = r.max.toDouble(),
+            min = r.min.toDouble(),
+            rainChance = r.rain,
+            code = r.code,
+            wind = r.wind,
         )
     }
 

@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Fifty-four easter eggs hidden in Hearth, the ones from 19.6 on not all with Clawd. Each one found is remembered. A new
+ * Fifty-seven easter eggs hidden in Hearth, the ones from 19.6 on not all with Clawd. Each one found is remembered. A new
  * find shows only a small hint; finding one again shows nothing; only the last one throws a
  * real party (confetti, Clawd dancing, a glass message).
  *
@@ -49,11 +49,12 @@ import kotlinx.coroutines.flow.asStateFlow
  * ZENITH 19.6 added twenty-two more (see the egg map): the codes *#8376# *#6366# *#7625# *#3729#
  * *#6725# *#9277# *#2733#, the words hearth, konami, fluid, zenith, sudo su, hello world and π,
  * and five small ones – the Monitor's title, the Schutzschild's gauge and perfect score, ten rolls
- * of the die in the Core Enforcer Studio, and the clock at 13:37.
+ * of the die in the Core Enforcer Studio, and the clock at 13:37. ZENITH 20 added three: the moon in
+ * the Z-Nacht, the weather picture in the Zentrale and twenty taps on its clock.
  */
 object EasterEggs {
 
-    const val TOTAL = 54
+    const val TOTAL = 57
 
     private const val PREFS = "hearth_eggs"
     private const val KEY = "found"

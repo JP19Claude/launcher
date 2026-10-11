@@ -46,6 +46,10 @@ enum class HearthWidget(val label: String, val description: String, val spanX: I
     Monitor("ZENITH-Monitor", "Akku mit Temperatur und Spannung, Arbeitsspeicher, Speicher und Laufzeit – live, wie ein HUD", 4, 2, 180),
     /** ZENITH 19.1: the Schutzschild's score round the Z. */
     Shield("Schutzschild", "Deine Schutz-Punkte als Bogen um das Metall-Z – antippen öffnet den Schutzschild", 2, 2, 200),
+    /** ZENITH 20: the weather, with the sky as a picture. */
+    ZenithWeather("ZENITH-Wetter", "Temperatur groß, der Himmel als Bild, Höchst- und Tiefstwert, Regenwahrscheinlichkeit und die nächsten Stunden – antippen öffnet die Zentrale mit den nächsten Tagen", 4, 2, 190),
+    /** ZENITH 20: the aurora as a picture with the time; tap for the Z-Nacht. */
+    ZenithAurora("ZENITH-Polarlicht", "Das Polarlicht als lebendes Bild mit der Uhrzeit – antippen öffnet die Z-Nacht (Nachttisch-Uhr)", 4, 2, 170),
     Photos("Fotos", "Deine Bilder als Diashow auf Glas", 2, 2, 220),
     Clock("Glas-Uhr", "Analoge Uhr mit Sekundenzeiger, wie aus Glas", 2, 2, 200),
     Battery("Akku", "Akkustand als Ring, grün beim Laden", 2, 2, 170),

@@ -316,6 +316,17 @@ fun SettingsScreen(
             // own section now.
             if (shows("design")) item {
                 Section("ZENITH") {
+                    // ZENITH 20: the Zentrale and the Z-Nacht.
+                    ActionRow(
+                        label = "ZENITH-Zentrale",
+                        description = "Der Tag auf einen Blick: Uhrzeit, Tagesbrief, Wetter, Telefon und alle Abkürzungen – unter dem Polarlicht",
+                    ) { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ZentraleActivity::class.java)) } }
+                    RowDivider()
+                    ActionRow(
+                        label = "Z-Nacht",
+                        description = "Der Nachttisch: große dünne Uhr unter dem Polarlicht, mit Wetter, Wecker und Akku – gedimmt, der Bildschirm bleibt an",
+                    ) { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.NightstandActivity::class.java)) } }
+                    RowDivider()
                     ActionRow(
                         label = "Core Enforcer Studio",
                         description = "Bau dein System um: Look würfeln, Profile, Z-Angriff, Icons, Uhr, Dock, Farben und Glas",
@@ -402,6 +413,21 @@ fun SettingsScreen(
                         description = "ZENITHs eigener Hintergrund auf dem Startbildschirm: das Metall-Z mit seinem grünen Licht – statt deines Hintergrundbilds",
                         checked = s.zenithWallpaper,
                     ) { v -> update { it.copy(zenithWallpaper = v) } }
+                    SwitchRow(
+                        label = "Polarlicht",
+                        description = "Lichtvorhänge ziehen langsam über den Startbildschirm, hinter den Apps und Widgets (ZENITH 20)",
+                        checked = s.zenithAurora,
+                    ) { v -> update { it.copy(zenithAurora = v) } }
+                    if (s.zenithAurora) {
+                        ChoiceRow(
+                            label = "Farben des Polarlichts",
+                            options = dev.hearth.launcher.data.AuroraLook.entries,
+                            selected = s.auroraLook,
+                            optionLabel = { it.label },
+                            swatch = { it.colors.first() },
+                            onSelect = { v -> update { it.copy(auroraLook = v) } },
+                        )
+                    }
                     SwitchRow(
                         label = "ZENITH-Start",
                         description = "Nach jedem Neustart des Handys leuchtet einmal das Metall-Z auf, bevor der Startbildschirm kommt",

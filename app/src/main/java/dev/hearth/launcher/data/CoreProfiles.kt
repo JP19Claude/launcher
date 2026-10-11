@@ -21,7 +21,7 @@ object CoreProfiles {
         "clockStyle", "clockFont", "dockStyle", "pageTransition",
         "accent", "glassLook", "glassTint", "glassTintStrength", "glassBlur", "glassRefraction",
         "glassDispersion", "glassSpecular", "glassQuality", "omegaGlass", "omegaColor",
-        "fluidDesign", "zenithWallpaper", "zenithDaylight", "smoothMode",
+        "fluidDesign", "zenithWallpaper", "zenithAurora", "auroraLook", "zenithDaylight", "smoothMode",
         "showGreeting", "showSearchPill", "galaxyClaude", "ccStyle",
         "strikeColor", "strikeSpeed", "zenithStrike", "colorOsClock", "colorOsDock",
     )
@@ -80,6 +80,8 @@ object CoreProfiles {
             glassSpecular = step(0.6f, 1.8f),
             glassTintStrength = step(0.5f, 2f),
             strikeColor = StrikeColor.entries.random(r),
+            zenithAurora = r.nextBoolean(),
+            auroraLook = AuroraLook.entries.random(r),
         ).withClock(clock).withDock(dock)
     }
 }

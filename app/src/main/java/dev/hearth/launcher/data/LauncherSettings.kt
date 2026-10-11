@@ -123,6 +123,15 @@ val LauncherSettings.colorOsLook: Boolean get() = projectZenith && projectColorO
 /** Projekt Zenith's hologram look: on with Projekt Zenith, off in the ColorOS 17.1 look. */
 val LauncherSettings.hologram: Boolean get() = projectZenith && !projectColorOs
 
+/** ZENITH 20, Aurora: the colors of the curtains of light moving over the home screen. */
+enum class AuroraLook(val label: String, val colors: List<Color>) {
+    Zenith("Zenith-Grün", listOf(Color(0xFF2FD27A), Color(0xFF3EE0C8), Color(0xFF5CC8FF))),
+    Gold("Jubiläums-Gold", listOf(Color(0xFFFFD34D), Color(0xFFFF9A3D), Color(0xFFFFF1B0))),
+    Eis("Eisblau", listOf(Color(0xFF3FA9FF), Color(0xFF7DE3FF), Color(0xFF9A6BFF))),
+    Violett("Violett", listOf(Color(0xFF9A6BFF), Color(0xFFFF6FB5), Color(0xFF5CC8FF))),
+    Rubin("Rubin", listOf(Color(0xFFFF4155), Color(0xFFFF9A3D), Color(0xFFFF6FB5))),
+}
+
 /** ZENITH 19.3, Core Enforcer Studio: the color of the Z-Angriff's light. */
 enum class StrikeColor(val label: String, val color: Color) {
     Green("Zenith-Grün", Color(0xFF2FD27A)),
@@ -161,6 +170,7 @@ fun LauncherSettings.withColorOsLook(): LauncherSettings = if (!colorOsLook) {
         showGreeting = true,
         showSearchPill = true,
         zenithWallpaper = false,
+        zenithAurora = false,
         omegaGlass = false,
         glassLook = if (glassLook == GlassLook.Zenith) GlassLook.Liquid else glassLook,
     ).withCcStyle(CcStyle.ColorOS)
@@ -409,6 +419,8 @@ enum class HomeGesture(val label: String) {
     Vault("ZENITH-Tresor"),
     Shield("ZENITH-Schutzschild"),
     Strike("Z-Angriff"),
+    Hub("Z-Zentrale"),
+    Night("Z-Nacht"),
 }
 
 /** The home clock's typeface. */
@@ -587,6 +599,9 @@ data class LauncherSettings(
     val zenithDaylight: Boolean = true,
     /** ZENITH 19: ZENITH's own background on the home screen instead of the wallpaper. */
     val zenithWallpaper: Boolean = false,
+    /** ZENITH 20, Aurora: curtains of light drift over the home screen's background. */
+    val zenithAurora: Boolean = false,
+    val auroraLook: AuroraLook = AuroraLook.Zenith,
     /** ZENITH 19: after the phone starts, the Z lights up once before the home screen. */
     val zenithBootIntro: Boolean = true,
     /** ZENITH 19, Z-Angriff: a fully charged Z draws a giant Z across the screen, like Zygarde's Core Enforcer. */
@@ -1136,6 +1151,8 @@ class SettingsRepository(context: Context) {
             omegaColor = enumOf("omegaColor", d.omegaColor),
             zenithDaylight = prefs.getBoolean("zenithDaylight", d.zenithDaylight),
             zenithWallpaper = prefs.getBoolean("zenithWallpaper", d.zenithWallpaper),
+            zenithAurora = prefs.getBoolean("zenithAurora", d.zenithAurora),
+            auroraLook = enumOf("auroraLook", d.auroraLook),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
             zenithStrike = prefs.getBoolean("zenithStrike", d.zenithStrike),
             zenithStrikeSystem = prefs.getBoolean("zenithStrikeSystem", d.zenithStrikeSystem),
@@ -1332,6 +1349,8 @@ class SettingsRepository(context: Context) {
             .putString("omegaColor", s.omegaColor.name)
             .putBoolean("zenithDaylight", s.zenithDaylight)
             .putBoolean("zenithWallpaper", s.zenithWallpaper)
+            .putBoolean("zenithAurora", s.zenithAurora)
+            .putString("auroraLook", s.auroraLook.name)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("zenithStrike", s.zenithStrike)
             .putBoolean("zenithStrikeSystem", s.zenithStrikeSystem)

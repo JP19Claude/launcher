@@ -87,6 +87,7 @@ internal fun ClaudeOsVersionEgg(version: String = ClaudeOs.VERSION, onClose: () 
     // ZENITH 19: the museum opens older ones too – each egg shows its own ClaudeOS.
     androidx.compose.runtime.CompositionLocalProvider(LocalClaudeOsEra provides claudeOsEra(version)) {
         when {
+            number >= 7f -> ApexEgg(onClose)
             number >= 6f -> HeliosEgg(onClose)
             number >= 5f -> MythosEgg(onClose)
             number >= 4f -> AuroraEgg(onClose)

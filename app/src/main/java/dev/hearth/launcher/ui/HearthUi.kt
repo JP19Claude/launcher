@@ -130,6 +130,13 @@ object HearthUi {
         prefs(context).edit().putBoolean("zenith19LogoSeen", true).apply()
     }
 
+    /** ZENITH 20: the jubilee's ceremony has been shown. */
+    fun jubileeSeen(context: Context): Boolean = prefs(context).getBoolean("zenith20Jubilee", false)
+
+    fun markJubileeSeen(context: Context) {
+        prefs(context).edit().putBoolean("zenith20Jubilee", true).apply()
+    }
+
     /** OMEGA Labs: show the welcome tour again next time. */
     fun resetIntro(context: Context) {
         prefs(context).edit().remove("introSeen").apply()
@@ -180,6 +187,87 @@ internal object HearthChangelog {
     private val Slate = Color(0xFF5E6C84)
 
     val releases: List<ChangeRelease> = listOf(
+        ChangeRelease(
+            version = "20.0",
+            name = "Jubiläum",
+            summary = "Zwanzig Versionen ZENITH – das größte Update bisher: die Zentrale für den ganzen Tag, ein Wetter mit dem Himmel als Bild, das Polarlicht auf dem Startbildschirm, die Z-Nacht fürs Nachttischchen und eine Zeremonie zum Jubiläum. Darunter ClaudeOS 7.0 „Apex“.",
+            sections = listOf(
+                ChangeSection(
+                    "Die Jubiläums-Zeremonie", Icons.Rounded.Star, Orange,
+                    listOf(
+                        "Einmal nach dem Update: Im Dunkeln zählen die Zahlen von 1 bis 20, die 20 rastet in Gold ein, eine Druckwelle läuft über den Bildschirm – und ein Feuerwerk in den Farben des Z-Angriffs beginnt. „Zwanzig Versionen. Danke, dass du von Anfang an dabei bist.“ Ein Tipp geht weiter.",
+                        "Sie ersetzt beim Update den Z-Angriff. Ansehen kannst du sie jederzeit wieder: in der Zentrale bei „Schnellzugriff → Jubiläum“.",
+                        "Neues Egg hinter der Versionsnummer (ZENITH 20): Feuerwerk – zwanzig Tipps, zwanzig Feuerwerke, eins für jede Version. Dann leuchtet die 20 in Gold.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "ZENITH-Zentrale", Icons.Rounded.Home, Green,
+                    listOf(
+                        "Neu: der ganze Tag auf einem Bildschirm, unter dem Polarlicht. Oben der Gruß und die Uhrzeit groß, mit Sekunden und Datum.",
+                        "Der Tagesbrief sagt, was das Wetter für heute heißt („Nimm einen Schirm mit: 70 % Regenwahrscheinlichkeit“), welches Parfüm der Duftschrank für heute gewählt hat, wann der nächste Wecker klingelt und wie es um Akku und Schutz steht.",
+                        "Auf Wunsch fasst Claude den Brief in eigene Worte – höchstens vier Sätze, nur aus dem, was das Telefon weiß. Dafür braucht er seinen Schlüssel (Frag Clawd); ohne Schlüssel bleibt der Brief, wie er ist.",
+                        "Darunter das Wetter, der Zustand des Telefons (Akku mit Temperatur, Arbeitsspeicher, Speicher, Laufzeit), die Farben des Polarlichts und Abkürzungen zu Z-Nacht, Tresor, Schutzschild, Core Enforcer, Duftschrank, Z-Angriff und der Zeremonie.",
+                        "Erreichbar über: ZENITH-Menü → „ZENITH-Zentrale“, Einstellungen → ZENITH, per Doppeltipp auf den Startbildschirm (Einstellungen → Startbildschirm → „Z-Zentrale“) oder antippen des Wetter-Widgets.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Wetter mit dem Himmel als Bild", Icons.Rounded.Info, Blue,
+                    listOf(
+                        "Neues Widget „ZENITH-Wetter“: die Temperatur groß, Höchst- und Tiefstwert, Regenwahrscheinlichkeit, und rechts der Himmel als bewegtes Bild – Sonne mit drehenden Strahlen, Mond mit funkelnden Sternen, Wolken, Regen, Schnee, Nebel, Gewitter mit Blitz. Darunter die nächsten Stunden.",
+                        "In der Zentrale zusätzlich: gefühlte Temperatur, Wind, Luftfeuchte, alle zwölf Stunden zum Wischen und sechs Tage voraus mit Balken vom Tiefst- zum Höchstwert.",
+                        "Den Ort tippst du einmal ein (Zentrale → Wetter). Er gilt auch für den Duftschrank. Das Wetter kommt von Open-Meteo, ohne Anmeldung; gesendet werden nur die Koordinaten des Ortes.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Polarlicht", Icons.Rounded.Favorite, Violet,
+                    listOf(
+                        "Neu: Lichtvorhänge ziehen langsam über den Startbildschirm, hinter den Apps und Widgets – wellenförmig, mit funkelnden Sternen und einem Leuchten wie von einer Lichtquelle.",
+                        "Fünf Farbwelten: Zenith-Grün, Jubiläums-Gold, Eisblau, Violett und Rubin. Einstellungen → ZENITH → „Polarlicht“ (auch im Core Enforcer Studio und in der Zentrale).",
+                        "Das Polarlicht wird beim Würfeln im Studio mitgewürfelt und mit dem Look als Profil gespeichert. Mit Animationen aus steht es still.",
+                        "Neues Widget „ZENITH-Polarlicht“: das Polarlicht als lebendes Bild mit Uhrzeit und Datum. Antippen öffnet die Z-Nacht.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Z-Nacht", Icons.Rounded.Phone, Slate,
+                    listOf(
+                        "Neu: der Nachttisch. Eine große, dünne Uhr unter dem Polarlicht, dazu Datum, Wetter, nächster Wecker und Akku. Der Bildschirm bleibt an und ist gedimmt, damit er das Zimmer nicht erleuchtet.",
+                        "Ein Tipp macht ihn heller, noch einer wieder dunkel. Die Uhr wandert jede Minute ein paar Pixel, damit nichts einbrennt. Zurück beendet.",
+                        "Erreichbar über: ZENITH-Menü → „Z-Nacht“, Einstellungen → ZENITH, per Doppeltipp auf den Startbildschirm oder über das Polarlicht-Widget.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "ClaudeOS 7.0 „Apex“", Icons.Rounded.Star, Terracotta,
+                    listOf(
+                        "Der Gipfel: Die Basis unter ZENITH ist jetzt ClaudeOS 7.0 mit dem Codenamen „Apex“. Zentrale, Wetter, Polarlicht und Z-Nacht gehören zu ihrem Fundament.",
+                        "Neues Egg: das Claude-Zeichen wartet im Tal. Zieh es mit dem Finger die Berge hinauf – je höher, desto mehr sinken die Berge, der Himmel wird hell und das Polarlicht wacht auf. Oben ist die Höhe 8.848 m erreicht.",
+                        "Das ClaudeOS-Museum kennt Apex und ZENITH 20 mit ihren Eggs.",
+                    ),
+                    everyone,
+                ),
+                ChangeSection(
+                    "Neue Gesten und Widgets", Icons.Rounded.Add, Pink,
+                    listOf(
+                        "Doppeltipp auf den Startbildschirm kann jetzt auch die Zentrale und die Z-Nacht öffnen.",
+                        "Das ZENITH-Menü hat Kacheln für die Zentrale und die Z-Nacht.",
+                        "Zwei neue Widgets: „ZENITH-Wetter“ und „ZENITH-Polarlicht“ (Widget hinzufügen).",
+                        "„Warum ZENITH“ nennt vier neue Vorteile: Zentrale, Wetter, Polarlicht und Z-Nacht.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Jetzt 57 Easter Eggs", Icons.Rounded.CheckCircle, Blue,
+                    listOf(
+                        "Drei neue, insgesamt 57: In der Z-Nacht gibt es einen Mond mit einem Geheimnis. In der Zentrale versteckt sich etwas hinter dem Wetterbild – und hinter der Uhr. Die Easter-Egg-Karte verrät, wo.",
+                    ),
+                    hearth,
+                ),
+            ),
+        ),
         ChangeRelease(
             version = "19.8",
             name = "Duftschrank",

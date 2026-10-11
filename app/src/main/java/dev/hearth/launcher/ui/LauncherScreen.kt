@@ -557,9 +557,11 @@ fun LauncherScreen(vm: LauncherViewModel) {
     }
     // ZENITH 19: after the phone starts, the Z lights up once.
     var bootIntro by remember { mutableStateOf(settings.zenithBootIntro && dev.hearth.launcher.BuildConfig.ALL_IN_ONE && ZenithBoot.isNewStart(context)) }
+    // ZENITH 20: the jubilee's ceremony, once – it takes the place of the update's Z-Angriff.
+    var jubilee by remember { mutableStateOf(dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !HearthUi.jubileeSeen(context)) }
     // ZENITH 19.5: the Z-Angriff – after an update, on a double tap or from the ZENITH menu.
     var strikeNow by remember {
-        mutableStateOf(dev.hearth.launcher.BuildConfig.ALL_IN_ONE && ZenithBoot.isNewVersion(context) && settings.strikeOnUpdate)
+        mutableStateOf(dev.hearth.launcher.BuildConfig.ALL_IN_ONE && ZenithBoot.isNewVersion(context) && settings.strikeOnUpdate && !jubilee)
     }
     val menuBlur by animateDpAsState(
         targetValue = when {
@@ -778,6 +780,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                         )
                     }
+                    // ZENITH 20: the aurora, curtains of light drifting behind the apps and widgets.
+                    if (settings.zenithAurora) ZenithAurora(settings.auroraLook, Modifier.matchParentSize(), strength = 0.85f)
                     // OMEGA UI 17.5: OMEGA light between the wallpaper and the apps and widgets.
                     OmegaHomeLight(Modifier.matchParentSize())
                     // OMEGA UI 18: the perks behind the apps and widgets (and Claude Mythos's Clawd).
@@ -863,6 +867,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                                 context.startActivity(Intent(context, dev.hearth.launcher.ShieldActivity::class.java))
                                             }
                                             HomeGesture.Strike -> strikeNow = true
+                                            HomeGesture.Hub -> runCatching {
+                                                context.startActivity(Intent(context, dev.hearth.launcher.ZentraleActivity::class.java))
+                                            }
+                                            HomeGesture.Night -> runCatching {
+                                                context.startActivity(Intent(context, dev.hearth.launcher.NightstandActivity::class.java))
+                                            }
                                         }
                                         Unit
                                     },
@@ -1269,6 +1279,13 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         HubTile("Schutz-\nschild", Icons.Rounded.CheckCircle, Color(0xFF2FD27A)) {
                             runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ShieldActivity::class.java)) }
                         },
+                        // ZENITH 20: the Zentrale and the Z-Nacht.
+                        HubTile("ZENITH-\nZentrale", Icons.Rounded.Star, Color(0xFF2FD27A)) {
+                            runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ZentraleActivity::class.java)) }
+                        },
+                        HubTile("Z-Nacht", Icons.Rounded.DateRange, Color(0xFF7C5CFF)) {
+                            runCatching { context.startActivity(Intent(context, dev.hearth.launcher.NightstandActivity::class.java)) }
+                        },
                         if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
                             HubTile("Z-Angriff", Icons.Rounded.Star, Color(0xFF00E676), onLongClick = { SecretRoutes.open(context, SecretMenu.Draw) }) { strikeNow = true }
                         } else {
@@ -1346,6 +1363,13 @@ fun LauncherScreen(vm: LauncherViewModel) {
             // ZENITH 19: the Z lights up once after the phone starts.
             if (bootIntro && !showOmega) {
                 ZenithBootIntro { bootIntro = false }
+            }
+            // ZENITH 20: the jubilee's ceremony, after the start and the tours.
+            if (jubilee && !bootIntro && !showOmega && !showIntro) {
+                ZenithJubilee {
+                    HearthUi.markJubileeSeen(context)
+                    jubilee = false
+                }
             }
             // ZENITH 19.5: the Z-Angriff, after the start and the tours.
             if (strikeNow && !bootIntro && !showOmega && !showIntro) {

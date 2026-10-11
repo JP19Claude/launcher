@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.AccentColor
+import dev.hearth.launcher.data.AuroraLook
 import dev.hearth.launcher.data.ClockFont
 import dev.hearth.launcher.data.ClockStyle
 import dev.hearth.launcher.data.CoreProfile
@@ -293,6 +294,19 @@ fun CoreEnforcerScreen(repo: SettingsRepository, onClose: () -> Unit) {
                         update { it.copy(zenithWallpaper = v) }
                     }
                     SwitchRow(label = "Farben nach Sonnenstand", checked = s.zenithDaylight) { v -> update { it.copy(zenithDaylight = v) } }
+                    SwitchRow(label = "Polarlicht", description = "Lichtvorhänge bewegen sich hinter den Apps (ZENITH 20)", checked = s.zenithAurora) { v ->
+                        update { it.copy(zenithAurora = v) }
+                    }
+                    if (s.zenithAurora) {
+                        ChoiceRow(
+                            label = "Farben des Polarlichts",
+                            options = AuroraLook.entries,
+                            selected = s.auroraLook,
+                            optionLabel = { it.label },
+                            swatch = { it.colors.first() },
+                            onSelect = { v -> update { it.copy(auroraLook = v) } },
+                        )
+                    }
                     SwitchRow(label = "Fließende Ränder", description = "Claudes Farben fließen um jede Fläche", checked = s.fluidDesign) { v -> update { it.copy(fluidDesign = v) } }
                     SwitchRow(label = "Flüssig-Modus", description = "Leichter und ruckelfreier", checked = s.smoothMode) { v -> update { it.copy(smoothMode = v) } }
                 }

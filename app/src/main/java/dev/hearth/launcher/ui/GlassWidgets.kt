@@ -66,6 +66,8 @@ fun InternalWidget(repo: WidgetRepository, id: Int, modifier: Modifier = Modifie
         HearthWidget.Zenith -> ZenithZWidget(modifier)
         HearthWidget.Monitor -> ZenithMonitorWidget(modifier)
         HearthWidget.Shield -> ShieldWidget(modifier)
+        HearthWidget.ZenithWeather -> ZenithWeatherWidget(modifier)
+        HearthWidget.ZenithAurora -> ZenithAuroraWidget(modifier)
         HearthWidget.Photos -> PhotoWidget(repo, id, modifier)
         HearthWidget.Clock -> GlassAnalogClock(modifier)
         HearthWidget.Battery -> BatteryWidget(modifier)

@@ -364,6 +364,11 @@ internal fun PrivacyCheck(shizukuReady: Boolean) {
 private class Advantage(val title: String, val text: String, val oneUi: Boolean = false, val colorOs: Boolean = false)
 
 private val Advantages = listOf(
+    // ZENITH 20: the jubilee's news.
+    Advantage("ZENITH-Zentrale", "Der Tag auf einen Blick: Uhrzeit, Tagesbrief, Wetter, Telefon und alle Abkürzungen auf einem Bildschirm – auf Wunsch von Claude in Worte gefasst."),
+    Advantage("Wetter mit Himmel als Bild", "Temperatur, nächste Stunden und sechs Tage voraus – Sonne, Mond, Wolken, Regen, Schnee und Gewitter als bewegtes Bild, ohne Anmeldung und ohne Werbung.", oneUi = true, colorOs = true),
+    Advantage("Polarlicht", "Lichtvorhänge in fünf Farbwelten bewegen sich hinter deinen Apps – auf dem Startbildschirm, in der Zentrale und als Widget."),
+    Advantage("Z-Nacht", "Der Nachttisch: große dünne Uhr unter dem Polarlicht, mit Wetter, Wecker und Akku – gedimmt, wandernd gegen Einbrennen, Bildschirm bleibt an."),
     // ZENITH 19.5: what only ZENITH has.
     Advantage("Clawd sucht dein Parfüm aus", "Schreib auf oder fotografier, welche Parfüms du hast – Clawd merkt sie sich und schlägt dir jeden Tag das passende vor, nach Wetter und Geschmack."),
     Advantage("ZENITH-Tresor", "Private Fotos, Videos, Notizen und Dateien mit AES-256 verschlüsselt – Passwort oder Fingerabdruck, nie in Screenshots.", oneUi = true, colorOs = true),
