@@ -246,6 +246,14 @@ internal fun ZenithJubilee(onDone: () -> Unit) {
     }
 }
 
+/** The finder's word "Jubiläum" (a hidden menu), or 20:20 on the clock: the ceremony once more. */
+@Composable
+internal fun JubileeWordEgg(onClose: () -> Unit) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { EasterEggs.find(context, "jubileeword") }
+    ZenithJubilee(onClose)
+}
+
 /** A firework the finger asked for. */
 private class Firework(val at: Offset, val born: Long, val color: Color, val seed: Int)
 

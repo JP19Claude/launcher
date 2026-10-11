@@ -202,6 +202,38 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Eine Karte, die nur 20 hat", Icons.Rounded.Info, Orange,
+                    listOf(
+                        "Die Versionskarte (Software-Update, Über das Telefon) sieht in ZENITH 20 anders aus als in 19 – wie bei ColorOS, wo jede Version ihre eigene Karte hat: Mitternachtsblau läuft in Gold, das Polarlicht zieht darüber, Sterne funkeln, drei Feuerwerke stehen eingefroren am Himmel, und die 20 und das Randlicht des Z leuchten in Gold, darunter „J U B I L Ä U M“.",
+                        "Die Karte von ZENITH 19 bleibt grün. Jede kommende Version bekommt eine eigene.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Jubiläums-Edition für jedes Egg", Icons.Rounded.Star, Orange,
+                    listOf(
+                        "Jedes Egg hat jetzt eine Jubiläums-Edition: Beim ersten Mal in ZENITH 20 – auch wenn du es schon kennst – setzt es ein goldenes Feuerwerk über den Bildschirm. Auf der Easter-Egg-Karte bekommt es dafür ein goldenes „✦ 20“ und einen goldenen Kreis.",
+                        "Die Eggs der Versionen vor 20, die der ClaudeOS vor 7 und alle Geheimmenüs liegen jetzt in Gold: goldenes Polarlicht, aufsteigender Goldstaub und ein Abzeichen „Jubiläums-Edition“.",
+                        "Neu in der Zentrale: die Jubiläums-Galerie – alle Versionen von Hearth 11 bis ZENITH 20 und alle sieben ClaudeOS auf einmal, jedes Egg zum Antippen.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Zwölf neue Jubiläums-Eggs", Icons.Rounded.CheckCircle, Blue,
+                    listOf(
+                        "Das Jubiläum steckt in der Uhr zu einer bestimmten Minute und in einem Wort im Finder. Im Polarlicht in allen fünf Farben. In der Z-Nacht nachts und nach zwanzig Minuten, in der Zentrale früh am Morgen, an einem 20. des Monats, bei 20 Grad und im Gruß – und bei genau 20 % Akku.",
+                        "Zwei kommen von allein: bei zwanzig gefundenen Eggs und bei vierzig in der Jubiläums-Edition. Wo die anderen stecken, verrät die Easter-Egg-Karte.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Jubiläums-Look", Icons.Rounded.Favorite, Pink,
+                    listOf(
+                        "Ein Tipp im Core Enforcer Studio (oder in der Zentrale): goldenes Polarlicht, warmes Gold bei Akzent und Glas, der ZENITH-Hintergrund und ein goldener Z-Angriff. Beim Würfel geht es mit „Zurück“ wieder weg.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "ZENITH-Zentrale", Icons.Rounded.Home, Green,
                     listOf(
                         "Neu: der ganze Tag auf einem Bildschirm, unter dem Polarlicht. Oben der Gruß und die Uhrzeit groß, mit Sekunden und Datum.",
@@ -260,9 +292,9 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
-                    "Jetzt 57 Easter Eggs", Icons.Rounded.CheckCircle, Blue,
+                    "Jetzt 69 Easter Eggs", Icons.Rounded.CheckCircle, Blue,
                     listOf(
-                        "Drei neue, insgesamt 57: In der Z-Nacht gibt es einen Mond mit einem Geheimnis. In der Zentrale versteckt sich etwas hinter dem Wetterbild – und hinter der Uhr. Die Easter-Egg-Karte verrät, wo.",
+                        "Fünfzehn neue, insgesamt 69: In der Z-Nacht gibt es einen Mond mit einem Geheimnis. In der Zentrale versteckt sich etwas hinter dem Wetterbild – und hinter der Uhr. Dazu die zwölf Jubiläums-Eggs. Die Easter-Egg-Karte verrät, wo.",
                     ),
                     hearth,
                 ),

@@ -1593,6 +1593,11 @@ private fun HomeHeader(settings: LauncherSettings, modifier: Modifier = Modifier
             SecretRoutes.open(context, SecretMenu.Console)
         }
         if ((hour == 3 || hour == 15) && minute == 14) SecretRoutes.open(context, SecretMenu.Pi)
+        // ZENITH 20: and at 20:20 the jubilee.
+        if (hour == 20 && minute == 20) {
+            EasterEggs.find(context, "twenty2020")
+            SecretRoutes.open(context, SecretMenu.Jubilee)
+        }
     }
     HomeHeaderContent(settings, modifier.then(tapped))
 }

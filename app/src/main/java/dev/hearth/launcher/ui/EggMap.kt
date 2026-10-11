@@ -40,10 +40,10 @@ import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.EasterEggs
 
 /** One easter egg: its id, a name, and where it hides. */
-private class EggSpot(val id: String, val name: String, val where: String)
+internal class EggSpot(val id: String, val name: String, val where: String)
 
 /** All of Hearth's easter eggs and how to find them. */
-private val EggSpots = listOf(
+internal val EggSpots = listOf(
     EggSpot("version", "ZENITH-Version", "Software-Update oder Über das Telefon: fünfmal schnell auf die ZENITH-Version tippen (lange drücken: die Ruhmeshalle mit den Eggs aller großen Versionen). Jede große Version hat ein eigenes Egg (19.5: Z-Sturm, 19: Sonnenlauf, 18.5: Lupe, 18: Schmiede, 17.5: Laterne, 17: Rubin, 16: Glühwürmchen, 15.5: Funken, 15: Tresor, 14.5: Kometen, 14: Prisma, 13.5: Tropfen, 13: Seide …)."),
     EggSpot("claudeos", "ClaudeOS", "Software-Update oder Über das Telefon: fünfmal schnell auf die ClaudeOS-Version tippen (lange drücken: die ClaudeOS-Ruhmeshalle mit allen Eggs) und dann: ClaudeOS 7 „Apex“ – das Claude-Zeichen mit dem Finger auf den Gipfel ziehen (ClaudeOS 6 „Helios“: bei der Sonnenfinsternis den Mond von der Sonne schieben; ClaudeOS 5 „Mythos“: den Finger halten, bis der Rat erscheint; ClaudeOS 4 „Aurora“: Nordlichter an den Himmel malen; ClaudeOS 3 „Nova“: den Stern zur Supernova bringen)."),
     EggSpot("footer", "Gebaut mit Claude", "Einstellungen ganz unten: siebenmal auf „${dev.hearth.launcher.data.Brand.name} · gebaut mit Claude“ tippen."),
@@ -105,6 +105,19 @@ private val EggSpots = listOf(
     EggSpot("nightmoon", "Mondsüchtig", "In der Z-Nacht (Nachttisch-Uhr) siebenmal auf den Mond tippen."),
     EggSpot("weathershow", "Wettermacher", "In der Zentrale fünfmal schnell auf das Wetterbild tippen – und der Himmel zeigt, was er kann."),
     EggSpot("twenty", "Zwanzig", "In der Zentrale zwanzigmal auf die Uhr tippen."),
+    // … and the jubilee's own, hidden through the day and the system.
+    EggSpot("twenty2020", "Zwanzig nach Acht", "Auf dem Startbildschirm genau um 20:20 auf die Uhr tippen – das öffnet das Jubiläum."),
+    EggSpot("jubileeword", "Das Jubiläum", "Im Finder nach „Jubiläum“, „Zwanzig“ oder „Zenith 20“ suchen – die Zeremonie noch einmal."),
+    EggSpot("auroraall", "Alle Lichter", "Alle fünf Farben des Polarlichts ausprobieren (Einstellungen → ZENITH → Polarlicht)."),
+    EggSpot("nightowl", "Nachtschicht", "Die Z-Nacht zwischen drei und vier Uhr nachts öffnen."),
+    EggSpot("nightwatch", "Nachtwache", "Die Z-Nacht zwanzig Minuten lang offen lassen."),
+    EggSpot("battery20", "Zwanzig Prozent", "Die Z-Nacht oder die Zentrale öffnen, wenn der Akku genau 20 % hat."),
+    EggSpot("earlybird", "Frühaufsteher", "Die Zentrale zwischen fünf und sechs Uhr morgens öffnen."),
+    EggSpot("twentyth", "Der Zwanzigste", "Die Zentrale an einem 20. des Monats öffnen."),
+    EggSpot("degrees20", "Zwanzig Grad", "In der Zentrale, wenn das Wetter genau 20 °C zeigt."),
+    EggSpot("polyglot", "Weltgewandt", "In der Zentrale fünfmal schnell auf den Gruß tippen."),
+    EggSpot("club20", "Jubiläums-Club", "Zwanzig Eggs finden – dann kommt dieses von allein."),
+    EggSpot("jubilee40", "Vierzig in Gold", "Vierzig Eggs in ihrer Jubiläums-Edition erleben – dann kommt dieses von allein."),
 )
 
 /**
@@ -116,6 +129,7 @@ internal fun EggMap(onClose: () -> Unit) {
     val context = LocalContext.current
     LaunchedEffect(Unit) { EasterEggs.init(context) }
     val found by EasterEggs.found.collectAsState()
+    val jubilee by EasterEggs.jubilee.collectAsState()
     BackHandler(onBack = onClose)
     Box(
         Modifier
@@ -139,7 +153,7 @@ internal fun EggMap(onClose: () -> Unit) {
                     )
                     val count = EggSpots.count { it.id in found }
                     Text(
-                        "$count von ${EggSpots.size} gefunden · psst, das ist geheim",
+                        "$count von ${EggSpots.size} gefunden · ${EggSpots.count { it.id in jubilee }} in Gold (Jubiläums-Edition) · psst, das ist geheim",
                         color = Color.White.copy(alpha = 0.6f),
                         fontSize = 14.sp,
                     )
@@ -160,14 +174,18 @@ internal fun EggMap(onClose: () -> Unit) {
                         Modifier
                             .size(32.dp)
                             .clip(CircleShape)
-                            .background(if (done) Color(0xFF34C759) else Color.White.copy(alpha = 0.1f)),
+                            .background(if (egg.id in jubilee) ZenithGold else if (done) Color(0xFF34C759) else Color.White.copy(alpha = 0.1f)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(if (done) "✓" else "🥚", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(egg.name, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(egg.name, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f, fill = false))
+                            // ZENITH 20: the egg has been seen in its jubilee edition.
+                            if (egg.id in jubilee) Text("  ✦ 20", color = ZenithGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                         Text(egg.where, color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, lineHeight = 18.sp)
                     }
                 }

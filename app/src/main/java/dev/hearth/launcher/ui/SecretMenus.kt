@@ -178,6 +178,9 @@ enum class SecretMenu(
     Sudo("sudo", "Sudo", "Nette Idee", listOf("sudosu", "sudomakemeasandwich"), listed = false),
     Hello("hello", "Hallo, Welt", "Das erste Programm von allen", listOf("helloworld", "hallowelt"), listed = false),
     Pi("pi", "π", "3,14159 …", listOf("π", "3,14", "3.14"), listed = false),
+
+    /** ZENITH 20: the jubilee's ceremony again – "Jubiläum", "Zwanzig" or "Zenith 20" in the finder, or 20:20 on the clock. */
+    Jubilee("jubilee", "Das Jubiläum", "Zwanzig Versionen, noch einmal", listOf("jubiläum", "jubilaeum", "jubilee", "zwanzig", "zenith20"), listed = false),
     ;
 
     companion object {
@@ -220,7 +223,10 @@ fun SecretMenuScreen(menu: SecretMenu, onClose: () -> Unit) {
             SecretMenu.Sudo -> SudoEgg(back)
             SecretMenu.Hello -> HelloWorldEgg(back)
             SecretMenu.Pi -> PiEgg(back)
+            SecretMenu.Jubilee -> JubileeWordEgg(back)
         }
+        // ZENITH 20: the jubilee edition lies over every hidden menu (but the jubilee itself).
+        if (current != SecretMenu.Jubilee) JubileeOverlay()
     }
 }
 

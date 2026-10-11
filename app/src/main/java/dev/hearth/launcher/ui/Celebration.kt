@@ -52,11 +52,18 @@ fun CelebrationOverlay() {
     var big by remember { mutableStateOf(false) }
     var round by remember { mutableStateOf(0) }
     val fall = remember { Animatable(0f) }
+    // ZENITH 20: every find sets off a golden firework – the jubilee edition of the hint.
+    val burst = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         EasterEggs.party.collect { party ->
-            message = party.text
+            val named = EggSpots.firstOrNull { it.id == party.egg }?.name
+            message = if (party.repeat && named != null) "✨ $named · ${party.text}" else party.text
             big = party.big
             round++
+            launch {
+                burst.snapTo(0f)
+                burst.animateTo(1f, tween(if (party.big) 2600 else 1800, easing = LinearEasing))
+            }
             if (party.big) {
                 launch {
                     fall.snapTo(0f)
@@ -73,6 +80,9 @@ fun CelebrationOverlay() {
     if (!big) {
         // Just a small hint at the top: Clawd and the count.
         Box(Modifier.fillMaxSize()) {
+            Canvas(Modifier.fillMaxSize()) {
+                drawBurst(Offset(size.width / 2f, size.height * 0.1f), burst.value, ZenithGold, size.minDimension * 0.3f, round * 977 + 5)
+            }
             androidx.compose.foundation.layout.Row(
                 Modifier
                     .align(Alignment.TopCenter)
@@ -109,6 +119,9 @@ fun CelebrationOverlay() {
     }
     Box(Modifier.fillMaxSize()) {
         Canvas(Modifier.fillMaxSize()) {
+            // Two golden fireworks over the confetti.
+            drawBurst(Offset(size.width * 0.28f, size.height * 0.2f), burst.value, ZenithGold, size.minDimension * 0.4f, round * 31 + 1)
+            drawBurst(Offset(size.width * 0.74f, size.height * 0.28f), ((burst.value - 0.15f) / 0.85f).coerceIn(0f, 1f), Color(0xFFFFF1C2), size.minDimension * 0.36f, round * 53 + 2)
             val t = fall.value
             pieces.forEach { p ->
                 val local = ((t - p.delay) / (1f - p.delay)).coerceIn(0f, 1f) * p.speed

@@ -57,6 +57,7 @@ import dev.hearth.launcher.VaultActivity
 import dev.hearth.launcher.data.AuroraLook
 import dev.hearth.launcher.data.ClaudeAssistant
 import dev.hearth.launcher.data.ClaudeOs
+import dev.hearth.launcher.data.CoreProfiles
 import dev.hearth.launcher.data.EasterEggs
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.PerfumeShelf
@@ -67,6 +68,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -112,6 +114,15 @@ fun ZentraleScreen(onClose: () -> Unit, onUpdate: ((LauncherSettings) -> Launche
         value = withContext(Dispatchers.IO) { runCatching { ZenithShield.score(ZenithShield.checks(context)) }.getOrNull() }
     }
     val alarm = remember { nextAlarmText(context) }
+    // ZENITH 20: the Zentrale's eggs – at dawn, on a 20th, at 20 °C, at 20 % battery.
+    LaunchedEffect(Unit) {
+        if (LocalDate.now().dayOfMonth == 20) EasterEggs.find(context, "twentyth")
+        if (LocalTime.now().hour == 5) EasterEggs.find(context, "earlybird")
+    }
+    val degrees = report?.now?.roundToInt()
+    LaunchedEffect(degrees) { if (degrees == 20) EasterEggs.find(context, "degrees20") }
+    val chargeNow = monitor?.battery
+    LaunchedEffect(chargeNow) { if (chargeNow == 20) EasterEggs.find(context, "battery20") }
 
     var editing by remember { mutableStateOf(false) }
     var cityText by remember { mutableStateOf("") }
@@ -122,6 +133,8 @@ fun ZentraleScreen(onClose: () -> Unit, onUpdate: ((LauncherSettings) -> Launche
     var briefError by remember { mutableStateOf<String?>(null) }
     var strike by remember { mutableStateOf(false) }
     var jubilee by remember { mutableStateOf(false) }
+    var galleryEgg by remember { mutableStateOf<String?>(null) }
+    var galleryOs by remember { mutableStateOf<String?>(null) }
     val glyphTaps = remember { longArrayOf(0L, 0L) }
     BackHandler { onClose() }
 
@@ -194,10 +207,16 @@ fun ZentraleScreen(onClose: () -> Unit, onUpdate: ((LauncherSettings) -> Launche
         ) {
             item { VaultTopBar(onClose, title = "ZENTRALE") }
             item {
-                ZentraleHeader {
-                    EasterEggs.find(context, "twenty")
-                    Toast.makeText(context, "Zwanzig. Für jede Version eine.", Toast.LENGTH_SHORT).show()
-                }
+                ZentraleHeader(
+                    onTwenty = {
+                        EasterEggs.find(context, "twenty")
+                        Toast.makeText(context, "Zwanzig. Für jede Version eine.", Toast.LENGTH_SHORT).show()
+                    },
+                    onGreeting = {
+                        EasterEggs.find(context, "polyglot")
+                        Toast.makeText(context, "Hallo · Hello · Bonjour · Hola · Ciao · Olá · Hej · こんにちは", Toast.LENGTH_LONG).show()
+                    },
+                )
             }
 
             // ---- The brief ----
@@ -366,6 +385,29 @@ fun ZentraleScreen(onClose: () -> Unit, onUpdate: ((LauncherSettings) -> Launche
                         swatch = { it.colors.first() },
                         onSelect = { v -> onUpdate { it.copy(auroraLook = v) } },
                     )
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
+                        VaultButton("Jubiläums-Look", Modifier.weight(1f), primary = false) { onUpdate { CoreProfiles.jubileeLook(it) } }
+                    }
+                }
+            }
+
+            // ---- The gallery: every version's egg, in its jubilee edition ----
+            item {
+                StudioPanel("Jubiläums-Galerie", "Jede Version hat ihr eigenes Egg – hier alle auf einmal, in der Jubiläums-Edition. Antippen spielt es.") {
+                    Text("ZENITH, HEARTH, OMEGA", color = VaultDim, fontSize = 10.sp, fontFamily = HudFont, letterSpacing = 2.sp, modifier = Modifier.padding(start = 18.dp, top = 8.dp))
+                    Row(
+                        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        SystemEras.forEach { era -> EraChip(HearthUi.major(era.version)) { galleryEgg = era.version } }
+                    }
+                    Text("CLAUDEOS", color = VaultDim, fontSize = 10.sp, fontFamily = HudFont, letterSpacing = 2.sp, modifier = Modifier.padding(start = 18.dp, top = 4.dp))
+                    Row(
+                        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        ClaudeOsEras.forEach { era -> EraChip("${era.version} ${era.codename}") { galleryOs = era.version } }
+                    }
                 }
             }
 
@@ -409,6 +451,8 @@ fun ZentraleScreen(onClose: () -> Unit, onUpdate: ((LauncherSettings) -> Launche
         }
         if (strike) ZenithStrikeOverlay { strike = false }
         if (jubilee) ZenithJubilee { jubilee = false }
+        galleryEgg?.let { version -> HearthVersionEgg(version, systemEra(version).system) { galleryEgg = null } }
+        galleryOs?.let { version -> ClaudeOsVersionEgg(version) { galleryOs = null } }
     }
 }
 
@@ -417,9 +461,10 @@ private class HubShortcut(val label: String, val sub: String, val action: () -> 
 
 /** The greeting, the time big and the date; [onTwenty] when the time has been tapped twenty times. */
 @Composable
-private fun ZentraleHeader(onTwenty: () -> Unit) {
+private fun ZentraleHeader(onTwenty: () -> Unit, onGreeting: () -> Unit) {
     val now = rememberTime(everySecond = true)
     val taps = remember { longArrayOf(0L, 0L) }
+    val greetTaps = remember { longArrayOf(0L, 0L) }
     Column(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 18.dp)) {
         Text(
             ZenithBrief.greeting(now.hour).uppercase(),
@@ -428,6 +473,15 @@ private fun ZentraleHeader(onTwenty: () -> Unit) {
             fontFamily = HudFont,
             letterSpacing = 4.sp,
             fontWeight = FontWeight.Bold,
+            modifier = Modifier.clickable(remember { MutableInteractionSource() }, indication = null) {
+                val at = System.currentTimeMillis()
+                greetTaps[0] = if (at - greetTaps[1] < 600) greetTaps[0] + 1 else 1
+                greetTaps[1] = at
+                if (greetTaps[0] >= 5) {
+                    greetTaps[0] = 0
+                    onGreeting()
+                }
+            },
         )
         Text(
             now.format(HubClock),
@@ -464,6 +518,24 @@ private fun BriefRow(text: String, onClick: (() -> Unit)? = null) {
         Text("›", color = ZenithGreen, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(20.dp))
         Text(text, color = VaultText, fontSize = 14.sp, lineHeight = 20.sp)
     }
+}
+
+/** A version in the gallery: its number in gold, in a cut frame. */
+@Composable
+private fun EraChip(label: String, onClick: () -> Unit) {
+    val shape = ZenithCutShape(6.dp)
+    Text(
+        label,
+        color = ZenithGold,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.SemiBold,
+        maxLines = 1,
+        modifier = Modifier
+            .clip(shape)
+            .border(0.8.dp, ZenithGold.copy(alpha = 0.5f), shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    )
 }
 
 @Composable

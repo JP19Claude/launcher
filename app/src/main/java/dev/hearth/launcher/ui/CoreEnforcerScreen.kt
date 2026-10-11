@@ -154,6 +154,18 @@ fun CoreEnforcerScreen(repo: SettingsRepository, onClose: () -> Unit) {
             }
 
             item {
+                StudioPanel("Jubiläums-Look", "Goldenes Polarlicht, warmes Gold bei Akzent und Glas, der ZENITH-Hintergrund und ein goldener Z-Angriff – mit einem Tipp. Gefällt es dir nicht: beim Würfel auf „Zurück“.") {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
+                        VaultButton("Jubiläums-Look an", Modifier.weight(1f)) {
+                            undo = CoreProfiles.snapshot(repo)
+                            update { CoreProfiles.jubileeLook(it) }
+                            note = "Der Jubiläums-Look ist an."
+                        }
+                    }
+                }
+            }
+
+            item {
                 StudioPanel("Profile", "Ein Profil merkt sich den ganzen Look – Icons, Uhr, Dock, Farben, Glas, Z-Angriff. Nicht darin: App-Sperren, Glimmer und Geheimes.") {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         NameField(name, { name = it }, Modifier.weight(1f)) {

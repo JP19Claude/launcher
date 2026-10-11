@@ -1033,6 +1033,7 @@ data class LauncherSettings(
 /** Keeps the launcher settings in SharedPreferences and exposes them as a flow. */
 class SettingsRepository(context: Context) {
 
+    private val appContext = context.applicationContext
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val _settings = MutableStateFlow(read())
@@ -1063,6 +1064,8 @@ class SettingsRepository(context: Context) {
     fun update(transform: (LauncherSettings) -> LauncherSettings) {
         _settings.update(transform)
         write(_settings.value)
+        // ZENITH 20: every color of the aurora tried is remembered (all five is an egg).
+        _settings.value.let { if (it.zenithAurora) JubileeTrail.sawAurora(appContext, it.auroraLook) }
     }
 
     /** All launcher settings as JSON, for "Einstellungen sichern" (the Claude key lives elsewhere). */

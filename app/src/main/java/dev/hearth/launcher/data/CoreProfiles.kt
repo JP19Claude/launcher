@@ -63,6 +63,19 @@ object CoreProfiles {
 
     fun delete(context: Context, id: String) = store(context, list(context).filterNot { it.id == id })
 
+    /**
+     * ZENITH 20, the jubilee's look in one tap: the aurora in gold, warm gold glass and accent, ZENITH's
+     * own background and a golden Z-Angriff.
+     */
+    fun jubileeLook(s: LauncherSettings): LauncherSettings = s.copy(
+        zenithAurora = true,
+        auroraLook = AuroraLook.Gold,
+        zenithWallpaper = true,
+        accent = AccentColor.Ochre,
+        glassTint = GlassTint.Warm,
+        strikeColor = StrikeColor.Gold,
+    )
+
     /** A look rolled at random – bold, but always something that works. */
     fun rolled(s: LauncherSettings, r: Random = Random.Default): LauncherSettings {
         fun step(from: Float, to: Float) = (Math.round((from + r.nextFloat() * (to - from)) * 20f) / 20f)

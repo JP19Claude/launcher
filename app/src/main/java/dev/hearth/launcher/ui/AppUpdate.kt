@@ -615,23 +615,27 @@ internal fun HearthVersionEgg(version: String, name: String, onClose: () -> Unit
     val context = LocalContext.current
     val look = remember { lookFor(context.packageName) }
     val number = versionNumber(version)
-    when {
-        number >= 20f -> JubileeEgg(version, name, onClose)
-        number >= 19.5f -> ZStormEgg(version, name, onClose)
-        number >= 19f -> SunRunEgg(version, name, onClose)
-        number >= 18.5f -> LensEgg(version, name, onClose)
-        number >= 18f -> ForgeEgg(version, name, onClose)
-        number >= 17.5f -> LanternEgg(version, name, onClose)
-        number >= 17f -> RubyEgg(version, name, onClose)
-        number >= 16f -> FireflyEgg(version, name, onClose)
-        number >= 15.5f -> SparkEgg(version, name, onClose)
-        number >= 15f -> VaultEgg(version, name, onClose)
-        number >= 14.5f -> CometEgg(version, name, onClose)
-        number >= 14f -> PrismEgg(version, name, onClose)
-        number >= 13.5f -> DropsEgg(version, name, onClose)
-        number >= 13f -> SilkEgg(version, name, onClose)
-        number >= 12.5f -> FluidOceanEgg(version, name, onClose)
-        else -> VersionEgg(version, name, look, onClose)
+    // ZENITH 20: the jubilee edition lies over every egg of the versions before it.
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+        when {
+            number >= 20f -> JubileeEgg(version, name, onClose)
+            number >= 19.5f -> ZStormEgg(version, name, onClose)
+            number >= 19f -> SunRunEgg(version, name, onClose)
+            number >= 18.5f -> LensEgg(version, name, onClose)
+            number >= 18f -> ForgeEgg(version, name, onClose)
+            number >= 17.5f -> LanternEgg(version, name, onClose)
+            number >= 17f -> RubyEgg(version, name, onClose)
+            number >= 16f -> FireflyEgg(version, name, onClose)
+            number >= 15.5f -> SparkEgg(version, name, onClose)
+            number >= 15f -> VaultEgg(version, name, onClose)
+            number >= 14.5f -> CometEgg(version, name, onClose)
+            number >= 14f -> PrismEgg(version, name, onClose)
+            number >= 13.5f -> DropsEgg(version, name, onClose)
+            number >= 13f -> SilkEgg(version, name, onClose)
+            number >= 12.5f -> FluidOceanEgg(version, name, onClose)
+            else -> VersionEgg(version, name, look, onClose)
+        }
+        if (number < 20f) JubileeOverlay()
     }
 }
 

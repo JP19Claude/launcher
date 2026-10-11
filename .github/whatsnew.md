@@ -1,5 +1,13 @@
 ZENITH 20 „Jubiläum“ auf ClaudeOS 7.0 „Apex“
 
+✨ Neu im Hotfix
+• Eine eigene Versionskarte für ZENITH 20: Mitternachtsblau in Gold, Polarlicht, Sterne, eingefrorene Feuerwerke, die 20 und das Randlicht des Z in Gold – anders als die grüne Karte von ZENITH 19
+• Jedes Egg hat eine Jubiläums-Edition: beim ersten Mal in ZENITH 20 ein goldenes Feuerwerk, ein goldenes „✦ 20“ auf der Easter-Egg-Karte
+• Die Eggs älterer Versionen, die ClaudeOS-Eggs und alle Geheimmenüs liegen jetzt in Gold (Polarlicht, Goldstaub, Abzeichen)
+• Zwölf neue Jubiläums-Eggs (jetzt 69): in der Uhr, im Finder, im Polarlicht, in der Z-Nacht und in der Zentrale
+• Jubiläums-Galerie in der Zentrale: alle Versionen von Hearth 11 bis ZENITH 20 und alle ClaudeOS auf einmal
+• Jubiläums-Look mit einem Tipp (Core Enforcer Studio, Zentrale): goldenes Polarlicht, Gold bei Akzent und Glas
+
 🎆 Die Jubiläums-Zeremonie
 • Einmal nach dem Update: die Zahlen laufen von 1 bis 20, die 20 rastet in Gold ein, ein Feuerwerk in den Farben des Z-Angriffs beginnt
 • Jederzeit wieder ansehen: Zentrale → Schnellzugriff → Jubiläum
@@ -28,7 +36,7 @@ ZENITH 20 „Jubiläum“ auf ClaudeOS 7.0 „Apex“
 
 ⛰ ClaudeOS 7.0 „Apex“
 • Neues Egg: das Claude-Zeichen den Berg hinaufziehen, bis das Polarlicht aufwacht
-• Doppeltipp auf den Startbildschirm öffnet jetzt auch Zentrale und Z-Nacht; Kacheln im ZENITH-Menü; 57 Easter Eggs
+• Doppeltipp auf den Startbildschirm öffnet jetzt auch Zentrale und Z-Nacht; Kacheln im ZENITH-Menü; 69 Easter Eggs
 
 Seit 19.8: der Duftschrank als eigene App mit Widget für jeden Launcher
 Seit 19.7: Clawd-Parfüm-Widget mit echten Flakon-Bildern, das Dock mit gleich großen Icons

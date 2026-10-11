@@ -69,6 +69,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.hearth.launcher.data.AuroraLook
 import dev.hearth.launcher.data.ClaudeOs
 import kotlinx.coroutines.launch
 import kotlin.math.PI
@@ -85,6 +86,10 @@ internal val ZenithGreen = Color(0xFF2FD27A)
 internal val ZenithGreenDeep = Color(0xFF15965A)
 internal val ZenithSun = Color(0xFFFFD34D)
 internal val ZenithSky = Color(0xFF5CC8FF)
+
+/** ZENITH 20, the jubilee: gold, where the version before had green. */
+internal val ZenithGold = Color(0xFFFFC94D)
+internal val ZenithGoldDeep = Color(0xFFC98A12)
 
 /** ZENITH's fluid: green, sun, sky, mint and white light. */
 val ZenithFluidColors = listOf(
@@ -122,7 +127,12 @@ fun ZenithLogo(
     zWidth: Float = 0.9f,
     /** The charge (0..1), shared when something around the logo should answer to it (the version card). */
     chargeState: Animatable<Float, AnimationVector1D> = remember { Animatable(0f) },
+    /** ZENITH 20, the jubilee: the number, the edge light and the charge in gold instead of green. */
+    gold: Boolean = false,
 ) {
+    val tint = if (gold) ZenithGold else ZenithGreen
+    val tintDeep = if (gold) ZenithGoldDeep else ZenithGreenDeep
+    val tintLight = if (gold) Color(0xFFFFF1C2) else Color(0xFFC8FFE0)
     val charged by androidx.compose.runtime.rememberUpdatedState(onCharged)
     val strikes by androidx.compose.runtime.rememberUpdatedState(strike && LocalSettings.current.zenithStrike)
     var striking by remember { mutableStateOf(false) }
@@ -203,12 +213,12 @@ fun ZenithLogo(
             if (c > 0.01f) {
                 // Held: green light pooling behind it.
                 drawCircle(
-                    Brush.radialGradient(listOf(ZenithGreen.copy(alpha = 0.3f * c), Color.Transparent), center = mid, radius = w * 0.65f),
+                    Brush.radialGradient(listOf(tint.copy(alpha = 0.3f * c), Color.Transparent), center = mid, radius = w * 0.65f),
                     w * 0.65f,
                     mid,
                 )
             }
-            drawZenithZ(left, top, w, light = light, charge = c)
+            drawZenithZ(left, top, w, light = light, charge = c, gold = gold)
             // The version, green, set into the Z across its diagonal – as in the first sketch: cut
             // into the metal, glowing, light catching its top.
             digits?.let { d ->
@@ -223,9 +233,9 @@ fun ZenithLogo(
                 drawText(d, color = Color(0xFF0B0D0E), topLeft = tl, drawStyle = Stroke(w * 0.024f, join = StrokeJoin.Round))
                 drawText(
                     d,
-                    brush = Brush.verticalGradient(listOf(Color(0xFFC8FFE0), ZenithGreen, ZenithGreenDeep), startY = head, endY = foot),
+                    brush = Brush.verticalGradient(listOf(tintLight, tint, tintDeep), startY = head, endY = foot),
                     topLeft = tl,
-                    shadow = androidx.compose.ui.graphics.Shadow(ZenithGreen.copy(alpha = glow), Offset.Zero, w * 0.045f * (1f + c)),
+                    shadow = androidx.compose.ui.graphics.Shadow(tint.copy(alpha = glow), Offset.Zero, w * 0.045f * (1f + c)),
                 )
                 drawText(
                     d,
@@ -238,7 +248,7 @@ fun ZenithLogo(
             val b = burst.value
             if (b < 1f) {
                 scale(1f + 0.3f * b, pivot = mid) {
-                    drawPath(zenithZPath(left, top, w), ZenithGreen.copy(alpha = (1f - b) * 0.8f), style = Stroke(w * 0.012f * (1f - b) + 1f))
+                    drawPath(zenithZPath(left, top, w), tint.copy(alpha = (1f - b) * 0.8f), style = Stroke(w * 0.012f * (1f - b) + 1f))
                 }
             }
         }
@@ -255,7 +265,7 @@ fun ZenithLogo(
                         Spacer(Modifier.width(letters * 1.4f))
                         Text(
                             rest,
-                            color = ZenithGreen,
+                            color = tint,
                             fontSize = with(density) { (letters * 1.55f).toSp() },
                             fontWeight = FontWeight.Light,
                             letterSpacing = with(density) { (letters * 0.3f).toSp() },
@@ -293,6 +303,9 @@ fun ZenithVersionHero(
     aspect: Float = 0.8f,
 ) {
     val charge = remember { Animatable(0f) }
+    // ZENITH 20: the jubilee's card is its own – midnight into gold, the aurora moving in it, the
+    // number and the Z's edge light in gold; the card of ZENITH 19 stays green.
+    val gold = versionNumber(version) >= 20f
     val shape = androidx.compose.foundation.shape.RoundedCornerShape(30.dp)
     androidx.compose.foundation.layout.BoxWithConstraints(
         modifier
@@ -304,9 +317,10 @@ fun ZenithVersionHero(
                 scaleY = 1f + 0.02f * c
             }
             .clip(shape)
-            .drawBehind { drawZenithCard(charge.value) },
+            .drawBehind { if (gold) drawJubileeCard(charge.value) else drawZenithCard(charge.value) },
     ) {
         val cardWidth = maxWidth
+        if (gold) ZenithAurora(AuroraLook.Gold, Modifier.matchParentSize(), strength = 0.75f)
         Column(
             Modifier.fillMaxWidth().padding(top = maxHeight * 0.1f),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -319,15 +333,26 @@ fun ZenithVersionHero(
                 caption = "ZENITH",
                 onTap = onTap,
                 chargeState = charge,
+                gold = gold,
             )
             Text(
-                "ZENITH $version · ${ClaudeOs.full}",
+                "ZENITH $version · ${if (gold) "${ClaudeOs.NAME} 7.0" else ClaudeOs.full}",
                 color = Color.White.copy(alpha = 0.78f),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Light,
                 letterSpacing = 1.sp,
                 modifier = Modifier.padding(top = 10.dp),
             )
+            if (gold) {
+                Text(
+                    "J U B I L Ä U M",
+                    color = ZenithGold,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 3.sp,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
         }
         if (footer != null) {
             Text(
@@ -371,6 +396,61 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawZenithCard(char
     drawCircle(Color.White.copy(alpha = 0.2f + 0.2f * charge), radius = w * 1.05f, center = Offset(-w * 0.32f, h * 0.62f), style = arc)
     drawCircle(Color.White.copy(alpha = 0.12f + 0.15f * charge), radius = w * 0.82f, center = Offset(w * 1.12f, h * 0.98f), style = arc)
     drawCircle(ZenithGreen.copy(alpha = 0.18f + 0.3f * charge), radius = w * 0.62f, center = Offset(w * 0.06f, h * 0.1f), style = arc)
+}
+
+/**
+ * ZENITH 20's card: midnight into gold, a violet glow high on the left and a golden one low on the
+ * right, a pale golden disc rising from below, arcs of light, stars, and three little fireworks
+ * frozen in the sky. [charge] (0..1, the Z held) brightens it.
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawJubileeCard(charge: Float) {
+    val w = size.width
+    val h = size.height
+    drawRect(
+        Brush.linearGradient(
+            listOf(Color(0xFF080612), Color(0xFF241506), Color(0xFFB8780F)),
+            start = Offset.Zero,
+            end = Offset(w, h),
+        ),
+    )
+    drawRect(Brush.radialGradient(listOf(Color(0xFF7C5CFF).copy(alpha = 0.26f + 0.1f * charge), Color.Transparent), center = Offset(0f, 0f), radius = w * 0.95f))
+    drawRect(Brush.radialGradient(listOf(ZenithGold.copy(alpha = 0.38f + 0.12f * charge), Color.Transparent), center = Offset(w, h), radius = w * 1.05f))
+    val disc = Offset(w * 0.62f, h * 1.1f)
+    drawCircle(
+        Brush.verticalGradient(listOf(Color(0xFFFFF1C2).copy(alpha = 0.2f + 0.08f * charge), Color(0xFFFFC94D).copy(alpha = 0.05f)), startY = h * 0.55f, endY = h),
+        radius = w * 0.8f,
+        center = disc,
+    )
+    val arc = Stroke(width = w * 0.004f)
+    drawCircle(Color(0xFFFFE9A0).copy(alpha = 0.22f + 0.2f * charge), radius = w * 1.05f, center = Offset(-w * 0.32f, h * 0.62f), style = arc)
+    drawCircle(Color.White.copy(alpha = 0.12f + 0.15f * charge), radius = w * 0.82f, center = Offset(w * 1.12f, h * 0.98f), style = arc)
+    drawCircle(Color(0xFFB8A2FF).copy(alpha = 0.2f + 0.3f * charge), radius = w * 0.62f, center = Offset(w * 0.06f, h * 0.1f), style = arc)
+    // Stars.
+    val r = kotlin.random.Random(20)
+    for (i in 0 until 46) {
+        val x = r.nextFloat() * w
+        val y = r.nextFloat() * h * 0.8f
+        val dot = 0.6f + r.nextFloat() * 1.6f
+        drawCircle(Color.White.copy(alpha = 0.25f + 0.5f * r.nextFloat()), dot * density, Offset(x, y))
+    }
+    // Three little fireworks, frozen.
+    listOf(
+        Triple(Offset(w * 0.16f, h * 0.2f), 0.07f, Color(0xFFFFD34D)),
+        Triple(Offset(w * 0.86f, h * 0.14f), 0.09f, Color(0xFFFFF1C2)),
+        Triple(Offset(w * 0.82f, h * 0.55f), 0.05f, Color(0xFFB8A2FF)),
+    ).forEach { (c, k, color) ->
+        for (i in 0 until 12) {
+            val a = i * 30.0 * PI / 180.0
+            val len = w * k
+            drawLine(
+                color.copy(alpha = 0.55f + 0.3f * charge),
+                c + Offset(cos(a).toFloat() * len * 0.45f, sin(a).toFloat() * len * 0.45f),
+                c + Offset(cos(a).toFloat() * len, sin(a).toFloat() * len),
+                strokeWidth = w * 0.004f,
+                cap = StrokeCap.Round,
+            )
+        }
+    }
 }
 
 /**

@@ -86,14 +86,18 @@ internal fun ClaudeOsVersionEgg(version: String = ClaudeOs.VERSION, onClose: () 
     val number = versionNumber(version)
     // ZENITH 19: the museum opens older ones too – each egg shows its own ClaudeOS.
     androidx.compose.runtime.CompositionLocalProvider(LocalClaudeOsEra provides claudeOsEra(version)) {
-        when {
-            number >= 7f -> ApexEgg(onClose)
-            number >= 6f -> HeliosEgg(onClose)
-            number >= 5f -> MythosEgg(onClose)
-            number >= 4f -> AuroraEgg(onClose)
-            number >= 3f -> NovaEgg(onClose)
-            number >= 2f -> BlazeEgg(onClose)
-            else -> ClaudeOsEgg(onClose)
+        // ZENITH 20: the jubilee edition lies over the eggs of the ClaudeOS before 7.
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+            when {
+                number >= 7f -> ApexEgg(onClose)
+                number >= 6f -> HeliosEgg(onClose)
+                number >= 5f -> MythosEgg(onClose)
+                number >= 4f -> AuroraEgg(onClose)
+                number >= 3f -> NovaEgg(onClose)
+                number >= 2f -> BlazeEgg(onClose)
+                else -> ClaudeOsEgg(onClose)
+            }
+            if (number < 7f) JubileeOverlay()
         }
     }
 }

@@ -51,6 +51,7 @@ import dev.hearth.launcher.data.EasterEggs
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -136,6 +137,13 @@ fun NightstandScreen(onClose: () -> Unit, onBrightness: (Boolean) -> Unit) {
         value = NightBattery(if (level < 0) -1 else level * 100 / scale, plugged)
     }
     val alarm = remember(minute) { nextAlarmText(context) }
+    // ZENITH 20: the night's eggs – at three in the morning, twenty minutes of watch, twenty percent.
+    LaunchedEffect(Unit) {
+        if (LocalTime.now().hour == 3) EasterEggs.find(context, "nightowl")
+        delay(20 * 60_000L)
+        EasterEggs.find(context, "nightwatch")
+    }
+    LaunchedEffect(battery.level) { if (battery.level == 20) EasterEggs.find(context, "battery20") }
     val ink = Color.White.copy(alpha = if (dim) 0.55f else 0.95f)
     val soft = Color.White.copy(alpha = if (dim) 0.35f else 0.7f)
     val hintAlpha by animateFloatAsState(if (hint) 0.6f else 0f, tween(800), label = "hint")
