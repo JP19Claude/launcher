@@ -121,7 +121,17 @@ data class GlassStyle(
 ) {
     companion object {
         fun from(s: LauncherSettings): GlassStyle = (if (s.colorOsLook) colorOs(s) else general(s)).let { glass ->
-            if (s.beSmarter) glass.copy(depth = s.smartDepth, vibrancy = 1f + 1.2f * s.smartVibrancy) else glass
+            if (s.beSmarter) {
+                glass.copy(
+                    depth = s.smartDepth,
+                    vibrancy = 1f + 1.2f * s.smartVibrancy,
+                    // Only Liquid Glass bends what lies behind it: the other themes are flat surfaces
+                    // and go without the lens shader (it is what makes many glass surfaces heavy).
+                    lensMinDp = if (s.smartGlass == dev.hearth.launcher.data.SmartGlass.Liquid) glass.lensMinDp else 100_000f,
+                )
+            } else {
+                glass
+            }
         }
 
         /**

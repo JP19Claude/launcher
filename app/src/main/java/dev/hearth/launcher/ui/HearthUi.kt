@@ -193,6 +193,28 @@ internal object HearthChangelog {
             summary = "Das große Update: Im Illuminati gibt es jetzt „Be Smarter“ – ein Modus, der aus dem Launcher Smart Launcher 6 macht, nach dessen Vorbild: seine Uhr mit Datum, Wetter und Wecker, Icons ohne Namen, die Smart-Suche, der Drawer mit der Leiste der sechs Kategorien, seine fünf Themes bis zum Liquid Glass mit Reglern, Apps ohne Verzögerung und Glimmer als Teil des ganzen Systems.",
             sections = listOf(
                 ChangeSection(
+                    "Kein Warten mehr nach dem Schließen (Hotfix)", Icons.Rounded.ThumbUp, Orange,
+                    listOf(
+                        "Nach dem Schließen einer App musste man kurz warten, bis die nächste aufging. Gesucht habe ich dort, wo der Launcher in genau diesem Moment arbeitet, und alles abgestellt, was in Frage kommt:",
+                        "Die Widgets bleiben angeschlossen. Bisher trennte der Launcher sie nach 15 Sekunden, und beim Zurückkommen mussten alle auf einmal neu gezeichnet werden – genau dann, wenn man die nächste App antippt. Jetzt trennt er sie erst nach einer halben Stunde.",
+                        "Be Smarter spielt keine eigene Schließ-Animation und macht keine Bilder der App mehr, solange „Glimmer ins System binden“ aus ist – wie beim Smart Launcher, der die des Systems zeigt. Mit Glimmer ist es die leichte „Smart Launcher“-Animation.",
+                        "Die flachen Themes (Ambient Design, Material You, Frostet, Opak) zeichnen ihr Glas ohne den Linsen-Shader; nur Liquid Glass behält ihn.",
+                        "Apps werden nicht mehr auf dem Hauptthread gestartet: Braucht das System einen Moment, wartet nicht der Bildschirm mit.",
+                        "Ehrlich dazu: Ich konnte es nicht auf dem Handy messen. Hängt es danach noch, sag mir bitte, ob es nach der Wischgeste oder nach Zurück ist, und ob Widgets auf dem Startbildschirm liegen.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Mehr einstellen", Icons.Rounded.Settings, Pink,
+                    listOf(
+                        "Neu im Illuminati unter „Be Smarter“: die Form der Icons (jetzt sieben: Squircle, Kreis, Abgerundet, Quadrat, Tropfen, Blatt, Kante), Größe, Spalten und Reihen, die Smart-Suche an oder aus.",
+                        "Die Uhr: Größe, Schrift, Anordnung (zentriert oder kompakt mit der Zeit links und dem Wetter rechts), Wetter und Wecker einzeln ein- oder ausschaltbar. Das Datum steht jetzt wie im Smart Launcher: „So., 11. Oktober ⛅ 10°C“.",
+                        "Der Drawer: Spalten (drei bis sechs), die Namen unter den Icons und deren Größe.",
+                        "Die Farbe der Flächen im Ambient Design: nach dem Hintergrundbild oder eine von acht Farben – wie „Thema bearbeiten → Farbe“.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Be Smarter", Icons.Rounded.Star, Blue,
                     listOf(
                         "Zu finden im Clawd Illuminati (Versionsnummer in „Über das Telefon“ antippen): ganz oben die Karte „Be Smarter“. Ein Tipp, und ZENITH sieht aus wie Smart Launcher 6 – und ein Tipp zurück, und alles ist wieder wie vorher. Der Modus legt sich nur über das, was du gewählt hast; geschrieben wird nichts.",

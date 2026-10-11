@@ -1,8 +1,11 @@
 ZENITH 20.5 „Be Smarter“ auf ClaudeOS 7.0 „Apex“
 
 ✨ Neu im Hotfix
+• Kein Warten mehr nach dem Schließen einer App: die Widgets bleiben angeschlossen (sie wurden nach 15 Sekunden getrennt und beim Zurückkommen alle auf einmal neu gezeichnet), Be Smarter spielt keine eigene Schließ-Animation und macht keine Bilder der App (außer mit „Glimmer ins System binden“), die flachen Themes zeichnen ohne Linsen-Shader, Apps starten nicht mehr auf dem Hauptthread
+• Mehr einstellen: sieben Formen für die Icons, Größe, Spalten und Reihen, Smart-Suche an oder aus; die Uhr in Größe, Schrift, Anordnung (zentriert oder kompakt), Wetter und Wecker einzeln; der Drawer mit Spalten, Namen und deren Größe; die Farbe der Flächen im Ambient Design
+• Das Datum wie im Smart Launcher: „So., 11. Oktober ⛅ 10°C“
 • Be Smarter nach Bildschirmfotos von Smart Launcher 6 angeglichen
-• Die Uhr in der Mitte: Zeit groß, darunter „Datum · Wetter“, darunter „Wecker · 07:00“
+• Die Uhr in der Mitte: Zeit groß, darunter „Datum ⛅ Wetter“, darunter „Wecker · 07:00“
 • Icons ohne Namen als abgerundete Quadrate (im Liquid Glass runde Glas-Kacheln), das Dock ohne Leiste, ganz unten die Pille „Smart-Suche“
 • Der Drawer sitzt tief: groß der Name der Kategorie mit Suche, Store und Menü, die Apps in vier Spalten, unten die Leiste mit sechs Kategorien (Kommunikation, Social, Spiele, Medien, Dienstprogramme, Einstellungen)
 • Fünf Themes wie dort: Ambient Design, Material You, Frostetes Glas, Opakisches Glas, Liquid Glass – mit den Reglern Unschärferadius, Lebendigkeit verwischen, Brechung, Tiefe und Streuung

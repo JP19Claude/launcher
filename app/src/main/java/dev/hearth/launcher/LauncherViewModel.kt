@@ -565,10 +565,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
         usage.recordLaunch(app.key)
         pendingFlyIn = app
-        if (settingsRepo.settings.value.glimmerFlyIn) {
+        // Be Smarter plays no closing animation of its own (Smart Launcher has none, the system's
+        // does it) – unless Glimmer is bound in: then there is nothing to capture, and nothing taking
+        // the screen's picture every second while the app is in front.
+        val look = settingsRepo.settings.value
+        if (look.glimmerFlyIn && (!look.beSmarter || look.smartGlimmer)) {
             viewModelScope.launch(Dispatchers.IO) { GlimmerLink.appLaunched(getApplication<Application>()) }
         }
-        repo.launch(app, sourceBounds, options)
+        // The system's answer can take a moment (it is busy with the closing app's animation): the
+        // main thread doesn't wait for it, so the screen stays alive for the next tap.
+        viewModelScope.launch(Dispatchers.IO) { repo.launch(app, sourceBounds, options) }
     }
     fun openAppInfo(app: AppInfo) = repo.openAppInfo(app)
 

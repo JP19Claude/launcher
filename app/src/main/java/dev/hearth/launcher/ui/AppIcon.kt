@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -205,6 +206,10 @@ fun IconShape.clipShape(): Shape = when (this) {
     IconShape.Squircle -> SquircleShape
     IconShape.Circle -> CircleShape
     IconShape.Rounded -> RoundedIconShape
+    IconShape.Square -> RoundedCornerShape(percent = 6)
+    IconShape.Teardrop -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 8, bottomStartPercent = 50)
+    IconShape.Leaf -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 8, bottomEndPercent = 50, bottomStartPercent = 8)
+    IconShape.Cut -> CutCornerShape(percent = 22)
 }
 
 /** Corner radius for glass tiles; the glass shader works with rounded rectangles. */
@@ -212,6 +217,10 @@ fun IconShape.glassCorner(size: Dp): Dp = when (this) {
     IconShape.Squircle -> size * 0.3f
     IconShape.Circle -> size / 2
     IconShape.Rounded -> size * 0.22f
+    IconShape.Square -> size * 0.08f
+    IconShape.Teardrop -> size * 0.4f
+    IconShape.Leaf -> size * 0.4f
+    IconShape.Cut -> size * 0.2f
 }
 
 /** Text drawn on the wallpaper gets a soft shadow so it stays readable on bright images. */

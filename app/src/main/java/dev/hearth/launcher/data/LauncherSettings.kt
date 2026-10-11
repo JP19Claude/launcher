@@ -20,6 +20,11 @@ enum class IconShape(val label: String) {
     Squircle("Squircle"),
     Circle("Kreis"),
     Rounded("Abgerundet"),
+    /** ZENITH 20.5, "Be Smarter": shapes of Smart Launcher's "Form". */
+    Square("Quadrat"),
+    Teardrop("Tropfen"),
+    Leaf("Blatt"),
+    Cut("Kante"),
 }
 
 enum class ClockStyle(val label: String) {
@@ -190,6 +195,25 @@ fun LauncherSettings.withColorOsLook(): LauncherSettings = if (!colorOsLook) {
     ).withCcStyle(CcStyle.ColorOS)
 }
 
+/** ZENITH 20.5, "Be Smarter": how the clock sits on the home screen. */
+enum class SmartClockLayout(val label: String) {
+    Center("Zentriert"),
+    Compact("Kompakt (Zeit links, Wetter rechts)"),
+}
+
+/** ZENITH 20.5, "Thema bearbeiten": the color Ambient Design tints its surfaces with – the wallpaper's, or one of these. */
+enum class SmartColor(val label: String, val color: Color?) {
+    Auto("Wie das Hintergrundbild", null),
+    Indigo("Indigo", Color(0xFF3A3F8F)),
+    Violet("Violett", Color(0xFF6A3F9A)),
+    Teal("Petrol", Color(0xFF1F6F78)),
+    Green("Grün", Color(0xFF2F7A4F)),
+    Amber("Bernstein", Color(0xFF8A5A1E)),
+    Red("Rot", Color(0xFF8A2F3A)),
+    Rose("Rosé", Color(0xFF9A3F6F)),
+    Slate("Schiefer", Color(0xFF3A444E)),
+}
+
 /**
  * ZENITH 20.5, "Be Smarter": the five themes of Smart Launcher 6 ("Allgemeine Darstellung"). Ambient
  * Design and Material You are flat, translucent surfaces in the wallpaper's (or the phone's) colors;
@@ -225,6 +249,8 @@ fun LauncherSettings.withSmartGlass(glass: SmartGlass): LauncherSettings = copy(
     smartTint = glass.tint,
     smartDepth = glass.depth,
     smartVibrancy = glass.vibrancy,
+    // Liquid Glass shows its icons in round glass tiles; the others in adaptive squircles.
+    smartShape = if (glass == SmartGlass.Liquid) IconShape.Circle else IconShape.Squircle,
 )
 
 /** Apps open the moment they are tapped (only in "Be Smarter", and only while that is chosen). */
@@ -261,15 +287,14 @@ fun LauncherSettings.withSmartLook(): LauncherSettings = if (!beSmarter) {
         omegaZeros = false,
         perks = emptySet(),
         showClaudeCard = false,
-        // Liquid Glass shows its icons in round glass tiles; the other themes in adaptive squircles.
+        // Liquid Glass shows its icons on glass tiles; the other themes as they are.
         iconStyle = if (smartGlass == SmartGlass.Liquid) IconStyle.Glass else IconStyle.Original,
-        iconShape = if (smartGlass == SmartGlass.Liquid) IconShape.Circle else IconShape.Squircle,
+        iconShape = smartShape,
         clockStyle = ClockStyle.Smart,
         // The dock has no bar of its own: the icons sit right on the wallpaper, and no names under them.
         dockStyle = DockStyle.Clear,
         showLabels = false,
         showGreeting = false,
-        showSearchPill = true,
         showAppLibrary = false,
         animations = true,
         glassLook = if (smartGlass == SmartGlass.Liquid) GlassLook.Liquid else GlassLook.Omega,
@@ -765,6 +790,15 @@ data class LauncherSettings(
     val smartTint: Float = SmartGlass.Ambient.tint,
     val smartDepth: Float = SmartGlass.Ambient.depth,
     val smartVibrancy: Float = SmartGlass.Ambient.vibrancy,
+    /** The form of the icons, the clock's size and what it shows, and the drawer's columns and names. */
+    val smartShape: IconShape = IconShape.Squircle,
+    val smartClockSize: Float = 78f,
+    val smartClockWeather: Boolean = true,
+    val smartClockAlarm: Boolean = true,
+    val smartDrawerColumns: Int = 4,
+    val smartDrawerNames: Boolean = true,
+    val smartClockLayout: SmartClockLayout = SmartClockLayout.Center,
+    val smartColor: SmartColor = SmartColor.Auto,
     /** Apps open the moment they are tapped: no splash, no press animation, no wait. */
     val smartInstant: Boolean = true,
     /** Glimmer bound into the whole system: its fly-in over every launcher, in the Smart style. */
@@ -1346,6 +1380,14 @@ class SettingsRepository(context: Context) {
             smartDispersion = prefs.getFloat("smartDispersion", d.smartDispersion),
             smartDepth = prefs.getFloat("smartDepth", d.smartDepth),
             smartVibrancy = prefs.getFloat("smartVibrancy", d.smartVibrancy),
+            smartShape = enumOf("smartShape", d.smartShape),
+            smartClockSize = prefs.getFloat("smartClockSize", d.smartClockSize),
+            smartClockWeather = prefs.getBoolean("smartClockWeather", d.smartClockWeather),
+            smartClockAlarm = prefs.getBoolean("smartClockAlarm", d.smartClockAlarm),
+            smartDrawerColumns = prefs.getInt("smartDrawerColumns", d.smartDrawerColumns),
+            smartDrawerNames = prefs.getBoolean("smartDrawerNames", d.smartDrawerNames),
+            smartClockLayout = enumOf("smartClockLayout", d.smartClockLayout),
+            smartColor = enumOf("smartColor", d.smartColor),
             smartSpecular = prefs.getFloat("smartSpecular", d.smartSpecular),
             smartTint = prefs.getFloat("smartTint", d.smartTint),
             smartInstant = prefs.getBoolean("smartInstant", d.smartInstant),
@@ -1563,6 +1605,14 @@ class SettingsRepository(context: Context) {
             .putFloat("smartDispersion", s.smartDispersion)
             .putFloat("smartDepth", s.smartDepth)
             .putFloat("smartVibrancy", s.smartVibrancy)
+            .putString("smartShape", s.smartShape.name)
+            .putFloat("smartClockSize", s.smartClockSize)
+            .putBoolean("smartClockWeather", s.smartClockWeather)
+            .putBoolean("smartClockAlarm", s.smartClockAlarm)
+            .putInt("smartDrawerColumns", s.smartDrawerColumns)
+            .putBoolean("smartDrawerNames", s.smartDrawerNames)
+            .putString("smartClockLayout", s.smartClockLayout.name)
+            .putString("smartColor", s.smartColor.name)
             .putFloat("smartSpecular", s.smartSpecular)
             .putFloat("smartTint", s.smartTint)
             .putBoolean("smartInstant", s.smartInstant)

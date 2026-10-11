@@ -47,8 +47,10 @@ class MainActivity : ComponentActivity() {
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
     /**
-     * Widgets stop updating only once the launcher has been away for a while: a quick trip into
-     * an app and back must not make every widget redraw just as the next app is tapped.
+     * Widgets stop updating only once the launcher has been away for a long while: a trip into an
+     * app and back – a quick one or a long one – must not make every widget redraw just as the
+     * next app is tapped (they pile up their updates while the host is deaf, and then all of them
+     * are inflated at once on the main thread).
      */
     private val stopWidgets = Runnable { viewModel.widgets.stopListening() }
 
@@ -62,7 +64,7 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         wasInBackground = true
         handler.removeCallbacks(stopWidgets)
-        handler.postDelayed(stopWidgets, 15_000)
+        handler.postDelayed(stopWidgets, 30 * 60_000L)
     }
 
     override fun onDestroy() {

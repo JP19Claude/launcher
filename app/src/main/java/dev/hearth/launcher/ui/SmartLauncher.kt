@@ -85,8 +85,13 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.AppInfo
+import dev.hearth.launcher.data.ClockFont
+import dev.hearth.launcher.data.IconShape
+import dev.hearth.launcher.data.LabelSize
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.LibraryCategory
+import dev.hearth.launcher.data.SmartClockLayout
+import dev.hearth.launcher.data.SmartColor
 import dev.hearth.launcher.data.SmartGlass
 import dev.hearth.launcher.data.WallpaperBackdrop
 import dev.hearth.launcher.data.withSmartGlass
@@ -171,13 +176,15 @@ internal fun rememberSmartPalette(settings: LauncherSettings, backdrop: Wallpape
     val ambient = remember(backdrop) { ambientColor(backdrop) }
     val on = settings.beSmarter
     val theme = settings.smartGlass
-    return remember(on, theme, ambient) {
+    // "Thema bearbeiten → Farbe": one of the chosen colors instead of the wallpaper's.
+    val base = settings.smartColor.color ?: ambient
+    return remember(on, theme, base) {
         if (!on) {
             null
         } else {
             when (theme) {
-                SmartGlass.Ambient -> ambientPalette(ambient)
-                SmartGlass.MaterialYou -> materialPalette(context, ambient)
+                SmartGlass.Ambient -> ambientPalette(base)
+                SmartGlass.MaterialYou -> materialPalette(context, base)
                 SmartGlass.Frosted, SmartGlass.Opaque, SmartGlass.Liquid -> SmartPalette(null, null, SmartAccent)
             }
         }
@@ -349,9 +356,9 @@ fun SmartDrawer(
     val settings = LocalSettings.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
-    val columns = settings.columns.coerceIn(4, 5)
-    // The names stand under the icons here, though the home screen goes without them.
-    val shown = remember(settings) { settings.copy(showLabels = true) }
+    val columns = settings.smartDrawerColumns.coerceIn(3, 6)
+    // The names stand under the icons here (if wanted), though the home screen goes without them.
+    val shown = remember(settings) { settings.copy(showLabels = settings.smartDrawerNames) }
 
     val byCategory = remember(apps) { apps.sortedBy { it.label.lowercase() }.groupBy { smartCategoryOf(it) } }
     val pagerState = rememberPagerState(initialPage = rememberedTab.coerceIn(0, SmartCategory.entries.size - 1)) { SmartCategory.entries.size }
@@ -811,10 +818,11 @@ internal fun SmartSection(settings: LauncherSettings, onChange: ((LauncherSettin
 
     IlluminationSection("Be Smarter · Launcher-Thema") {
         SmartThemeList(settings.smartGlass) { theme -> onChange { it.withSmartGlass(theme) } }
-        SmartNote("Wie in „Allgemeine Darstellung“ des Smart Launchers 6. Mit der Wahl springen die Regler auf die Werte des Themes – danach sind sie frei.")
+        SmartNote("Wie in „Allgemeine Darstellung“ des Smart Launchers 6. Mit der Wahl springen die Regler und die Form der Icons auf die Werte des Themes – danach sind sie frei.")
     }
 
     IlluminationSection("Be Smarter · Oberfläche") {
+        IlluminatiChoice("◐", "Farbe der Flächen (Ambient Design)", SmartColor.entries, settings.smartColor, { it.label }) { color -> onChange { it.copy(smartColor = color) } }
         SliderRow("Unschärferadius", settings.smartBlur, 0f..2.5f, "${"%.1f".format(settings.smartBlur)} %") { v -> onChange { it.copy(smartBlur = v) } }
         SliderRow("Lebendigkeit verwischen", settings.smartVibrancy, 0f..1f, "+${(settings.smartVibrancy * 100).roundToInt()} %") { v -> onChange { it.copy(smartVibrancy = v) } }
         SliderRow("Brechung", settings.smartRefraction, 0f..2.5f, "${(settings.smartRefraction * 100).roundToInt()} %") { v -> onChange { it.copy(smartRefraction = v) } }
@@ -823,6 +831,28 @@ internal fun SmartSection(settings: LauncherSettings, onChange: ((LauncherSettin
         SliderRow("Glanz", settings.smartSpecular, 0f..2f, "${(settings.smartSpecular * 100).roundToInt()} %") { v -> onChange { it.copy(smartSpecular = v) } }
         SliderRow("Tönung", settings.smartTint, 0f..2.5f, "${(settings.smartTint * 100).roundToInt()} %") { v -> onChange { it.copy(smartTint = v) } }
         SmartNote("Brechung, Tiefe, Streuung und Lebendigkeit zeigen sich vor allem im Liquid Glass. Ambient Design und Material You färben die Flächen selbst; die Tönung gilt dort nicht.")
+    }
+
+    IlluminationSection("Be Smarter · Startbildschirm") {
+        IlluminatiChoice("▢", "Form der Icons", IconShape.entries, settings.smartShape, { it.label }) { shape -> onChange { it.copy(smartShape = shape) } }
+        IntSlider("Größe der Icons", settings.iconSize, 40..96, unit = " dp") { v -> onChange { it.copy(iconSize = v) } }
+        IntSlider("Spalten", settings.columns, 3..6) { v -> onChange { it.copy(columns = v) } }
+        IntSlider("Reihen", settings.rows, 4..8) { v -> onChange { it.copy(rows = v) } }
+        IlluminationSwitch("⌕", "Smart-Suche", "Die Pille „Smart-Suche“ ganz unten, unter dem Dock.", settings.showSearchPill) { v -> onChange { it.copy(showSearchPill = v) } }
+    }
+
+    IlluminationSection("Be Smarter · Uhr") {
+        IlluminatiChoice("◷", "Anordnung", SmartClockLayout.entries, settings.smartClockLayout, { it.label }) { layout -> onChange { it.copy(smartClockLayout = layout) } }
+        SliderRow("Größe der Uhr", settings.smartClockSize, 48f..100f, "${settings.smartClockSize.roundToInt()} sp") { v -> onChange { it.copy(smartClockSize = v) } }
+        IlluminatiChoice("Aa", "Schrift der Uhr", ClockFont.entries, settings.clockFont, { it.label }) { font -> onChange { it.copy(clockFont = font) } }
+        IlluminationSwitch("☁", "Wetter an der Uhr", "Bild und Temperatur hinter dem Datum (der Ort steht in der Zentrale).", settings.smartClockWeather) { v -> onChange { it.copy(smartClockWeather = v) } }
+        IlluminationSwitch("⏰", "Wecker an der Uhr", "Die Zeile „Wecker · 07:00“ unter dem Datum.", settings.smartClockAlarm) { v -> onChange { it.copy(smartClockAlarm = v) } }
+    }
+
+    IlluminationSection("Be Smarter · Drawer") {
+        IntSlider("Spalten im Drawer", settings.smartDrawerColumns, 3..6) { v -> onChange { it.copy(smartDrawerColumns = v) } }
+        IlluminationSwitch("Ab", "Namen unter den Icons", "Im Drawer stehen die Namen der Apps unter den Icons.", settings.smartDrawerNames) { v -> onChange { it.copy(smartDrawerNames = v) } }
+        IlluminatiChoice("Aa", "Größe der Namen", LabelSize.entries, settings.labelSize, { it.label }) { size -> onChange { it.copy(labelSize = size) } }
     }
 
     IlluminationSection("Be Smarter · Tempo") {

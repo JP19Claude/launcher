@@ -172,6 +172,7 @@ import dev.hearth.launcher.data.hologram
 import dev.hearth.launcher.data.colorOsLook
 import dev.hearth.launcher.data.withColorOsLook
 import dev.hearth.launcher.data.withSmartLook
+import dev.hearth.launcher.data.SmartClockLayout
 import dev.hearth.launcher.data.instantOpen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -534,7 +535,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
         vm.flyIns.collect { fly ->
             val s = currentSettings
             // Needs the Glimmer app running with its island on.
-            if (s.glimmerFlyIn && s.animations && fly.ready) {
+            if (s.glimmerFlyIn && s.animations && fly.ready && (!s.beSmarter || s.smartGlimmer)) {
                 // Apps that hide their screen (banking, passwords) give a black picture: then the
                 // card in the app's colors flies instead.
                 val shot = fly.snapshot?.takeIf { withContext(Dispatchers.Default) { snapshotLooksReal(it) } }
@@ -1788,11 +1789,12 @@ private fun LargeClock(settings: LauncherSettings, modifier: Modifier = Modifier
 }
 
 /**
- * ZENITH 20.5, "Be Smarter": the clock of Smart Launcher 6, centered – the time big, under it the date
- * with the weather (its picture and the temperature), and under that the next alarm. A tap on the date
- * opens the calendar, on the weather the ZENITH-Zentrale, on the alarm the alarms. The weather needs
- * the place set once in the Zentrale. (Smart Launcher also shows the next event of the calendar there;
- * that needs the calendar's permission, which this launcher doesn't ask for.)
+ * ZENITH 20.5, "Be Smarter": the clock of Smart Launcher 6 – centered, the time big, under it the date
+ * with the weather (its picture and the temperature: "So., 11. Oktober ⛅ 10°C"), and under that the
+ * next alarm; or compact, the time (with the date and the alarm) left and the weather right. A tap on
+ * the date opens the calendar, on the weather the ZENITH-Zentrale, on the alarm the alarms. The weather
+ * needs the place set once in the Zentrale. (Smart Launcher also shows the next event of the calendar
+ * there; that needs the calendar's permission, which this launcher doesn't ask for.)
  */
 @Composable
 private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier) {
@@ -1800,12 +1802,13 @@ private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier
     val locale = Locale.getDefault()
     val time = remember(now) { now.format(DateTimeFormatter.ofPattern("HH:mm", locale)) }
     val date = remember(now) {
-        now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale)).replaceFirstChar { it.titlecase(locale) }
+        now.format(DateTimeFormatter.ofPattern("EEE, d. MMMM", locale)).replaceFirstChar { it.titlecase(locale) }
     }
-    val weather = rememberWeather()
+    val weather = if (settings.smartClockWeather) rememberWeather() else null
     val context = LocalContext.current
     // The next alarm: just the time when it rings today, with the day otherwise.
-    val alarm = remember(now) {
+    val alarm = remember(now, settings.smartClockAlarm) {
+        if (!settings.smartClockAlarm) return@remember null
         runCatching {
             context.getSystemService(android.app.AlarmManager::class.java)?.nextAlarmClock?.triggerTime?.let { at ->
                 val ring = java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault())
@@ -1813,6 +1816,60 @@ private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier
                 ring.format(DateTimeFormatter.ofPattern(pattern, locale))
             }
         }.getOrNull()
+    }
+    val openZentrale = { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ZentraleActivity::class.java)) }; Unit }
+    val clockSize = settings.smartClockSize
+    if (settings.smartClockLayout == SmartClockLayout.Compact) {
+        Row(
+            modifier
+                .fillMaxWidth()
+                .padding(start = 8.dp, end = 8.dp, top = 24.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                ClockDigits(
+                    settings,
+                    text = time,
+                    color = Color.White,
+                    fontFamily = clockFamily(settings, null),
+                    fontWeight = clockWeight(settings, FontWeight.SemiBold),
+                    fontSize = (clockSize * 0.62f).sp,
+                    lineHeight = (clockSize * 0.64f).sp,
+                    letterSpacing = (-1).sp,
+                    style = OnWallpaperText,
+                )
+                Text(
+                    text = date,
+                    color = Color.White.copy(alpha = 0.95f),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    style = OnWallpaperText,
+                    modifier = Modifier.clickable { openCalendar(context) },
+                )
+                if (alarm != null) {
+                    Text(
+                        text = "Wecker · $alarm",
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 14.sp,
+                        style = OnWallpaperText,
+                        modifier = Modifier.clickable { openAlarms(context) },
+                    )
+                }
+            }
+            weather?.let { w ->
+                Row(Modifier.clickable { openZentrale() }, verticalAlignment = Alignment.CenterVertically) {
+                    WeatherGlyph(w.code, w.night, Modifier.size(34.dp))
+                    Text(
+                        text = " ${w.now.roundToInt()}°C",
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Medium,
+                        style = OnWallpaperText,
+                    )
+                }
+            }
+        }
+        return
     }
     Column(
         modifier
@@ -1826,8 +1883,8 @@ private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier
             color = Color.White,
             fontFamily = clockFamily(settings, null),
             fontWeight = clockWeight(settings, FontWeight.SemiBold),
-            fontSize = 78.sp,
-            lineHeight = 80.sp,
+            fontSize = clockSize.sp,
+            lineHeight = (clockSize + 2f).sp,
             letterSpacing = (-1).sp,
             style = OnWallpaperText,
         )
@@ -1841,11 +1898,8 @@ private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier
                 modifier = Modifier.clickable { openCalendar(context) },
             )
             weather?.let { w ->
-                Row(
-                    Modifier.clickable { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ZentraleActivity::class.java)) } },
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(text = "  ·  ", color = Color.White, fontSize = 19.sp, style = OnWallpaperText)
+                Row(Modifier.clickable { openZentrale() }, verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.width(8.dp))
                     WeatherGlyph(w.code, w.night, Modifier.size(26.dp))
                     Text(
                         text = " ${w.now.roundToInt()}°C",
