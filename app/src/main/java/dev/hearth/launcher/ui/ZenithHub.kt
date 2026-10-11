@@ -63,6 +63,7 @@ import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.PerfumeShelf
 import dev.hearth.launcher.data.ZenithBrief
 import dev.hearth.launcher.data.ZenithShield
+import dev.hearth.launcher.data.ZenithSlogan
 import dev.hearth.launcher.data.ZenithTint
 import dev.hearth.launcher.data.ZenithWeather
 import dev.hearth.launcher.data.withZenithTint
@@ -449,6 +450,16 @@ fun ZentraleScreen(onClose: () -> Unit, onUpdate: ((LauncherSettings) -> Launche
                 }
             }
 
+            item {
+                Text(
+                    "${ZenithSlogan.UPPER} · ${ZenithSlogan.GERMAN}",
+                    color = ZenithGreen,
+                    fontSize = 11.sp,
+                    fontFamily = HudFont,
+                    letterSpacing = 2.sp,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 2.dp),
+                )
+            }
             item {
                 Text(
                     "ZENITH ${HearthUi.major(BuildConfig.VERSION_NAME)} · Jubiläum · ${ClaudeOs.full} „${ClaudeOs.CODENAME}“",

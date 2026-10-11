@@ -362,6 +362,17 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                     "$appName ${groups.first().specs.first().value} · ${ClaudeOs.full} „${ClaudeOs.CODENAME}“",
                     style = TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
                 )
+                if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
+                    // ZENITH 20: its saying.
+                    Text(
+                        dev.hearth.launcher.data.ZenithSlogan.UPPER,
+                        color = ZenithGreen.copy(alpha = 0.9f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 4.sp,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "made by Julius Pranner und Claude Code",

@@ -202,6 +202,14 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Der Spruch des Systems", Icons.Rounded.ThumbUp, Blue,
+                    listOf(
+                        "ZENITH hat jetzt einen Spruch, wie OnePlus „Never Settle“: „Always Zenith.“ – und auf Deutsch: „Höher geht nicht.“ Der Zenit ist der höchste Punkt, den es gibt.",
+                        "Er steht beim Start nach dem Neustart, in „Über das Telefon“, im Software-Update, in der Willkommens-Tour, in der Zentrale und am Ende der Jubiläums-Zeremonie.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Eine Karte, die nur 20 hat", Icons.Rounded.Info, Orange,
                     listOf(
                         "Die Versionskarte (Software-Update, Über das Telefon) sieht in ZENITH 20 anders aus als in 19 – wie bei ColorOS, wo jede Version ihre eigene Karte hat: Mitternachtsblau läuft in Gold, das Polarlicht zieht darüber, Sterne funkeln, drei Feuerwerke stehen eingefroren am Himmel, und die 20 und das Randlicht des Z leuchten in Gold, darunter „J U B I L Ä U M“.",
@@ -2308,6 +2316,14 @@ private fun TourHero(appear: () -> Float) {
         Text(
             "auf ${ClaudeOs.full} „${ClaudeOs.CODENAME}“",
             style = TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            dev.hearth.launcher.data.ZenithSlogan.UPPER,
+            color = Color.White.copy(alpha = 0.9f),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 5.sp,
         )
         Spacer(Modifier.height(18.dp))
         Text(

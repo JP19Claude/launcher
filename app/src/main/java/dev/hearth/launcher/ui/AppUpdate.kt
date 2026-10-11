@@ -217,7 +217,7 @@ private fun lookFor(packageName: String): UpdateLook = when (packageName) {
         accent = Color(0xFF3E91FF),
         card = Color(0xFF1C1C1E),
         hero = UpdateHero.Number,
-        tagline = "Galaxy × Claude",
+        tagline = if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) dev.hearth.launcher.data.ZenithSlogan.MAIN else "Galaxy × Claude",
         planet = listOf(Color(0xFFBFDDFF), Color(0xFF3E91FF), Color(0xFF5B3BC8)),
         tips = listOf(
             "Glimmer Drop: Halte zwei Handys mit Glimmer oben aneinander – Glimmer Drop geht auf.",

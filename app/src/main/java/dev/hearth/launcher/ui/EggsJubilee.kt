@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.AuroraLook
 import dev.hearth.launcher.data.EasterEggs
 import dev.hearth.launcher.data.StrikeColor
+import dev.hearth.launcher.data.ZenithSlogan
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
@@ -231,6 +232,22 @@ internal fun ZenithJubilee(onDone: () -> Unit) {
                     color = Color.White.copy(alpha = ((time - 6000L) / 900f).coerceIn(0f, 0.85f)),
                     fontSize = 15.sp,
                     textAlign = TextAlign.Center,
+                )
+            }
+            if (time > 7000L) {
+                // ZENITH's saying, to close.
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    ZenithSlogan.UPPER,
+                    color = GoldLight.copy(alpha = ((time - 7000L) / 900f).coerceIn(0f, 1f)),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 6.sp,
+                )
+                Text(
+                    ZenithSlogan.GERMAN,
+                    color = Color.White.copy(alpha = ((time - 7000L) / 900f).coerceIn(0f, 0.7f)),
+                    fontSize = 13.sp,
                 )
             }
             if (time > 8000L) {

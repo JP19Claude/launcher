@@ -1,6 +1,7 @@
 ZENITH 20 „Jubiläum“ auf ClaudeOS 7.0 „Apex“
 
 ✨ Neu im Hotfix
+• Der Spruch des Systems, wie OnePlus „Never Settle“: „Always Zenith.“ – auf Deutsch „Höher geht nicht.“ Beim Start nach dem Neustart, in Über das Telefon, im Software-Update, in der Willkommens-Tour, in der Zentrale und am Ende der Jubiläums-Zeremonie
 • Eine eigene Versionskarte für ZENITH 20: Mitternachtsblau in Gold, Polarlicht, Sterne, eingefrorene Feuerwerke, die 20 und das Randlicht des Z in Gold – anders als die grüne Karte von ZENITH 19
 • Hältst du auf der Karte das Z gedrückt: weiterhin der Z-Angriff (Core Enforcer), und auf der Karte von 20 ein Feuerwerk wie bei ColorOS 16
 • Überall, wo das Z mit seiner Nummer steht (Illuminati, Willkommens-Tour, Feuerwerk-Egg), steht jetzt die 20 statt der 19

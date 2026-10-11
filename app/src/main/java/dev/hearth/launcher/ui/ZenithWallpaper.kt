@@ -11,7 +11,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -31,8 +35,11 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.WallpaperBackdrop
+import dev.hearth.launcher.data.ZenithSlogan
 import dev.hearth.launcher.data.blurred
 
 /*
@@ -171,5 +178,20 @@ internal fun ZenithBootIntro(onDone: () -> Unit) {
             light = ((p - 0.48f) / 0.3f).coerceIn(0f, 1f),
             strike = false,
         )
+        // ZENITH 20: its saying, once the Z is there.
+        val say = ((p - 0.62f) / 0.16f).coerceIn(0f, 1f)
+        if (say > 0f) {
+            Column(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 110.dp)
+                    .graphicsLayer { alpha = say },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(ZenithSlogan.UPPER, color = Color.White.copy(alpha = 0.85f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 6.sp)
+                Text(ZenithSlogan.GERMAN, color = ZenithGreen, fontSize = 13.sp, letterSpacing = 2.sp, modifier = Modifier.padding(top = 4.dp))
+            }
+        }
     }
 }
