@@ -188,6 +188,60 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "20.5",
+            name = "Be Smarter",
+            summary = "Das große Update: Im Illuminati gibt es jetzt „Be Smarter“ – ein Modus, der aus dem Launcher einen Smart Launcher macht, nach dessen Vorbild: seine Uhr mit dem Wetter, sein Dock, sein Drawer mit der Kategorie-Leiste, dazu Frosted und Liquid Glass zum Einstellen, Apps ohne Verzögerung und Glimmer als Teil des ganzen Systems.",
+            sections = listOf(
+                ChangeSection(
+                    "Be Smarter", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Zu finden im Clawd Illuminati (Versionsnummer in „Über das Telefon“ antippen): ganz oben die Karte „Be Smarter“. Ein Tipp, und ZENITH sieht aus wie der Smart Launcher – und ein Tipp zurück, und alles ist wieder wie vorher. Der Modus legt sich nur über das, was du gewählt hast; geschrieben wird nichts.",
+                        "Der Look: runde Icons, die Smart-Uhr (helle, große Ziffern mit dem Datum, rechts das Wetter), die Suchleiste und das Dock aus Glas. ZENITHs eigene Looks und Effekte – Metall, Polarlicht, Fluid, Z-Regen, Parade und die anderen – treten solange zurück.",
+                        "Das Wetter an der Uhr braucht den Ort, den du einmal in der Zentrale einträgst. Ein Tipp auf das Datum öffnet den Kalender, einer auf das Wetter die Zentrale.",
+                        "Eine Annäherung, kein Abpausen: Der Smart Launcher selbst lag nicht zum Nachmessen vor. Wo es abweicht, lässt es sich mit einem Bildschirmfoto angleichen.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Der Smart-Drawer", Icons.Rounded.Home, Green,
+                    listOf(
+                        "Nach oben wischen auf dem Startbildschirm öffnet den neuen Drawer (auch per Doppeltipp „Drawer“ und über „Alle Apps“ im ZENITH-Menü). Oben die Suche und die Einstellungen, in der Mitte die Apps, unten die Kategorie-Leiste auf Glas.",
+                        "Die Apps sind nach Kategorien sortiert: Alle, Favoriten (deine meistgenutzten), dazu Social, Arbeit, Medien, Kreativ, News, Shopping, Reisen, Fitness, Spiele, Tools und Andere – nur die, in denen Apps liegen. Seitlich wischen oder die Leiste antippen wechselt die Kategorie; die Leiste läuft mit.",
+                        "Der Startbildschirm tritt zurück, wenn der Drawer aufsteigt; nach unten ziehen (oder Zurück) lässt ihn wieder los. Die Apps steigen Reihe für Reihe ein.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Frosted und Liquid Glass", Icons.Rounded.Info, Violet,
+                    listOf(
+                        "Zwei Gläser zur Wahl, beide mit eigenen Reglern: Frosted – milchig und weich, es verwischt, was dahinter liegt – und Liquid – klar mit einer Linse, es bricht das Dahinter und fängt das Licht am Rand.",
+                        "Vier Regler pro Glas: Unschärfe, Lichtbrechung, Glanz und Tönung. Die Wahl des Glases stellt sie auf dessen Werte, danach sind sie frei. Sie gelten für jede Glasfläche des Launchers: Suche, Drawer, Dock, Menüs, Widgets.",
+                        "Die Glas-Einstellungen von ZENITH selbst bleiben unberührt – beim Ausschalten ist alles wie vorher.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Ohne Verzögerung", Icons.Rounded.ThumbUp, Orange,
+                    listOf(
+                        "Apps öffnen sich im Moment des Tippens: Der Fluid-Spritzer unter dem Finger fällt weg, die Feder am Icon ebenso, und die Öffnen-Animation ist nur noch ein kurzes Einblenden (etwa eine Siebtelsekunde).",
+                        "Wer es wie beim Smart Launcher mag, schaltet „Ohne Verzögerung“ aus: Dann klappt die App aus ihrem Icon auf.",
+                        "Die Dauer richtet sich nach dem Fensteranimationsmaßstab in den Entwickleroptionen des Telefons – steht er auf 1×, ist es das, was du siehst.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Glimmer im ganzen System", Icons.Rounded.Phone, Pink,
+                    listOf(
+                        "Neuer Schalter „Glimmer ins System binden“: Er schaltet Glimmer, sein Schließ-Fly-in für alle Launcher und das Verdecken der Launcher-Animation zusammen an.",
+                        "Neuer Stil „Smart Launcher“ für das Schließen (Glimmer-Einstellungen → „So fliegt sie hinein“): Die App behält ihre Form und schrumpft in einer weichen Bewegung zurück in ihr Icon – das Bild der App wird dabei zum Icon. Bei einem Start vom Startbildschirm oder Dock aus landet sie genau auf dem angetippten Icon; mit einem anderen Launcher unten im Dock.",
+                        "Die Öffnen-Animation eines anderen Launchers kann Glimmer nicht ersetzen – die macht der Launcher selbst. In ZENITH ist sie die des Smart-Looks.",
+                        "Glimmer braucht dafür seinen Dienst in den Bedienungshilfen; die Karte zeigt, ob er läuft, und führt dorthin.",
+                    ),
+                    withGlimmer,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "20.0",
             name = "Jubiläum",
             summary = "Zwanzig Versionen ZENITH – das größte Update bisher: die Zentrale für den ganzen Tag, ein Wetter mit dem Himmel als Bild, das Polarlicht auf dem Startbildschirm, die Z-Nacht fürs Nachttischchen und eine Zeremonie zum Jubiläum. Darunter ClaudeOS 7.0 „Apex“.",

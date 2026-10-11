@@ -1,48 +1,20 @@
-ZENITH 20 „Jubiläum“ auf ClaudeOS 7.0 „Apex“
+ZENITH 20.5 „Be Smarter“ auf ClaudeOS 7.0 „Apex“
 
-✨ Neu im Hotfix
-• Der Spruch des Systems, wie OnePlus „Never Settle“: „Aim Higher.“ Beim Start nach dem Neustart, in Über das Telefon, im Software-Update, in der Willkommens-Tour, in der Zentrale und am Ende der Jubiläums-Zeremonie
-• Eine eigene Versionskarte für ZENITH 20: Mitternachtsblau in Gold, Polarlicht, Sterne, eingefrorene Feuerwerke, die 20 und das Randlicht des Z in Gold – anders als die grüne Karte von ZENITH 19
-• Hältst du auf der Karte das Z gedrückt: weiterhin der Z-Angriff (Core Enforcer), und auf der Karte von 20 ein Feuerwerk wie bei ColorOS 16
-• Überall, wo das Z mit seiner Nummer steht (Illuminati, Willkommens-Tour, Feuerwerk-Egg), steht jetzt die 20 statt der 19
-• Vorschau vor dem Installieren wie bei ColorOS: das Software-Update zeigt die Karte einer angebotenen Version schon vor dem Installieren (ab ZENITH 20 für jedes künftige Update)
-• Jedes Egg hat eine Jubiläums-Edition: beim ersten Mal in ZENITH 20 ein goldenes Feuerwerk, ein goldenes „✦ 20“ auf der Easter-Egg-Karte
-• Die Eggs älterer Versionen, die ClaudeOS-Eggs und alle Geheimmenüs liegen jetzt in Gold (Polarlicht, Goldstaub, Abzeichen)
-• Zwölf neue Jubiläums-Eggs (jetzt 69): in der Uhr, im Finder, im Polarlicht, in der Z-Nacht und in der Zentrale
-• Jubiläums-Galerie in der Zentrale: alle Versionen von Hearth 11 bis ZENITH 20 und alle ClaudeOS auf einmal
-• Jubiläums-Look mit einem Tipp (Core Enforcer Studio, Zentrale): goldenes Polarlicht, Gold bei Akzent und Glas
-• ZENITH-Farbe fürs ganze System: das Gold der Karte (oder Eisblau, Violett, Rubin) statt Zenith-Grün – Randlicht des Z, Zahl, Karten, Tresor, Schutzschild, HUD-Texte; Polarlicht, Z-Angriff, Akzent und Glas passen sich an
-• Hintergrundbeleuchtung einstellbar: Stärke, Farbe, Lichtstrahl, Funkeln und Bodenlicht des ZENITH-Lichts; Polarlicht mit Stärke und Tempo
+✨ Neu in 20.5
+• Be Smarter: ein Modus im Clawd Illuminati (Versionsnummer in „Über das Telefon“ antippen), der aus dem Launcher einen Smart Launcher macht – nach dessen Vorbild, ohne dass etwas von dem überschrieben wird, was du gewählt hast. Aus: alles wie vorher
+• Der Look: runde Icons, die Smart-Uhr mit dem Wetter, die Suchleiste, das Dock aus Glas; ZENITHs eigene Effekte treten solange zurück
+• Der Smart-Drawer: nach oben wischen, die Apps nach Kategorien (Alle, Favoriten, Social, Arbeit, Medien …) mit der Kategorie-Leiste auf Glas, seitlich wischen wechselt, nach unten ziehen schließt
+• Frosted und Liquid Glass zur Wahl, je mit Reglern für Unschärfe, Lichtbrechung, Glanz und Tönung – für jede Glasfläche des Launchers
+• Ohne Verzögerung: Apps öffnen sich im Moment des Tippens (kein Fluid-Spritzer, keine Feder, nur ein kurzes Einblenden); aus, klappt die App wie beim Smart Launcher aus ihrem Icon auf
+• Glimmer ins System binden: ein Schalter für Glimmer, sein Schließ-Fly-in für alle Launcher und das Verdecken der Launcher-Animation – mit dem neuen Stil „Smart Launcher“: die App schrumpft in einer weichen Bewegung zurück in ihr Icon
 
-🎆 Die Jubiläums-Zeremonie
-• Einmal nach dem Update: die Zahlen laufen von 1 bis 20, die 20 rastet in Gold ein, ein Feuerwerk in den Farben des Z-Angriffs beginnt
-• Jederzeit wieder ansehen: Zentrale → Schnellzugriff → Jubiläum
-• Neues Egg hinter der Versionsnummer: zwanzig Tipps, zwanzig Feuerwerke
+Eine Annäherung, kein Abpausen: der Smart Launcher selbst lag nicht zum Nachmessen vor. Wo es abweicht, lässt es sich mit einem Bildschirmfoto angleichen.
 
-🏠 ZENITH-Zentrale
-• Der ganze Tag auf einem Bildschirm, unter dem Polarlicht: Gruß, Uhrzeit, Datum
-• Tagesbrief: was das Wetter für heute heißt, welches Parfüm heute dran ist, nächster Wecker, Akku und Schutz – auf Wunsch von Claude in eigene Worte gefasst
-• Wetter, Zustand des Telefons, Polarlicht-Farben und Abkürzungen zu Z-Nacht, Tresor, Schutzschild, Core Enforcer, Duftschrank
-• Zu öffnen über das ZENITH-Menü, die Einstellungen, einen Doppeltipp auf den Startbildschirm oder das Wetter-Widget
-
-⛅ Wetter mit dem Himmel als Bild
-• Neues Widget „ZENITH-Wetter“: Temperatur, Höchst-/Tiefstwert, Regenwahrscheinlichkeit und die nächsten Stunden
-• Sonne, Mond, Wolken, Regen, Schnee, Nebel und Gewitter als bewegtes Bild
-• In der Zentrale: gefühlte Temperatur, Wind, Luftfeuchte, zwölf Stunden und sechs Tage voraus
-• Der Ort gilt auch für den Duftschrank. Wetter von Open-Meteo, ohne Anmeldung
-
-🌌 Polarlicht
-• Lichtvorhänge ziehen über den Startbildschirm, hinter Apps und Widgets
-• Fünf Farbwelten: Zenith-Grün, Jubiläums-Gold, Eisblau, Violett, Rubin
-• Im Core Enforcer Studio mit dabei (würfeln, als Profil speichern); neues Widget „ZENITH-Polarlicht“
-
-🌙 Z-Nacht
-• Der Nachttisch: große dünne Uhr unter dem Polarlicht, mit Datum, Wetter, Wecker und Akku
-• Gedimmt, der Bildschirm bleibt an, die Uhr wandert gegen Einbrennen; ein Tipp macht heller
-
-⛰ ClaudeOS 7.0 „Apex“
-• Neues Egg: das Claude-Zeichen den Berg hinaufziehen, bis das Polarlicht aufwacht
-• Doppeltipp auf den Startbildschirm öffnet jetzt auch Zentrale und Z-Nacht; Kacheln im ZENITH-Menü; 69 Easter Eggs
+Seit 20.0
+• Jubiläum: Zentrale, Wetter mit dem Himmel als Bild, Polarlicht, Z-Nacht, Jubiläums-Zeremonie, 69 Easter Eggs
+• ZENITH-Farbe fürs ganze System, einstellbare Hintergrundbeleuchtung
+• Der Spruch des Systems: „Aim Higher.“
+• Eine eigene Versionskarte pro Version, Vorschau vor dem Installieren
 
 Seit 19.8: der Duftschrank als eigene App mit Widget für jeden Launcher
 Seit 19.7: Clawd-Parfüm-Widget mit echten Flakon-Bildern, das Dock mit gleich großen Icons

@@ -81,6 +81,7 @@ import dev.hearth.launcher.data.IconKind
 import dev.hearth.launcher.data.IconShape
 import dev.hearth.launcher.data.IconStyle
 import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.data.instantOpen
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -383,9 +384,11 @@ fun AppIcon(
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     var pressedByHand by remember { mutableStateOf(false) }
+    // Be Smarter: the icon gives a little under the finger and is back at once – no spring to wait out.
+    val quick = settings.instantOpen
     val scale by animateFloatAsState(
-        targetValue = if (pressed || pressedByHand) 0.86f else 1f,
-        animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow),
+        targetValue = if (pressed || pressedByHand) (if (quick) 0.94f else 0.86f) else 1f,
+        animationSpec = if (quick) tween(60) else spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow),
         label = "iconPress",
     )
     // One UI 10 Fluid: a halo of Claude's colors swells behind the icon under the finger.

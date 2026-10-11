@@ -266,6 +266,9 @@ fun ClawdIlluminationScreen(
             MythosCard(settings.mythos) { v -> onChange { it.copy(mythos = v) } }
             Spacer(Modifier.height(18.dp))
 
+            // ZENITH 20.5: Be Smarter – the launcher as the Smart Launcher, with Frosted or Liquid glass.
+            SmartSection(settings, onChange)
+
             // ZENITH 19: Projekt Zenith lives only here, behind a secret password.
             IlluminationSection("◈ Projekt Zenith") {
                 ProjectZenithGate(settings, onChange)
@@ -493,7 +496,7 @@ private fun MythosCard(on: Boolean, onToggle: (Boolean) -> Unit) {
 
 /** A group of switches on a card of glass with OMEGA Fluid along its rim. */
 @Composable
-private fun IlluminationSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+internal fun IlluminationSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
         // The Illuminati's way: an eye in its pyramid before every heading, in old gold.
         Row(Modifier.padding(start = 8.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -521,7 +524,7 @@ private fun IlluminationSection(title: String, content: @Composable ColumnScope.
 }
 
 @Composable
-private fun IlluminationSwitch(icon: String, title: String, text: String, on: Boolean, onToggle: (Boolean) -> Unit) {
+internal fun IlluminationSwitch(icon: String, title: String, text: String, on: Boolean, onToggle: (Boolean) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -558,7 +561,7 @@ private fun IlluminationSwitch(icon: String, title: String, text: String, on: Bo
 
 /** A choice in the Illuminati: chips in a row, the chosen one in gold. */
 @Composable
-private fun <T> IlluminatiChoice(icon: String, title: String, options: List<T>, selected: T, label: (T) -> String, onPick: (T) -> Unit) {
+internal fun <T> IlluminatiChoice(icon: String, title: String, options: List<T>, selected: T, label: (T) -> String, onPick: (T) -> Unit) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(icon, fontSize = 18.sp, color = Color(0xFFFFE3A0), modifier = Modifier.width(30.dp))

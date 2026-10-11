@@ -155,6 +155,8 @@ fun GlimmerFlyIn(
     backdrop: ImageBitmap? = null,
     /** HyperOS: exactly where the icon lands, when Glimmer knows (turned with the phone sideways). */
     landAt: Offset? = null,
+    /** Smart Launcher: where the app's icon is on the home screen, when known (else the foot of the screen). */
+    iconAt: Offset? = null,
 ) {
     val done by rememberUpdatedState(onDone)
     val reveal = remember(app) { Animatable(1f) }
@@ -187,10 +189,10 @@ fun GlimmerFlyIn(
                 )
             }
         }
-        if (style == FlyInStyle.HyperOS) {
-            HyperFlyIn(app, landing, onArrive, finish, snapshot, target, look, hold, landAt)
-        } else {
-            HarmonyFlyIn(app, island, onPulse, finish, snapshot, target, look, hold)
+        when (style) {
+            FlyInStyle.HyperOS -> HyperFlyIn(app, landing, onArrive, finish, snapshot, target, look, hold, landAt)
+            FlyInStyle.Smart -> SmartFlyIn(app, finish, snapshot, look, hold, iconAt)
+            FlyInStyle.HarmonyOS -> HarmonyFlyIn(app, island, onPulse, finish, snapshot, target, look, hold)
         }
     }
 }
@@ -591,6 +593,123 @@ private fun HyperFlyIn(
                 iconPaint.shader.setLocalMatrix(matrix)
                 iconPaint.alpha = (255 * asIcon * fadeAll).roundToInt().coerceIn(0, 255)
                 val ir = min(r, side * 0.28f)
+                native.drawRoundRect(il, itop, il + side, itop + side, ir, ir, iconPaint)
+            }
+        }
+    }
+}
+
+/** The Smart Launcher's curve: a quick start, a soft landing. */
+private val SmartEase = CubicBezierEasing(0.25f, 0.1f, 0.15f, 1f)
+
+/**
+ * Closing an app, the way the Smart Launcher does it: the app keeps its shape, shrinks in one
+ * smooth move back into its icon (rounding as it goes, the picture turning into the icon) and
+ * is gone as the icon is there. No island, no flight to the camera. With [hold] the app waits
+ * whole and lifted a little, and goes the moment the finger leaves the glass.
+ */
+@Composable
+private fun SmartFlyIn(
+    app: AppInfo,
+    onDone: () -> Unit,
+    snapshot: ImageBitmap?,
+    look: FlyInLook?,
+    hold: () -> Boolean,
+    iconAt: Offset?,
+) {
+    val context = LocalContext.current
+    val travel = remember(app) { Animatable(0f) }
+    val lift = remember(app) { Animatable(0f) }
+    val held = remember(app) { hold() }
+    val done by rememberUpdatedState(onDone)
+    val worked = remember(app, look) { look ?: flyInLook(context, app) }
+    val color = worked.color
+    val icon = app.icon
+    // Drawn with bitmap shaders in rounded rects, like the HyperOS flight: cheap on every frame.
+    val snapPaint = remember(snapshot) {
+        snapshot?.let {
+            android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG or android.graphics.Paint.FILTER_BITMAP_FLAG).apply {
+                shader = android.graphics.BitmapShader(it.asAndroidBitmap(), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+            }
+        }
+    }
+    val iconPaint = remember(icon) {
+        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG or android.graphics.Paint.FILTER_BITMAP_FLAG).apply {
+            shader = android.graphics.BitmapShader(icon.asAndroidBitmap(), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+        }
+    }
+    val cardPaint = remember { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG) }
+    val matrix = remember { android.graphics.Matrix() }
+
+    LaunchedEffect(app) {
+        if (hold()) {
+            lift.animateTo(1f, tween(260, easing = SmartEase))
+            snapshotFlow { hold() }.first { !it }
+        }
+        travel.animateTo(1f, tween(380, easing = SmartEase))
+        delay(40)
+        done()
+    }
+
+    Canvas(Modifier.fillMaxSize()) {
+        val w = size.width.coerceAtLeast(1f)
+        val h = size.height.coerceAtLeast(1f)
+        // Back into the icon it came from – or, when that isn't known, down into the dock.
+        val endX = iconAt?.x ?: (w / 2f)
+        val endY = iconAt?.y ?: (h * 0.9f)
+        val iconSide = 58.dp.toPx()
+        val k = travel.value.coerceIn(0f, 1f)
+        val lifted = lift.value
+        val square = smoothstep(0.4f, 0.92f, k)
+        val cw = lerp(w * (1f - 0.06f * lifted), iconSide, k)
+        val ch = lerp(h * (cw / w), cw, square)
+        val cx = lerp(w / 2f, endX, k)
+        val cy = lerp(h / 2f, endY, k)
+        val left = cx - cw / 2f
+        val top = cy - ch / 2f
+        val cornerIn = if (held) max(lifted, smoothstep(0f, 0.12f, k)) else 1f
+        val r = lerp(32.dp.toPx() * cornerIn, min(cw, ch) * 0.5f, square).coerceAtMost(min(cw, ch) / 2f)
+        // Gone as the real icon is there.
+        val fadeAll = 1f - smoothstep(0.9f, 1f, k)
+        if (fadeAll <= 0.001f) return@Canvas
+        val content = 1f - smoothstep(0.35f, 0.75f, k)
+        val asIcon = smoothstep(0.3f, 0.7f, k)
+
+        drawIntoCanvas { canvas ->
+            val native = canvas.nativeCanvas
+            // A soft shadow while it is big.
+            val shadow = (1f - smoothstep(0.1f, 0.5f, k)) * 0.2f * fadeAll * (if (held) lifted else 1f)
+            if (shadow > 0.01f) {
+                cardPaint.shader = null
+                cardPaint.color = Color.Black.copy(alpha = shadow).toArgb()
+                val grow = 6.dp.toPx()
+                native.drawRoundRect(left - grow, top - grow + 8.dp.toPx(), left + cw + grow, top + ch + grow + 8.dp.toPx(), r + grow, r + grow, cardPaint)
+            }
+            // The app itself (its picture, or its colors).
+            if (content > 0.001f) {
+                if (snapPaint != null && snapshot != null) {
+                    val scale = max(cw / snapshot.width, ch / snapshot.height)
+                    matrix.setScale(scale, scale)
+                    matrix.postTranslate(left + (cw - snapshot.width * scale) / 2f, top + (ch - snapshot.height * scale) / 2f)
+                    snapPaint.shader.setLocalMatrix(matrix)
+                    snapPaint.alpha = (255 * content * fadeAll).roundToInt().coerceIn(0, 255)
+                    native.drawRoundRect(left, top, left + cw, top + ch, r, r, snapPaint)
+                } else {
+                    cardPaint.shader = null
+                    cardPaint.color = color.copy(alpha = content * fadeAll).toArgb()
+                    native.drawRoundRect(left, top, left + cw, top + ch, r, r, cardPaint)
+                }
+            }
+            // Turning into its icon.
+            if (asIcon * fadeAll > 0.001f) {
+                val side = min(cw, ch)
+                val il = left + (cw - side) / 2f
+                val itop = top + (ch - side) / 2f
+                matrix.setScale(side / icon.width.coerceAtLeast(1), side / icon.height.coerceAtLeast(1))
+                matrix.postTranslate(il, itop)
+                iconPaint.shader.setLocalMatrix(matrix)
+                iconPaint.alpha = (255 * asIcon * fadeAll).roundToInt().coerceIn(0, 255)
+                val ir = min(r, side * 0.5f)
                 native.drawRoundRect(il, itop, il + side, itop + side, ir, ir, iconPaint)
             }
         }

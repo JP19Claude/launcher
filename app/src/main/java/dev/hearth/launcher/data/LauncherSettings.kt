@@ -40,6 +40,8 @@ enum class ClockStyle(val label: String) {
     OneUI("One UI"),
     Glass("Glas-Karte"),
     Large("Groß"),
+    /** ZENITH 20.5, "Be Smarter": the Smart Launcher's clock – light digits, the date, the weather beside them. */
+    Smart("Smart"),
     Hidden("Aus"),
 }
 
@@ -186,6 +188,108 @@ fun LauncherSettings.withColorOsLook(): LauncherSettings = if (!colorOsLook) {
         omegaGlass = false,
         glassLook = if (glassLook == GlassLook.Zenith) GlassLook.Liquid else glassLook,
     ).withCcStyle(CcStyle.ColorOS)
+}
+
+/**
+ * ZENITH 20.5, "Be Smarter": the glass of the Smart Launcher look. Frosted is milky and soft (it
+ * blurs what lies behind it, hardly bends it), Liquid is clear with a lens (it bends it and
+ * catches the light at its rim). Choosing one sets the four sliders; they stay free after.
+ */
+enum class SmartGlass(
+    val label: String,
+    val blur: Float,
+    val refraction: Float,
+    val dispersion: Float,
+    val specular: Float,
+    val tint: Float,
+) {
+    Frosted("Frosted Glass", blur = 2.1f, refraction = 0.4f, dispersion = 0.1f, specular = 0.7f, tint = 1.7f),
+    Liquid("Liquid Glass", blur = 0.7f, refraction = 1.7f, dispersion = 0.9f, specular = 1.4f, tint = 0.6f),
+}
+
+/** The mode's glass, set to what [glass] brings (the four sliders move to its values). */
+fun LauncherSettings.withSmartGlass(glass: SmartGlass): LauncherSettings = copy(
+    smartGlass = glass,
+    smartBlur = glass.blur,
+    smartRefraction = glass.refraction,
+    smartSpecular = glass.specular,
+    smartTint = glass.tint,
+)
+
+/** Apps open the moment they are tapped (only in "Be Smarter", and only while that is chosen). */
+val LauncherSettings.instantOpen: Boolean get() = beSmarter && smartInstant
+
+/**
+ * ZENITH 20.5, "Be Smarter": the launcher dressed as the Smart Launcher, when drawing – round
+ * icons, its clock with the weather, the dock, the drawer with its category bar, and the glass
+ * Frosted or Liquid by the mode's own sliders. It is never written back, so switching it off
+ * brings everything exactly as it was. ZENITH's own looks and effects step aside meanwhile.
+ */
+fun LauncherSettings.withSmartLook(): LauncherSettings = if (!beSmarter) {
+    this
+} else {
+    copy(
+        projectZenith = false,
+        projectColorOs = false,
+        galaxyClaude = false,
+        zenithWallpaper = false,
+        zenithAurora = false,
+        omegaGlass = false,
+        fluidDesign = false,
+        omegaOverdrive = false,
+        hyperGlass = false,
+        colorWorld = ColorWorld.Off,
+        omegaRain = false,
+        weightless = false,
+        clawdParade = false,
+        giantClawd = false,
+        allSeeingEye = false,
+        clawdHalo = false,
+        clawdCompanion = false,
+        omegaLight = false,
+        omegaZeros = false,
+        perks = emptySet(),
+        showClaudeCard = false,
+        iconStyle = IconStyle.Original,
+        iconShape = IconShape.Circle,
+        clockStyle = ClockStyle.Smart,
+        dockStyle = DockStyle.Glass,
+        showGreeting = false,
+        showSearchPill = true,
+        showAppLibrary = false,
+        animations = true,
+        glassLook = if (smartGlass == SmartGlass.Liquid) GlassLook.Liquid else GlassLook.Omega,
+        glassTint = if (smartGlass == SmartGlass.Liquid) GlassTint.Clear else GlassTint.Light,
+        glassBlur = smartBlur,
+        glassRefraction = smartRefraction,
+        glassDispersion = smartGlass.dispersion,
+        glassSpecular = smartSpecular,
+        glassTintStrength = smartTint,
+        glassInteractive = true,
+    )
+}
+
+/**
+ * ZENITH 20.5, "Be Smarter", Glimmer bound into the system: Glimmer on, the fly-in over every
+ * launcher with the launcher's own closing animation covered, and the Smart style for it. (Written
+ * for real, because Glimmer's service reads what is stored, not what is drawn.) Off, the
+ * style goes back to the one before if it was the Smart one.
+ */
+fun LauncherSettings.withSmartGlimmer(on: Boolean): LauncherSettings = if (on) {
+    copy(
+        smartGlimmer = true,
+        glimmerEnabled = true,
+        glimmerFlyIn = true,
+        glimmerFlyInEverywhere = true,
+        glimmerFlyInCover = true,
+        glimmerFlyInStyle = FlyInStyle.Smart,
+        animations = true,
+    )
+} else {
+    copy(
+        smartGlimmer = false,
+        glimmerFlyInStyle = if (glimmerFlyInStyle == FlyInStyle.Smart) FlyInStyle.HarmonyOS else glimmerFlyInStyle,
+    )
 }
 
 /** ZENITH 19.3: the clock as it's shown – in the ColorOS 17.1 look, that look's own choice. */
@@ -352,6 +456,8 @@ enum class GlimmerDoubleTap(val label: String) {
 enum class FlyInStyle(val label: String) {
     HarmonyOS("HarmonyOS"),
     HyperOS("HyperOS"),
+    /** ZENITH 20.5, "Be Smarter": the app shrinks back into its icon, as it does in the Smart Launcher. */
+    Smart("Smart Launcher"),
 }
 
 /** How Glimmer shows music. */
@@ -625,6 +731,18 @@ data class LauncherSettings(
     val homeLightBeam: Boolean = true,
     val homeLightGlint: Boolean = true,
     val homeLightFloor: Boolean = true,
+    /** ZENITH 20.5, "Be Smarter": the Illuminati's mode that makes the launcher a copy of the Smart Launcher. */
+    val beSmarter: Boolean = false,
+    /** The glass of that look (Frosted or Liquid) and its four sliders, which are the mode's own. */
+    val smartGlass: SmartGlass = SmartGlass.Frosted,
+    val smartBlur: Float = SmartGlass.Frosted.blur,
+    val smartRefraction: Float = SmartGlass.Frosted.refraction,
+    val smartSpecular: Float = SmartGlass.Frosted.specular,
+    val smartTint: Float = SmartGlass.Frosted.tint,
+    /** Apps open the moment they are tapped: no splash, no press animation, no wait. */
+    val smartInstant: Boolean = true,
+    /** Glimmer bound into the whole system: its fly-in over every launcher, in the Smart style. */
+    val smartGlimmer: Boolean = false,
     /** ZENITH 19: after the phone starts, the Z lights up once before the home screen. */
     val zenithBootIntro: Boolean = true,
     /** ZENITH 19, Z-Angriff: a fully charged Z draws a giant Z across the screen, like Zygarde's Core Enforcer. */
@@ -1195,6 +1313,14 @@ class SettingsRepository(context: Context) {
             homeLightBeam = prefs.getBoolean("homeLightBeam", d.homeLightBeam),
             homeLightGlint = prefs.getBoolean("homeLightGlint", d.homeLightGlint),
             homeLightFloor = prefs.getBoolean("homeLightFloor", d.homeLightFloor),
+            beSmarter = prefs.getBoolean("beSmarter", d.beSmarter),
+            smartGlass = enumOf("smartGlass", d.smartGlass),
+            smartBlur = prefs.getFloat("smartBlur", d.smartBlur),
+            smartRefraction = prefs.getFloat("smartRefraction", d.smartRefraction),
+            smartSpecular = prefs.getFloat("smartSpecular", d.smartSpecular),
+            smartTint = prefs.getFloat("smartTint", d.smartTint),
+            smartInstant = prefs.getBoolean("smartInstant", d.smartInstant),
+            smartGlimmer = prefs.getBoolean("smartGlimmer", d.smartGlimmer),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
             zenithStrike = prefs.getBoolean("zenithStrike", d.zenithStrike),
             zenithStrikeSystem = prefs.getBoolean("zenithStrikeSystem", d.zenithStrikeSystem),
@@ -1401,6 +1527,14 @@ class SettingsRepository(context: Context) {
             .putBoolean("homeLightBeam", s.homeLightBeam)
             .putBoolean("homeLightGlint", s.homeLightGlint)
             .putBoolean("homeLightFloor", s.homeLightFloor)
+            .putBoolean("beSmarter", s.beSmarter)
+            .putString("smartGlass", s.smartGlass.name)
+            .putFloat("smartBlur", s.smartBlur)
+            .putFloat("smartRefraction", s.smartRefraction)
+            .putFloat("smartSpecular", s.smartSpecular)
+            .putFloat("smartTint", s.smartTint)
+            .putBoolean("smartInstant", s.smartInstant)
+            .putBoolean("smartGlimmer", s.smartGlimmer)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("zenithStrike", s.zenithStrike)
             .putBoolean("zenithStrikeSystem", s.zenithStrikeSystem)

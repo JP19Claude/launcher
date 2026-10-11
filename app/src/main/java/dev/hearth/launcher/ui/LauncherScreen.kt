@@ -171,6 +171,8 @@ import dev.hearth.launcher.data.SwipeDownAction
 import dev.hearth.launcher.data.hologram
 import dev.hearth.launcher.data.colorOsLook
 import dev.hearth.launcher.data.withColorOsLook
+import dev.hearth.launcher.data.withSmartLook
+import dev.hearth.launcher.data.instantOpen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -191,7 +193,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
     val night by remember(systemDark) { derivedStateOf { storedSettings.nightActive(clock.value.hour, systemDark) } }
     // OMEGA UI 18: Claude Mythos lays its takeover over everything chosen.
-    val settings = remember(storedSettings, night) { (if (night) storedSettings.forNight() else storedSettings).mythic().withColorOsLook() }
+    val settings = remember(storedSettings, night) { (if (night) storedSettings.forNight() else storedSettings).mythic().withSmartLook().withColorOsLook() }
     val library by vm.library.collectAsStateWithLifecycle()
     val assistantOpen by vm.assistantOpen.collectAsStateWithLifecycle()
     val appUsage by vm.appUsage.collectAsStateWithLifecycle()
@@ -199,6 +201,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     // Galaxy × Claude: One UI's app drawer (swipe up) instead of the App Library page.
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
+    // Be Smarter: the home screen steps back as the drawer rises over it.
+    val drawerDepth by animateFloatAsState(
+        targetValue = if (drawerOpen && settings.beSmarter) 1f else 0f,
+        animationSpec = tween(260),
+        label = "smartDepth",
+    )
     // Galaxy × Claude: One UI's edit mode (long press on the home screen).
     var editMode by remember { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
@@ -206,6 +214,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
     var controlPage by remember { mutableIntStateOf(0) }
     // The app that was just closed, flying into Glimmer.
     var flyApp by remember { mutableStateOf<Triple<AppInfo, ImageBitmap?, DpSize?>?>(null) }
+    // Be Smarter: where the icon of the app opened last was, so the closing app shrinks back into it.
+    var flyOrigin by remember { mutableStateOf<Offset?>(null) }
     var flyLook by remember { mutableStateOf<FlyInLook?>(null) }
     var flyLanding by remember { mutableStateOf(GlimmerLink.Landing()) }
     var menu by remember { mutableStateOf<GlassMenuRequest?>(null) }
@@ -400,17 +410,33 @@ fun LauncherScreen(vm: LauncherViewModel) {
 
     // Apps open with a zoom out of their icon, which the system can start right away.
     val view = LocalView.current
+    val launchLook by rememberUpdatedState(settings)
     val launchApp: (AppInfo, Rect?) -> Unit = remember(vm, view) {
         { app, bounds ->
             val area = bounds?.takeIf { it.width > 0f && it.height > 0f }
-            area?.let { fluidWaves.splash(it.center) }
+            // Be Smarter: no splash of fluid, no wait – the app is asked for before anything moves.
+            val quick = launchLook.instantOpen
+            if (!quick) area?.let { fluidWaves.splash(it.center) }
+            flyOrigin = area?.center
             val source = area?.let {
                 android.graphics.Rect(it.left.roundToInt(), it.top.roundToInt(), it.right.roundToInt(), it.bottom.roundToInt())
             }
-            val options = source?.let {
-                runCatching {
-                    ActivityOptions.makeScaleUpAnimation(view, it.left, it.top, it.width(), it.height()).toBundle()
+            val options = when {
+                // A quick fade with the smallest lift (see res/anim/smart_open_in.xml).
+                quick -> runCatching {
+                    ActivityOptions.makeCustomAnimation(view.context, dev.hearth.launcher.R.anim.smart_open_in, dev.hearth.launcher.R.anim.smart_open_out).toBundle()
                 }.getOrNull()
+                // The Smart Launcher's way: the app opens out of its icon.
+                launchLook.beSmarter -> source?.let {
+                    runCatching {
+                        ActivityOptions.makeClipRevealAnimation(view, it.left, it.top, it.width(), it.height()).toBundle()
+                    }.getOrNull()
+                }
+                else -> source?.let {
+                    runCatching {
+                        ActivityOptions.makeScaleUpAnimation(view, it.left, it.top, it.width(), it.height()).toBundle()
+                    }.getOrNull()
+                }
             }
             // An app still flying into Glimmer makes way at once for the next one.
             flyApp = null
@@ -751,6 +777,16 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 Box(
                     Modifier
                         .fillMaxSize()
+                        // Be Smarter: the home screen steps back as the drawer rises over it.
+                        .graphicsLayer {
+                            val depth = drawerDepth
+                            if (depth > 0f) {
+                                val back = 1f - 0.07f * depth
+                                scaleX = back
+                                scaleY = back
+                                alpha = 1f - 0.45f * depth
+                            }
+                        }
                         .sparkSource(sparkField)
                         .background(Color.Black.copy(alpha = settings.dimWallpaper.coerceIn(0f, 0.9f)))
                         .background(
@@ -764,7 +800,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         .homeSwipes(
                             onSwipeUp = {
                                 when {
-                                    settings.galaxyClaude -> drawerOpen = true
+                                    settings.galaxyClaude || settings.beSmarter -> drawerOpen = true
                                     settings.swipeOpensSearch -> searchOpen = true
                                 }
                             },
@@ -855,7 +891,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                             }
                                             HomeGesture.Claude -> vm.askClaude()
                                             HomeGesture.Search -> searchOpen = true
-                                            HomeGesture.Drawer -> if (settings.galaxyClaude) drawerOpen = true else searchOpen = true
+                                            HomeGesture.Drawer -> if (settings.galaxyClaude || settings.beSmarter) drawerOpen = true else searchOpen = true
                                             HomeGesture.Notifications -> openNotifications()
                                             HomeGesture.Torch -> vm.controls.setTorch(!vm.controls.torchOn.value)
                                             HomeGesture.Menu -> hubOpen = true
@@ -1036,29 +1072,60 @@ fun LauncherScreen(vm: LauncherViewModel) {
                 AnimatedVisibility(
                     visible = drawerOpen,
                     // The drawer lets its rows rise in itself; from outside just a short, soft lift.
-                    enter = fadeIn(tween(140)) + slideInVertically(spring(dampingRatio = 0.86f, stiffness = 420f)) { it / 14 },
-                    exit = fadeOut(tween(170)) + slideOutVertically(tween(220)) { it / 9 },
+                    enter = if (settings.beSmarter) {
+                        // The Smart Launcher's drawer slides up out of the dock, quickly.
+                        fadeIn(tween(120)) + slideInVertically(tween(260, easing = androidx.compose.animation.core.FastOutSlowInEasing)) { it / 4 }
+                    } else {
+                        fadeIn(tween(140)) + slideInVertically(spring(dampingRatio = 0.86f, stiffness = 420f)) { it / 14 }
+                    },
+                    exit = if (settings.beSmarter) {
+                        fadeOut(tween(140)) + slideOutVertically(tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing)) { it / 4 }
+                    } else {
+                        fadeOut(tween(170)) + slideOutVertically(tween(220)) { it / 9 }
+                    },
                 ) {
-                    OneUIDrawer(
-                        apps = apps,
-                        actions = actions,
-                        onLaunch = { app, bounds ->
-                            launchApp(app, bounds)
-                            drawerOpen = false
-                        },
-                        onOpenSearch = {
-                            drawerOpen = false
-                            searchOpen = true
-                        },
-                        onDismiss = { drawerOpen = false },
-                        onOpenSettings = {
-                            drawerOpen = false
-                            settingsOpen = true
-                        },
-                        usage = appUsage,
-                        suggestions = library.suggestions,
-                        onSettingsChange = vm::updateSettings,
-                    )
+                    if (settings.beSmarter) {
+                        SmartDrawer(
+                            apps = apps,
+                            actions = actions,
+                            onLaunch = { app, bounds ->
+                                launchApp(app, bounds)
+                                drawerOpen = false
+                            },
+                            onOpenSearch = {
+                                drawerOpen = false
+                                searchOpen = true
+                            },
+                            onDismiss = { drawerOpen = false },
+                            onOpenSettings = {
+                                drawerOpen = false
+                                settingsOpen = true
+                            },
+                            usage = appUsage,
+                            suggestions = library.suggestions,
+                        )
+                    } else {
+                        OneUIDrawer(
+                            apps = apps,
+                            actions = actions,
+                            onLaunch = { app, bounds ->
+                                launchApp(app, bounds)
+                                drawerOpen = false
+                            },
+                            onOpenSearch = {
+                                drawerOpen = false
+                                searchOpen = true
+                            },
+                            onDismiss = { drawerOpen = false },
+                            onOpenSettings = {
+                                drawerOpen = false
+                                settingsOpen = true
+                            },
+                            usage = appUsage,
+                            suggestions = library.suggestions,
+                            onSettingsChange = vm::updateSettings,
+                        )
+                    }
                 }
 
                 AnimatedVisibility(
@@ -1142,6 +1209,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             projectColorOs = false,
                             glassLook = dev.hearth.launcher.data.GlassLook.Zenith,
                         )
+                    } else if (settings.beSmarter) {
+                        // Be Smarter: the settings show what is really chosen, not the Smart look laid over it.
+                        storedSettings
                     } else {
                         null
                     }
@@ -1169,6 +1239,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     style = settings.glimmerFlyInStyle,
                     landing = flyLanding,
                     look = flyLook,
+                    iconAt = flyOrigin,
                     onArrive = vm::arriveGlimmer,
                     onPulse = vm::pulseGlimmer,
                     onDone = { flyApp = null },
@@ -1266,7 +1337,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         HubTile("Einstellungen", Icons.Rounded.Settings, Color(0xFF8E8E93), onLongClick = { SecretRoutes.open(context, SecretMenu.Hello) }) { settingsOpen = true },
                         HubTile("Finder", Icons.Rounded.Search, Color(0xFF3E91FF)) { searchOpen = true },
                         HubTile("Alle Apps", Icons.Rounded.Home, Color(0xFF30B0C7)) {
-                            if (settings.galaxyClaude) drawerOpen = true else searchOpen = true
+                            if (settings.galaxyClaude || settings.beSmarter) drawerOpen = true else searchOpen = true
                         },
                         HubTile("Clawd", Icons.Rounded.Face, Color(0xFFD97757), onLongClick = { SecretRoutes.open(context, SecretMenu.Oracle) }) { vm.askClaude() },
                         // ZENITH 19: the ZENITH-Tresor.
@@ -1615,6 +1686,7 @@ private fun HomeHeaderContent(settings: LauncherSettings, modifier: Modifier = M
         ClockStyle.ColorOS -> ColorOSClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.OneUI -> OneUIClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Large -> LargeClock(settings, modifier.padding(start = 8.dp))
+        ClockStyle.Smart -> SmartClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Glass -> GlassClockCard(settings, modifier)
         ClockStyle.Zenith -> ZenithHomeClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Omega -> OmegaHomeClock(settings, modifier.padding(start = 8.dp))
@@ -1661,6 +1733,69 @@ private fun LargeClock(settings: LauncherSettings, modifier: Modifier = Modifier
             fontSize = 16.sp,
             style = OnWallpaperText,
         )
+    }
+}
+
+/**
+ * ZENITH 20.5, "Be Smarter": the Smart Launcher's clock – light digits with the date beneath them,
+ * the weather on the right (its picture, the temperature, the day's high and low). A tap on the
+ * date opens the calendar, a tap on the weather the ZENITH-Zentrale. The weather needs the place
+ * set once in the Zentrale.
+ */
+@Composable
+private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier) {
+    val now by rememberNow()
+    val locale = Locale.getDefault()
+    val time = remember(now) { now.format(DateTimeFormatter.ofPattern("HH:mm", locale)) }
+    val date = remember(now) {
+        now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale)).replaceFirstChar { it.titlecase(locale) }
+    }
+    val weather = rememberWeather()
+    val context = LocalContext.current
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            ClockDigits(
+                settings,
+                text = time,
+                color = Color.White,
+                fontFamily = clockFamily(settings, null),
+                fontWeight = clockWeight(settings, FontWeight.Light),
+                fontSize = 66.sp,
+                lineHeight = 68.sp,
+                letterSpacing = (-1).sp,
+                style = OnWallpaperText,
+            )
+            Text(
+                text = date,
+                color = Color.White.copy(alpha = 0.92f),
+                fontSize = 15.sp,
+                style = OnWallpaperText,
+                modifier = Modifier.clickable { openCalendar(context) },
+            )
+        }
+        weather?.let { w ->
+            Column(
+                Modifier
+                    .padding(end = 4.dp)
+                    .clickable { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ZentraleActivity::class.java)) } },
+                horizontalAlignment = Alignment.End,
+            ) {
+                WeatherGlyph(w.code, w.night, Modifier.size(44.dp))
+                Text(
+                    text = "${w.now.roundToInt()}°",
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Light,
+                    style = OnWallpaperText,
+                )
+                Text(
+                    text = "${w.max}° / ${w.min}°",
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 12.sp,
+                    style = OnWallpaperText,
+                )
+            }
+        }
     }
 }
 
