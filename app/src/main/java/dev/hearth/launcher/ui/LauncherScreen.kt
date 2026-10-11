@@ -201,6 +201,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     // Galaxy × Claude: One UI's app drawer (swipe up) instead of the App Library page.
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
+    // Be Smarter: the sheet that rises when the home screen is held.
+    var smartSheetOpen by remember { mutableStateOf(false) }
     // Be Smarter: the home screen steps back as the drawer rises over it.
     val drawerDepth by animateFloatAsState(
         targetValue = if (drawerOpen && settings.beSmarter) 1f else 0f,
@@ -471,7 +473,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
         )
     }
     val homeMenu: (Offset) -> Unit = { position ->
-        if (settings.galaxyClaude) {
+        if (settings.beSmarter) {
+            smartSheetOpen = true
+        } else if (settings.galaxyClaude) {
             editMode = true
         } else {
             menu = GlassMenuRequest(
@@ -505,6 +509,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     LaunchedEffect(Unit) {
         vm.homeEvents.collect { alreadyInFront ->
             menu = null
+            smartSheetOpen = false
             hubOpen = false
             secret = null
             openFolder = null
@@ -556,6 +561,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
         when {
             assistantOpen -> vm.closeAssistant()
             editMode -> editMode = false
+            smartSheetOpen -> smartSheetOpen = false
             menu != null -> menu = null
             renaming != null -> renaming = null
             openHomeFolder != null -> openHomeFolder = null
@@ -570,7 +576,13 @@ fun LauncherScreen(vm: LauncherViewModel) {
     }
 
     val light = rememberGlassLight(settings.glassMotion)
-    val glassStyle = remember(settings) { GlassStyle.from(settings) }
+    // Be Smarter: the colors of the chosen theme (Ambient Design takes them from the wallpaper).
+    val smartPalette = rememberSmartPalette(settings, backdrop)
+    val glassStyle = remember(settings, smartPalette) {
+        val base = GlassStyle.from(settings)
+        val surface = smartPalette?.surface
+        if (surface != null) base.copy(tint = surface) else base
+    }
     // ZENITH 19: ZENITH's own background – made once, off the main thread; the metal over it
     // blurs it instead of the wallpaper.
     val zenithWall by androidx.compose.runtime.produceState<ZenithWall?>(null, settings.zenithWallpaper, settings.hologram, settings.zenithTint) {
@@ -719,6 +731,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
         LocalBackdrop provides (zenithWall?.backdrop ?: backdrop),
         LocalSettings provides settings,
         LocalGlassStyle provides glassStyle,
+        LocalSmartPalette provides smartPalette,
         LocalGlassLight provides light,
         LocalPhotoPicker provides requestPhotos,
         LocalBadges provides badges,
@@ -1029,7 +1042,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                 )
                             }
                             // The App Library has its own search bar at the top.
-                            if (settings.showSearchPill && !onLibraryPage) {
+                            if (settings.showSearchPill && !onLibraryPage && !settings.beSmarter) {
                                 SearchPill(onClick = { searchOpen = true }, onZ = { vm.askClaude() }, onZHold = { hubOpen = true })
                             }
                         }
@@ -1048,6 +1061,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                 )
                                 .onGloballyPositioned { dockBounds = it.boundsInRoot() },
                         )
+                        // Be Smarter: "Smart-Suche", the full-width pill under the dock.
+                        if (settings.beSmarter && settings.showSearchPill) {
+                            SmartSearchPill(onClick = { searchOpen = true })
+                        }
                     }
                     // OMEGA UI 17.5, Clawd Illumination: now and then a parade of Clawds marches
                     // along the top of the dock.
@@ -1101,8 +1118,6 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                 drawerOpen = false
                                 settingsOpen = true
                             },
-                            usage = appUsage,
-                            suggestions = library.suggestions,
                         )
                     } else {
                         OneUIDrawer(
@@ -1126,6 +1141,42 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             onSettingsChange = vm::updateSettings,
                         )
                     }
+                }
+
+                AnimatedVisibility(
+                    visible = smartSheetOpen,
+                    enter = fadeIn(tween(120)) + slideInVertically(tween(240, easing = androidx.compose.animation.core.FastOutSlowInEasing)) { it / 3 },
+                    exit = fadeOut(tween(120)) + slideOutVertically(tween(180)) { it / 3 },
+                ) {
+                    SmartHomeSheet(
+                        onDismiss = { smartSheetOpen = false },
+                        onAddWidget = {
+                            smartSheetOpen = false
+                            widgetTarget = (pagerState.currentPage - widgetPages).coerceAtLeast(0)
+                            widgetPickerOpen = true
+                        },
+                        onSelectApps = {
+                            smartSheetOpen = false
+                            selecting = true
+                            selected = emptySet()
+                        },
+                        onSearch = {
+                            smartSheetOpen = false
+                            searchOpen = true
+                        },
+                        onWallpaper = {
+                            smartSheetOpen = false
+                            vm.openWallpaperPicker()
+                        },
+                        onAppearance = {
+                            smartSheetOpen = false
+                            openClawdIllumination(context)
+                        },
+                        onHomeSettings = {
+                            smartSheetOpen = false
+                            settingsOpen = true
+                        },
+                    )
                 }
 
                 AnimatedVisibility(
@@ -1686,7 +1737,7 @@ private fun HomeHeaderContent(settings: LauncherSettings, modifier: Modifier = M
         ClockStyle.ColorOS -> ColorOSClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.OneUI -> OneUIClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Large -> LargeClock(settings, modifier.padding(start = 8.dp))
-        ClockStyle.Smart -> SmartClock(settings, modifier.padding(start = 8.dp))
+        ClockStyle.Smart -> SmartClock(settings, modifier)
         ClockStyle.Glass -> GlassClockCard(settings, modifier)
         ClockStyle.Zenith -> ZenithHomeClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Omega -> OmegaHomeClock(settings, modifier.padding(start = 8.dp))
@@ -1737,10 +1788,11 @@ private fun LargeClock(settings: LauncherSettings, modifier: Modifier = Modifier
 }
 
 /**
- * ZENITH 20.5, "Be Smarter": the Smart Launcher's clock – light digits with the date beneath them,
- * the weather on the right (its picture, the temperature, the day's high and low). A tap on the
- * date opens the calendar, a tap on the weather the ZENITH-Zentrale. The weather needs the place
- * set once in the Zentrale.
+ * ZENITH 20.5, "Be Smarter": the clock of Smart Launcher 6, centered – the time big, under it the date
+ * with the weather (its picture and the temperature), and under that the next alarm. A tap on the date
+ * opens the calendar, on the weather the ZENITH-Zentrale, on the alarm the alarms. The weather needs
+ * the place set once in the Zentrale. (Smart Launcher also shows the next event of the calendar there;
+ * that needs the calendar's permission, which this launcher doesn't ask for.)
  */
 @Composable
 private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier) {
@@ -1752,68 +1804,69 @@ private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier
     }
     val weather = rememberWeather()
     val context = LocalContext.current
-    // The clock widget of Smart Launcher 6 also shows the next alarm.
+    // The next alarm: just the time when it rings today, with the day otherwise.
     val alarm = remember(now) {
         runCatching {
             context.getSystemService(android.app.AlarmManager::class.java)?.nextAlarmClock?.triggerTime?.let { at ->
-                java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("EEE HH:mm", locale))
+                val ring = java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault())
+                val pattern = if (ring.toLocalDate() == now.toLocalDate()) "HH:mm" else "EEE HH:mm"
+                ring.format(DateTimeFormatter.ofPattern(pattern, locale))
             }
         }.getOrNull()
     }
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            ClockDigits(
-                settings,
-                text = time,
-                color = Color.White,
-                fontFamily = clockFamily(settings, null),
-                fontWeight = clockWeight(settings, FontWeight.Light),
-                fontSize = 66.sp,
-                lineHeight = 68.sp,
-                letterSpacing = (-1).sp,
-                style = OnWallpaperText,
-            )
+    Column(
+        modifier
+            .fillMaxWidth()
+            .padding(top = 28.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        ClockDigits(
+            settings,
+            text = time,
+            color = Color.White,
+            fontFamily = clockFamily(settings, null),
+            fontWeight = clockWeight(settings, FontWeight.SemiBold),
+            fontSize = 78.sp,
+            lineHeight = 80.sp,
+            letterSpacing = (-1).sp,
+            style = OnWallpaperText,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = date,
-                color = Color.White.copy(alpha = 0.92f),
-                fontSize = 15.sp,
+                color = Color.White,
+                fontSize = 19.sp,
+                fontWeight = FontWeight.Medium,
                 style = OnWallpaperText,
                 modifier = Modifier.clickable { openCalendar(context) },
             )
-            if (alarm != null) {
-                Text(
-                    text = "⏰ $alarm",
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontSize = 13.sp,
-                    style = OnWallpaperText,
-                    modifier = Modifier
-                        .padding(top = 2.dp)
-                        .clickable { openAlarms(context) },
-                )
+            weather?.let { w ->
+                Row(
+                    Modifier.clickable { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ZentraleActivity::class.java)) } },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(text = "  ·  ", color = Color.White, fontSize = 19.sp, style = OnWallpaperText)
+                    WeatherGlyph(w.code, w.night, Modifier.size(26.dp))
+                    Text(
+                        text = " ${w.now.roundToInt()}°C",
+                        color = Color.White,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Medium,
+                        style = OnWallpaperText,
+                    )
+                }
             }
         }
-        weather?.let { w ->
-            Column(
-                Modifier
-                    .padding(end = 4.dp)
-                    .clickable { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ZentraleActivity::class.java)) } },
-                horizontalAlignment = Alignment.End,
-            ) {
-                WeatherGlyph(w.code, w.night, Modifier.size(44.dp))
-                Text(
-                    text = "${w.now.roundToInt()}°",
-                    color = Color.White,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Light,
-                    style = OnWallpaperText,
-                )
-                Text(
-                    text = "${w.max}° / ${w.min}°",
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontSize = 12.sp,
-                    style = OnWallpaperText,
-                )
-            }
+        if (alarm != null) {
+            Text(
+                text = "Wecker · $alarm",
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 15.sp,
+                style = OnWallpaperText,
+                modifier = Modifier
+                    .padding(top = 4.dp)
+                    .clickable { openAlarms(context) },
+            )
         }
     }
 }

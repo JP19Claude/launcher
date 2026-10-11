@@ -1,16 +1,21 @@
 package dev.hearth.launcher.ui
 
+import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.os.Build
 import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,38 +24,31 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Build
-import androidx.compose.material.icons.rounded.Create
-import androidx.compose.material.icons.rounded.DateRange
-import androidx.compose.material.icons.rounded.Face
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Menu
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Place
-import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.ThumbUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,11 +57,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -74,16 +80,15 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.AppInfo
-import dev.hearth.launcher.data.AppUsage
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.LibraryCategory
 import dev.hearth.launcher.data.SmartGlass
+import dev.hearth.launcher.data.WallpaperBackdrop
 import dev.hearth.launcher.data.withSmartGlass
 import dev.hearth.launcher.data.withSmartGlimmer
 import dev.hearth.launcher.system.GlimmerService
@@ -92,42 +97,228 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /*
- * ZENITH 20.5, "Be Smarter": the launcher dressed after the Smart Launcher. The look itself is a
- * layer of settings laid over what is chosen while drawing (see withSmartLook); what lives here is
- * what the other looks have no counterpart for – the drawer with its category bar – and the
- * Illuminati's controls for the mode.
+ * ZENITH 20.5, "Be Smarter": the launcher dressed after Smart Launcher 6. The look itself is a layer
+ * of settings laid over what is chosen while drawing (see withSmartLook); what lives here is what the
+ * other looks have no counterpart for – the drawer with its category bar, the colors of its themes,
+ * the search pill, the sheet of the home screen – and the Illuminati's controls for the mode.
  */
 
-/** One tab of the Smart drawer: a category (or all apps, or the favorites) with its apps. */
-private class SmartTab(val label: String, val title: String, val icon: ImageVector, val apps: List<AppInfo>)
+// ---------------------------------------------------------------------------------------------
+// The colors of the themes
+// ---------------------------------------------------------------------------------------------
 
-private fun categoryIcon(category: LibraryCategory): ImageVector = when (category) {
-    LibraryCategory.Social -> Icons.Rounded.Face
-    LibraryCategory.Productivity -> Icons.Rounded.DateRange
-    LibraryCategory.Entertainment -> Icons.Rounded.PlayArrow
-    LibraryCategory.Creativity -> Icons.Rounded.Create
-    LibraryCategory.Information -> Icons.Rounded.Info
-    LibraryCategory.Shopping -> Icons.Rounded.ShoppingCart
-    LibraryCategory.Travel -> Icons.Rounded.Place
-    LibraryCategory.Health -> Icons.Rounded.Favorite
-    LibraryCategory.Games -> Icons.Rounded.ThumbUp
-    LibraryCategory.Utilities -> Icons.Rounded.Build
-    LibraryCategory.Other -> Icons.Rounded.MoreVert
+/**
+ * The colors Smart Launcher's surfaces take: [surface] for flat glass (the dock, widgets), [highlight]
+ * for what stands out a little (the search pill, the category bar), [accent] for what is chosen.
+ * Null colors leave the glass to its own look (Frosted, Opaque, Liquid).
+ */
+@Immutable
+internal class SmartPalette(val surface: Color?, val highlight: Color?, val accent: Color)
+
+internal val LocalSmartPalette = compositionLocalOf<SmartPalette?> { null }
+
+private val SmartAccent = Color(0xFF5CCBFF)
+private val SmartFallback = Color(0xFF2B2F6B)
+
+/** The wallpaper's color as a deep, rich shade – what Ambient Design tints its surfaces with. */
+internal fun ambientColor(backdrop: WallpaperBackdrop?): Color {
+    val source = backdrop?.image?.asAndroidBitmap() ?: return SmartFallback
+    return runCatching {
+        val soft = if (source.config == Bitmap.Config.HARDWARE) source.copy(Bitmap.Config.ARGB_8888, false) else source
+        val tiny = Bitmap.createScaledBitmap(soft, 12, 12, true)
+        var red = 0L
+        var green = 0L
+        var blue = 0L
+        for (y in 0 until tiny.height) {
+            for (x in 0 until tiny.width) {
+                val pixel = tiny.getPixel(x, y)
+                red += (pixel shr 16) and 0xFF
+                green += (pixel shr 8) and 0xFF
+                blue += pixel and 0xFF
+            }
+        }
+        val count = tiny.width * tiny.height
+        val hsv = FloatArray(3)
+        android.graphics.Color.RGBToHSV((red / count).toInt(), (green / count).toInt(), (blue / count).toInt(), hsv)
+        hsv[1] = hsv[1].coerceIn(0.45f, 0.85f)
+        hsv[2] = hsv[2].coerceIn(0.26f, 0.5f)
+        Color(android.graphics.Color.HSVToColor(hsv))
+    }.getOrDefault(SmartFallback)
 }
 
-private fun categoryLabel(category: LibraryCategory): String = when (category) {
-    LibraryCategory.Social -> "Social"
-    LibraryCategory.Productivity -> "Produktiv"
-    LibraryCategory.Entertainment -> "Medien"
-    LibraryCategory.Creativity -> "Kreativ"
-    LibraryCategory.Information -> "News"
-    LibraryCategory.Shopping -> "Shopping"
-    LibraryCategory.Travel -> "Reisen"
-    LibraryCategory.Health -> "Fitness"
-    LibraryCategory.Games -> "Spiele"
-    LibraryCategory.Utilities -> "Tools"
-    LibraryCategory.Other -> "Andere"
+private fun ambientPalette(ambient: Color) = SmartPalette(
+    surface = ambient.copy(alpha = 0.55f),
+    highlight = lerp(ambient, Color.White, 0.2f).copy(alpha = 0.85f),
+    accent = SmartAccent,
+)
+
+/** Material You: the colors the phone itself uses (Android 12 and newer); before that, the wallpaper's. */
+private fun materialPalette(context: Context, ambient: Color): SmartPalette {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return ambientPalette(ambient)
+    return runCatching {
+        SmartPalette(
+            surface = Color(context.getColor(android.R.color.system_accent2_800)).copy(alpha = 0.7f),
+            highlight = Color(context.getColor(android.R.color.system_accent1_700)).copy(alpha = 0.85f),
+            accent = Color(context.getColor(android.R.color.system_accent1_200)),
+        )
+    }.getOrElse { ambientPalette(ambient) }
 }
+
+/** The palette of the chosen theme, or null while "Be Smarter" is off. */
+@Composable
+internal fun rememberSmartPalette(settings: LauncherSettings, backdrop: WallpaperBackdrop?): SmartPalette? {
+    val context = LocalContext.current
+    val ambient = remember(backdrop) { ambientColor(backdrop) }
+    val on = settings.beSmarter
+    val theme = settings.smartGlass
+    return remember(on, theme, ambient) {
+        if (!on) {
+            null
+        } else {
+            when (theme) {
+                SmartGlass.Ambient -> ambientPalette(ambient)
+                SmartGlass.MaterialYou -> materialPalette(context, ambient)
+                SmartGlass.Frosted, SmartGlass.Opaque, SmartGlass.Liquid -> SmartPalette(null, null, SmartAccent)
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The categories and their line icons
+// ---------------------------------------------------------------------------------------------
+
+private enum class SmartGlyph { Chat, Social, Games, Media, Tools, Gear, Bag }
+
+/** A line icon of Smart Launcher's kind, drawn in a 24 × 24 box. */
+@Composable
+private fun SmartGlyphIcon(glyph: SmartGlyph, color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier.size(24.dp)) {
+        val u = size.minDimension / 24f
+        val line = Stroke(width = 1.8f * u, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        fun at(x: Float, y: Float) = Offset(x * u, y * u)
+        when (glyph) {
+            SmartGlyph.Chat -> {
+                drawRoundRect(color, topLeft = at(3f, 3.5f), size = Size(18f * u, 13f * u), cornerRadius = CornerRadius(6f * u), style = line)
+                val tail = Path().apply {
+                    moveTo(7.5f * u, 16.5f * u)
+                    lineTo(6.5f * u, 20.5f * u)
+                    lineTo(11.5f * u, 16.5f * u)
+                }
+                drawPath(tail, color, style = line)
+                drawCircle(color, 1.1f * u, at(8f, 10f))
+                drawCircle(color, 1.1f * u, at(12f, 10f))
+                drawCircle(color, 1.1f * u, at(16f, 10f))
+            }
+            SmartGlyph.Social -> {
+                drawCircle(color, 2.6f * u, at(12f, 6f), style = line)
+                drawCircle(color, 2.2f * u, at(6f, 17.5f), style = line)
+                drawCircle(color, 2.2f * u, at(18f, 17.5f), style = line)
+                drawLine(color, at(11f, 8.4f), at(7f, 15.5f), 1.8f * u, StrokeCap.Round)
+                drawLine(color, at(13f, 8.4f), at(17f, 15.5f), 1.8f * u, StrokeCap.Round)
+                drawLine(color, at(8.4f, 17.5f), at(15.6f, 17.5f), 1.8f * u, StrokeCap.Round)
+            }
+            SmartGlyph.Games -> {
+                drawRoundRect(color, topLeft = at(2.5f, 6.5f), size = Size(19f * u, 11.5f * u), cornerRadius = CornerRadius(5.75f * u), style = line)
+                drawLine(color, at(6f, 12.25f), at(10f, 12.25f), 1.8f * u, StrokeCap.Round)
+                drawLine(color, at(8f, 10.25f), at(8f, 14.25f), 1.8f * u, StrokeCap.Round)
+                drawCircle(color, 1.1f * u, at(15.5f, 11.2f))
+                drawCircle(color, 1.1f * u, at(18f, 13.6f))
+            }
+            SmartGlyph.Media -> {
+                drawRoundRect(color, topLeft = at(3f, 6f), size = Size(15f * u, 15f * u), cornerRadius = CornerRadius(3f * u), style = line)
+                val hills = Path().apply {
+                    moveTo(4.5f * u, 18.5f * u)
+                    lineTo(9f * u, 13.5f * u)
+                    lineTo(12f * u, 16.5f * u)
+                    lineTo(13.5f * u, 15f * u)
+                    lineTo(16.5f * u, 18.5f * u)
+                }
+                drawPath(hills, color, style = line)
+                drawLine(color, at(19.5f, 2f), at(19.5f, 7f), 1.8f * u, StrokeCap.Round)
+                drawLine(color, at(17f, 4.5f), at(22f, 4.5f), 1.8f * u, StrokeCap.Round)
+            }
+            SmartGlyph.Tools -> {
+                val triangle = Path().apply {
+                    moveTo(12f * u, 3f * u)
+                    lineTo(16.8f * u, 11f * u)
+                    lineTo(7.2f * u, 11f * u)
+                    close()
+                }
+                drawPath(triangle, color, style = line)
+                drawRoundRect(color, topLeft = at(3.5f, 14f), size = Size(7f * u, 7f * u), cornerRadius = CornerRadius(1.4f * u), style = line)
+                drawCircle(color, 3.5f * u, at(17.5f, 17.5f), style = line)
+            }
+            SmartGlyph.Gear -> {
+                val gear = Path()
+                val cx = 12f * u
+                val cy = 12f * u
+                for (i in 0 until 8) {
+                    val base = i * 45f
+                    val corners = listOf(base - 13f to 7.2f, base - 7f to 9.6f, base + 7f to 9.6f, base + 13f to 7.2f)
+                    corners.forEachIndexed { k, corner ->
+                        val angle = Math.toRadians(corner.first.toDouble())
+                        val x = cx + (corner.second * u * kotlin.math.cos(angle)).toFloat()
+                        val y = cy + (corner.second * u * kotlin.math.sin(angle)).toFloat()
+                        if (i == 0 && k == 0) gear.moveTo(x, y) else gear.lineTo(x, y)
+                    }
+                }
+                gear.close()
+                drawPath(gear, color, style = line)
+                drawCircle(color, 3f * u, Offset(cx, cy), style = line)
+            }
+            SmartGlyph.Bag -> {
+                drawRoundRect(color, topLeft = at(5f, 8f), size = Size(14f * u, 13f * u), cornerRadius = CornerRadius(2.5f * u), style = line)
+                val handle = Path().apply {
+                    moveTo(9f * u, 11f * u)
+                    lineTo(9f * u, 7f * u)
+                    cubicTo(9f * u, 3f * u, 15f * u, 3f * u, 15f * u, 7f * u)
+                    lineTo(15f * u, 11f * u)
+                }
+                drawPath(handle, color, style = line)
+            }
+        }
+    }
+}
+
+/** The six tabs of the drawer, in the order of its bar. */
+private enum class SmartCategory(val title: String, val glyph: SmartGlyph) {
+    Communication("Kommunikation", SmartGlyph.Chat),
+    Social("Social", SmartGlyph.Social),
+    Games("Spiele", SmartGlyph.Games),
+    Media("Medien", SmartGlyph.Media),
+    Utilities("Dienstprogramme", SmartGlyph.Tools),
+    Preferences("Einstellungen", SmartGlyph.Gear),
+}
+
+/** Packages (parts of their names) of the apps that talk to people: phone, messages, mail, messengers. */
+private val CommunicationHints = listOf(
+    "dialer", "contacts", "messag", "mms", "sms", "whatsapp", "telegram", "thoughtcrime", "threema",
+    "android.gm", "outlook", "skype", "zoom", "teams", "viber", "discord", "android.email", "protonmail",
+    "k9mail", "com.android.phone", "telecom",
+)
+
+/** Which tab an app belongs to, by what it declares and what it is called. */
+private fun smartCategoryOf(app: AppInfo): SmartCategory {
+    val pkg = app.packageName.lowercase()
+    if (pkg == "com.android.settings" || pkg.endsWith(".settings") || pkg.contains(".settings.") || app.component.className.endsWith(".SettingsShortcutActivity")) {
+        return SmartCategory.Preferences
+    }
+    if (CommunicationHints.any { pkg.contains(it) }) return SmartCategory.Communication
+    return when (app.category) {
+        LibraryCategory.Social -> SmartCategory.Social
+        LibraryCategory.Games -> SmartCategory.Games
+        LibraryCategory.Entertainment, LibraryCategory.Creativity -> SmartCategory.Media
+        else -> SmartCategory.Utilities
+    }
+}
+
+/** The tab the drawer was left on, so it opens there again. */
+private var rememberedTab = 0
+
+// ---------------------------------------------------------------------------------------------
+// The drawer
+// ---------------------------------------------------------------------------------------------
 
 /**
  * Rises into place as [progress] goes from 0 to 1, [row] a little after the one before: all on
@@ -141,9 +332,10 @@ private fun Modifier.smartRise(progress: () -> Float, row: Int): Modifier = grap
 }
 
 /**
- * The Smart Launcher's app drawer: all apps over the frosted (or liquid) wallpaper, one category
- * at a time – swipe sideways or tap the bar at the foot to change it – with the search on top.
- * Pull it down (or go back) and it lets go.
+ * Smart Launcher 6's app drawer: the apps of one category at a time, set low on the screen where the
+ * thumb reaches – the category's name big on top with search, the store and a menu beside it, the
+ * apps in four columns with their names, and at the foot the bar of the six categories (the chosen
+ * one underlined). Swipe sideways or tap the bar to change category; pull down (or go back) to let go.
  */
 @Composable
 fun SmartDrawer(
@@ -153,34 +345,17 @@ fun SmartDrawer(
     onOpenSearch: () -> Unit,
     onDismiss: () -> Unit,
     onOpenSettings: () -> Unit,
-    /** How often each app was opened, for the favorites. */
-    usage: Map<String, AppUsage> = emptyMap(),
-    /** The apps you'll likely open next, first among the favorites. */
-    suggestions: List<AppInfo> = emptyList(),
 ) {
     val settings = LocalSettings.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val columns = settings.columns.coerceIn(4, 5)
+    // The names stand under the icons here, though the home screen goes without them.
+    val shown = remember(settings) { settings.copy(showLabels = true) }
 
-    val sorted = remember(apps) { apps.sortedBy { it.label.lowercase() } }
-    val favorites = remember(sorted, usage, suggestions) {
-        val mostUsed = sorted
-            .filter { (usage[it.key]?.count ?: 0) > 0 }
-            .sortedByDescending { usage[it.key]?.count ?: 0 }
-        (suggestions + mostUsed).distinctBy { it.key }.take(20)
-    }
-    val tabs = remember(sorted, favorites) {
-        buildList {
-            add(SmartTab("Alle", "Alle Apps", Icons.Rounded.Menu, sorted))
-            if (favorites.isNotEmpty()) add(SmartTab("Favoriten", "Favoriten", Icons.Rounded.Star, favorites))
-            LibraryCategory.entries.forEach { category ->
-                val inside = sorted.filter { it.category == category }
-                if (inside.isNotEmpty()) add(SmartTab(categoryLabel(category), category.title, categoryIcon(category), inside))
-            }
-        }
-    }
-    val pagerState = rememberPagerState { tabs.size }
+    val byCategory = remember(apps) { apps.sortedBy { it.label.lowercase() }.groupBy { smartCategoryOf(it) } }
+    val pagerState = rememberPagerState(initialPage = rememberedTab.coerceIn(0, SmartCategory.entries.size - 1)) { SmartCategory.entries.size }
+    LaunchedEffect(pagerState.currentPage) { rememberedTab = pagerState.currentPage }
 
     // Opening: the rows rise in one after another.
     val appear = remember { Animatable(if (settings.animations) 0f else 1f) }
@@ -231,195 +406,393 @@ fun SmartDrawer(
         }
     }
 
-    Box(
-        Modifier
-            .fillMaxSize()
-            .nestedScroll(nested),
-    ) {
-        // The wallpaper, frosted by the glass chosen for the mode; it clears as the drawer is pulled away.
+    CompositionLocalProvider(LocalSettings provides shown) {
         Box(
             Modifier
-                .matchParentSize()
-                .graphicsLayer { alpha = 1f - (pull.value / (dismissPx * 3f)).coerceIn(0f, 0.6f) },
-        ) {
-            OmegaScreenBackdrop(
-                modifier = Modifier.matchParentSize(),
-                blur = (14f + 22f * settings.glassBlur).coerceIn(10f, 60f).dp,
-                dim = 0.34f,
-                omegaDim = 0.28f,
-                noGlassDim = 0.5f,
-                fluid = 0f,
-            )
-        }
-        Column(
-            Modifier
                 .fillMaxSize()
-                .graphicsLayer {
-                    val p = pull.value
-                    translationY = p * 0.55f
-                    alpha = 1f - (p / (dismissPx * 3f)).coerceIn(0f, 0.45f)
-                }
-                .systemBarsPadding(),
+                .nestedScroll(nested),
         ) {
-            // The search on top, the launcher's settings beside it.
-            Row(
+            // The wallpaper, frosted by the theme's blur; it clears as the drawer is pulled away.
+            Box(
                 Modifier
-                    .padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 6.dp)
-                    .smartRise({ appear.value }, 0),
-                verticalAlignment = Alignment.CenterVertically,
+                    .matchParentSize()
+                    .graphicsLayer { alpha = 1f - (pull.value / (dismissPx * 3f)).coerceIn(0f, 0.6f) },
             ) {
-                LiquidGlass(
-                    cornerRadius = 24.dp,
-                    refraction = 14.dp,
-                    interactive = true,
-                    fluidEdge = false,
+                OmegaScreenBackdrop(
+                    modifier = Modifier.matchParentSize(),
+                    blur = (14f + 22f * settings.glassBlur).coerceIn(10f, 60f).dp,
+                    dim = 0.38f,
+                    omegaDim = 0.3f,
+                    noGlassDim = 0.55f,
+                    fluid = 0f,
+                )
+            }
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        val p = pull.value
+                        translationY = p * 0.55f
+                        alpha = 1f - (p / (dismissPx * 3f)).coerceIn(0f, 0.45f)
+                    }
+                    .systemBarsPadding(),
+            ) {
+                HorizontalPager(
+                    state = pagerState,
+                    beyondViewportPageCount = 1,
                     modifier = Modifier
                         .weight(1f)
-                        .clip(CircleShape)
-                        .clickable(onClick = onOpenSearch),
-                ) {
-                    Row(
-                        Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(Icons.Rounded.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(10.dp))
-                        Text("Apps und Web durchsuchen", color = Color.White.copy(alpha = 0.8f), fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
+                        .fillMaxWidth(),
+                ) { page ->
+                    val category = SmartCategory.entries[page]
+                    SmartPage(
+                        category = category,
+                        apps = byCategory[category].orEmpty(),
+                        columns = columns,
+                        actions = actions,
+                        onLaunch = onLaunch,
+                        onSearch = onOpenSearch,
+                        onMore = onOpenSettings,
+                        appear = { appear.value },
+                        modifier = Modifier.graphicsLayer {
+                            // The page leaving dims a little.
+                            val off = kotlin.math.abs((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction).coerceIn(0f, 1f)
+                            alpha = 1f - 0.5f * off
+                        },
+                    )
                 }
-                Spacer(Modifier.width(8.dp))
-                GlassCircle(onClick = onOpenSettings) {
-                    Icon(Icons.Rounded.Settings, contentDescription = "Einstellungen", tint = Color.White.copy(alpha = 0.9f))
-                }
+                SmartTabBar(
+                    selected = pagerState.currentPage,
+                    onSelect = { index -> scope.launch { pagerState.animateScrollToPage(index) } },
+                    modifier = Modifier
+                        .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp)
+                        .smartRise({ appear.value }, 3),
+                )
             }
+        }
+    }
+}
 
-            // Which tab this is, and how many apps are in it.
-            val current = tabs.getOrNull(pagerState.currentPage)
+/** One category: its name with the buttons beside it, then its apps in rows – all set low on the page. */
+@Composable
+private fun SmartPage(
+    category: SmartCategory,
+    apps: List<AppInfo>,
+    columns: Int,
+    actions: AppActions,
+    onLaunch: (AppInfo, Rect?) -> Unit,
+    onSearch: () -> Unit,
+    onMore: () -> Unit,
+    appear: () -> Float,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val rows = remember(apps, columns) { apps.chunked(columns) }
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Bottom,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+    ) {
+        item(key = "title") {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 2.dp)
-                    .smartRise({ appear.value }, 1),
+                    .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 10.dp)
+                    .smartRise(appear, 0),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    current?.title.orEmpty(),
-                    color = Color.White.copy(alpha = 0.9f),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    category.title,
+                    color = Color.White,
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
                     modifier = Modifier.weight(1f),
                 )
-                Text("${current?.apps?.size ?: 0} Apps", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp)
-            }
-
-            HorizontalPager(
-                state = pagerState,
-                beyondViewportPageCount = 1,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-            ) { page ->
-                val tab = tabs[page]
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(columns),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        // The tab leaving shrinks and dims a little.
-                        .graphicsLayer {
-                            val off = kotlin.math.abs((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction).coerceIn(0f, 1f)
-                            alpha = 1f - 0.5f * off
-                            val s = 1f - 0.05f * off
-                            scaleX = s
-                            scaleY = s
-                        },
+                SmartTopButton(onClick = onSearch) {
+                    Icon(Icons.Rounded.Search, contentDescription = "Suchen", tint = Color.White, modifier = Modifier.size(24.dp))
+                }
+                SmartTopButton(
+                    onClick = {
+                        runCatching {
+                            context.packageManager.getLaunchIntentForPackage("com.android.vending")
+                                ?.let { context.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        }
+                    },
                 ) {
-                    itemsIndexed(tab.apps, key = { _, app -> app.key }) { index, app ->
-                        Box(
-                            Modifier.smartRise({ appear.value }, 2 + index / columns),
-                            contentAlignment = Alignment.Center,
-                        ) {
+                    SmartGlyphIcon(SmartGlyph.Bag, Color.White)
+                }
+                SmartTopButton(onClick = onMore) {
+                    // The three dots of the menu.
+                    Canvas(Modifier.size(24.dp)) {
+                        val r = 2.1.dp.toPx()
+                        drawCircle(Color.White, r, Offset(size.width / 2f, size.height * 0.2f))
+                        drawCircle(Color.White, r, Offset(size.width / 2f, size.height * 0.5f))
+                        drawCircle(Color.White, r, Offset(size.width / 2f, size.height * 0.8f))
+                    }
+                }
+            }
+        }
+        if (rows.isEmpty()) {
+            item(key = "empty") {
+                Text(
+                    "Hier liegt noch nichts.",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 15.sp,
+                    modifier = Modifier
+                        .padding(start = 12.dp, top = 8.dp, bottom = 24.dp)
+                        .smartRise(appear, 1),
+                )
+            }
+        }
+        itemsIndexed(rows, key = { index, _ -> index }) { index, row ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .smartRise(appear, 1 + index),
+                verticalAlignment = Alignment.Top,
+            ) {
+                for (column in 0 until columns) {
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) {
+                        row.getOrNull(column)?.let { app ->
                             AppIcon(app, actions, onWallpaper = true, fillCell = true, onLaunch = onLaunch)
                         }
                     }
                 }
             }
-
-            // The category bar at the foot, on glass; the chosen tab lit.
-            SmartTabBar(
-                tabs = tabs,
-                selected = pagerState.currentPage,
-                onSelect = { index -> scope.launch { pagerState.animateScrollToPage(index) } },
-                modifier = Modifier
-                    .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 12.dp)
-                    .smartRise({ appear.value }, 3),
-            )
         }
     }
 }
 
-/** The category bar: one glass capsule with a tab for each category, scrolling to follow the chosen one. */
 @Composable
-private fun SmartTabBar(tabs: List<SmartTab>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
-    val scroll = rememberScrollState()
-    val density = LocalDensity.current
-    val itemWidth = 64.dp
-    LaunchedEffect(selected) {
-        val at = with(density) { itemWidth.toPx() } * (selected - 2)
-        scroll.animateScrollTo(at.coerceAtLeast(0f).roundToInt())
-    }
+private fun SmartTopButton(onClick: () -> Unit, content: @Composable () -> Unit) {
+    Box(
+        Modifier
+            .size(46.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { content() }
+}
+
+/** The bar of the six categories, a rounded pill of the theme's color; the chosen tab has a short line under its icon. */
+@Composable
+private fun SmartTabBar(selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    val palette = LocalSmartPalette.current
     LiquidGlass(
         cornerRadius = 30.dp,
-        refraction = 14.dp,
+        refraction = 12.dp,
+        tint = palette?.highlight,
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(
             Modifier
-                .horizontalScroll(scroll)
+                .fillMaxWidth()
                 .padding(horizontal = 6.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            tabs.forEachIndexed { index, tab ->
-                SmartTabItem(tab, index == selected, itemWidth) { onSelect(index) }
+            SmartCategory.entries.forEachIndexed { index, category ->
+                SmartTabCell(category, index == selected, palette?.accent ?: SmartAccent, Modifier.weight(1f)) { onSelect(index) }
             }
         }
     }
 }
 
 @Composable
-private fun SmartTabItem(tab: SmartTab, on: Boolean, width: Dp, onClick: () -> Unit) {
-    val lit by animateFloatAsState(if (on) 1f else 0f, tween(180), label = "smartTab")
+private fun SmartTabCell(category: SmartCategory, on: Boolean, accent: Color, modifier: Modifier, onClick: () -> Unit) {
+    val line by animateDpAsState(if (on) 24.dp else 0.dp, tween(200), label = "smartTabLine")
     Column(
-        Modifier
-            .width(width)
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color.White.copy(alpha = 0.2f * lit))
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
+        modifier
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
+            .padding(top = 12.dp, bottom = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(
-            tab.icon,
-            contentDescription = tab.title,
-            tint = Color.White.copy(alpha = 0.62f + 0.38f * lit),
-            modifier = Modifier.size(22.dp),
-        )
-        Text(
-            tab.label,
-            color = Color.White.copy(alpha = 0.55f + 0.45f * lit),
-            fontSize = 10.sp,
-            fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 2.dp),
+        SmartGlyphIcon(category.glyph, Color.White)
+        Spacer(Modifier.height(5.dp))
+        Box(
+            Modifier
+                .width(line)
+                .height(2.5.dp)
+                .clip(CircleShape)
+                .background(accent),
         )
     }
 }
 
+// ---------------------------------------------------------------------------------------------
+// The search pill and the sheet of the home screen
+// ---------------------------------------------------------------------------------------------
+
+/** "Smart-Suche": the full-width pill at the foot of the home screen, under the dock. */
+@Composable
+internal fun SmartSearchPill(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val palette = LocalSmartPalette.current
+    LiquidGlass(
+        cornerRadius = 26.dp,
+        refraction = 12.dp,
+        tint = palette?.highlight,
+        interactive = true,
+        fluidEdge = false,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 12.dp)
+            .clip(RoundedCornerShape(26.dp))
+            .clickable(onClick = onClick),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("Smart-Suche", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
+private val SheetColor = Color(0xFF22252B)
+private val SheetBlue = Color(0xFF2F8CFF)
+
+/**
+ * The sheet that rises from the foot when the home screen is held, as in Smart Launcher: its
+ * actions in a row, then the places of the settings, and a chip above it for all of them.
+ */
+@Composable
+internal fun SmartHomeSheet(
+    onDismiss: () -> Unit,
+    onAddWidget: () -> Unit,
+    onSelectApps: () -> Unit,
+    onSearch: () -> Unit,
+    onWallpaper: () -> Unit,
+    onAppearance: () -> Unit,
+    onHomeSettings: () -> Unit,
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.35f))
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
+    ) {
+        Column(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // "Alle Einstellungen anzeigen" – a dark chip on the seam.
+            Row(
+                Modifier
+                    .padding(bottom = 14.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.78f))
+                    .clickable(onClick = onHomeSettings)
+                    .padding(horizontal = 18.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Canvas(Modifier.size(14.dp)) {
+                    val w = 1.8.dp.toPx()
+                    val path = Path().apply {
+                        moveTo(size.width * 0.1f, size.height * 0.7f)
+                        lineTo(size.width * 0.5f, size.height * 0.3f)
+                        lineTo(size.width * 0.9f, size.height * 0.7f)
+                    }
+                    drawPath(path, Color.White, style = Stroke(w, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                }
+                Spacer(Modifier.width(12.dp))
+                Text("Alle Einstellungen anzeigen", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Medium)
+            }
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
+                    .background(SheetColor)
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { }
+                    .navigationBarsPadding()
+                    .padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 12.dp),
+            ) {
+                Text("Startbildschirm", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(18.dp))
+                Row(Modifier.fillMaxWidth()) {
+                    SheetAction(Icons.Rounded.Add, "Widget hinzufügen", Modifier.weight(1f), onAddWidget)
+                    SheetAction(Icons.Rounded.CheckCircle, "Apps auswählen", Modifier.weight(1f), onSelectApps)
+                    SheetAction(Icons.Rounded.Search, "Suche öffnen", Modifier.weight(1f), onSearch)
+                }
+                Spacer(Modifier.height(10.dp))
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(Color.White.copy(alpha = 0.12f)),
+                )
+                SheetRow(Icons.Rounded.Edit, Color(0xFF63D68A), "Hintergrundbild", onWallpaper)
+                SheetRow(Icons.Rounded.Star, Color(0xFFFFA45C), "Allgemeine Darstellung", onAppearance)
+                SheetRow(Icons.Rounded.Home, SheetBlue, "Startbildschirm", onHomeSettings)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SheetAction(icon: ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
+    Column(
+        modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier
+                .size(46.dp)
+                .border(2.dp, SheetBlue, RoundedCornerShape(13.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = SheetBlue, modifier = Modifier.size(24.dp))
+        }
+        Text(
+            label,
+            color = Color.White.copy(alpha = 0.7f),
+            fontSize = 15.sp,
+            lineHeight = 19.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+    }
+}
+
+@Composable
+private fun SheetRow(icon: ImageVector, tint: Color, label: String, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(34.dp)
+                .border(2.dp, tint, RoundedCornerShape(9.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.width(22.dp))
+        Text(label, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The Illuminati's controls
+// ---------------------------------------------------------------------------------------------
+
 private val SmartBlue = Color(0xFF4DA3FF)
 
 /**
- * The Clawd Illuminati's "Be Smarter": the card that switches the mode, and under it the glass
- * (Frosted or Liquid, with its sliders), the speed of opening apps and Glimmer bound into the system.
+ * The Clawd Illuminati's "Be Smarter": the card that switches the mode, and under it the theme
+ * (the five of Smart Launcher 6) with the sliders of its glass, the speed of opening apps and Glimmer
+ * bound into the system.
  */
 @Composable
 internal fun SmartSection(settings: LauncherSettings, onChange: ((LauncherSettings) -> LauncherSettings) -> Unit) {
@@ -436,17 +809,20 @@ internal fun SmartSection(settings: LauncherSettings, onChange: ((LauncherSettin
     SmartCard(settings.beSmarter) { v -> onChange { it.copy(beSmarter = v) } }
     Spacer(Modifier.height(18.dp))
 
-    IlluminationSection("Be Smarter · Glas") {
-        IlluminatiChoice("◇", "Glas", SmartGlass.entries, settings.smartGlass, { it.label }) { glass -> onChange { it.withSmartGlass(glass) } }
-        PercentSlider("Unschärfe", settings.smartBlur, 0f..2.5f) { v -> onChange { it.copy(smartBlur = v) } }
-        PercentSlider("Lichtbrechung", settings.smartRefraction, 0f..2.5f) { v -> onChange { it.copy(smartRefraction = v) } }
-        PercentSlider("Glanz", settings.smartSpecular, 0f..2f) { v -> onChange { it.copy(smartSpecular = v) } }
-        PercentSlider("Tönung", settings.smartTint, 0f..2.5f) { v -> onChange { it.copy(smartTint = v) } }
-        SmartNote(
-            "Die drei Gläser des Smart Launchers 6: Frosted ist milchig und weich, es verwischt, was dahinter liegt. Opaque ist am festesten, damit alles auf jedem " +
-                "Hintergrund lesbar bleibt, und folgt Hell und Dunkel. Liquid ist klar mit einer Linse, es bricht und spiegelt das Dahinter und fängt das Licht an " +
-                "seinem Rand. Mit der Wahl springen die Regler auf die Werte des Glases – danach sind sie frei.",
-        )
+    IlluminationSection("Be Smarter · Launcher-Thema") {
+        SmartThemeList(settings.smartGlass) { theme -> onChange { it.withSmartGlass(theme) } }
+        SmartNote("Wie in „Allgemeine Darstellung“ des Smart Launchers 6. Mit der Wahl springen die Regler auf die Werte des Themes – danach sind sie frei.")
+    }
+
+    IlluminationSection("Be Smarter · Oberfläche") {
+        SliderRow("Unschärferadius", settings.smartBlur, 0f..2.5f, "${"%.1f".format(settings.smartBlur)} %") { v -> onChange { it.copy(smartBlur = v) } }
+        SliderRow("Lebendigkeit verwischen", settings.smartVibrancy, 0f..1f, "+${(settings.smartVibrancy * 100).roundToInt()} %") { v -> onChange { it.copy(smartVibrancy = v) } }
+        SliderRow("Brechung", settings.smartRefraction, 0f..2.5f, "${(settings.smartRefraction * 100).roundToInt()} %") { v -> onChange { it.copy(smartRefraction = v) } }
+        SliderRow("Tiefe", settings.smartDepth, 0.5f..3f, "${(settings.smartDepth * 100).roundToInt()} %") { v -> onChange { it.copy(smartDepth = v) } }
+        SliderRow("Streuung", settings.smartDispersion, 0f..1.5f, "${(settings.smartDispersion * 100).roundToInt()} %") { v -> onChange { it.copy(smartDispersion = v) } }
+        SliderRow("Glanz", settings.smartSpecular, 0f..2f, "${(settings.smartSpecular * 100).roundToInt()} %") { v -> onChange { it.copy(smartSpecular = v) } }
+        SliderRow("Tönung", settings.smartTint, 0f..2.5f, "${(settings.smartTint * 100).roundToInt()} %") { v -> onChange { it.copy(smartTint = v) } }
+        SmartNote("Brechung, Tiefe, Streuung und Lebendigkeit zeigen sich vor allem im Liquid Glass. Ambient Design und Material You färben die Flächen selbst; die Tönung gilt dort nicht.")
     }
 
     IlluminationSection("Be Smarter · Tempo") {
@@ -482,6 +858,52 @@ internal fun SmartSection(settings: LauncherSettings, onChange: ((LauncherSettin
                     fontSize = 13.sp,
                     lineHeight = 17.sp,
                 )
+            }
+        }
+    }
+}
+
+/** The five themes in a list, each with its radio mark – the way Smart Launcher shows them. */
+@Composable
+private fun SmartThemeList(selected: SmartGlass, onPick: (SmartGlass) -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+    ) {
+        SmartGlass.entries.forEach { theme ->
+            val on = theme == selected
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onPick(theme) }
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .padding(end = 12.dp),
+                ) {
+                    Text(theme.label, color = Color.White, fontSize = 17.sp)
+                    if (theme.note.isNotEmpty()) {
+                        Text(theme.note, color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp, lineHeight = 17.sp)
+                    }
+                }
+                Box(
+                    Modifier
+                        .size(24.dp)
+                        .border(2.dp, if (on) SmartBlue else Color.White.copy(alpha = 0.6f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (on) {
+                        Box(
+                            Modifier
+                                .size(12.dp)
+                                .background(SmartBlue, CircleShape),
+                        )
+                    }
+                }
             }
         }
     }
@@ -537,9 +959,9 @@ private fun SmartCard(on: Boolean, onToggle: (Boolean) -> Unit) {
         }
         Spacer(Modifier.height(10.dp))
         Text(
-            "Nach dem Vorbild von Smart Launcher 6: runde Icons, seine Uhr mit Wecker und Wetter, ein Dock aus Glas, ein App-Drawer mit Kategorie-Leiste " +
-                "und die Suche mit Vorschlägen beim Wischen nach unten – alles in Frosted, Opaque oder Liquid Glass. Apps öffnen sich ohne Verzögerung. Die " +
-                "eigenen Looks und Effekte von ZENITH treten solange zurück. Aus: alles wie vorher.",
+            "Nach dem Vorbild von Smart Launcher 6: seine Uhr mit Datum, Wetter und Wecker, Icons ohne Namen, die Smart-Suche unten, ein App-Drawer " +
+                "mit sechs Kategorien und seine fünf Themes bis zum Liquid Glass. Apps öffnen sich ohne Verzögerung. Die eigenen Looks und Effekte von " +
+                "ZENITH treten solange zurück. Aus: alles wie vorher.",
             color = Color.White.copy(alpha = 0.65f),
             fontSize = 12.sp,
             lineHeight = 16.sp,

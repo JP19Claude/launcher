@@ -190,43 +190,42 @@ internal object HearthChangelog {
         ChangeRelease(
             version = "20.5",
             name = "Be Smarter",
-            summary = "Das große Update: Im Illuminati gibt es jetzt „Be Smarter“ – ein Modus, der aus dem Launcher einen Smart Launcher macht, nach dessen Vorbild: seine Uhr mit dem Wetter, sein Dock, sein Drawer mit der Kategorie-Leiste, dazu Frosted und Liquid Glass zum Einstellen, Apps ohne Verzögerung und Glimmer als Teil des ganzen Systems.",
+            summary = "Das große Update: Im Illuminati gibt es jetzt „Be Smarter“ – ein Modus, der aus dem Launcher Smart Launcher 6 macht, nach dessen Vorbild: seine Uhr mit Datum, Wetter und Wecker, Icons ohne Namen, die Smart-Suche, der Drawer mit der Leiste der sechs Kategorien, seine fünf Themes bis zum Liquid Glass mit Reglern, Apps ohne Verzögerung und Glimmer als Teil des ganzen Systems.",
             sections = listOf(
-                ChangeSection(
-                    "Näher an Smart Launcher 6 (Hotfix)", Icons.Rounded.CheckCircle, Green,
-                    listOf(
-                        "Vorbild ist ausdrücklich Smart Launcher 6 – in den Fassungen 6.5 und 6.6 –, nicht irgendein Smart Launcher.",
-                        "Das dritte Glas: Dort heißen die Gläser Frosted Glass, Opaque Glass (seit 6.5: das festeste, damit alles auf jedem Hintergrund lesbar bleibt, es folgt Hell und Dunkel) und Liquid Glass (seit 6.6: Lichtbrechung, einstellbar). „Be Smarter“ hat jetzt alle drei, jedes mit den vier Reglern.",
-                        "Die Uhr zeigt wie die des Smart Launchers auch den nächsten Wecker; ein Tipp darauf öffnet die Wecker.",
-                        "Wischen nach unten auf dem Startbildschirm bringt die Suche mit den Apps, die du als Nächstes brauchst – wie dort. In „Be Smarter“ ist das fest eingestellt.",
-                        "Ehrlich dazu: Die Seiten und Bilder von Smart Launcher 6 waren von hier aus nicht zu erreichen. Was nicht beschrieben ist, ist geschätzt – wo es abweicht, gleiche ich es mit Bildschirmfotos an.",
-                    ),
-                    hearth,
-                ),
                 ChangeSection(
                     "Be Smarter", Icons.Rounded.Star, Blue,
                     listOf(
-                        "Zu finden im Clawd Illuminati (Versionsnummer in „Über das Telefon“ antippen): ganz oben die Karte „Be Smarter“. Ein Tipp, und ZENITH sieht aus wie der Smart Launcher – und ein Tipp zurück, und alles ist wieder wie vorher. Der Modus legt sich nur über das, was du gewählt hast; geschrieben wird nichts.",
-                        "Der Look: runde Icons, die Smart-Uhr (helle, große Ziffern mit dem Datum, rechts das Wetter), die Suchleiste und das Dock aus Glas. ZENITHs eigene Looks und Effekte – Metall, Polarlicht, Fluid, Z-Regen, Parade und die anderen – treten solange zurück.",
-                        "Das Wetter an der Uhr braucht den Ort, den du einmal in der Zentrale einträgst. Ein Tipp auf das Datum öffnet den Kalender, einer auf das Wetter die Zentrale.",
-                        "Eine Annäherung, kein Abpausen: Der Smart Launcher selbst lag nicht zum Nachmessen vor. Wo es abweicht, lässt es sich mit einem Bildschirmfoto angleichen.",
+                        "Zu finden im Clawd Illuminati (Versionsnummer in „Über das Telefon“ antippen): ganz oben die Karte „Be Smarter“. Ein Tipp, und ZENITH sieht aus wie Smart Launcher 6 – und ein Tipp zurück, und alles ist wieder wie vorher. Der Modus legt sich nur über das, was du gewählt hast; geschrieben wird nichts.",
+                        "Solange er an ist, treten ZENITHs eigene Looks und Effekte – Metall, Polarlicht, Fluid, Z-Regen, Parade und die anderen – zurück.",
+                        "Gebaut nach Bildschirmfotos von Smart Launcher 6 (Startbildschirm, Drawer, Einstellungen, Themes). Eine Annäherung, kein Abpausen: Wo etwas abweicht, lässt es sich mit einem weiteren Bildschirmfoto angleichen.",
                     ),
                     hearth,
                 ),
                 ChangeSection(
-                    "Der Smart-Drawer", Icons.Rounded.Home, Green,
+                    "Der Startbildschirm", Icons.Rounded.CheckCircle, Green,
                     listOf(
-                        "Nach oben wischen auf dem Startbildschirm öffnet den neuen Drawer (auch per Doppeltipp „Drawer“ und über „Alle Apps“ im ZENITH-Menü). Oben die Suche und die Einstellungen, in der Mitte die Apps, unten die Kategorie-Leiste auf Glas.",
-                        "Die Apps sind nach Kategorien sortiert: Alle, Favoriten (deine meistgenutzten), dazu Social, Arbeit, Medien, Kreativ, News, Shopping, Reisen, Fitness, Spiele, Tools und Andere – nur die, in denen Apps liegen. Seitlich wischen oder die Leiste antippen wechselt die Kategorie; die Leiste läuft mit.",
-                        "Der Startbildschirm tritt zurück, wenn der Drawer aufsteigt; nach unten ziehen (oder Zurück) lässt ihn wieder los. Die Apps steigen Reihe für Reihe ein.",
+                        "Die Uhr steht in der Mitte: die Zeit groß, darunter „Datum · Wetter“ mit Bild und Temperatur, darunter „Wecker · 07:00“ (mit dem Tag, wenn er nicht heute klingelt). Ein Tipp aufs Datum öffnet den Kalender, aufs Wetter die Zentrale, auf den Wecker die Wecker. Das Wetter braucht den Ort, den du einmal in der Zentrale einträgst.",
+                        "Die Icons stehen ohne Namen auf dem Startbildschirm, als abgerundete Quadrate (im Liquid Glass als runde Glas-Kacheln). Das Dock hat keine eigene Leiste mehr; darunter ganz unten die Pille „Smart-Suche“.",
+                        "Halten auf dem Startbildschirm öffnet ein Blatt von unten: „Startbildschirm“ mit Widget hinzufügen, Apps auswählen und Suche öffnen, dazu Hintergrundbild, Allgemeine Darstellung und Startbildschirm – und oben „Alle Einstellungen anzeigen“.",
+                        "Wischen nach unten bringt die Suche mit den Apps, die du als Nächstes brauchst.",
                     ),
                     hearth,
                 ),
                 ChangeSection(
-                    "Frosted und Liquid Glass", Icons.Rounded.Info, Violet,
+                    "Der Drawer mit sechs Kategorien", Icons.Rounded.Home, Green,
                     listOf(
-                        "Drei Gläser zur Wahl, alle mit eigenen Reglern: Frosted – milchig und weich, es verwischt, was dahinter liegt –, Opaque – am festesten, immer lesbar – und Liquid – klar mit einer Linse, es bricht das Dahinter und fängt das Licht am Rand.",
-                        "Vier Regler pro Glas: Unschärfe, Lichtbrechung, Glanz und Tönung. Die Wahl des Glases stellt sie auf dessen Werte, danach sind sie frei. Sie gelten für jede Glasfläche des Launchers: Suche, Drawer, Dock, Menüs, Widgets.",
+                        "Nach oben wischen auf dem Startbildschirm öffnet den Drawer (auch per Doppeltipp „Drawer“ und über „Alle Apps“ im ZENITH-Menü). Wie in Smart Launcher sitzt alles tief, wo der Daumen hinkommt: oben groß der Name der Kategorie, daneben Suche, Store und Menü, darunter die Apps in vier Spalten mit ihren Namen.",
+                        "Unten die Leiste mit sechs Kategorien auf einer Pille: Kommunikation, Social, Spiele, Medien, Dienstprogramme und Einstellungen – die gewählte mit einem kurzen Strich unter dem Symbol. Seitlich wischen oder die Leiste antippen wechselt; der Drawer öffnet wieder bei der zuletzt gewählten.",
+                        "Welche App wohin kommt, entscheidet, was sie von sich sagt (Telefon, Nachrichten und Mail zu Kommunikation, Netzwerke zu Social, Musik und Video zu Medien …) – nach Namen und Art, nicht nach Smart Launchers eigener Liste.",
+                        "Der Startbildschirm tritt zurück, wenn der Drawer aufsteigt; nach unten ziehen (oder Zurück) lässt ihn los.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Die fünf Themes", Icons.Rounded.Info, Violet,
+                    listOf(
+                        "Wie in „Allgemeine Darstellung“ des Smart Launchers: Ambient Design (durchscheinende Flächen in den Farben deines Hintergrundbildes), Material You (die Farben des Telefons, ab Android 12), Frostetes Glas, Opakisches Glas (am festesten, immer lesbar) und Liquid Glass (durchscheinende Flächen mit fließenden Lichtreflexen).",
+                        "Dazu die Regler „Oberfläche“: Unschärferadius, Lebendigkeit verwischen, Brechung, Tiefe und Streuung wie dort, außerdem Glanz und Tönung. Die Wahl eines Themes stellt sie auf dessen Werte, danach sind sie frei.",
                         "Die Glas-Einstellungen von ZENITH selbst bleiben unberührt – beim Ausschalten ist alles wie vorher.",
                     ),
                     hearth,
@@ -249,6 +248,13 @@ internal object HearthChangelog {
                         "Glimmer braucht dafür seinen Dienst in den Bedienungshilfen; die Karte zeigt, ob er läuft, und führt dorthin.",
                     ),
                     withGlimmer,
+                ),
+                ChangeSection(
+                    "Noch nicht dabei", Icons.Rounded.Edit, Slate,
+                    listOf(
+                        "Aus Smart Launcher 6 fehlen noch: der nächste Termin des Kalenders an der Uhr (braucht die Berechtigung für den Kalender), „Your Feed“ (Nachrichten), der Private Space, das Widget-Paket mit Stapeln und Symbolgruppen, das Dock mit mehreren Reihen und Seiten, die Auswahl aus über zwanzig Symbolformen (hier drei) und „Thema bearbeiten“ mit freien Farben.",
+                    ),
+                    hearth,
                 ),
             ),
         ),

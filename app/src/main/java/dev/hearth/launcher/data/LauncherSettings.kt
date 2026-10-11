@@ -191,22 +191,28 @@ fun LauncherSettings.withColorOsLook(): LauncherSettings = if (!colorOsLook) {
 }
 
 /**
- * ZENITH 20.5, "Be Smarter": the three glasses of Smart Launcher 6 (6.5 and 6.6). Frosted is milky
- * and soft (it blurs what lies behind it, hardly bends it), Opaque is the most solid – for
- * readability on any wallpaper – and follows light and dark, Liquid is clear with a lens (it bends
- * it and catches the light at its rim). Choosing one sets the four sliders; they stay free after.
+ * ZENITH 20.5, "Be Smarter": the five themes of Smart Launcher 6 ("Allgemeine Darstellung"). Ambient
+ * Design and Material You are flat, translucent surfaces in the wallpaper's (or the phone's) colors;
+ * Frosted is milky and soft, Opaque the most solid (readable on any wallpaper, follows light and
+ * dark), Liquid clear with a lens – it bends what lies behind it and catches the light. Choosing one
+ * sets the sliders (blur radius, refraction, depth, dispersion, vibrancy …); they stay free after.
  */
 enum class SmartGlass(
     val label: String,
+    val note: String,
     val blur: Float,
     val refraction: Float,
     val dispersion: Float,
     val specular: Float,
     val tint: Float,
+    val depth: Float,
+    val vibrancy: Float,
 ) {
-    Frosted("Frosted Glass", blur = 2.1f, refraction = 0.4f, dispersion = 0.1f, specular = 0.7f, tint = 1.7f),
-    Opaque("Opaque Glass", blur = 2.5f, refraction = 0.15f, dispersion = 0f, specular = 0.4f, tint = 2.4f),
-    Liquid("Liquid Glass", blur = 0.7f, refraction = 1.7f, dispersion = 0.9f, specular = 1.4f, tint = 0.6f),
+    Ambient("Ambient Design", "Transparente Oberflächen, die den Farben deines Hintergrundbildes entsprechen.", 1f, 0.15f, 0f, 0.3f, 1f, 1f, 0.2f),
+    MaterialYou("Material You", "Die Farben deines Telefons (ab Android 12) als weiche, durchscheinende Flächen.", 1f, 0.15f, 0f, 0.3f, 1f, 1f, 0.2f),
+    Frosted("Frostetes Glas", "", 2.1f, 0.4f, 0.1f, 0.7f, 1.7f, 1f, 0.5f),
+    Opaque("Opakisches Glas", "", 2.5f, 0.15f, 0f, 0.4f, 2.4f, 1f, 0.3f),
+    Liquid("Liquid Glass", "Dynamische, durchscheinende Oberflächen mit fließenden Lichtreflexen für einen dynamischen Effekt.", 0.7f, 1.7f, 0.9f, 1.4f, 0.6f, 1f, 0.5f),
 }
 
 /** The mode's glass, set to what [glass] brings (the four sliders move to its values). */
@@ -214,8 +220,11 @@ fun LauncherSettings.withSmartGlass(glass: SmartGlass): LauncherSettings = copy(
     smartGlass = glass,
     smartBlur = glass.blur,
     smartRefraction = glass.refraction,
+    smartDispersion = glass.dispersion,
     smartSpecular = glass.specular,
     smartTint = glass.tint,
+    smartDepth = glass.depth,
+    smartVibrancy = glass.vibrancy,
 )
 
 /** Apps open the moment they are tapped (only in "Be Smarter", and only while that is chosen). */
@@ -252,10 +261,13 @@ fun LauncherSettings.withSmartLook(): LauncherSettings = if (!beSmarter) {
         omegaZeros = false,
         perks = emptySet(),
         showClaudeCard = false,
-        iconStyle = IconStyle.Original,
-        iconShape = IconShape.Circle,
+        // Liquid Glass shows its icons in round glass tiles; the other themes in adaptive squircles.
+        iconStyle = if (smartGlass == SmartGlass.Liquid) IconStyle.Glass else IconStyle.Original,
+        iconShape = if (smartGlass == SmartGlass.Liquid) IconShape.Circle else IconShape.Squircle,
         clockStyle = ClockStyle.Smart,
-        dockStyle = DockStyle.Glass,
+        // The dock has no bar of its own: the icons sit right on the wallpaper, and no names under them.
+        dockStyle = DockStyle.Clear,
+        showLabels = false,
         showGreeting = false,
         showSearchPill = true,
         showAppLibrary = false,
@@ -266,12 +278,14 @@ fun LauncherSettings.withSmartLook(): LauncherSettings = if (!beSmarter) {
             SmartGlass.Liquid -> GlassTint.Clear
             SmartGlass.Opaque -> if (darkGlass) GlassTint.Dark else GlassTint.Light
             SmartGlass.Frosted -> GlassTint.Light
+            // Ambient Design and Material You tint the glass with their own color (see the home screen).
+            SmartGlass.Ambient, SmartGlass.MaterialYou -> GlassTint.Dark
         },
         // Swiping down from the middle brings the search and the apps you might want next.
         swipeDownAction = SwipeDownAction.Search,
         glassBlur = smartBlur,
         glassRefraction = smartRefraction,
-        glassDispersion = smartGlass.dispersion,
+        glassDispersion = smartDispersion,
         glassSpecular = smartSpecular,
         glassTintStrength = smartTint,
         glassInteractive = true,
@@ -743,11 +757,14 @@ data class LauncherSettings(
     /** ZENITH 20.5, "Be Smarter": the Illuminati's mode that makes the launcher a copy of the Smart Launcher. */
     val beSmarter: Boolean = false,
     /** The glass of that look (Frosted or Liquid) and its four sliders, which are the mode's own. */
-    val smartGlass: SmartGlass = SmartGlass.Frosted,
-    val smartBlur: Float = SmartGlass.Frosted.blur,
-    val smartRefraction: Float = SmartGlass.Frosted.refraction,
-    val smartSpecular: Float = SmartGlass.Frosted.specular,
-    val smartTint: Float = SmartGlass.Frosted.tint,
+    val smartGlass: SmartGlass = SmartGlass.Ambient,
+    val smartBlur: Float = SmartGlass.Ambient.blur,
+    val smartRefraction: Float = SmartGlass.Ambient.refraction,
+    val smartDispersion: Float = SmartGlass.Ambient.dispersion,
+    val smartSpecular: Float = SmartGlass.Ambient.specular,
+    val smartTint: Float = SmartGlass.Ambient.tint,
+    val smartDepth: Float = SmartGlass.Ambient.depth,
+    val smartVibrancy: Float = SmartGlass.Ambient.vibrancy,
     /** Apps open the moment they are tapped: no splash, no press animation, no wait. */
     val smartInstant: Boolean = true,
     /** Glimmer bound into the whole system: its fly-in over every launcher, in the Smart style. */
@@ -1326,6 +1343,9 @@ class SettingsRepository(context: Context) {
             smartGlass = enumOf("smartGlass", d.smartGlass),
             smartBlur = prefs.getFloat("smartBlur", d.smartBlur),
             smartRefraction = prefs.getFloat("smartRefraction", d.smartRefraction),
+            smartDispersion = prefs.getFloat("smartDispersion", d.smartDispersion),
+            smartDepth = prefs.getFloat("smartDepth", d.smartDepth),
+            smartVibrancy = prefs.getFloat("smartVibrancy", d.smartVibrancy),
             smartSpecular = prefs.getFloat("smartSpecular", d.smartSpecular),
             smartTint = prefs.getFloat("smartTint", d.smartTint),
             smartInstant = prefs.getBoolean("smartInstant", d.smartInstant),
@@ -1540,6 +1560,9 @@ class SettingsRepository(context: Context) {
             .putString("smartGlass", s.smartGlass.name)
             .putFloat("smartBlur", s.smartBlur)
             .putFloat("smartRefraction", s.smartRefraction)
+            .putFloat("smartDispersion", s.smartDispersion)
+            .putFloat("smartDepth", s.smartDepth)
+            .putFloat("smartVibrancy", s.smartVibrancy)
             .putFloat("smartSpecular", s.smartSpecular)
             .putFloat("smartTint", s.smartTint)
             .putBoolean("smartInstant", s.smartInstant)

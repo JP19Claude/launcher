@@ -115,9 +115,14 @@ data class GlassStyle(
     val hud: Boolean = false,
     /** ZENITH 19.1, "Projekt Zenith Glas": Projekt Zenith in real liquid glass – a lens, green light. */
     val hudGlass: Boolean = false,
+    /** "Be Smarter", Liquid Glass of Smart Launcher 6: how deep the lens reaches, and how vivid the blurred wallpaper under glass is. */
+    val depth: Float = 1f,
+    val vibrancy: Float = 1.6f,
 ) {
     companion object {
-        fun from(s: LauncherSettings): GlassStyle = if (s.colorOsLook) colorOs(s) else general(s)
+        fun from(s: LauncherSettings): GlassStyle = (if (s.colorOsLook) colorOs(s) else general(s)).let { glass ->
+            if (s.beSmarter) glass.copy(depth = s.smartDepth, vibrancy = 1f + 1.2f * s.smartVibrancy) else glass
+        }
 
         /**
          * ZENITH 19.2, the ColorOS 17.1 look: frosted liquid glass in ColorOS's manner, built only
@@ -426,6 +431,7 @@ private fun DrawScope.drawBackdrop(
     origin: Offset,
     frost: Frost = Frost.Soft,
     blendMode: BlendMode = BlendMode.SrcOver,
+    colorFilter: ColorFilter? = Vibrancy,
 ) {
     val image = when (frost) {
         Frost.None -> backdrop.image
@@ -438,7 +444,7 @@ private fun DrawScope.drawBackdrop(
         srcSize = IntSize(image.width, image.height),
         dstOffset = IntOffset(-origin.x.roundToInt(), -origin.y.roundToInt()),
         dstSize = IntSize(backdrop.screenWidth, backdrop.screenHeight),
-        colorFilter = Vibrancy,
+        colorFilter = colorFilter,
         blendMode = blendMode,
         filterQuality = FilterQuality.Low,
     )
@@ -511,6 +517,10 @@ fun LiquidGlass(
     val frost = frostFor(style.blur * (blur.value / 14f).coerceIn(0.5f, 1.6f))
     val rimPx = with(density) { 1.dp.toPx() }
     val shaderMinPx = with(density) { style.lensMinDp.dp.toPx() }
+    // How vivid the wallpaper looks through the glass (the usual 1.6, or what "Be Smarter" sets).
+    val vibrancyFilter = remember(style.vibrancy) {
+        if (style.vibrancy == 1.6f) Vibrancy else ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(style.vibrancy) })
+    }
     val maxPadPx = with(density) { 28.dp.toPx() }
     // One compiled shader for every glass surface, and none at all without the wallpaper.
     val glassEffect = if (backdrop != null) SharedGlassEffect else null
@@ -613,7 +623,7 @@ fun LiquidGlass(
     ) {
         if (backdrop != null) {
             val lensAvailable = glassEffect != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-            val lensPad = refractionPx.coerceIn(2f, maxPadPx).roundToInt()
+            val lensPad = (refractionPx * style.depth.coerceAtLeast(1f)).coerceIn(2f, maxPadPx).roundToInt()
             // The lens draws a little more of the backdrop than its own size, because the rim
             // shows what lies just beyond it. Small glass (below "Glas-Qualität") skips it.
             fun padFor(innerW: Float, innerH: Float): Int =
@@ -640,7 +650,7 @@ fun LiquidGlass(
                                 height = size.height,
                                 inset = lensPad.toFloat(),
                                 radius = min(radiusPx, innerMin / 2f),
-                                depth = min(refractionPx, innerMin / 2f),
+                                depth = min(refractionPx * style.depth, innerMin / 2f),
                                 blur = 0f,
                                 dispersion = style.dispersion,
                                 specular = specular,
@@ -663,7 +673,7 @@ fun LiquidGlass(
             ) {
                 val padded = lensPad * 2f
                 val pad = if (lensAvailable && min(size.width - padded, size.height - padded) >= shaderMinPx) lensPad else 0
-                drawBackdrop(backdrop, origin - Offset(pad.toFloat(), pad.toFloat()), frost)
+                drawBackdrop(backdrop, origin - Offset(pad.toFloat(), pad.toFloat()), frost, colorFilter = vibrancyFilter)
             }
         }
 
