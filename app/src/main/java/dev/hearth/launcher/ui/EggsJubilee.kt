@@ -244,11 +244,6 @@ internal fun ZenithJubilee(onDone: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 6.sp,
                 )
-                Text(
-                    ZenithSlogan.GERMAN,
-                    color = Color.White.copy(alpha = ((time - 7000L) / 900f).coerceIn(0f, 0.7f)),
-                    fontSize = 13.sp,
-                )
             }
             if (time > 8000L) {
                 Spacer(Modifier.height(8.dp))

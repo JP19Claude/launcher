@@ -190,7 +190,6 @@ internal fun ZenithBootIntro(onDone: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(ZenithSlogan.UPPER, color = Color.White.copy(alpha = 0.85f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 6.sp)
-                Text(ZenithSlogan.GERMAN, color = ZenithGreen, fontSize = 13.sp, letterSpacing = 2.sp, modifier = Modifier.padding(top = 4.dp))
             }
         }
     }

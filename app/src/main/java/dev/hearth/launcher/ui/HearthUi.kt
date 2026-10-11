@@ -204,7 +204,7 @@ internal object HearthChangelog {
                 ChangeSection(
                     "Der Spruch des Systems", Icons.Rounded.ThumbUp, Blue,
                     listOf(
-                        "ZENITH hat jetzt einen Spruch, wie OnePlus „Never Settle“: „Always Zenith.“ – und auf Deutsch: „Höher geht nicht.“ Der Zenit ist der höchste Punkt, den es gibt.",
+                        "ZENITH hat jetzt einen Spruch, wie OnePlus „Never Settle“: „Aim Higher.“ – ziel höher, denn der Zenit ist der höchste Punkt, den es gibt.",
                         "Er steht beim Start nach dem Neustart, in „Über das Telefon“, im Software-Update, in der Willkommens-Tour, in der Zentrale und am Ende der Jubiläums-Zeremonie.",
                     ),
                     hearth,

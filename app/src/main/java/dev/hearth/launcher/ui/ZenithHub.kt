@@ -452,7 +452,7 @@ fun ZentraleScreen(onClose: () -> Unit, onUpdate: ((LauncherSettings) -> Launche
 
             item {
                 Text(
-                    "${ZenithSlogan.UPPER} · ${ZenithSlogan.GERMAN}",
+                    ZenithSlogan.UPPER,
                     color = ZenithGreen,
                     fontSize = 11.sp,
                     fontFamily = HudFont,
