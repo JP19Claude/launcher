@@ -174,6 +174,7 @@ import dev.hearth.launcher.data.withColorOsLook
 import dev.hearth.launcher.data.withSmartLook
 import dev.hearth.launcher.data.SmartClockLayout
 import dev.hearth.launcher.data.instantOpen
+import dev.hearth.launcher.data.showSlogan
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -402,10 +403,16 @@ fun LauncherScreen(vm: LauncherViewModel) {
 
     // One UI 10 Fluid: waves of Claude's colors when an app opens, and coming home.
     val fluidWaves = rememberFluidWaves()
+    val fluidClock = LocalFluidClock.current
     val waveOwner = LocalLifecycleOwner.current
     DisposableEffect(waveOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) fluidWaves.bloom()
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                fluidWaves.bloom()
+                // Back from an app: the glass and every flowing color go easy on the first frames.
+                GlassCalm.settle()
+                fluidClock?.calm(900)
+            }
         }
         waveOwner.lifecycle.addObserver(observer)
         onDispose { waveOwner.lifecycle.removeObserver(observer) }
@@ -1032,6 +1039,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             // Clawd lives here, on the home pages: he walks, talks and plays.
                             if (settings.clawdCompanion && !onLibraryPage && pagerState.currentPage >= widgetPages) {
                                 ClawdCompanion(onTalk = { vm.askClaude() })
+                            }
+                            // ZENITH 20.5: the saying, quietly, above the dots.
+                            if (settings.showSlogan) {
+                                SloganLine(Modifier.padding(bottom = 8.dp))
                             }
                             if (widgetPages + pages.size + libraryPages > 1) {
                                 PageDots(

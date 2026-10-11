@@ -49,10 +49,27 @@ class GlimmerBridgeProvider : ContentProvider() {
             return result
         }
 
+        /**
+         * The settings the bridge answers with, read at most every second and a half – and without
+         * holding on to the preferences (a new repository for every call meant a full read of ~200
+         * values on the main thread for each, and a listener left behind for each).
+         */
+        private var settingsCache: dev.hearth.launcher.data.LauncherSettings? = null
+        private var settingsCachedAt = 0L
+
+        private fun bridgeSettings(context: Context): dev.hearth.launcher.data.LauncherSettings {
+            val now = android.os.SystemClock.uptimeMillis()
+            settingsCache?.let { if (now - settingsCachedAt < 1500L) return it }
+            return SettingsRepository(context, listen = false).settings.value.forGlimmer().also {
+                settingsCache = it
+                settingsCachedAt = now
+            }
+        }
+
         fun handle(context: Context, method: String, arg: String?, extras: Bundle?): Bundle? = onMain {
             // Glimmer's service in the Glimmer app.
             val service = GlimmerService.instance
-            val settings = SettingsRepository(context).settings.value.forGlimmer()
+            val settings = bridgeSettings(context)
             fun status(into: Bundle) = into.apply {
                 putBoolean("running", service != null)
                 putBoolean("glimmer", settings.glimmerEnabled)

@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.NightstandActivity
 import dev.hearth.launcher.data.EasterEggs
+import dev.hearth.launcher.data.showSlogan
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.LocalDate
@@ -228,6 +229,10 @@ fun NightstandScreen(onClose: () -> Unit, onBrightness: (Boolean) -> Unit) {
                 }
             }
             Spacer(Modifier.height(10.dp))
+            // ZENITH 20.5: the saying, as quiet as the hint under it.
+            if (LocalSettings.current.showSlogan) {
+                SloganLine(Modifier.padding(bottom = 6.dp), alpha = hintAlpha, size = 11.sp)
+            }
             Text(
                 "Tippen: heller und dunkler · Zurück: beenden",
                 color = Color.White.copy(alpha = hintAlpha),

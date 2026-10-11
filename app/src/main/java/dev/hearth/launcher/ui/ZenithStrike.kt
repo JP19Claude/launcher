@@ -435,6 +435,10 @@ internal fun DrawScope.drawZenithStrike(p: Float, tint: Color = ZenithGreen) {
             blendMode = plus,
         )
     }
+
+    // After the eruption, the saying comes up in the Z's light and goes with the dark.
+    val say = span(p, 0.66f, 0.8f) * out
+    if (say > 0f) drawSloganText(w / 2f, h * 0.9f, unit * 0.05f, mint, 0.9f * say)
 }
 
 /** Places a popup over the whole window. */

@@ -90,6 +90,20 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.drop
+
+/**
+ * Set when the launcher comes back to the front (an app was closed): all glass draws the cheap way
+ * for a moment, so the first frames after coming back – when the graphics memory is filled again –
+ * are quick and the next tap is not waiting behind them.
+ */
+internal object GlassCalm {
+    var token by androidx.compose.runtime.mutableIntStateOf(0)
+
+    fun settle() {
+        token++
+    }
+}
 
 /** The wallpaper copy that glass surfaces look through. Null = frosted fallback. */
 val LocalBackdrop = compositionLocalOf<WallpaperBackdrop?> { null }
@@ -546,6 +560,15 @@ fun LiquidGlass(
             moving = false
         }
     }
+    // Back in front after an app: the lens waits a moment (see GlassCalm).
+    var calm by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { GlassCalm.token }.drop(1).collectLatest {
+            calm = true
+            delay(650)
+            calm = false
+        }
+    }
 
     val isInteractive = interactive && style.interactive
     var pressed by remember { mutableStateOf(false) }
@@ -651,7 +674,7 @@ fun LiquidGlass(
                     .graphicsLayer {
                         val padded = lensPad * 2f
                         val lens = lensAvailable && min(size.width - padded, size.height - padded) >= shaderMinPx
-                        if (lens && !moving && glassEffect != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        if (lens && !moving && !calm && glassEffect != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             val innerMin = min(size.width, size.height) - padded
                             // The shader cuts the shape out itself, with soft edges.
                             clip = false

@@ -253,6 +253,9 @@ fun LauncherSettings.withSmartGlass(glass: SmartGlass): LauncherSettings = copy(
     smartShape = if (glass == SmartGlass.Liquid) IconShape.Circle else IconShape.Squircle,
 )
 
+/** ZENITH's saying is shown (it is ZENITH's own: only in the all-in-one app). */
+val LauncherSettings.showSlogan: Boolean get() = sloganEverywhere && dev.hearth.launcher.BuildConfig.ALL_IN_ONE
+
 /** Apps open the moment they are tapped (only in "Be Smarter", and only while that is chosen). */
 val LauncherSettings.instantOpen: Boolean get() = beSmarter && smartInstant
 
@@ -803,6 +806,8 @@ data class LauncherSettings(
     val smartInstant: Boolean = true,
     /** Glimmer bound into the whole system: its fly-in over every launcher, in the Smart style. */
     val smartGlimmer: Boolean = false,
+    /** ZENITH 20.5: the saying "Aim Higher." in every place of the system that has room for it. */
+    val sloganEverywhere: Boolean = true,
     /** ZENITH 19: after the phone starts, the Z lights up once before the home screen. */
     val zenithBootIntro: Boolean = true,
     /** ZENITH 19, Z-Angriff: a fully charged Z draws a giant Z across the screen, like Zygarde's Core Enforcer. */
@@ -1232,7 +1237,13 @@ data class LauncherSettings(
 }
 
 /** Keeps the launcher settings in SharedPreferences and exposes them as a flow. */
-class SettingsRepository(context: Context) {
+/**
+ * [listen] false: a plain look at what is stored, with no hold on the preferences – for the ones
+ * that only need the settings once (the Glimmer bridge, answering the launcher on every app that
+ * opens and closes): every repository that listens stays registered until the next garbage
+ * collection, and every write to the preferences makes each of them read everything again.
+ */
+class SettingsRepository(context: Context, listen: Boolean = true) {
 
     private val appContext = context.applicationContext
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -1260,8 +1271,10 @@ class SettingsRepository(context: Context) {
     }
 
     init {
-        prefs.registerOnSharedPreferenceChangeListener(onPrefsChanged)
-        syncPalette(_settings.value)
+        if (listen) {
+            prefs.registerOnSharedPreferenceChangeListener(onPrefsChanged)
+            syncPalette(_settings.value)
+        }
     }
 
     /** ZENITH 20.1: the color ZENITH is in follows the setting, in every screen. */
@@ -1392,6 +1405,7 @@ class SettingsRepository(context: Context) {
             smartTint = prefs.getFloat("smartTint", d.smartTint),
             smartInstant = prefs.getBoolean("smartInstant", d.smartInstant),
             smartGlimmer = prefs.getBoolean("smartGlimmer", d.smartGlimmer),
+            sloganEverywhere = prefs.getBoolean("sloganEverywhere", d.sloganEverywhere),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
             zenithStrike = prefs.getBoolean("zenithStrike", d.zenithStrike),
             zenithStrikeSystem = prefs.getBoolean("zenithStrikeSystem", d.zenithStrikeSystem),
@@ -1617,6 +1631,7 @@ class SettingsRepository(context: Context) {
             .putFloat("smartTint", s.smartTint)
             .putBoolean("smartInstant", s.smartInstant)
             .putBoolean("smartGlimmer", s.smartGlimmer)
+            .putBoolean("sloganEverywhere", s.sloganEverywhere)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("zenithStrike", s.zenithStrike)
             .putBoolean("zenithStrikeSystem", s.zenithStrikeSystem)

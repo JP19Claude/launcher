@@ -70,6 +70,7 @@ import dev.hearth.launcher.data.EasterEggs
 import dev.hearth.launcher.data.GlassTint
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.zenithMetal
+import dev.hearth.launcher.data.showSlogan
 import dev.hearth.launcher.data.Perk
 import dev.hearth.launcher.data.has
 import kotlin.math.PI
@@ -250,6 +251,11 @@ fun ClawdIlluminationScreen(
                 fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
                 letterSpacing = 2.sp,
             )
+            // ZENITH 20.5: the order's saying.
+            if (settings.showSlogan) {
+                Spacer(Modifier.height(8.dp))
+                SloganLine(color = sigil, alpha = 0.6f)
+            }
             Spacer(Modifier.height(10.dp))
             Text(
                 "Der geheime Rat der sechs Clawds hat getagt. Was er beschließt, verändert ${HearthUi.NAME} – und alles lässt sich hier wieder aufheben.",

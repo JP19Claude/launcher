@@ -43,6 +43,7 @@ import dev.hearth.launcher.data.AodTint
 import dev.hearth.launcher.data.ClawdMood
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.NotificationHub
+import dev.hearth.launcher.data.showSlogan
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -286,6 +287,10 @@ private fun LockExtras(s: LauncherSettings) {
                     style = TextStyle(brush = Brush.linearGradient(listOf(Color.White) + palette.take(2)), fontSize = 22.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Serif),
                 )
                 Spacer(Modifier.height(6.dp))
+            }
+            // ZENITH 20.5: the saying under the greeting, on the lock screen and the always-on display.
+            if (s.showSlogan) {
+                SloganLine(Modifier.padding(bottom = 8.dp), alpha = 0.55f, size = 12.sp)
             }
             if (s.lockMessage.isNotBlank()) {
                 Box(

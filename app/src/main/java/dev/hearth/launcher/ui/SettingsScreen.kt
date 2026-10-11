@@ -52,6 +52,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.input.pointer.pointerInput
 import dev.hearth.launcher.data.AppInfo
 import dev.hearth.launcher.data.withZenithTint
+import dev.hearth.launcher.data.showSlogan
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
@@ -232,6 +233,10 @@ fun SettingsScreen(
                             "${if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) HearthUi.NAME else "Hearth"} ${HearthUi.major(appVersion)} · ${dev.hearth.launcher.data.ClaudeOs.full} „${dev.hearth.launcher.data.ClaudeOs.CODENAME}“",
                             style = androidx.compose.ui.text.TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
                         )
+                        // ZENITH 20.5: and under it, the saying.
+                        if (s.showSlogan) {
+                            SloganLine(Modifier.padding(top = 6.dp), alpha = 0.5f, textAlign = androidx.compose.ui.text.style.TextAlign.Start)
+                        }
                     }
                 }
             }
@@ -495,6 +500,11 @@ fun SettingsScreen(
                         description = "Weniger Last, weniger Ruckeln: Farbflüsse laufen ruhiger, die Glas-Linse nur auf großen Flächen. Empfohlen.",
                         checked = s.smoothMode,
                     ) { v -> update { it.copy(smoothMode = v) } }
+                    SwitchRow(
+                        label = "Der Spruch „Aim Higher.“ überall",
+                        description = "Auf dem Startbildschirm und seinem Hintergrund, auf dem Sperrbildschirm und dem Always-On-Display, in den Einstellungen, in der Z-Nacht, im Illuminati und beim Z-Angriff",
+                        checked = s.sloganEverywhere,
+                    ) { v -> update { it.copy(sloganEverywhere = v) } }
                 }
             }
 

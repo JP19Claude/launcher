@@ -54,7 +54,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
 
 
     private fun restartGlimmer() {
-        val current = SettingsRepository(this).settings.value
+        val current = SettingsRepository(this, listen = false).settings.value
         glimmer?.stop()
         if (current.glimmerEnabled) glimmer?.start(current)
     }
@@ -63,14 +63,14 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
     private var cachedSettings: dev.hearth.launcher.data.LauncherSettings? = null
 
     private fun current(): dev.hearth.launcher.data.LauncherSettings =
-        cachedSettings ?: SettingsRepository(this).settings.value.also { cachedSettings = it }
+        cachedSettings ?: SettingsRepository(this, listen = false).settings.value.also { cachedSettings = it }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
         cachedSettings = null
         when (key) {
             AppLock.KEY, "glimmerFlyIn", "glimmerFlyInEverywhere", "glimmerFlyInCover" -> applyEventScope()
             // Applied while running, so sliders and switches show at once without a flicker.
-            in SettingsRepository.GLIMMER_LIVE_KEYS -> glimmer?.update(SettingsRepository(this).settings.value)
+            in SettingsRepository.GLIMMER_LIVE_KEYS -> glimmer?.update(SettingsRepository(this, listen = false).settings.value)
             in SettingsRepository.GLIMMER_KEYS -> restartGlimmer()
         }
     }

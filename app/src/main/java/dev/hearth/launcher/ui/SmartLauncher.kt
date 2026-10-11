@@ -94,6 +94,7 @@ import dev.hearth.launcher.data.SmartClockLayout
 import dev.hearth.launcher.data.SmartColor
 import dev.hearth.launcher.data.SmartGlass
 import dev.hearth.launcher.data.WallpaperBackdrop
+import dev.hearth.launcher.data.showSlogan
 import dev.hearth.launcher.data.withSmartGlass
 import dev.hearth.launcher.data.withSmartGlimmer
 import dev.hearth.launcher.system.GlimmerService
@@ -735,6 +736,9 @@ internal fun SmartHomeSheet(
                 SheetRow(Icons.Rounded.Edit, Color(0xFF63D68A), "Hintergrundbild", onWallpaper)
                 SheetRow(Icons.Rounded.Star, Color(0xFFFFA45C), "Allgemeine Darstellung", onAppearance)
                 SheetRow(Icons.Rounded.Home, SheetBlue, "Startbildschirm", onHomeSettings)
+                if (LocalSettings.current.showSlogan) {
+                    SloganLine(Modifier.padding(top = 4.dp, bottom = 6.dp), alpha = 0.35f)
+                }
             }
         }
     }

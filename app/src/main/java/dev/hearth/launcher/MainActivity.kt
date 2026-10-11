@@ -88,9 +88,14 @@ class MainActivity : ComponentActivity() {
         wasInBackground = false
         viewModel.onResume()
         // Just moved into Hearth One: once per start, the welcome (old apps to remove …).
-        if (BuildConfig.ALL_IN_ONE && !oneWelcomeShown && dev.hearth.launcher.data.HearthOneUpgrade.oldAppsInstalled(this).isNotEmpty()) {
-            oneWelcomeShown = true
-            runCatching { startActivity(Intent(this, OneWelcomeActivity::class.java)) }
+        // (Asked once per start of the app, not on every coming back from an app: it is a handful
+        // of calls to the package manager, on the main thread, just as the next tap is coming.)
+        if (BuildConfig.ALL_IN_ONE && !oneWelcomeShown && !oneWelcomeChecked) {
+            oneWelcomeChecked = true
+            if (dev.hearth.launcher.data.HearthOneUpgrade.oldAppsInstalled(this).isNotEmpty()) {
+                oneWelcomeShown = true
+                runCatching { startActivity(Intent(this, OneWelcomeActivity::class.java)) }
+            }
         }
     }
 
@@ -110,5 +115,8 @@ class MainActivity : ComponentActivity() {
 
         /** The Hearth One welcome shows at most once per start of the app. */
         private var oneWelcomeShown = false
+
+        /** Whether the old apps were looked for in this start of the app already. */
+        private var oneWelcomeChecked = false
     }
 }

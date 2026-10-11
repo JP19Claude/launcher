@@ -1,6 +1,8 @@
 ZENITH 20.5 „Be Smarter“ auf ClaudeOS 7.0 „Apex“
 
 ✨ Neu im Hotfix
+• „Aim Higher.“ überall im System: auf dem Startbildschirm und in seinem Hintergrund (ZENITH-Hintergrund, Projekt Zenith), auf dem Sperrbildschirm und dem Always-On-Display, in den Einstellungen, in der Z-Nacht, im Illuminati, im Blatt des Startbildschirms und beim Z-Angriff – abschaltbar unter Einstellungen → ZENITH
+• Noch einmal gegen die Wartezeit nach dem Schließen: Glimmers Anfragen legen keine Einstellungs-Leser mehr an (jeder las alles und blieb bis zur Speicherbereinigung hängen), die Suche nach alten Apps läuft einmal pro Start, Glas und fließende Farben gehen die ersten Zehntelsekunden nach dem Zurückkommen leicht
 • Kein Warten mehr nach dem Schließen einer App: die Widgets bleiben angeschlossen (sie wurden nach 15 Sekunden getrennt und beim Zurückkommen alle auf einmal neu gezeichnet), Be Smarter spielt keine eigene Schließ-Animation und macht keine Bilder der App (außer mit „Glimmer ins System binden“), die flachen Themes zeichnen ohne Linsen-Shader, Apps starten nicht mehr auf dem Hauptthread
 • Mehr einstellen: sieben Formen für die Icons, Größe, Spalten und Reihen, Smart-Suche an oder aus; die Uhr in Größe, Schrift, Anordnung (zentriert oder kompakt), Wetter und Wecker einzeln; der Drawer mit Spalten, Namen und deren Größe; die Farbe der Flächen im Ambient Design
 • Das Datum wie im Smart Launcher: „So., 11. Oktober ⛅ 10°C“

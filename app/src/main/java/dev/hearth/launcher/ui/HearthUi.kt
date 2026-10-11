@@ -193,6 +193,27 @@ internal object HearthChangelog {
             summary = "Das große Update: Im Illuminati gibt es jetzt „Be Smarter“ – ein Modus, der aus dem Launcher Smart Launcher 6 macht, nach dessen Vorbild: seine Uhr mit Datum, Wetter und Wecker, Icons ohne Namen, die Smart-Suche, der Drawer mit der Leiste der sechs Kategorien, seine fünf Themes bis zum Liquid Glass mit Reglern, Apps ohne Verzögerung und Glimmer als Teil des ganzen Systems.",
             sections = listOf(
                 ChangeSection(
+                    "„Aim Higher.“ überall im System (Hotfix)", Icons.Rounded.Star, Orange,
+                    listOf(
+                        "Der Spruch von ZENITH steht jetzt dort, wo im System Platz für ihn ist – als stille Zeile in weit gesetzten Großbuchstaben:",
+                        "Auf dem Startbildschirm über den Seitenpunkten, und im Hintergrund selbst: der ZENITH-Hintergrund und der von Projekt Zenith tragen ihn unter dem Z beziehungsweise am Horizont.",
+                        "Auf dem Sperrbildschirm und dem Always-On-Display unter dem Gruß, in den Einstellungen unter der Überschrift, in der Z-Nacht über dem Hinweis, im Illuminati unter dem Wahlspruch der Ordnung und im Blatt, das beim Halten des Startbildschirms aufgeht.",
+                        "Und beim Z-Angriff: Nach dem Ausbruch steigt der Spruch im Licht des Z auf und geht mit dem Dunkel. Wie bisher am Start nach dem Neustart, in „Über das Telefon“, im Software-Update, in der Willkommens-Tour, in der Zentrale und am Ende der Jubiläums-Zeremonie.",
+                        "Ausschalten lässt er sich unter Einstellungen → ZENITH: „Der Spruch ‚Aim Higher.‘ überall“.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Noch einmal gegen die Wartezeit (Hotfix)", Icons.Rounded.ThumbUp, Orange,
+                    listOf(
+                        "Jede Anfrage von Glimmer an den Launcher – bei jedem Öffnen und Schließen einer App mehrere – legte auf dem Hauptthread einen neuen Einstellungs-Leser an, der alle gut zweihundert Werte las und sich bis zur nächsten Speicherbereinigung an die Einstellungen hängte; jede Änderung ließ dann jeden dieser Leser noch einmal alles lesen. Jetzt gibt es keinen solchen Leser mehr, und die Antwort wird anderthalb Sekunden lang wiederverwendet.",
+                        "Die Suche nach den alten Apps (Hearth One) lief bei jedem Zurückkommen auf dem Hauptthread; jetzt einmal pro Start.",
+                        "Beim Zurückkommen aus einer App zeichnen Glas und fließende Farben die ersten knapp sieben Zehntelsekunden den leichten Weg, solange der Grafikspeicher wieder gefüllt wird – und die Linse kommt danach zurück.",
+                        "Ehrlich: Gemessen habe ich auch das nicht. Wenn es hängt, sag mir bitte: nach der Wischgeste oder nach Zurück, mit Be Smarter an oder aus, und ob „Glimmer ins System binden“ an ist.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Kein Warten mehr nach dem Schließen (Hotfix)", Icons.Rounded.ThumbUp, Orange,
                     listOf(
                         "Nach dem Schließen einer App musste man kurz warten, bis die nächste aufging. Gesucht habe ich dort, wo der Launcher in genau diesem Moment arbeitet, und alles abgestellt, was in Frage kommt:",

@@ -78,6 +78,8 @@ internal fun DrawScope.drawZenithWallpaper() {
     }
     val glint = Offset(w * 0.86f, h * 0.07f)
     drawCircle(Brush.radialGradient(listOf(ZenithGreen.copy(alpha = 0.16f), Color.Transparent), center = glint, radius = w * 0.45f), w * 0.45f, glint)
+    // Under the Z, the saying – part of the background itself.
+    drawSloganText(w / 2f, h * 0.665f, w * 0.036f, Color.White, 0.3f)
 }
 
 /** Draws [block] into a new picture of [width] × [height]. */

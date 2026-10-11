@@ -92,6 +92,8 @@ internal fun DrawScope.drawProjectWallpaper() {
     drawPath(z, ZenithGreen.copy(alpha = 0.06f))
     drawPath(z, ZenithGreen.copy(alpha = 0.22f), style = Stroke(7f * u))
     drawPath(z, HudGreen.copy(alpha = 0.85f), style = Stroke(1.5f * u))
+    // The saying, on the horizon below the Z.
+    drawSloganText(w / 2f, horizon + h * 0.045f, w * 0.034f, HudGreen, 0.55f)
     // Scan lines and a vignette.
     var y = 0f
     while (y < h) {
