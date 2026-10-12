@@ -193,6 +193,24 @@ internal object HearthChangelog {
             summary = "Das große Update: Im Illuminati gibt es jetzt „Be Smarter“ – ein Modus, der aus dem Launcher Smart Launcher 6 macht, nach dessen Vorbild: seine Uhr mit Datum, Wetter und Wecker, Icons ohne Namen, die Smart-Suche, der Drawer mit der Leiste der sechs Kategorien, seine fünf Themes bis zum Liquid Glass mit Reglern, Apps ohne Verzögerung und Glimmer als Teil des ganzen Systems.",
             sections = listOf(
                 ChangeSection(
+                    "„Aim Higher.“ groß auf der Systemkarte (Hotfix)", Icons.Rounded.Star, Orange,
+                    listOf(
+                        "Oben in den Einstellungen, auf der Karte mit dem Z, deinem Handy und der Versionsnummer, steht jetzt groß „Aim Higher.“ – in schweren, schrägen Buchstaben wie das Z, in der Farbe der Karte (Gold im Jubiläum), mit einem Lichtband, das darüberläuft.",
+                        "Dasselbe auf der Versionskarte in „Über das Telefon“ und im Software-Update: groß unter dem Z; die Karte ist dafür ein Stück höher.",
+                        "Und überall sonst mehr zu sehen: die stille Zeile ist größer und heller (auf dem Startbildschirm, dem Sperrbildschirm, der Z-Nacht, im Blatt des Startbildschirms), im ZENITH-Hintergrund und in Projekt Zenith steht er fast halb so groß wie das Z breit ist, in der Zentrale und in „Über das Telefon“ deutlich größer, in den Einstellungen unter der Überschrift gut lesbar.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Be Smarter, weiter (Hotfix)", Icons.Rounded.Settings, Pink,
+                    listOf(
+                        "Der nächste Termin an der Uhr: „Termin · 11:00 Zahnarzt“, „Morgen · 09:30 …“, „Jetzt · …“ oder „Heute · …“ bei ganztägigen. Ein-/ausschalten im Illuminati unter „Be Smarter · Uhr“; Android fragt dich dabei einmal nach dem Zugriff auf den Kalender (nichts wird ohne dein Okay freigegeben). Ein Tipp öffnet den Kalender.",
+                        "Apps selbst einsortieren: Im Menü einer App (Halten) steht jetzt „In ‚Spiele‘ verschieben“ – jeder Druck schiebt sie in die nächste Kategorie des Smart-Drawers –, und „Kategorie zurücksetzen“ bringt sie dorthin zurück, wo sie von selbst hingehört.",
+                        "Die Ecken der Widgets: ein Regler unter „Be Smarter · Startbildschirm“ von eckig bis sehr rund (0 bis 44 dp).",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "„Aim Higher.“ überall im System (Hotfix)", Icons.Rounded.Star, Orange,
                     listOf(
                         "Der Spruch von ZENITH steht jetzt dort, wo im System Platz für ihn ist – als stille Zeile in weit gesetzten Großbuchstaben:",
@@ -295,7 +313,7 @@ internal object HearthChangelog {
                 ChangeSection(
                     "Noch nicht dabei", Icons.Rounded.Edit, Slate,
                     listOf(
-                        "Aus Smart Launcher 6 fehlen noch: der nächste Termin des Kalenders an der Uhr (braucht die Berechtigung für den Kalender), „Your Feed“ (Nachrichten), der Private Space, das Widget-Paket mit Stapeln und Symbolgruppen, das Dock mit mehreren Reihen und Seiten, die Auswahl aus über zwanzig Symbolformen (hier drei) und „Thema bearbeiten“ mit freien Farben.",
+                        "Aus Smart Launcher 6 fehlen noch: „Your Feed“ (Nachrichten), der Private Space, das Widget-Paket mit Stapeln und Symbolgruppen, das Dock mit mehreren Reihen und Seiten, die Auswahl aus über zwanzig Symbolformen (hier drei) und „Thema bearbeiten“ mit freien Farben.",
                     ),
                     hearth,
                 ),

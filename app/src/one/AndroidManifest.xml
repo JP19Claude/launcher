@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- Be Smarter: the next event on the clock (asked for once, only when that switch is turned on) -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
 
     <queries>
         <!-- What Claude opens for you -->

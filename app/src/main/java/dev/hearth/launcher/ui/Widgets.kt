@@ -171,16 +171,19 @@ private fun WidgetCard(
     canMoveDown: Boolean,
 ) {
     val info = remember(widget.id) { repo.info(widget.id) }
+    // ZENITH 20.5, "Be Smarter": the widgets' corners are as round as set there.
+    val smart = LocalSettings.current
+    val corner = if (smart.beSmarter) smart.smartWidgetRadius.coerceIn(0, 44).dp else 28.dp
     Column {
         LiquidGlass(
-            cornerRadius = 28.dp,
+            cornerRadius = corner,
             refraction = 18.dp,
             blur = 20.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(widget.heightDp.dp)
-                .clip(RoundedCornerShape(28.dp))
-                .fluidWidget(28.dp),
+                .clip(RoundedCornerShape(corner))
+                .fluidWidget(corner),
             fluidEdge = false,
         ) {
             if (repo.isInternal(widget.id)) {

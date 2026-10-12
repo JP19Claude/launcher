@@ -454,9 +454,9 @@ fun ZentraleScreen(onClose: () -> Unit, onUpdate: ((LauncherSettings) -> Launche
                 Text(
                     ZenithSlogan.UPPER,
                     color = ZenithGreen,
-                    fontSize = 11.sp,
+                    fontSize = 17.sp,
                     fontFamily = HudFont,
-                    letterSpacing = 2.sp,
+                    letterSpacing = 5.sp,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 2.dp),
                 )
             }

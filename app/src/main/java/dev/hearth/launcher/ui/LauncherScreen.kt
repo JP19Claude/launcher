@@ -1599,6 +1599,11 @@ private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Un
     if (vm.folderOf(app.key) != null) {
         add(GlassMenuItem("Aus dem Ordner nehmen", Icons.Rounded.Close) { vm.removeFromFolder(app.key) })
     }
+    // Be Smarter: sort the app into another tab of the Smart drawer by hand.
+    val smartNow = vm.settings.value
+    if (smartNow.beSmarter) {
+        smartCategoryMenu(app, smartNow.smartCategories) { moved -> vm.updateSettings { it.copy(smartCategories = moved) } }.forEach { add(it) }
+    }
     add(GlassMenuItem("Auswählen", Icons.Rounded.CheckCircle, onClick = onSelect))
     add(GlassMenuItem("Ausblenden", Icons.Rounded.Clear) { vm.hide(app) })
     add(GlassMenuItem("Deinstallieren", Icons.Rounded.Delete, destructive = true) { vm.uninstall(app) })
@@ -1804,8 +1809,8 @@ private fun LargeClock(settings: LauncherSettings, modifier: Modifier = Modifier
  * with the weather (its picture and the temperature: "So., 11. Oktober ⛅ 10°C"), and under that the
  * next alarm; or compact, the time (with the date and the alarm) left and the weather right. A tap on
  * the date opens the calendar, on the weather the ZENITH-Zentrale, on the alarm the alarms. The weather
- * needs the place set once in the Zentrale. (Smart Launcher also shows the next event of the calendar
- * there; that needs the calendar's permission, which this launcher doesn't ask for.)
+ * needs the place set once in the Zentrale. With the switch on in the Illuminati (and the calendar's
+ * permission, asked for once there) the next event of the calendar stands there too.
  */
 @Composable
 private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier) {
@@ -1828,6 +1833,9 @@ private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier
             }
         }.getOrNull()
     }
+    // The next event of the calendar (if it's switched on and the calendar may be read).
+    val event by rememberNextEvent(settings.smartClockEvent, now.toLocalDate().toEpochDay() * 288L + now.hour * 12L + now.minute / 5)
+    val eventLine = event?.line()
     val openZentrale = { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ZentraleActivity::class.java)) }; Unit }
     val clockSize = settings.smartClockSize
     if (settings.smartClockLayout == SmartClockLayout.Compact) {
@@ -1857,6 +1865,17 @@ private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier
                     style = OnWallpaperText,
                     modifier = Modifier.clickable { openCalendar(context) },
                 )
+                if (eventLine != null) {
+                    Text(
+                        text = eventLine,
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        style = OnWallpaperText,
+                        modifier = Modifier.clickable { openCalendar(context) },
+                    )
+                }
                 if (alarm != null) {
                     Text(
                         text = "Wecker · $alarm",
@@ -1921,6 +1940,19 @@ private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier
                     )
                 }
             }
+        }
+        if (eventLine != null) {
+            Text(
+                text = eventLine,
+                color = Color.White.copy(alpha = 0.95f),
+                fontSize = 15.sp,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                style = OnWallpaperText,
+                modifier = Modifier
+                    .padding(top = 4.dp, start = 28.dp, end = 28.dp)
+                    .clickable { openCalendar(context) },
+            )
         }
         if (alarm != null) {
             Text(

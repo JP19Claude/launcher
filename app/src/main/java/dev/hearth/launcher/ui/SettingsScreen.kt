@@ -235,7 +235,7 @@ fun SettingsScreen(
                         )
                         // ZENITH 20.5: and under it, the saying.
                         if (s.showSlogan) {
-                            SloganLine(Modifier.padding(top = 6.dp), alpha = 0.5f, textAlign = androidx.compose.ui.text.style.TextAlign.Start)
+                            SloganLine(Modifier.padding(top = 6.dp), alpha = 0.75f, size = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Start)
                         }
                     }
                 }
@@ -1926,34 +1926,45 @@ private fun HearthCard(s: LauncherSettings) {
             },
         fluidEdge = false,
     ) {
-        Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-            // ZENITH 19: the Z with the sun, the version through it – held, it charges up; tapped
-            // as often as its number, it's the way into the Clawd Illuminati.
-            if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
-                val crystal = rememberCrystalTaps(version)
-                ZenithLogo(size = 84.dp, number = version.substringBefore('.'), onTap = crystal)
-            } else {
-                Box(
-                    Modifier
-                        .size(58.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(Brush.linearGradient(listOf(Color(0xFFFFB494), Color(0xFFFF6FB5), Color(0xFF8E6BFF), Color(0xFF3E91FF))))
-                        .glassSheen(18.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(HearthUi.major(version), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+        Column(Modifier.padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // ZENITH 19: the Z with the sun, the version through it – held, it charges up; tapped
+                // as often as its number, it's the way into the Clawd Illuminati.
+                if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
+                    val crystal = rememberCrystalTaps(version)
+                    ZenithLogo(size = 84.dp, number = version.substringBefore('.'), onTap = crystal)
+                } else {
+                    Box(
+                        Modifier
+                            .size(58.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Brush.linearGradient(listOf(Color(0xFFFFB494), Color(0xFFFF6FB5), Color(0xFF8E6BFF), Color(0xFF3E91FF))))
+                            .glassSheen(18.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(HearthUi.major(version), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    }
                 }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(phone, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    Text("$product $version", color = TextSecondary, fontSize = 13.sp)
+                    Text(
+                        "${dev.hearth.launcher.data.ClaudeOs.full} „${dev.hearth.launcher.data.ClaudeOs.CODENAME}“",
+                        style = androidx.compose.ui.text.TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+                    )
+                }
+                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
             }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(phone, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                Text("$product $version", color = TextSecondary, fontSize = 13.sp)
-                Text(
-                    "${dev.hearth.launcher.data.ClaudeOs.full} „${dev.hearth.launcher.data.ClaudeOs.CODENAME}“",
-                    style = androidx.compose.ui.text.TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+            // ZENITH 20.5: the system's saying, big on the system card.
+            if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
+                SloganBanner(
+                    Modifier.padding(top = 14.dp, start = 2.dp),
+                    accent = if (versionNumber(version) >= 20f) ZenithCardSpec.Jubilee.accent else ZenithGreen,
+                    size = 36.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Start,
                 )
             }
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
         }
     }
 }

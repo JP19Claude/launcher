@@ -329,10 +329,12 @@ fun ZenithVersionHero(
         }
     }
     val shape = androidx.compose.foundation.shape.RoundedCornerShape(30.dp)
+    // ZENITH 20.5: the saying stands big on the card – a little taller for it.
+    val saying = dev.hearth.launcher.BuildConfig.ALL_IN_ONE
     androidx.compose.foundation.layout.BoxWithConstraints(
         modifier
             .fillMaxWidth()
-            .aspectRatio(aspect)
+            .aspectRatio(if (saying) aspect * 0.88f else aspect)
             .graphicsLayer {
                 val c = charge.value
                 scaleX = 1f + 0.02f * c
@@ -344,7 +346,7 @@ fun ZenithVersionHero(
         val cardWidth = maxWidth
         look?.aurora?.let { ZenithAurora(it, Modifier.matchParentSize(), strength = 0.75f) }
         Column(
-            Modifier.fillMaxWidth().padding(top = maxHeight * 0.1f),
+            Modifier.fillMaxWidth().padding(top = maxHeight * (if (saying) 0.075f else 0.1f)),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // The Z, as wide as the card allows, the version set into it; held, it spreads wider still.
@@ -376,6 +378,10 @@ fun ZenithVersionHero(
                     modifier = Modifier.padding(top = 6.dp),
                 )
             }
+            // ZENITH 20.5: "Aim Higher." – big, in the card's color.
+            if (saying) {
+                SloganBanner(Modifier.padding(top = 16.dp), accent = look?.accent ?: ZenithGreen, size = 40.sp)
+            }
         }
         // The fireworks, over the card.
         if (look != null) {
@@ -398,7 +404,7 @@ fun ZenithVersionHero(
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = maxHeight * 0.1f),
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = maxHeight * (if (saying) 0.05f else 0.1f)),
             )
         }
     }

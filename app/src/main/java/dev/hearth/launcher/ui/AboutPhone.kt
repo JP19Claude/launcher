@@ -366,11 +366,11 @@ fun AboutPhoneScreen(onClose: () -> Unit) {
                     // ZENITH 20: its saying.
                     Text(
                         dev.hearth.launcher.data.ZenithSlogan.UPPER,
-                        color = ZenithGreen.copy(alpha = 0.9f),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 4.sp,
-                        modifier = Modifier.padding(top = 4.dp),
+                        color = ZenithGreen,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 7.sp,
+                        modifier = Modifier.padding(top = 6.dp),
                     )
                 }
                 Spacer(Modifier.height(4.dp))

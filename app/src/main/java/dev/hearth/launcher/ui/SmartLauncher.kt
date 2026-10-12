@@ -306,8 +306,9 @@ private val CommunicationHints = listOf(
     "k9mail", "com.android.phone", "telecom",
 )
 
-/** Which tab an app belongs to, by what it declares and what it is called. */
-private fun smartCategoryOf(app: AppInfo): SmartCategory {
+/** Which tab an app belongs to: the one it was moved to, else by what it declares and what it is called. */
+private fun smartCategoryOf(app: AppInfo, moved: Map<String, Int> = emptyMap()): SmartCategory {
+    moved[app.packageName]?.let { tab -> SmartCategory.entries.getOrNull(tab)?.let { return it } }
     val pkg = app.packageName.lowercase()
     if (pkg == "com.android.settings" || pkg.endsWith(".settings") || pkg.contains(".settings.") || app.component.className.endsWith(".SettingsShortcutActivity")) {
         return SmartCategory.Preferences
@@ -318,6 +319,22 @@ private fun smartCategoryOf(app: AppInfo): SmartCategory {
         LibraryCategory.Games -> SmartCategory.Games
         LibraryCategory.Entertainment, LibraryCategory.Creativity -> SmartCategory.Media
         else -> SmartCategory.Utilities
+    }
+}
+
+/**
+ * ZENITH 20.5: the app menu's way to move an app to another tab of the drawer (Smart Launcher lets you
+ * sort them by hand): the app goes to the next tab on each press, and "Kategorie zurücksetzen" brings
+ * it back to where it belongs by itself. [save] gets the new list of moved apps.
+ */
+internal fun smartCategoryMenu(app: AppInfo, moved: Map<String, Int>, save: (Map<String, Int>) -> Unit): List<GlassMenuItem> {
+    val here = smartCategoryOf(app, moved)
+    val next = SmartCategory.entries[(here.ordinal + 1) % SmartCategory.entries.size]
+    return buildList {
+        add(GlassMenuItem("In „${next.title}“ verschieben", Icons.Rounded.Edit) { save(moved + (app.packageName to next.ordinal)) })
+        if (app.packageName in moved) {
+            add(GlassMenuItem("Kategorie zurücksetzen", Icons.Rounded.Home) { save(moved - app.packageName) })
+        }
     }
 }
 
@@ -361,7 +378,8 @@ fun SmartDrawer(
     // The names stand under the icons here (if wanted), though the home screen goes without them.
     val shown = remember(settings) { settings.copy(showLabels = settings.smartDrawerNames) }
 
-    val byCategory = remember(apps) { apps.sortedBy { it.label.lowercase() }.groupBy { smartCategoryOf(it) } }
+    val moved = settings.smartCategories
+    val byCategory = remember(apps, moved) { apps.sortedBy { it.label.lowercase() }.groupBy { smartCategoryOf(it, moved) } }
     val pagerState = rememberPagerState(initialPage = rememberedTab.coerceIn(0, SmartCategory.entries.size - 1)) { SmartCategory.entries.size }
     LaunchedEffect(pagerState.currentPage) { rememberedTab = pagerState.currentPage }
 
@@ -843,6 +861,7 @@ internal fun SmartSection(settings: LauncherSettings, onChange: ((LauncherSettin
         IntSlider("Spalten", settings.columns, 3..6) { v -> onChange { it.copy(columns = v) } }
         IntSlider("Reihen", settings.rows, 4..8) { v -> onChange { it.copy(rows = v) } }
         IlluminationSwitch("⌕", "Smart-Suche", "Die Pille „Smart-Suche“ ganz unten, unter dem Dock.", settings.showSearchPill) { v -> onChange { it.copy(showSearchPill = v) } }
+        SliderRow("Ecken der Widgets", settings.smartWidgetRadius.toFloat(), 0f..44f, "${settings.smartWidgetRadius} dp") { v -> onChange { it.copy(smartWidgetRadius = v.roundToInt()) } }
     }
 
     IlluminationSection("Be Smarter · Uhr") {
@@ -851,6 +870,22 @@ internal fun SmartSection(settings: LauncherSettings, onChange: ((LauncherSettin
         IlluminatiChoice("Aa", "Schrift der Uhr", ClockFont.entries, settings.clockFont, { it.label }) { font -> onChange { it.copy(clockFont = font) } }
         IlluminationSwitch("☁", "Wetter an der Uhr", "Bild und Temperatur hinter dem Datum (der Ort steht in der Zentrale).", settings.smartClockWeather) { v -> onChange { it.copy(smartClockWeather = v) } }
         IlluminationSwitch("⏰", "Wecker an der Uhr", "Die Zeile „Wecker · 07:00“ unter dem Datum.", settings.smartClockAlarm) { v -> onChange { it.copy(smartClockAlarm = v) } }
+        // The calendar's permission is asked once, here, by the system's own dialog – nothing is granted behind your back.
+        val context = LocalContext.current
+        val calendarAllowed = {
+            androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CALENDAR) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+        val askCalendar = androidx.activity.compose.rememberLauncherForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+        ) { ok -> onChange { it.copy(smartClockEvent = ok) } }
+        IlluminationSwitch(
+            "📅", "Nächster Termin an der Uhr",
+            "Die Zeile „Termin · 11:00 Zahnarzt“ aus deinem Kalender. Android fragt dich einmal nach dem Zugriff auf den Kalender.",
+            settings.smartClockEvent && calendarAllowed(),
+        ) { v ->
+            if (v && !calendarAllowed()) askCalendar.launch(android.Manifest.permission.READ_CALENDAR) else onChange { it.copy(smartClockEvent = v) }
+        }
     }
 
     IlluminationSection("Be Smarter · Drawer") {

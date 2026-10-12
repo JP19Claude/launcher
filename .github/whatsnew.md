@@ -1,6 +1,11 @@
 ZENITH 20.5 „Be Smarter“ auf ClaudeOS 7.0 „Apex“
 
 ✨ Neu im Hotfix
+• „Aim Higher.“ groß auf der Systemkarte: oben in den Einstellungen (auf der Karte mit dem Z, dem Handy und der Version), auf der Versionskarte in „Über das Telefon“ und im Software-Update – in schweren, schrägen Buchstaben in der Farbe der Karte, mit einem Lichtband darüber
+• Der Spruch überall deutlich sichtbarer: größer und heller auf Startbildschirm, Sperrbildschirm, Z-Nacht und im Blatt des Startbildschirms, groß im ZENITH-Hintergrund und in Projekt Zenith, in der Zentrale und in „Über das Telefon“
+• Be Smarter: der nächste Termin an der Uhr („Termin · 11:00 Zahnarzt“; einschaltbar im Illuminati, Android fragt einmal nach dem Zugriff auf den Kalender)
+• Be Smarter: Apps im Menü (Halten) in eine andere Kategorie des Smart-Drawers verschieben, und zurücksetzen
+• Be Smarter: die Ecken der Widgets einstellbar (0 bis 44 dp)
 • „Aim Higher.“ überall im System: auf dem Startbildschirm und in seinem Hintergrund (ZENITH-Hintergrund, Projekt Zenith), auf dem Sperrbildschirm und dem Always-On-Display, in den Einstellungen, in der Z-Nacht, im Illuminati, im Blatt des Startbildschirms und beim Z-Angriff – abschaltbar unter Einstellungen → ZENITH
 • Noch einmal gegen die Wartezeit nach dem Schließen: Glimmers Anfragen legen keine Einstellungs-Leser mehr an (jeder las alles und blieb bis zur Speicherbereinigung hängen), die Suche nach alten Apps läuft einmal pro Start, Glas und fließende Farben gehen die ersten Zehntelsekunden nach dem Zurückkommen leicht
 • Kein Warten mehr nach dem Schließen einer App: die Widgets bleiben angeschlossen (sie wurden nach 15 Sekunden getrennt und beim Zurückkommen alle auf einmal neu gezeichnet), Be Smarter spielt keine eigene Schließ-Animation und macht keine Bilder der App (außer mit „Glimmer ins System binden“), die flachen Themes zeichnen ohne Linsen-Shader, Apps starten nicht mehr auf dem Hauptthread
@@ -12,7 +17,7 @@ ZENITH 20.5 „Be Smarter“ auf ClaudeOS 7.0 „Apex“
 • Der Drawer sitzt tief: groß der Name der Kategorie mit Suche, Store und Menü, die Apps in vier Spalten, unten die Leiste mit sechs Kategorien (Kommunikation, Social, Spiele, Medien, Dienstprogramme, Einstellungen)
 • Fünf Themes wie dort: Ambient Design, Material You, Frostetes Glas, Opakisches Glas, Liquid Glass – mit den Reglern Unschärferadius, Lebendigkeit verwischen, Brechung, Tiefe und Streuung
 • Halten auf dem Startbildschirm öffnet das Blatt „Startbildschirm“ von unten
-• Noch nicht dabei: Kalender-Termin an der Uhr, Your Feed, Private Space, Widget-Paket, Dock mit mehreren Reihen, freie Symbolformen und Farben
+• Noch nicht dabei: Your Feed, Private Space, Widget-Paket, Dock mit mehreren Reihen, freie Symbolformen und Farben
 
 ✨ Neu in 20.5
 • Be Smarter: ein Modus im Clawd Illuminati (Versionsnummer in „Über das Telefon“ antippen), der aus dem Launcher Smart Launcher 6 macht – ohne dass etwas von dem überschrieben wird, was du gewählt hast. Aus: alles wie vorher

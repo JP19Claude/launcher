@@ -257,6 +257,14 @@ fun LauncherSettings.withSmartGlass(glass: SmartGlass): LauncherSettings = copy(
 val LauncherSettings.showSlogan: Boolean get() = sloganEverywhere && dev.hearth.launcher.BuildConfig.ALL_IN_ONE
 
 /** Apps open the moment they are tapped (only in "Be Smarter", and only while that is chosen). */
+/** The drawer's moved apps as they are kept: "package=tab;package=tab". */
+fun parseSmartCategories(text: String?): Map<String, Int> =
+    text.orEmpty().split(';').mapNotNull { part ->
+        val at = part.lastIndexOf('=')
+        val tab = if (at > 0) part.substring(at + 1).toIntOrNull() else null
+        if (tab == null) null else part.substring(0, at) to tab
+    }.toMap()
+
 val LauncherSettings.instantOpen: Boolean get() = beSmarter && smartInstant
 
 /**
@@ -806,6 +814,12 @@ data class LauncherSettings(
     val smartInstant: Boolean = true,
     /** Glimmer bound into the whole system: its fly-in over every launcher, in the Smart style. */
     val smartGlimmer: Boolean = false,
+    /** The clock shows the next event of the calendar ("Termin · 11:00 Zahnarzt"; asks the calendar's permission once). */
+    val smartClockEvent: Boolean = false,
+    /** How round the widgets' corners are (dp). */
+    val smartWidgetRadius: Int = 28,
+    /** Apps the user moved to another tab of the drawer: package name → the tab's number. */
+    val smartCategories: Map<String, Int> = emptyMap(),
     /** ZENITH 20.5: the saying "Aim Higher." in every place of the system that has room for it. */
     val sloganEverywhere: Boolean = true,
     /** ZENITH 19: after the phone starts, the Z lights up once before the home screen. */
@@ -1405,6 +1419,9 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             smartTint = prefs.getFloat("smartTint", d.smartTint),
             smartInstant = prefs.getBoolean("smartInstant", d.smartInstant),
             smartGlimmer = prefs.getBoolean("smartGlimmer", d.smartGlimmer),
+            smartClockEvent = prefs.getBoolean("smartClockEvent", d.smartClockEvent),
+            smartWidgetRadius = prefs.getInt("smartWidgetRadius", d.smartWidgetRadius),
+            smartCategories = parseSmartCategories(prefs.getString("smartCategories", null)),
             sloganEverywhere = prefs.getBoolean("sloganEverywhere", d.sloganEverywhere),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
             zenithStrike = prefs.getBoolean("zenithStrike", d.zenithStrike),
@@ -1631,6 +1648,9 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putFloat("smartTint", s.smartTint)
             .putBoolean("smartInstant", s.smartInstant)
             .putBoolean("smartGlimmer", s.smartGlimmer)
+            .putBoolean("smartClockEvent", s.smartClockEvent)
+            .putInt("smartWidgetRadius", s.smartWidgetRadius)
+            .putString("smartCategories", s.smartCategories.entries.joinToString(";") { "${it.key}=${it.value}" })
             .putBoolean("sloganEverywhere", s.sloganEverywhere)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("zenithStrike", s.zenithStrike)
