@@ -1,6 +1,9 @@
 ZENITH 20.5 „Be Smarter“ auf ClaudeOS 7.0 „Apex“
 
 ✨ Neu im Hotfix
+• Be Smarter nach der echten Smart-Launcher-6.6-Datei umgebaut: Maße (Leiste 64 dp, Knöpfe 48 dp, Blatt 24 dp rund), App-Öffnen wie dort (125 ms, 90 → 100 %, der Startbildschirm tritt auf 110 % zurück), eigene Suche im Drawer (Lupe → Suchfeld, filtert alle Kategorien)
+• Neu im Drawer: Kategorieleiste, Kategorientitel, letzte Kategorie geöffnet, sechs Übergangseffekte der Kategorien, Abstand zwischen den Icons
+• Neu am Startbildschirm: Indikator ein/aus, Lesbarkeit verbessern, Eckenradius der Widgets; an der Uhr: Stundenformat, Fahrenheit, ganztägige Ereignisse ausblenden
 • „Aim Higher.“ groß auf der Systemkarte: oben in den Einstellungen (auf der Karte mit dem Z, dem Handy und der Version), auf der Versionskarte in „Über das Telefon“ und im Software-Update – in schweren, schrägen Buchstaben in der Farbe der Karte, mit einem Lichtband darüber
 • Der Spruch überall deutlich sichtbarer: größer und heller auf Startbildschirm, Sperrbildschirm, Z-Nacht und im Blatt des Startbildschirms, groß im ZENITH-Hintergrund und in Projekt Zenith, in der Zentrale und in „Über das Telefon“
 • Be Smarter: der nächste Termin an der Uhr („Termin · 11:00 Zahnarzt“; einschaltbar im Illuminati, Android fragt einmal nach dem Zugriff auf den Kalender)

@@ -28,7 +28,7 @@ import java.util.Locale
 internal class SmartEvent(val title: String, val begin: Long, val allDay: Boolean)
 
 /** The event that is on now or comes next (an all-day event of today only when nothing with a time is left). */
-internal fun nextCalendarEvent(context: Context, now: Long = System.currentTimeMillis()): SmartEvent? {
+internal fun nextCalendarEvent(context: Context, hideAllDay: Boolean = false, now: Long = System.currentTimeMillis()): SmartEvent? {
     if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) return null
     val uri = CalendarContract.Instances.CONTENT_URI.buildUpon().also {
         ContentUris.appendId(it, now)
@@ -54,6 +54,7 @@ internal fun nextCalendarEvent(context: Context, now: Long = System.currentTimeM
                 val begin = c.getLong(1)
                 val end = c.getLong(2)
                 if (c.getInt(3) == 1) {
+                    if (hideAllDay) continue
                     // All-day events are kept in UTC: look at their days, not their hours.
                     val first = Instant.ofEpochMilli(begin).atZone(ZoneOffset.UTC).toLocalDate()
                     val last = Instant.ofEpochMilli(end).atZone(ZoneOffset.UTC).toLocalDate().minusDays(1)
@@ -83,9 +84,9 @@ internal fun SmartEvent.line(now: Long = System.currentTimeMillis(), locale: Loc
 
 /** The next event while [enabled]; looked up again every five minutes ([slot] changes) off the main thread. */
 @Composable
-internal fun rememberNextEvent(enabled: Boolean, slot: Long): State<SmartEvent?> {
+internal fun rememberNextEvent(enabled: Boolean, hideAllDay: Boolean, slot: Long): State<SmartEvent?> {
     val context = LocalContext.current.applicationContext
-    return produceState<SmartEvent?>(null, enabled, slot) {
-        value = if (enabled) withContext(Dispatchers.IO) { nextCalendarEvent(context) } else null
+    return produceState<SmartEvent?>(null, enabled, hideAllDay, slot) {
+        value = if (enabled) withContext(Dispatchers.IO) { nextCalendarEvent(context, hideAllDay) } else null
     }
 }

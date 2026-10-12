@@ -193,6 +193,26 @@ internal object HearthChangelog {
             summary = "Das große Update: Im Illuminati gibt es jetzt „Be Smarter“ – ein Modus, der aus dem Launcher Smart Launcher 6 macht, nach dessen Vorbild: seine Uhr mit Datum, Wetter und Wecker, Icons ohne Namen, die Smart-Suche, der Drawer mit der Leiste der sechs Kategorien, seine fünf Themes bis zum Liquid Glass mit Reglern, Apps ohne Verzögerung und Glimmer als Teil des ganzen Systems.",
             sections = listOf(
                 ChangeSection(
+                    "Be Smarter nach der Smart-Launcher-APK (Hotfix)", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Be Smarter ist nach der echten Smart-Launcher-6.6-Datei umgebaut, die du hochgeladen hast. Ich konnte sie nicht laufen lassen, aber ihre Dateien lesen: Maße, Farben, Zeiten und die Namen ihrer Einstellungen. Nachgebaut ist alles mit eigenem Code; übernommen habe ich nur Zahlen und Namen, keine Grafiken und keinen Programmcode.",
+                        "Maße aus der Datei: die Leiste des Drawers ist 64 dp hoch mit 48-dp-Knöpfen, der Name der Kategorie bis 28 sp, die Ränder 8 dp; das Blatt des Startbildschirms hat 24 dp Rundung und eine feine Umrandung.",
+                        "Apps öffnen sich wie dort: 125 Millisekunden, die App wächst aus 90 Prozent ein und blendet ein, der Startbildschirm tritt auf 110 Prozent zurück – ohne die 50 Millisekunden Warten davor.",
+                        "Der Drawer hat jetzt seine eigene Suche: Die Lupe macht aus dem Namen der Kategorie ein Suchfeld (48 dp hoch, 28 dp rund, feine Umrandung), gefiltert wird über alle Kategorien; Enter startet die einzige übrige App, ein Kreuz schließt die Suche.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Neue Einstellungen aus der Smart-Launcher-APK (Hotfix)", Icons.Rounded.Settings, Pink,
+                    listOf(
+                        "Drawer: „Kategorieleiste“ (aus: eine Liste mit allen Apps), „Kategorientitel“ (der Name unter dem Zeichen), „Letzte Kategorie geöffnet“, „Übergangseffekt der Kategorien“ (Schieben, Überblenden, Zoomen, Drehen, 3D-Wendung, Strecken) und „Abstand zwischen den Icons“.",
+                        "Startbildschirm: „Zeige Indikator“ für die Seitenpunkte, „Lesbarkeit verbessern“ (ein dunklerer Schleier über hellen Hintergründen) und der „Eckenradius der Widgets“.",
+                        "Uhr: „Stundenformat“ (wie im System, 24 oder 12 Stunden), „Temperatur in Fahrenheit“ und „Ganztägige Ereignisse ausblenden“.",
+                        "Gezeichnet ist das meiste im Smart Launcher in seinem Programmcode, nicht in Dateien – wo etwas noch anders aussieht, hilft ein Bildschirmfoto.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "„Aim Higher.“ groß auf der Systemkarte (Hotfix)", Icons.Rounded.Star, Orange,
                     listOf(
                         "Oben in den Einstellungen, auf der Karte mit dem Z, deinem Handy und der Versionsnummer, steht jetzt groß „Aim Higher.“ – in schweren, schrägen Buchstaben wie das Z, in der Farbe der Karte (Gold im Jubiläum), mit einem Lichtband, das darüberläuft.",

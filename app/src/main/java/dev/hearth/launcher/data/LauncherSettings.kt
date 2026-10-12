@@ -201,6 +201,23 @@ enum class SmartClockLayout(val label: String) {
     Compact("Kompakt (Zeit links, Wetter rechts)"),
 }
 
+/** ZENITH 20.5, "Übergangseffekt der Kategorien": how the pages of the Smart drawer move into one another. */
+enum class SmartPageEffect(val label: String) {
+    Slide("Schieben"),
+    Fade("Überblenden"),
+    Zoom("Zoomen"),
+    Rotate("Drehen"),
+    Flip("3D-Wendung"),
+    Stretch("Strecken"),
+}
+
+/** ZENITH 20.5, "Stundenformat" of the Smart clock. */
+enum class SmartHours(val label: String) {
+    System("Wie im System"),
+    H24("24 Stunden"),
+    H12("12 Stunden"),
+}
+
 /** ZENITH 20.5, "Thema bearbeiten": the color Ambient Design tints its surfaces with – the wallpaper's, or one of these. */
 enum class SmartColor(val label: String, val color: Color?) {
     Auto("Wie das Hintergrundbild", null),
@@ -317,6 +334,8 @@ fun LauncherSettings.withSmartLook(): LauncherSettings = if (!beSmarter) {
             // Ambient Design and Material You tint the glass with their own color (see the home screen).
             SmartGlass.Ambient, SmartGlass.MaterialYou -> GlassTint.Dark
         },
+        // "Lesbarkeit verbessern": a darker veil over the wallpaper, for light ones.
+        dimWallpaper = if (smartReadable) maxOf(dimWallpaper, 0.42f) else dimWallpaper,
         // Swiping down from the middle brings the search and the apps you might want next.
         swipeDownAction = SwipeDownAction.Search,
         glassBlur = smartBlur,
@@ -820,6 +839,20 @@ data class LauncherSettings(
     val smartWidgetRadius: Int = 28,
     /** Apps the user moved to another tab of the drawer: package name → the tab's number. */
     val smartCategories: Map<String, Int> = emptyMap(),
+    /** The drawer: the bar of the categories, its titles, remembering the last one, the pages' effect, the room between rows. */
+    val smartCategoryBar: Boolean = true,
+    val smartCategoryTitles: Boolean = false,
+    val smartLastCategory: Boolean = true,
+    val smartPageEffect: SmartPageEffect = SmartPageEffect.Slide,
+    val smartItemSpacing: Int = 0,
+    /** The dots that show the page you are on. */
+    val smartIndicator: Boolean = true,
+    /** "Lesbarkeit verbessern": a darker veil over the wallpaper. */
+    val smartReadable: Boolean = false,
+    /** The clock: °F instead of °C, the hours' format, no all-day events in the line of the next event. */
+    val smartFahrenheit: Boolean = false,
+    val smartHours: SmartHours = SmartHours.System,
+    val smartHideAllDay: Boolean = false,
     /** ZENITH 20.5: the saying "Aim Higher." in every place of the system that has room for it. */
     val sloganEverywhere: Boolean = true,
     /** ZENITH 19: after the phone starts, the Z lights up once before the home screen. */
@@ -1422,6 +1455,16 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             smartClockEvent = prefs.getBoolean("smartClockEvent", d.smartClockEvent),
             smartWidgetRadius = prefs.getInt("smartWidgetRadius", d.smartWidgetRadius),
             smartCategories = parseSmartCategories(prefs.getString("smartCategories", null)),
+            smartCategoryBar = prefs.getBoolean("smartCategoryBar", d.smartCategoryBar),
+            smartCategoryTitles = prefs.getBoolean("smartCategoryTitles", d.smartCategoryTitles),
+            smartLastCategory = prefs.getBoolean("smartLastCategory", d.smartLastCategory),
+            smartPageEffect = enumOf("smartPageEffect", d.smartPageEffect),
+            smartItemSpacing = prefs.getInt("smartItemSpacing", d.smartItemSpacing),
+            smartIndicator = prefs.getBoolean("smartIndicator", d.smartIndicator),
+            smartReadable = prefs.getBoolean("smartReadable", d.smartReadable),
+            smartFahrenheit = prefs.getBoolean("smartFahrenheit", d.smartFahrenheit),
+            smartHours = enumOf("smartHours", d.smartHours),
+            smartHideAllDay = prefs.getBoolean("smartHideAllDay", d.smartHideAllDay),
             sloganEverywhere = prefs.getBoolean("sloganEverywhere", d.sloganEverywhere),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
             zenithStrike = prefs.getBoolean("zenithStrike", d.zenithStrike),
@@ -1651,6 +1694,16 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putBoolean("smartClockEvent", s.smartClockEvent)
             .putInt("smartWidgetRadius", s.smartWidgetRadius)
             .putString("smartCategories", s.smartCategories.entries.joinToString(";") { "${it.key}=${it.value}" })
+            .putBoolean("smartCategoryBar", s.smartCategoryBar)
+            .putBoolean("smartCategoryTitles", s.smartCategoryTitles)
+            .putBoolean("smartLastCategory", s.smartLastCategory)
+            .putString("smartPageEffect", s.smartPageEffect.name)
+            .putInt("smartItemSpacing", s.smartItemSpacing)
+            .putBoolean("smartIndicator", s.smartIndicator)
+            .putBoolean("smartReadable", s.smartReadable)
+            .putBoolean("smartFahrenheit", s.smartFahrenheit)
+            .putString("smartHours", s.smartHours.name)
+            .putBoolean("smartHideAllDay", s.smartHideAllDay)
             .putBoolean("sloganEverywhere", s.sloganEverywhere)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("zenithStrike", s.zenithStrike)

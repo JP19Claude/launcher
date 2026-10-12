@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- "Be Smarter": an app comes in at once – a quick fade and the smallest lift, no wait. -->
+<!-- "Be Smarter": an app comes in at once, the way Smart Launcher 6's own windows do – 125 ms,
+     a fade from nothing and a settling from 90 % to full size (its default_open_enter_anim), without
+     the 50 ms wait in front of it. -->
 <set xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shareInterpolator="false">
+    android:interpolator="@android:anim/accelerate_decelerate_interpolator"
+    android:shareInterpolator="true">
     <alpha
-        android:duration="130"
+        android:duration="125"
         android:fromAlpha="0.0"
-        android:interpolator="@android:interpolator/decelerate_cubic"
         android:toAlpha="1.0" />
     <scale
-        android:duration="170"
-        android:fromXScale="0.95"
-        android:fromYScale="0.95"
-        android:interpolator="@android:interpolator/decelerate_cubic"
-        android:pivotX="50%"
-        android:pivotY="50%"
+        android:duration="125"
+        android:fromXScale="0.9"
+        android:fromYScale="0.9"
+        android:pivotX="50%p"
+        android:pivotY="50%p"
         android:toXScale="1.0"
         android:toYScale="1.0" />
 </set>

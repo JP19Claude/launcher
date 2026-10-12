@@ -173,6 +173,7 @@ import dev.hearth.launcher.data.colorOsLook
 import dev.hearth.launcher.data.withColorOsLook
 import dev.hearth.launcher.data.withSmartLook
 import dev.hearth.launcher.data.SmartClockLayout
+import dev.hearth.launcher.data.SmartHours
 import dev.hearth.launcher.data.instantOpen
 import dev.hearth.launcher.data.showSlogan
 import kotlinx.coroutines.delay
@@ -1044,7 +1045,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             if (settings.showSlogan) {
                                 SloganLine(Modifier.padding(bottom = 8.dp))
                             }
-                            if (widgetPages + pages.size + libraryPages > 1) {
+                            if (widgetPages + pages.size + libraryPages > 1 && (!settings.beSmarter || settings.smartIndicator)) {
                                 PageDots(
                                     count = widgetPages + pages.size + libraryPages,
                                     position = { pagerState.currentPage + pagerState.currentPageOffsetFraction },
@@ -1816,12 +1817,22 @@ private fun LargeClock(settings: LauncherSettings, modifier: Modifier = Modifier
 private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier) {
     val now by rememberNow()
     val locale = Locale.getDefault()
-    val time = remember(now) { now.format(DateTimeFormatter.ofPattern("HH:mm", locale)) }
+    val context = LocalContext.current
+    // "Stundenformat": the system's, or 24 or 12 hours.
+    val hourPattern = when (settings.smartHours) {
+        SmartHours.H24 -> "HH:mm"
+        SmartHours.H12 -> "h:mm"
+        SmartHours.System -> if (android.text.format.DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm"
+    }
+    val time = remember(now, hourPattern) { now.format(DateTimeFormatter.ofPattern(hourPattern, locale)) }
     val date = remember(now) {
         now.format(DateTimeFormatter.ofPattern("EEE, d. MMMM", locale)).replaceFirstChar { it.titlecase(locale) }
     }
     val weather = if (settings.smartClockWeather) rememberWeather() else null
-    val context = LocalContext.current
+    // "Temperatureinheit".
+    val degrees = { celsius: Double ->
+        if (settings.smartFahrenheit) "${(celsius * 9.0 / 5.0 + 32.0).roundToInt()}°F" else "${celsius.roundToInt()}°C"
+    }
     // The next alarm: just the time when it rings today, with the day otherwise.
     val alarm = remember(now, settings.smartClockAlarm) {
         if (!settings.smartClockAlarm) return@remember null
@@ -1834,7 +1845,7 @@ private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier
         }.getOrNull()
     }
     // The next event of the calendar (if it's switched on and the calendar may be read).
-    val event by rememberNextEvent(settings.smartClockEvent, now.toLocalDate().toEpochDay() * 288L + now.hour * 12L + now.minute / 5)
+    val event by rememberNextEvent(settings.smartClockEvent, settings.smartHideAllDay, now.toLocalDate().toEpochDay() * 288L + now.hour * 12L + now.minute / 5)
     val eventLine = event?.line()
     val openZentrale = { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ZentraleActivity::class.java)) }; Unit }
     val clockSize = settings.smartClockSize
@@ -1890,7 +1901,7 @@ private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier
                 Row(Modifier.clickable { openZentrale() }, verticalAlignment = Alignment.CenterVertically) {
                     WeatherGlyph(w.code, w.night, Modifier.size(34.dp))
                     Text(
-                        text = " ${w.now.roundToInt()}°C",
+                        text = " ${degrees(w.now)}",
                         color = Color.White,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Medium,
@@ -1932,7 +1943,7 @@ private fun SmartClock(settings: LauncherSettings, modifier: Modifier = Modifier
                     Spacer(Modifier.width(8.dp))
                     WeatherGlyph(w.code, w.night, Modifier.size(26.dp))
                     Text(
-                        text = " ${w.now.roundToInt()}°C",
+                        text = " ${degrees(w.now)}",
                         color = Color.White,
                         fontSize = 19.sp,
                         fontWeight = FontWeight.Medium,
