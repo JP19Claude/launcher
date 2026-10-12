@@ -1295,6 +1295,13 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
     private val appContext = context.applicationContext
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    // ZENITH Smart: "Be Smarter" is on from its first start (once – after that it is for the user to switch).
+    init {
+        if (dev.hearth.launcher.BuildConfig.SMART && !prefs.getBoolean("smartVariantApplied", false)) {
+            prefs.edit().putBoolean("beSmarter", true).putBoolean("smartVariantApplied", true).apply()
+        }
+    }
+
     private val _settings = MutableStateFlow(read())
     val settings: StateFlow<LauncherSettings> = _settings.asStateFlow()
 

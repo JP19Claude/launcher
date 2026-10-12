@@ -215,6 +215,11 @@ fun LauncherScreen(vm: LauncherViewModel) {
     // Galaxy × Claude: One UI's edit mode (long press on the home screen).
     var editMode by remember { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
+    // Be Smarter / ZENITH Smart: the settings are Smart Launcher's; from ClaudeOS and ZENITH in them ZENITH's own
+    // settings open (on [zenithPage], or on their start page), and back leads to Smart's again.
+    var zenithOpen by remember { mutableStateOf(false) }
+    var zenithPage by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(settingsOpen) { if (!settingsOpen) zenithOpen = false }
     var controlOpen by rememberSaveable { mutableStateOf(false) }
     var controlPage by remember { mutableIntStateOf(0) }
     // The app that was just closed, flying into Glimmer.
@@ -578,6 +583,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
             selecting -> endSelection()
             openFolder != null -> openFolder = null
             controlOpen -> controlOpen = false
+            settingsOpen && zenithOpen -> zenithOpen = false
             settingsOpen -> settingsOpen = false
             searchOpen -> searchOpen = false
             else -> drawerOpen = false
@@ -1283,12 +1289,25 @@ fun LauncherScreen(vm: LauncherViewModel) {
                         LocalSettings provides (settingsLook ?: LocalSettings.current),
                         LocalGlassStyle provides (settingsLook?.let { GlassStyle.from(it) } ?: LocalGlassStyle.current),
                     ) {
-                        SettingsScreen(
-                            vm = vm,
-                            needsWallpaperAccess = needsWallpaperAccess,
-                            onRequestWallpaperAccess = requestWallpaperAccess,
-                            onClose = { settingsOpen = false },
-                        )
+                        if (settings.beSmarter && !zenithOpen) {
+                            SmartSettingsScreen(
+                                vm = vm,
+                                onClose = { settingsOpen = false },
+                                onZenith = { target ->
+                                    zenithPage = target
+                                    zenithOpen = true
+                                },
+                            )
+                        } else {
+                            SettingsScreen(
+                                vm = vm,
+                                needsWallpaperAccess = needsWallpaperAccess,
+                                onRequestWallpaperAccess = requestWallpaperAccess,
+                                onClose = { if (zenithOpen) zenithOpen = false else settingsOpen = false },
+                                initialPage = if (zenithOpen) zenithPage else null,
+                                fromSmart = zenithOpen,
+                            )
+                        }
                     }
                 }
             }

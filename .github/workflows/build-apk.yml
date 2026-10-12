@@ -23,15 +23,16 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build debug APKs (Hearth, Glimmer, Clawd, Duftschrank, Hearth UI)
+      - name: Build debug APKs (Hearth, Glimmer, Clawd, Duftschrank, ZENITH, ZENITH Smart)
         run: |
           chmod +x gradlew
-          ./gradlew assembleHearthDebug assembleGlimmerDebug assembleClawdDebug assembleDuftDebug assembleOneDebug
+          ./gradlew assembleHearthDebug assembleGlimmerDebug assembleClawdDebug assembleDuftDebug assembleOneDebug assembleSmartDebug
           cp app/build/outputs/apk/hearth/debug/app-hearth-debug.apk Hearth.apk
           cp app/build/outputs/apk/glimmer/debug/app-glimmer-debug.apk Glimmer.apk
           cp app/build/outputs/apk/clawd/debug/app-clawd-debug.apk Clawd.apk
           cp app/build/outputs/apk/duft/debug/app-duft-debug.apk Duft.apk
           cp app/build/outputs/apk/one/debug/app-one-debug.apk HearthUI.apk
+          cp app/build/outputs/apk/smart/debug/app-smart-debug.apk ZenithSmart.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -42,6 +43,7 @@ jobs:
             Clawd.apk
             Duft.apk
             HearthUI.apk
+            ZenithSmart.apk
 
       # Once: every earlier version of every app as its own release (oldest first, so they
       # line up in order). A marker tag remembers it's done.
@@ -101,7 +103,8 @@ jobs:
                        "Glimmer.apk|glimmer|Glimmer|Glimmer|die Insel um die Kamera" \
                        "Clawd.apk|clawd|Clawd|Clawd|Clawds Widgets für jeden Launcher, sein Tamagotchi und Chat" \
                        "Duft.apk|duft|Duftschrank|Duftschrank|Clawds Parfüm-Berater als eigene App: deine Parfüms, das passende für heute, Widget für jeden Launcher" \
-                       "HearthUI.apk|hearthone|ZENITH|ZENITH|Launcher, Glimmer und Clawd in einer App"; do
+                       "HearthUI.apk|hearthone|ZENITH|ZENITH|Launcher, Glimmer und Clawd in einer App" \
+                       "ZenithSmart.apk|smart|ZENITH-Smart|ZENITH Smart|ZENITH im Look des Smart Launchers 6, mit ClaudeOS und ZENITH im Kern der Einstellungen"; do
             IFS='|' read -r file slug name title what <<< "$entry"
             tag="$slug-v$v"
             cp "$file" "$name-$v.apk"
@@ -141,12 +144,12 @@ jobs:
           # The newest version's card (colors, label), so an installed ZENITH can draw it before the update is installed.
           if os.path.exists(".github/card.json"):
               out["card"] = json.load(open(".github/card.json"))
-          for slug, file in [("hearth", "Hearth.apk"), ("glimmer", "Glimmer.apk"), ("clawd", "Clawd.apk"), ("duft", "Duft.apk"), ("hearthone", "HearthUI.apk")]:
+          for slug, file in [("hearth", "Hearth.apk"), ("glimmer", "Glimmer.apk"), ("clawd", "Clawd.apk"), ("duft", "Duft.apk"), ("hearthone", "HearthUI.apk"), ("smart", "ZenithSmart.apk")]:
               out[slug] = {"version": v, "build": build, "url": base + file, "size": os.path.getsize(file)}
           json.dump(out, open("versions.json", "w"), ensure_ascii=False, indent=1)
           PY
-          gh release create "build-${{ github.run_number }}" Hearth.apk Glimmer.apk Clawd.apk Duft.apk HearthUI.apk versions.json \
+          gh release create "build-${{ github.run_number }}" Hearth.apk Glimmer.apk Clawd.apk Duft.apk HearthUI.apk ZenithSmart.apk versions.json \
             --target "${{ github.sha }}" \
             --title "Hearth Build ${{ github.run_number }}" \
-            --notes "HearthUI.apk (ZENITH: alles in einer App), Hearth.apk (Launcher), Glimmer.apk (Insel), Clawd.apk (Clawds Widgets für jeden Launcher) und Duft.apk (der Duftschrank, Clawds Parfüm-Berater). Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
+            --notes "ZenithSmart.apk (ZENITH Smart: ZENITH im Look des Smart Launchers 6), HearthUI.apk (ZENITH: alles in einer App), Hearth.apk (Launcher), Glimmer.apk (Insel), Clawd.apk (Clawds Widgets für jeden Launcher) und Duft.apk (der Duftschrank, Clawds Parfüm-Berater). Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
             --latest

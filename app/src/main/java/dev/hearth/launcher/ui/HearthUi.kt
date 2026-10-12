@@ -193,6 +193,16 @@ internal object HearthChangelog {
             summary = "Das große Update: Im Illuminati gibt es jetzt „Be Smarter“ – ein Modus, der aus dem Launcher Smart Launcher 6 macht, nach dessen Vorbild: seine Uhr mit Datum, Wetter und Wecker, Icons ohne Namen, die Smart-Suche, der Drawer mit der Leiste der sechs Kategorien, seine fünf Themes bis zum Liquid Glass mit Reglern, Apps ohne Verzögerung und Glimmer als Teil des ganzen Systems.",
             sections = listOf(
                 ChangeSection(
+                    "ZENITH Smart – eine eigene App (Hotfix)", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Neu neben ZENITH: „ZENITH Smart“, eine App im Look des Smart Launchers 6 von der ersten Sekunde an. „Be Smarter“ ist an, die Uhr, der Drawer mit den Kategorien, die Smart-Suche, die Themes bis zum Liquid Glass – und die Einstellungen sind die des Smart Launchers nachgebaut: dunkler Grund, große Titel unter dem Zurück-Pfeil, Zeilen mit Linien-Symbol und Pfeil, blaue Schalter, Regler mit ihrem Wert und dem Knopf zum Zurücksetzen, Karten, das Thema mit seiner Vorschau und der Knopf „Thema Bearbeiten“ mit dem Regenbogenrand.",
+                        "Im Kern der Einstellungen stehen ClaudeOS und ZENITH, gleich unter der Systemkarte mit dem großen „Aim Higher.“: ClaudeOS mit Claude & KI, Clawd, Glimmer, Software-Update und Über das Telefon; ZENITH mit der Zentrale, Design & Liquid Glass, dem Clawd Illuminati, Warum ZENITH, ZENITH Cloud, Datenschutz, Allgemein, System und dem Spruch. Alles, was keine eigene Seite im Smart-Stil hat, öffnet sich von dort in den Einstellungen von ZENITH selbst; zurück führt wieder in die Smart-Einstellungen.",
+                        "Dasselbe Paket wie ZENITH: ZENITH Smart installiert sich als Update über ZENITH und umgekehrt, alles Gewählte bleibt erhalten. Es hat eine eigene Update-Linie („smart“) und wird deshalb nie in ZENITH verwandelt. Auch in ZENITH zeigt „Be Smarter“ ab jetzt diese Einstellungen; ausgeschaltet kommen ZENITHs eigene zurück.",
+                        "Ehrlich dazu: Das ist kein Smart Launcher, sondern ein Nachbau mit eigenem Code nach den Bildschirmfotos, den Maßen und den Namen der Einstellungen. Die Originaldatei zu verändern und weiterzugeben geht nicht; wo etwas anders aussieht als beim Original, hilft ein Bildschirmfoto.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Be Smarter nach der Smart-Launcher-APK (Hotfix)", Icons.Rounded.Star, Blue,
                     listOf(
                         "Be Smarter ist nach der echten Smart-Launcher-6.6-Datei umgebaut, die du hochgeladen hast. Ich konnte sie nicht laufen lassen, aber ihre Dateien lesen: Maße, Farben, Zeiten und die Namen ihrer Einstellungen. Nachgebaut ist alles mit eigenem Code; übernommen habe ich nur Zahlen und Namen, keine Grafiken und keinen Programmcode.",

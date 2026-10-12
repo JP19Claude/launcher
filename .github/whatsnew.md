@@ -1,6 +1,9 @@
 ZENITH 20.5 „Be Smarter“ auf ClaudeOS 7.0 „Apex“
 
 ✨ Neu im Hotfix
+• ZENITH Smart: eine eigene App im Look des Smart Launchers 6 (Be Smarter von Anfang an) mit den Einstellungen im Stil des Smart Launchers – dunkler Grund, große Titel, Zeilen mit Linien-Symbol, blaue Schalter, Regler mit Wert und Zurücksetzen, Thema mit Vorschau und „Thema Bearbeiten“
+• Im Kern der Einstellungen: ClaudeOS (Claude & KI, Clawd, Glimmer, Update) und ZENITH (Zentrale, Design, Illuminati, Datenschutz, System, der Spruch); der Rest von ZENITHs Einstellungen öffnet sich von dort
+• Dasselbe Paket wie ZENITH (Update über ZENITH und zurück, alles bleibt), eigene Update-Linie; auch in ZENITH zeigt „Be Smarter“ jetzt diese Einstellungen
 • Be Smarter nach der echten Smart-Launcher-6.6-Datei umgebaut: Maße (Leiste 64 dp, Knöpfe 48 dp, Blatt 24 dp rund), App-Öffnen wie dort (125 ms, 90 → 100 %, der Startbildschirm tritt auf 110 % zurück), eigene Suche im Drawer (Lupe → Suchfeld, filtert alle Kategorien)
 • Neu im Drawer: Kategorieleiste, Kategorientitel, letzte Kategorie geöffnet, sechs Übergangseffekte der Kategorien, Abstand zwischen den Icons
 • Neu am Startbildschirm: Indikator ein/aus, Lesbarkeit verbessern, Eckenradius der Widgets; an der Uhr: Stundenformat, Fahrenheit, ganztägige Ereignisse ausblenden

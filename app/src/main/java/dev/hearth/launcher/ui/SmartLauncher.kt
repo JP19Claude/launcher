@@ -209,11 +209,11 @@ internal fun rememberSmartPalette(settings: LauncherSettings, backdrop: Wallpape
 // The categories and their line icons
 // ---------------------------------------------------------------------------------------------
 
-private enum class SmartGlyph { Chat, Social, Games, Media, Tools, Gear, Bag }
+internal enum class SmartGlyph { Chat, Social, Games, Media, Tools, Gear, Bag }
 
 /** A line icon of Smart Launcher's kind, drawn in a 24 × 24 box. */
 @Composable
-private fun SmartGlyphIcon(glyph: SmartGlyph, color: Color, modifier: Modifier = Modifier) {
+internal fun SmartGlyphIcon(glyph: SmartGlyph, color: Color, modifier: Modifier = Modifier) {
     Canvas(modifier.size(24.dp)) {
         val u = size.minDimension / 24f
         val line = Stroke(width = 1.8f * u, cap = StrokeCap.Round, join = StrokeJoin.Round)

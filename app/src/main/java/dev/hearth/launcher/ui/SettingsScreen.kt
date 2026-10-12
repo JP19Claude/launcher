@@ -155,6 +155,10 @@ fun SettingsScreen(
     needsWallpaperAccess: Boolean,
     onRequestWallpaperAccess: () -> Unit,
     onClose: () -> Unit,
+    /** ZENITH Smart: opened from the Smart settings on this page ("claude", "design" …) – back then leaves at once. */
+    initialPage: String? = null,
+    /** ZENITH Smart: opened from the Smart settings – in the categories' layout, whatever the look. */
+    fromSmart: Boolean = false,
 ) {
     val s = LocalSettings.current
     val iconPacks by vm.iconPacks.collectAsStateWithLifecycle()
@@ -176,12 +180,14 @@ fun SettingsScreen(
     }
 
     // Galaxy × Claude: Samsung's settings – a start page of categories, each opening its own page.
-    val oneUi = s.galaxyClaude
-    var page by rememberSaveable { mutableStateOf<String?>(null) }
+    val oneUi = s.galaxyClaude || fromSmart
+    var page by rememberSaveable { mutableStateOf<String?>(initialPage) }
     val oneUiPage = if (oneUi) page else null
     var query by rememberSaveable { mutableStateOf("") }
     fun shows(category: String) = !oneUi || page == category
-    BackHandler(enabled = oneUiPage != null) { page = null }
+    // Opened on a page from the Smart settings, back leaves them (to the Smart settings), not to the categories.
+    val leavePage: () -> Unit = { if (fromSmart && initialPage != null) onClose() else page = null }
+    BackHandler(enabled = oneUiPage != null) { leavePage() }
 
     Box(Modifier.fillMaxSize()) {
         GlassBackdropFill(blur = 36.dp, modifier = Modifier.matchParentSize())
@@ -256,7 +262,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(CircleShape)
-                                .clickable { page = null },
+                                .clickable { leavePage() },
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Rounded.ArrowBack,
