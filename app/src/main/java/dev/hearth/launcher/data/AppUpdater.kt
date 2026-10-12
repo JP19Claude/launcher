@@ -28,8 +28,8 @@ object AppUpdater {
 
     /** Hearth UI (once Hearth One): Hearth with Glimmer and Clawd built in. Its slug stays. */
     val HearthOne = Kind("hearthone", "ZENITH", "dev.hearth.launcher")
-    /** ZENITH Smart: the same package as ZENITH, its own update line (so it is never updated into the other one). */
-    val SmartApp = Kind("smart", "ZENITH Smart", "dev.hearth.launcher")
+    /** ZENITH Smart: an app of its own next to ZENITH, with its own update line. */
+    val SmartApp = Kind("smart", "ZENITH Smart", "dev.hearth.smart")
     val GlimmerApp = Kind("glimmer", "Glimmer", "dev.hearth.glimmer")
     val ClawdApp = Kind("clawd", "Clawd", "dev.hearth.clawd")
 

@@ -18,7 +18,7 @@ object HearthOneUpgrade {
     private val OldApps = listOf(OldGlimmerApp to AppUpdater.GlimmerApp, OldClawdApp to AppUpdater.ClawdApp)
 
     /** The separate Glimmer and Clawd apps still on the phone (package names). */
-    fun oldAppsInstalled(context: Context): List<String> = OldApps
+    fun oldAppsInstalled(context: Context): List<String> = if (dev.hearth.launcher.BuildConfig.SMART) emptyList() else OldApps
         .filter { (app, _) -> app.packageName != context.packageName && app.isInstalled(context) }
         .map { (app, _) -> app.packageName }
 
@@ -27,6 +27,8 @@ object HearthOneUpgrade {
      * it over (they need an update first).
      */
     suspend fun takeOver(context: Context): List<AppUpdater.Kind> = withContext(Dispatchers.IO) {
+        // ZENITH Smart is a new app: there are no old Glimmer and Clawd apps for it to take over from.
+        if (dev.hearth.launcher.BuildConfig.SMART) return@withContext emptyList<AppUpdater.Kind>()
         val tooOld = mutableListOf<AppUpdater.Kind>()
         for ((app, kind) in OldApps) {
             if (app.packageName == context.packageName || !app.isInstalled(context)) continue

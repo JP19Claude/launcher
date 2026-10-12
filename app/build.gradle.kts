@@ -12,7 +12,7 @@ android {
         applicationId = "dev.hearth.launcher"
         minSdk = 28
         targetSdk = 35
-        versionCode = 184
+        versionCode = 185
         // Small updates (fixes, little things) +0.1, big ones (many features, redesign) +0.5.
         versionName = "20.5"
         // Hearth One (everything in one app) says so; the separate apps don't.
@@ -64,11 +64,11 @@ android {
             buildConfigField("boolean", "ALL_IN_ONE", "true")
         }
         // ZENITH Smart: ZENITH as the Smart Launcher 6 look-alike from the start – "Be Smarter" on, the settings
-        // in Smart Launcher's style with ClaudeOS and ZENITH at their core. The same package as ZENITH (all that is
-        // chosen stays; either one installs over the other), its own name and its own update line.
+        // in Smart Launcher's style with ClaudeOS and ZENITH at their core. An app of its own next to ZENITH
+        // (its own package, its own settings and data), with its own update line.
         create("smart") {
             dimension = "app"
-            applicationId = "dev.hearth.launcher"
+            applicationId = "dev.hearth.smart"
             buildConfigField("boolean", "ALL_IN_ONE", "true")
             buildConfigField("boolean", "SMART", "true")
         }

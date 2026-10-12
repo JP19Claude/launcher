@@ -17,7 +17,8 @@ object AppLock {
     /** The locked packages, joined with "|" (shared with Glimmer and the control center). */
     const val KEY = "lockedApps"
 
-    const val HEARTH_PACKAGE = "dev.hearth.launcher"
+    /** The launcher's package (ZENITH Smart's own, in ZENITH Smart). */
+    val HEARTH_PACKAGE: String get() = dev.hearth.launcher.system.GlimmerLink.HEARTH_PACKAGE
     const val ACTIVITY = "dev.hearth.launcher.AppLockActivity"
     const val EXTRA_PACKAGE = "dev.hearth.launcher.LOCK_PACKAGE"
     const val EXTRA_COMPONENT = "dev.hearth.launcher.LOCK_COMPONENT"

@@ -184,7 +184,7 @@
             android:exported="true"
             android:label="Claude"
             android:launchMode="singleTask"
-            android:taskAffinity="dev.hearth.launcher.claude"
+            android:taskAffinity="${applicationId}.claude"
             android:theme="@style/Theme.Hearth.Assist"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -208,7 +208,7 @@
             android:exported="true"
             android:launchMode="singleTask"
             android:permission="dev.hearth.permission.BRIDGE"
-            android:taskAffinity="dev.hearth.launcher.lock"
+            android:taskAffinity="${applicationId}.lock"
             android:theme="@style/Theme.Hearth" />
 
         <!-- "Claude" tile in the system's quick settings -->
@@ -248,7 +248,7 @@
         <!-- The family's bridge (signature-protected); inside Hearth One calls go straight. -->
         <provider
             android:name=".system.GlimmerBridgeProvider"
-            android:authorities="dev.hearth.launcher.bridge"
+            android:authorities="${applicationId}.bridge"
             android:exported="true"
             android:permission="dev.hearth.permission.BRIDGE" />
 

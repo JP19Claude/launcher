@@ -937,7 +937,8 @@ object ClaudeAssistant {
         if (openClaudeApp(context, lastQuestion)) _openedScreen.tryEmit(Unit)
     }
 
-    const val HEARTH_PACKAGE = "dev.hearth.launcher"
+    /** The launcher's package (ZENITH Smart's own, in ZENITH Smart). */
+    val HEARTH_PACKAGE: String get() = dev.hearth.launcher.system.GlimmerLink.HEARTH_PACKAGE
     const val ASSIST_ACTIVITY = "dev.hearth.launcher.ClaudeAssistActivity"
     const val ASK_ALIAS = "dev.hearth.launcher.ClaudeAskActivity"
     const val EXTRA_PROMPT = "dev.hearth.launcher.CLAUDE_PROMPT"

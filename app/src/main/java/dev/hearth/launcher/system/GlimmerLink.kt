@@ -75,8 +75,8 @@ object ControlsLink : HearthApp("dev.hearth.controls", "dev.hearth.controls.brid
 
 /** Clawd: his own app with his widgets for any launcher (Samsung's too); takes Hearth's look of him. */
 object ClawdLink : HearthApp(
-    if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "dev.hearth.launcher" else "dev.hearth.clawd",
-    if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "dev.hearth.launcher.bridge" else "dev.hearth.clawd.bridge",
+    if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) dev.hearth.launcher.BuildConfig.APPLICATION_ID else "dev.hearth.clawd",
+    if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) dev.hearth.launcher.BuildConfig.APPLICATION_ID + ".bridge" else "dev.hearth.clawd.bridge",
     builtInScreen = "dev.hearth.launcher.clawd.ClawdAppActivity",
 ) {
     const val DOWNLOAD_URL = "https://github.com/JP19Claude/launcher/releases/latest/download/Clawd.apk"
@@ -94,13 +94,15 @@ object OldGlimmerApp : HearthApp("dev.hearth.glimmer", "dev.hearth.glimmer.bridg
 object OldClawdApp : HearthApp("dev.hearth.clawd", "dev.hearth.clawd.bridge")
 
 object GlimmerLink : HearthApp(
-    if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "dev.hearth.launcher" else "dev.hearth.glimmer",
-    if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) "dev.hearth.launcher.bridge" else "dev.hearth.glimmer.bridge",
+    if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) dev.hearth.launcher.BuildConfig.APPLICATION_ID else "dev.hearth.glimmer",
+    if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) dev.hearth.launcher.BuildConfig.APPLICATION_ID + ".bridge" else "dev.hearth.glimmer.bridge",
     builtInScreen = "dev.hearth.launcher.GlimmerActivity",
 ) {
 
     const val GLIMMER_PACKAGE = "dev.hearth.glimmer"
-    const val HEARTH_PACKAGE = "dev.hearth.launcher"
+    /** The launcher's package: this app's own in ZENITH and ZENITH Smart (which is why it isn't a constant), else Hearth's. */
+    val HEARTH_PACKAGE: String
+        get() = if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) dev.hearth.launcher.BuildConfig.APPLICATION_ID else "dev.hearth.launcher"
     const val DOWNLOAD_URL = "https://github.com/JP19Claude/launcher/releases/latest/download/Glimmer.apk"
 
     internal const val STATUS = "status"
