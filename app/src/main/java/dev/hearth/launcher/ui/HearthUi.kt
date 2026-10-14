@@ -230,18 +230,20 @@ internal object HearthChangelog {
                 ChangeSection(
                     "Vom Smart Launcher wechseln", Icons.Rounded.CheckCircle, Green,
                     listOf(
-                        "ZENITH Smart begrüßt neue Nutzer mit einem Wechsel-Assistenten in fünf Schritten: das Thema, die Icon-Form, was unter der Uhr steht, der Standard-Launcher. Zu öffnen ist er jederzeit wieder in den Einstellungen („Wechsel-Assistent“).",
+                        "„Be Smarter“ hat einen Wechsel-Assistenten in fünf Schritten: das Thema, die Icon-Form, was unter der Uhr steht, der Standard-Launcher. Zu öffnen ist er in den Smart-Einstellungen („Wechsel-Assistent“).",
                         "Dazu die Seite „Warum ZENITH Smart“: was hier frei ist und was Smart Launcher laut eigenen Texten nur mit Pro hat – Kategorien bearbeiten, mehr Formen, keine Werbung, Schutz für Apps.",
                         "Ehrlich dazu: Das Layout des Smart Launchers lässt sich nicht übernehmen, das Format ist ein anderes – aber alle Apps ordnet ZENITH Smart sofort selbst in Kategorien. Und ZENITH Smart ist ein Nachbau mit eigenem Code, kein Smart Launcher.",
                     ),
                     hearth,
                 ),
                 ChangeSection(
-                    "Klare Dateinamen in den Downloads (Hotfix)", Icons.Rounded.CheckCircle, Green,
+                    "Hotfix: Karte, Spruch, Update, Smart", Icons.Rounded.CheckCircle, Green,
                     listOf(
-                        "Auf GitHub heißen die Dateien jetzt, was sie sind: ZENITH.apk ist die Hauptapp (früher HearthUI.apk, denn so hieß sie einmal), ZENITH-Smart.apk die eigene Smart-App daneben, Duftschrank.apk Clawds Parfüm-Berater (früher Duft.apk).",
-                        "Hearth-alt.apk ist der alte Launcher allein, ohne Glimmer und Clawd – er hat dasselbe Paket wie ZENITH und ist nicht nötig. Glimmer.apk und Clawd.apk stecken schon in ZENITH.",
-                        "Die Update-Suche in den Apps findet die neuen Namen von selbst; nichts ist neu zu installieren.",
+                        "Eine Karte, die wirklich anders aussieht: Horizont zeigt einen klaren Himmel, eine Sonne, die hinter drei Bergrücken aufgeht, und ein paar blasse Sterne – statt Bögen und Feuerwerk. Dasselbe Bild trägt die Systemkarte oben in den Einstellungen; mit dem Jubiläums-Theme bleibt sie, wie sie war.",
+                        "„Aim Higher.“ ruhiger: eine feine Schrift in einer Farbe, ohne Glühen, Farbverlauf und Lichtband.",
+                        "Der Update-Fehler „INSTALL_FAILED_INVALID_APK“: Die App lädt nur noch eine ganz angekommene Datei, installiert sie als das Paket, das sie ist, und zeigt bei einem Fehler Androids ganze Meldung mit dem Grund auf der Seite des Software-Updates.",
+                        "ZENITH Smart ist wieder auf dem Stand von 20.5, mit eigenem Code und eigener Versionslinie; „Be Smarter“ in ZENITH bleibt, wie es mit 21.0 ist.",
+                        "Klare Dateinamen in den Downloads: ZENITH.apk (die Hauptapp, früher HearthUI.apk), ZENITH-Smart.apk, Duftschrank.apk (früher Duft.apk) und Hearth-alt.apk – der alte Launcher allein, mit demselben Paket wie ZENITH und nicht nötig.",
                     ),
                     hearth,
                 ),

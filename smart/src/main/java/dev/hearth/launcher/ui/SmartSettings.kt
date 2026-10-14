@@ -1,0 +1,1012 @@
+package dev.hearth.launcher.ui
+
+import android.content.Intent
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import dev.hearth.launcher.LauncherViewModel
+import dev.hearth.launcher.data.ClaudeOs
+import dev.hearth.launcher.data.ClockFont
+import dev.hearth.launcher.data.HomeGesture
+import dev.hearth.launcher.data.IconShape
+import dev.hearth.launcher.data.LabelSize
+import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.data.SmartClockLayout
+import dev.hearth.launcher.data.SmartColor
+import dev.hearth.launcher.data.SmartGlass
+import dev.hearth.launcher.data.SmartHours
+import dev.hearth.launcher.data.SmartPageEffect
+import dev.hearth.launcher.data.SwipeDownAction
+import dev.hearth.launcher.data.withSmartGlass
+import dev.hearth.launcher.data.withSmartGlimmer
+import kotlin.math.roundToInt
+
+/*
+ * ZENITH Smart: the settings the way Smart Launcher 6 draws its own – a dark ground, a big title under a back arrow,
+ * plain rows with a line icon and a chevron, switches that turn blue, sliders with their value and a button that
+ * sets them back, cards for what belongs together, a theme with its preview on top. At the core of it, before
+ * everything else: ClaudeOS and ZENITH. What has no page of its own here (Claude's key, Clawd, the Zentrale, the
+ * vault …) opens from those two, in ZENITH's own settings.
+ */
+
+private val SsBg = Color(0xFF22252B)
+private val SsCardColor = Color(0xFF2F3238)
+private val SsLine = Color(0xFF3F434A)
+private val SsDim = Color(0xFFA9ADB4)
+private val SsBlue = Color(0xFF2F8CFF)
+private val SsOff = Color(0xFF50535A)
+private val SsKey = Color(0xFF3A3D44)
+
+// ---------------------------------------------------------------------------------------------
+// The pages
+// ---------------------------------------------------------------------------------------------
+
+/** Where the back arrow of a page leads (null: out of the settings). */
+private fun ssParent(page: String): String? = when (page) {
+    "main" -> null
+    "theme", "icons", "widget", "font" -> "look"
+    "clock" -> "home"
+    else -> "main"
+}
+
+/**
+ * The settings of ZENITH Smart (and of "Be Smarter" in ZENITH). [onZenith] opens ZENITH's own settings on one of their
+ * pages ("claude", "clawd", "glimmer", "design", "vorteile", "cloud", "privacy", "general", "system") or, with null, on
+ * their start page.
+ */
+@Composable
+fun SmartSettingsScreen(
+    vm: LauncherViewModel,
+    onClose: () -> Unit,
+    onZenith: (String?) -> Unit,
+) {
+    val s = LocalSettings.current
+    val update: ((LauncherSettings) -> LauncherSettings) -> Unit = vm::updateSettings
+    var page by rememberSaveable { mutableStateOf("main") }
+    val back: () -> Unit = {
+        val parent = ssParent(page)
+        if (parent == null) onClose() else page = parent
+    }
+    BackHandler { back() }
+    val go: (String) -> Unit = { page = it }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(SsBg),
+    ) {
+        when (page) {
+            "look" -> SsLookPage(s, update, go, back)
+            "theme" -> SsThemePage(s, update, back)
+            "icons" -> SsIconsPage(s, update, back)
+            "widget" -> SsWidgetPage(s, update, back)
+            "font" -> SsFontPage(s, update, back)
+            "home" -> SsHomePage(s, update, go, back)
+            "clock" -> SsClockPage(s, update, back)
+            "drawer" -> SsDrawerPage(s, update, back)
+            "search" -> SsSearchPage(s, update, back)
+            "gestures" -> SsGesturesPage(s, update, back)
+            "anim" -> SsAnimPage(s, update, onZenith, back)
+            "claudeos" -> SsClaudeOsPage(onZenith, back)
+            "zenith" -> SsZenithPage(s, update, onZenith, back)
+            else -> SsMainPage(go, onZenith, back)
+        }
+    }
+}
+
+@Composable
+private fun SsMainPage(go: (String) -> Unit, onZenith: (String?) -> Unit, back: () -> Unit) {
+    val context = LocalContext.current
+    val version = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
+    }
+    SsPage("Einstellungen", back) {
+        // The system card: what this is and what it runs on. Tapped: the phone's info.
+        SsCard {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { ssOpen(context, "AboutPhoneActivity") }
+                    .padding(vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SsIcon(SsGlyph.Z, ssAccent(version), 44)
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("ZENITH Smart $version", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "${ClaudeOs.full} „${ClaudeOs.CODENAME}“",
+                        style = TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
+                    )
+                }
+                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = SsDim)
+            }
+            SloganBanner(Modifier.padding(top = 4.dp, bottom = 14.dp), accent = ssAccent(version), size = 34.sp, textAlign = TextAlign.Start)
+        }
+        // The core: the two systems this launcher is made of.
+        SsHeader("Kern")
+        SsLink("ClaudeOS", "Claude & KI, Clawd, Glimmer, Software-Update", { SsIcon(SsGlyph.Spark, Color(0xFFE5845F)) }) { go("claudeos") }
+        SsLink("ZENITH", "Zentrale, Design, Illuminati, Datenschutz, System", { SsIcon(SsGlyph.Z, ssAccent(version)) }) { go("zenith") }
+        SsHeader("Launcher")
+        SsLink("Allgemeine Darstellung", null, { SsIcon(SsGlyph.Look) }) { go("look") }
+        SsLink("Startbildschirm", null, { SsIcon(SsGlyph.Home) }) { go("home") }
+        SsLink("App-Raster", null, { SsIcon(SsGlyph.Grid) }) { go("drawer") }
+        SsLink("Suchseite", null, { SsIcon(SsGlyph.Search) }) { go("search") }
+        SsLink("Gesten und Hotkeys", null, { SsIcon(SsGlyph.Swipe) }) { go("gestures") }
+        SsLink("Animationen", null, { SsIcon(SsGlyph.Bolt) }) { go("anim") }
+        SsHeader("Mehr")
+        SsLink("Sicherheit und Privatsphäre", null, { SsIcon(SsGlyph.Lock) }) { onZenith("privacy") }
+        SsLink("Sicherung", null, { SsIcon(SsGlyph.Cloud) }) { onZenith("cloud") }
+        SsLink("Erweiterte Einstellungen", "Alle Einstellungen von ZENITH", { SsIcon(SsGlyph.Gear) }) { onZenith(null) }
+    }
+}
+
+@Composable
+private fun SsLookPage(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, go: (String) -> Unit, back: () -> Unit) {
+    SsPage("Allgemeine Darstellung", back, trailing = { SsKeyButton { update { it.withSmartGlass(it.smartGlass) } } }) {
+        SsPreview(s) { theme -> update { it.withSmartGlass(theme) } }
+        Spacer(Modifier.height(20.dp))
+        SsOutlineButton("Thema Bearbeiten") { go("theme") }
+        Spacer(Modifier.height(10.dp))
+        SsLink("Symbol-Darstellung", null, { SsIcon(SsGlyph.Look) }) { go("icons") }
+        SsLink("Widget", null, { SsIcon(SsGlyph.Widget) }) { go("widget") }
+        SsLink("Schriftart", null, { SsIcon(SsGlyph.Font) }) { go("font") }
+    }
+}
+
+@Composable
+private fun SsThemePage(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, back: () -> Unit) {
+    val theme = s.smartGlass
+    SsPage("Thema bearbeiten", back, trailing = { SsKeyButton { update { it.withSmartGlass(it.smartGlass) } } }) {
+        SsCard {
+            SsSliderRow(
+                "Unschärferadius", "${"%.1f".format(s.smartBlur)}%", ssFrac(s.smartBlur, 0f, 2.5f),
+                { f -> update { it.copy(smartBlur = ssUnfrac(f, 0f, 2.5f)) } },
+                { update { it.copy(smartBlur = theme.blur) } },
+            )
+            SsDivider()
+            SsHeader("Erweiterte Einstellungen")
+            SsSliderRow(
+                "Lebendigkeit verwischen", "+${(s.smartVibrancy * 100).roundToInt()}%", ssFrac(s.smartVibrancy, 0f, 1f),
+                { f -> update { it.copy(smartVibrancy = ssUnfrac(f, 0f, 1f)) } },
+                { update { it.copy(smartVibrancy = theme.vibrancy) } },
+            )
+            SsSliderRow(
+                "Brechung", "${(s.smartRefraction * 40).roundToInt()}dp", ssFrac(s.smartRefraction, 0f, 2.5f),
+                { f -> update { it.copy(smartRefraction = ssUnfrac(f, 0f, 2.5f)) } },
+                { update { it.copy(smartRefraction = theme.refraction) } },
+            )
+            SsSliderRow(
+                "Tiefe", "${(s.smartDepth * 40).roundToInt()}dp", ssFrac(s.smartDepth, 0.5f, 3f),
+                { f -> update { it.copy(smartDepth = ssUnfrac(f, 0.5f, 3f)) } },
+                { update { it.copy(smartDepth = theme.depth) } },
+            )
+            SsSliderRow(
+                "Streuung", "${(s.smartDispersion * 100).roundToInt()}%", ssFrac(s.smartDispersion, 0f, 1.5f),
+                { f -> update { it.copy(smartDispersion = ssUnfrac(f, 0f, 1.5f)) } },
+                { update { it.copy(smartDispersion = theme.dispersion) } },
+            )
+            SsSliderRow(
+                "Glanz", "${(s.smartSpecular * 100).roundToInt()}%", ssFrac(s.smartSpecular, 0f, 2f),
+                { f -> update { it.copy(smartSpecular = ssUnfrac(f, 0f, 2f)) } },
+                { update { it.copy(smartSpecular = theme.specular) } },
+            )
+            SsSliderRow(
+                "Tönung", "${(s.smartTint * 100).roundToInt()}%", ssFrac(s.smartTint, 0f, 2.5f),
+                { f -> update { it.copy(smartTint = ssUnfrac(f, 0f, 2.5f)) } },
+                { update { it.copy(smartTint = theme.tint) } },
+            )
+        }
+        SsCard {
+            SsHeader("Karten und Symbole")
+            SsChoice(SmartColor.entries, s.smartColor, { it.label }) { color -> update { it.copy(smartColor = color) } }
+            SsNote("Die Farbe gilt für Ambient Design; Material You nimmt die Farben des Telefons.")
+        }
+    }
+}
+
+@Composable
+private fun SsIconsPage(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, back: () -> Unit) {
+    SsPage("Symbol-Darstellung", back) {
+        SsHeader("Form")
+        SsChoice(IconShape.entries, s.smartShape, { it.label }) { shape -> update { it.copy(smartShape = shape) } }
+        SsHeader("Größe")
+        SsIntSlider("Symbolgröße", s.iconSize, 40..96, " dp", { v -> update { it.copy(iconSize = v) } }, { update { it.copy(iconSize = 58) } })
+        SsHeader("Beschriftung")
+        SsSwitchRow("Namen im App-Raster", "Der Name der App steht unter dem Symbol.", s.smartDrawerNames) { v -> update { it.copy(smartDrawerNames = v) } }
+        SsChoice(LabelSize.entries, s.labelSize, { it.label }) { size -> update { it.copy(labelSize = size) } }
+    }
+}
+
+@Composable
+private fun SsWidgetPage(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, back: () -> Unit) {
+    SsPage("Widget", back) {
+        SsSwitchRow("Abgerundete Widget-Ecken", null, s.smartWidgetRadius > 0) { v -> update { it.copy(smartWidgetRadius = if (v) 28 else 0) } }
+        SsIntSlider("Eckenradius", s.smartWidgetRadius, 0..44, " dp", { v -> update { it.copy(smartWidgetRadius = v) } }, { update { it.copy(smartWidgetRadius = 28) } })
+    }
+}
+
+@Composable
+private fun SsFontPage(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, back: () -> Unit) {
+    SsPage("Schriftart", back) {
+        SsHeader("Uhr")
+        SsChoice(ClockFont.entries, s.clockFont, { it.label }) { font -> update { it.copy(clockFont = font) } }
+        SsHeader("Textgröße der Symbole")
+        SsChoice(LabelSize.entries, s.labelSize, { it.label }) { size -> update { it.copy(labelSize = size) } }
+    }
+}
+
+@Composable
+private fun SsHomePage(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, go: (String) -> Unit, back: () -> Unit) {
+    SsPage("Startbildschirm", back) {
+        SsLink("Uhr und Wetter", "Anordnung, Größe, Wetter, Wecker, Termin", { SsIcon(SsGlyph.Home) }) { go("clock") }
+        SsHeader("Raster-Eigenschaften")
+        SsIntSlider("Spalten", s.columns, 3..6, "", { v -> update { it.copy(columns = v) } }, { update { it.copy(columns = 4) } })
+        SsIntSlider("Zeilen", s.rows, 4..8, "", { v -> update { it.copy(rows = v) } }, { update { it.copy(rows = 6) } })
+        SsHeader("Seiten")
+        SsSwitchRow("Zeige Indikator", "Zeigt einen Indikator für die Seite, auf der du gerade bist.", s.smartIndicator) { v -> update { it.copy(smartIndicator = v) } }
+        SsSwitchRow("Lesbarkeit verbessern", "Fügt ein dunkles Layout zur Verbesserung der Lesbarkeit auf hellen Hintergründen hinzu.", s.smartReadable) { v -> update { it.copy(smartReadable = v) } }
+        SsSwitchRow("Smart-Suche", "Die Suchleiste ganz unten, unter dem Dock.", s.showSearchPill) { v -> update { it.copy(showSearchPill = v) } }
+    }
+}
+
+@Composable
+private fun SsClockPage(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, back: () -> Unit) {
+    val context = LocalContext.current
+    // The calendar's permission is asked once, here, by Android's own dialog – nothing is granted behind your back.
+    val calendarAllowed = {
+        androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CALENDAR) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+    val askCalendar = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        update { it.copy(smartClockEvent = ok) }
+    }
+    SsPage("Uhr und Wetter", back) {
+        SsHeader("Anordnung")
+        SsChoice(SmartClockLayout.entries, s.smartClockLayout, { it.label }) { layout -> update { it.copy(smartClockLayout = layout) } }
+        SsIntSlider("Größe der Uhr", s.smartClockSize.roundToInt(), 48..100, " sp", { v -> update { it.copy(smartClockSize = v.toFloat()) } }, { update { it.copy(smartClockSize = 78f) } })
+        SsHeader("Stundenformat")
+        SsChoice(SmartHours.entries, s.smartHours, { it.label }) { hours -> update { it.copy(smartHours = hours) } }
+        SsHeader("Anzeigen")
+        SsSwitchRow("Wetter anzeigen", "Wetterbedingungen für deinen Ort (der Ort steht in der Zentrale).", s.smartClockWeather) { v -> update { it.copy(smartClockWeather = v) } }
+        SsSwitchRow("Temperatur in Fahrenheit", null, s.smartFahrenheit) { v -> update { it.copy(smartFahrenheit = v) } }
+        SsSwitchRow("Nächsten Alarm anzeigen", null, s.smartClockAlarm) { v -> update { it.copy(smartClockAlarm = v) } }
+        SsSwitchRow(
+            "Nächsten Termin anzeigen",
+            "Zeigt anstehende Termine auf dem Startbildschirm. Erfordert die Kalenderberechtigung; Android fragt einmal.",
+            s.smartClockEvent && calendarAllowed(),
+        ) { v ->
+            if (v && !calendarAllowed()) askCalendar.launch(android.Manifest.permission.READ_CALENDAR) else update { it.copy(smartClockEvent = v) }
+        }
+        SsSwitchRow("Ganztägige Ereignisse ausblenden", "Schließt ganztägige Ereignisse wie Geburtstage aus.", s.smartHideAllDay) { v -> update { it.copy(smartHideAllDay = v) } }
+    }
+}
+
+@Composable
+private fun SsDrawerPage(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, back: () -> Unit) {
+    SsPage("App-Raster", back) {
+        SsSwitchRow("Kategorieleiste", "Die Leiste mit den Kategorien unten. Aus: eine einzige Liste mit allen Apps.", s.smartCategoryBar) { v -> update { it.copy(smartCategoryBar = v) } }
+        SsSwitchRow("Kategorientitel", "Titel über den Kategorien einblenden.", s.smartCategoryTitles) { v -> update { it.copy(smartCategoryTitles = v) } }
+        SsSwitchRow("Letzte Kategorie geöffnet", "Öffnet das App-Raster wieder auf der zuletzt angezeigten Kategorie.", s.smartLastCategory) { v -> update { it.copy(smartLastCategory = v) } }
+        SsSwitchRow("Namen unter den Symbolen", null, s.smartDrawerNames) { v -> update { it.copy(smartDrawerNames = v) } }
+        SsHeader("Übergangseffekt der Kategorien")
+        SsChoice(SmartPageEffect.entries, s.smartPageEffect, { it.label }) { effect -> update { it.copy(smartPageEffect = effect) } }
+        SsHeader("Raster")
+        SsIntSlider("Spalten", s.smartDrawerColumns, 3..6, "", { v -> update { it.copy(smartDrawerColumns = v) } }, { update { it.copy(smartDrawerColumns = 4) } })
+        SsIntSlider("Abstand zwischen den Icons", s.smartItemSpacing, 0..32, " dp", { v -> update { it.copy(smartItemSpacing = v) } }, { update { it.copy(smartItemSpacing = 0) } })
+        SsNote("Eine App in eine andere Kategorie legen: im Menü der App (Halten) „In … verschieben“.")
+    }
+}
+
+@Composable
+private fun SsSearchPage(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, back: () -> Unit) {
+    SsPage("Suchseite", back) {
+        SsSwitchRow("Smart-Suche", "Die Suchleiste ganz unten, unter dem Dock.", s.showSearchPill) { v -> update { it.copy(showSearchPill = v) } }
+        SsHeader("Wischen: Runter")
+        SsChoice(SwipeDownAction.entries, s.swipeDownAction, { it.label }) { action -> update { it.copy(swipeDownAction = action) } }
+    }
+}
+
+@Composable
+private fun SsGesturesPage(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, back: () -> Unit) {
+    SsPage("Gesten und Hotkeys", back) {
+        SsHeader("Doppelklick")
+        SsChoice(HomeGesture.entries, s.doubleTapAction, { it.label }) { gesture -> update { it.copy(doubleTapAction = gesture) } }
+    }
+}
+
+@Composable
+private fun SsAnimPage(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, onZenith: (String?) -> Unit, back: () -> Unit) {
+    SsPage("Animationen", back) {
+        SsSwitchRow(
+            "Ohne Verzögerung",
+            "Apps öffnen sich im Moment des Tippens: kein Fluid-Spritzer, keine Feder am Icon, nur ein kurzes Einblenden. Aus: Die App klappt aus ihrem Icon auf.",
+            s.smartInstant,
+        ) { v -> update { it.copy(smartInstant = v) } }
+        SsSwitchRow(
+            "Glimmer ins System binden",
+            "Beim Schließen schrumpft jede App – auch mit einem anderen Startbildschirm – zurück in ihr Icon, im Stil des Smart Launchers.",
+            s.smartGlimmer,
+        ) { v -> update { it.withSmartGlimmer(v) } }
+        SsLink("Glimmer-Einstellungen", "Insel um die Kamera, Schließ-Animation", { SsIcon(SsGlyph.Bolt) }) { onZenith("glimmer") }
+    }
+}
+
+@Composable
+private fun SsClaudeOsPage(onZenith: (String?) -> Unit, back: () -> Unit) {
+    val context = LocalContext.current
+    SsPage("ClaudeOS", back) {
+        SsCard {
+            Row(Modifier.fillMaxWidth().padding(vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                SsIcon(SsGlyph.Spark, Color(0xFFE5845F), 44)
+                Spacer(Modifier.width(16.dp))
+                Column {
+                    Text("${ClaudeOs.full} „${ClaudeOs.CODENAME}“", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Das System unter ZENITH: Claude im ganzen Telefon.", color = SsDim, fontSize = 14.sp, lineHeight = 19.sp)
+                }
+            }
+        }
+        SsLink("Claude & KI", "Assistent, Anbieter, Schlüssel, Sparmodus", { SsIcon(SsGlyph.Spark, Color(0xFFE5845F)) }) { onZenith("claude") }
+        SsLink("Clawd", "Farbe, Hüte, Begleiter, Widgets", { SsIcon(SsGlyph.Spark) }) { onZenith("clawd") }
+        SsLink("Glimmer", "Insel um die Kamera, Schließ-Animation", { SsIcon(SsGlyph.Bolt) }) { onZenith("glimmer") }
+        SsLink("Software-Update", null, { SsIcon(SsGlyph.Cloud) }) { ssOpen(context, "UpdateActivity") }
+        SsLink("Über das Telefon", null, { SsIcon(SsGlyph.Gear) }) { ssOpen(context, "AboutPhoneActivity") }
+    }
+}
+
+@Composable
+private fun SsZenithPage(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, onZenith: (String?) -> Unit, back: () -> Unit) {
+    val context = LocalContext.current
+    val version = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
+    }
+    SsPage("ZENITH", back) {
+        SsCard {
+            Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                SsIcon(SsGlyph.Z, ssAccent(version), 44)
+                Spacer(Modifier.width(16.dp))
+                Column {
+                    Text("ZENITH $version", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Der Launcher, an dem alles hängt.", color = SsDim, fontSize = 14.sp)
+                }
+            }
+            SloganBanner(Modifier.padding(top = 2.dp, bottom = 14.dp), accent = ssAccent(version), size = 34.sp, textAlign = TextAlign.Start)
+        }
+        SsLink("ZENITH-Zentrale", "Wetter, Schnelleinstellungen, Z-Moment", { SsIcon(SsGlyph.Z, ssAccent(version)) }) { ssOpen(context, "ZentraleActivity") }
+        SsLink("Design & Liquid Glass", "Vorlagen, Glas, Icons, Animationen", { SsIcon(SsGlyph.Look) }) { onZenith("design") }
+        SsLink("Clawd Illuminati", "Die geheimen Modi, auch „Be Smarter“", { SsIcon(SsGlyph.Spark) }) { ssOpen(context, "IlluminationActivity") }
+        SsLink("Warum ZENITH", "Was One UI und ColorOS so nicht können", { SsIcon(SsGlyph.Z) }) { onZenith("vorteile") }
+        SsLink("ZENITH Cloud", "Sicherung über dein Google-Konto und als Datei", { SsIcon(SsGlyph.Cloud) }) { onZenith("cloud") }
+        SsLink("Datenschutz & Sicherheit", "App-Sperre, ausgeblendete Apps", { SsIcon(SsGlyph.Lock) }) { onZenith("privacy") }
+        SsLink("Allgemein", "Suche, Vibration, Sichern & Wiederherstellen", { SsIcon(SsGlyph.Gear) }) { onZenith("general") }
+        SsLink("System", "Helligkeit, Töne, WLAN, Bluetooth, Akku …", { SsIcon(SsGlyph.Gear) }) { onZenith("system") }
+        SsHeader("Der Spruch")
+        SsSwitchRow("„Aim Higher.“ überall", "Der Spruch von ZENITH in jedem Winkel des Systems, der Platz für ihn hat.", s.sloganEverywhere) { v -> update { it.copy(sloganEverywhere = v) } }
+        SsHeader("Aussehen")
+        SsSwitchRow(
+            "Smart-Look (Be Smarter)",
+            "Aus: ZENITH sieht wieder aus wie ZENITH – mit seinen eigenen Einstellungen. Alles Gewählte bleibt.",
+            s.beSmarter,
+        ) { v -> update { it.copy(beSmarter = v) } }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The preview of the theme
+// ---------------------------------------------------------------------------------------------
+
+/** The card on top of "Allgemeine Darstellung": a little home screen in the theme's colors, and the list of the themes under it. */
+@Composable
+private fun SsPreview(s: LauncherSettings, onPick: (SmartGlass) -> Unit) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    val base = s.smartColor.color ?: Color(0xFF8A6A38)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(30.dp)),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .background(Brush.verticalGradient(listOf(lerp(base, Color.White, 0.28f), base, lerp(base, Color.Black, 0.6f))))
+                .padding(horizontal = 22.dp, vertical = 22.dp),
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("12:46", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.weight(1f))
+                    Text("28 C°", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Medium)
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(58.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xFFE9ECF2)))
+                    Spacer(Modifier.width(18.dp))
+                    Box(Modifier.size(58.dp).clip(RoundedCornerShape(18.dp)).background(lerp(base, Color.Black, 0.7f)))
+                    Spacer(Modifier.width(18.dp))
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(58.dp)
+                            .clip(RoundedCornerShape(29.dp))
+                            .background(lerp(base, Color.Black, 0.45f).copy(alpha = 0.9f)),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Text("50%", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp))
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(lerp(base, Color.Black, 0.35f).copy(alpha = 0.85f))
+                        .padding(horizontal = 10.dp, vertical = 14.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly,
+                ) {
+                    listOf(SmartGlyph.Chat, SmartGlyph.Social, SmartGlyph.Games, SmartGlyph.Media, SmartGlyph.Tools, SmartGlyph.Gear).forEach { glyph ->
+                        SmartGlyphIcon(glyph, Color.White)
+                    }
+                }
+            }
+        }
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .background(Color.Black),
+        ) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { open = !open }
+                    .padding(horizontal = 22.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Launcher Theme", color = SsDim, fontSize = 15.sp)
+                    Text(s.smartGlass.label, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+                }
+                Icon(if (open) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = Color.White)
+            }
+            if (open) {
+                if (s.smartGlass.note.isNotEmpty()) {
+                    Text(s.smartGlass.note, color = SsDim, fontSize = 15.sp, lineHeight = 21.sp, modifier = Modifier.padding(horizontal = 22.dp, vertical = 6.dp))
+                }
+                Column(Modifier.padding(horizontal = 22.dp)) {
+                    SsChoice(SmartGlass.entries, s.smartGlass, { it.label }, onPick)
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// What the pages are made of
+// ---------------------------------------------------------------------------------------------
+
+/** One page: the back arrow (and what else sits in the bar), the big title, then the rows. */
+@Composable
+private fun SsPage(title: String, onBack: () -> Unit, trailing: (@Composable () -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(SsBg)
+            .systemBarsPadding(),
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .padding(horizontal = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Zurück", tint = Color.White, modifier = Modifier.size(28.dp))
+            }
+            Spacer(Modifier.weight(1f))
+            trailing?.invoke()
+        }
+        Column(
+            Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp),
+        ) {
+            Text(
+                title,
+                color = Color.White,
+                fontSize = 34.sp,
+                lineHeight = 40.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 6.dp, bottom = 22.dp),
+            )
+            content()
+            Spacer(Modifier.height(56.dp))
+        }
+    }
+}
+
+/** A row that opens another page: a line icon, the name (and what is inside), a chevron. */
+@Composable
+private fun SsLink(title: String, subtitle: String?, icon: (@Composable () -> Unit)?, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 15.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) { icon() }
+            Spacer(Modifier.width(22.dp))
+        }
+        Column(Modifier.weight(1f)) {
+            Text(title, color = Color.White, fontSize = 21.sp)
+            if (subtitle != null) {
+                Text(subtitle, color = SsDim, fontSize = 15.sp, lineHeight = 20.sp)
+            }
+        }
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = SsDim)
+    }
+}
+
+@Composable
+private fun SsSwitchRow(title: String, subtitle: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable { onChange(!checked) }
+            .padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            Modifier
+                .weight(1f)
+                .padding(end = 18.dp),
+        ) {
+            Text(title, color = Color.White, fontSize = 21.sp, lineHeight = 26.sp)
+            if (subtitle != null) {
+                Text(subtitle, color = SsDim, fontSize = 15.sp, lineHeight = 21.sp)
+            }
+        }
+        SsSwitch(checked)
+    }
+}
+
+/** Smart Launcher's switch: a blue track with the white knob right, a grey one with it left. */
+@Composable
+private fun SsSwitch(on: Boolean) {
+    val x by animateDpAsState(if (on) 24.dp else 0.dp, tween(140), label = "ssSwitch")
+    Box(
+        Modifier
+            .width(58.dp)
+            .height(34.dp)
+            .clip(CircleShape)
+            .background(if (on) SsBlue else SsOff)
+            .padding(3.dp),
+    ) {
+        Box(
+            Modifier
+                .offset(x = x)
+                .size(28.dp)
+                .background(Color.White, CircleShape),
+        )
+    }
+}
+
+@Composable
+private fun SsRadioRow(title: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(title, color = Color.White, fontSize = 21.sp, modifier = Modifier.weight(1f).padding(end = 16.dp))
+        Box(
+            Modifier
+                .size(28.dp)
+                .border(2.5.dp, if (selected) SsBlue else Color.White.copy(alpha = 0.6f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (selected) {
+                Box(
+                    Modifier
+                        .size(14.dp)
+                        .background(SsBlue, CircleShape),
+                )
+            }
+        }
+    }
+}
+
+/** A list of choices with a radio mark each. */
+@Composable
+private fun <T> SsChoice(options: List<T>, selected: T, label: (T) -> String, onPick: (T) -> Unit) {
+    options.forEach { option -> SsRadioRow(label(option), option == selected) { onPick(option) } }
+}
+
+/** A name with its value on the right, the slider under it and – if wanted – the button that sets it back. */
+@Composable
+private fun SsSliderRow(title: String, valueText: String, fraction: Float, onFraction: (Float) -> Unit, onReset: (() -> Unit)?) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(end = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, color = Color.White, fontSize = 20.sp, modifier = Modifier.weight(1f))
+                Text(valueText, color = SsDim, fontSize = 16.sp)
+            }
+            Spacer(Modifier.height(8.dp))
+            SsSlider(fraction, onFraction)
+        }
+        if (onReset != null) {
+            Spacer(Modifier.width(12.dp))
+            SsKeyButton(onReset)
+        }
+    }
+}
+
+@Composable
+private fun SsIntSlider(title: String, value: Int, range: IntRange, unit: String, onChange: (Int) -> Unit, onReset: (() -> Unit)?) {
+    val lo = range.first.toFloat()
+    val hi = range.last.toFloat()
+    SsSliderRow(
+        title,
+        "$value$unit",
+        ssFrac(value.toFloat(), lo, hi),
+        { f -> onChange(ssUnfrac(f, lo, hi).roundToInt().coerceIn(range.first, range.last)) },
+        onReset,
+    )
+}
+
+/** The slider: a thick track, blue up to the knob, grey after it; tapped or dragged anywhere. */
+@Composable
+private fun SsSlider(fraction: Float, onFraction: (Float) -> Unit) {
+    var width by remember { mutableStateOf(1f) }
+    val current by rememberUpdatedState(onFraction)
+    val knob = 20.dp
+    val knobPx = with(LocalDensity.current) { knob.toPx() }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(32.dp)
+            .onSizeChanged { width = it.width.toFloat().coerceAtLeast(1f) }
+            .pointerInput(Unit) { detectTapGestures { at -> current((at.x / width).coerceIn(0f, 1f)) } }
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures { change, _ ->
+                    change.consume()
+                    current((change.position.x / width).coerceIn(0f, 1f))
+                }
+            },
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(12.dp)
+                .clip(CircleShape)
+                .background(SsOff),
+        )
+        Box(
+            Modifier
+                .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                .height(12.dp)
+                .clip(CircleShape)
+                .background(SsBlue),
+        )
+        Box(
+            Modifier
+                .offset { IntOffset(((width - knobPx) * fraction.coerceIn(0f, 1f)).roundToInt(), 0) }
+                .size(knob)
+                .background(Color.White, CircleShape),
+        )
+    }
+}
+
+/** The square button with the arrow that goes round: sets a value (or the whole theme) back. */
+@Composable
+private fun SsKeyButton(onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(52.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(SsKey)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Rounded.Refresh, contentDescription = "Zurücksetzen", tint = Color.White.copy(alpha = 0.8f))
+    }
+}
+
+/** The button with the rainbow outline ("Thema Bearbeiten"). */
+@Composable
+private fun SsOutlineButton(text: String, onClick: () -> Unit) {
+    val rainbow = Brush.sweepGradient(listOf(Color(0xFFFFA726), Color(0xFFEF3F7A), Color(0xFF8E4DE0), Color(0xFF2F8CFF), Color(0xFFFFA726)))
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(58.dp)
+            .clip(RoundedCornerShape(29.dp))
+            .border(3.dp, rainbow, RoundedCornerShape(29.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun SsHeader(text: String) {
+    Text(
+        text.uppercase(),
+        color = SsDim,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Medium,
+        letterSpacing = 1.6.sp,
+        modifier = Modifier.padding(top = 22.dp, bottom = 6.dp),
+    )
+}
+
+@Composable
+private fun SsNote(text: String) {
+    Text(text, color = SsDim, fontSize = 14.sp, lineHeight = 19.sp, modifier = Modifier.padding(vertical = 10.dp))
+}
+
+@Composable
+private fun SsCard(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clip(RoundedCornerShape(26.dp))
+            .background(SsCardColor)
+            .padding(horizontal = 18.dp, vertical = 6.dp),
+        content = content,
+    )
+}
+
+@Composable
+private fun SsDivider() {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(SsLine),
+    )
+}
+
+private fun ssFrac(value: Float, lo: Float, hi: Float): Float = ((value - lo) / (hi - lo)).coerceIn(0f, 1f)
+
+private fun ssUnfrac(fraction: Float, lo: Float, hi: Float): Float = lo + fraction.coerceIn(0f, 1f) * (hi - lo)
+
+/** The color of the system card and the Z: gold from the jubilee on. */
+private fun ssAccent(version: String): Color = if (versionNumber(version) >= 20f) ZenithCardSpec.Jubilee.accent else ZenithGreen
+
+/** One of the app's own screens (they are in this app's package, whichever app it is). */
+private fun ssOpen(context: android.content.Context, activity: String) {
+    runCatching {
+        context.startActivity(
+            Intent().setClassName(context.packageName, "dev.hearth.launcher.$activity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The line icons
+// ---------------------------------------------------------------------------------------------
+
+private enum class SsGlyph { Look, Home, Grid, Search, Swipe, Bolt, Spark, Z, Lock, Cloud, Gear, Widget, Font }
+
+/** A line icon of the kind Smart Launcher uses, drawn in a 24 × 24 box of [dp] size. */
+@Composable
+private fun SsIcon(glyph: SsGlyph, tint: Color = Color.White, dp: Int = 28) {
+    Canvas(Modifier.size(dp.dp)) {
+        val u = size.minDimension / 24f
+        val line = Stroke(width = 1.9f * u, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        fun at(x: Float, y: Float) = Offset(x * u, y * u)
+        when (glyph) {
+            SsGlyph.Look -> {
+                drawRoundRect(tint, topLeft = at(3f, 3f), size = Size(18f * u, 18f * u), cornerRadius = CornerRadius(5f * u), style = line)
+                drawCircle(tint, 4.5f * u, at(12f, 12f), style = line)
+            }
+            SsGlyph.Home -> {
+                val path = Path().apply {
+                    moveTo(3.5f * u, 11f * u)
+                    lineTo(12f * u, 4f * u)
+                    lineTo(20.5f * u, 11f * u)
+                    moveTo(5.5f * u, 9.5f * u)
+                    lineTo(5.5f * u, 20f * u)
+                    lineTo(18.5f * u, 20f * u)
+                    lineTo(18.5f * u, 9.5f * u)
+                }
+                drawPath(path, tint, style = line)
+            }
+            SsGlyph.Grid -> {
+                for (x in listOf(3.5f, 13.5f)) {
+                    for (y in listOf(3.5f, 13.5f)) {
+                        drawRoundRect(tint, topLeft = at(x, y), size = Size(7f * u, 7f * u), cornerRadius = CornerRadius(2f * u), style = line)
+                    }
+                }
+            }
+            SsGlyph.Search -> {
+                drawCircle(tint, 6.5f * u, at(10.5f, 10.5f), style = line)
+                drawLine(tint, at(15.5f, 15.5f), at(20.5f, 20.5f), strokeWidth = 1.9f * u, cap = StrokeCap.Round)
+            }
+            SsGlyph.Swipe -> {
+                drawCircle(tint, 3f * u, at(12f, 17f), style = line)
+                val arrow = Path().apply {
+                    moveTo(12f * u, 12f * u)
+                    lineTo(12f * u, 3.5f * u)
+                    moveTo(8f * u, 7.5f * u)
+                    lineTo(12f * u, 3.5f * u)
+                    lineTo(16f * u, 7.5f * u)
+                }
+                drawPath(arrow, tint, style = line)
+            }
+            SsGlyph.Bolt -> {
+                val bolt = Path().apply {
+                    moveTo(13.5f * u, 2.5f * u)
+                    lineTo(5.5f * u, 13.5f * u)
+                    lineTo(11.5f * u, 13.5f * u)
+                    lineTo(10.5f * u, 21.5f * u)
+                    lineTo(18.5f * u, 10.5f * u)
+                    lineTo(12.5f * u, 10.5f * u)
+                    close()
+                }
+                drawPath(bolt, tint, style = line)
+            }
+            SsGlyph.Spark -> {
+                // Eight rays around a point, as Claude's mark.
+                for (k in 0 until 8) {
+                    val a = k * (Math.PI / 4.0)
+                    val inner = if (k % 2 == 0) 3.5f else 4.5f
+                    val outer = if (k % 2 == 0) 10.5f else 8.5f
+                    val dx = Math.cos(a).toFloat()
+                    val dy = Math.sin(a).toFloat()
+                    drawLine(tint, at(12f + dx * inner, 12f + dy * inner), at(12f + dx * outer, 12f + dy * outer), strokeWidth = 2.1f * u, cap = StrokeCap.Round)
+                }
+            }
+            SsGlyph.Z -> {
+                // The Z of ZENITH: slanted, a stroke across.
+                val z = Path().apply {
+                    moveTo(5f * u, 5.5f * u)
+                    lineTo(19f * u, 5.5f * u)
+                    lineTo(5f * u, 18.5f * u)
+                    lineTo(19f * u, 18.5f * u)
+                }
+                drawPath(z, tint, style = Stroke(width = 2.6f * u, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            }
+            SsGlyph.Lock -> {
+                drawRoundRect(tint, topLeft = at(5f, 10.5f), size = Size(14f * u, 10f * u), cornerRadius = CornerRadius(3f * u), style = line)
+                val shackle = Path().apply {
+                    moveTo(8f * u, 10.5f * u)
+                    lineTo(8f * u, 8f * u)
+                    cubicTo(8f * u, 2.5f * u, 16f * u, 2.5f * u, 16f * u, 8f * u)
+                    lineTo(16f * u, 10.5f * u)
+                }
+                drawPath(shackle, tint, style = line)
+            }
+            SsGlyph.Cloud -> {
+                val cloud = Path().apply {
+                    moveTo(7f * u, 18.5f * u)
+                    cubicTo(2.5f * u, 18.5f * u, 2.5f * u, 11f * u, 8f * u, 11f * u)
+                    cubicTo(8.5f * u, 5f * u, 17f * u, 5f * u, 17.5f * u, 11.5f * u)
+                    cubicTo(22f * u, 11.5f * u, 22f * u, 18.5f * u, 17.5f * u, 18.5f * u)
+                    close()
+                }
+                drawPath(cloud, tint, style = line)
+            }
+            SsGlyph.Gear -> {
+                drawCircle(tint, 3.5f * u, at(12f, 12f), style = line)
+                for (k in 0 until 8) {
+                    val a = k * (Math.PI / 4.0)
+                    val dx = Math.cos(a).toFloat()
+                    val dy = Math.sin(a).toFloat()
+                    drawLine(tint, at(12f + dx * 7.5f, 12f + dy * 7.5f), at(12f + dx * 10f, 12f + dy * 10f), strokeWidth = 2.4f * u, cap = StrokeCap.Round)
+                }
+                drawCircle(tint, 7.5f * u, at(12f, 12f), style = line)
+            }
+            SsGlyph.Widget -> {
+                drawRoundRect(tint, topLeft = at(3.5f, 3.5f), size = Size(7f * u, 7f * u), cornerRadius = CornerRadius(2f * u), style = line)
+                drawRoundRect(tint, topLeft = at(3.5f, 13.5f), size = Size(7f * u, 7f * u), cornerRadius = CornerRadius(2f * u), style = line)
+                drawRoundRect(tint, topLeft = at(13.5f, 13.5f), size = Size(7f * u, 7f * u), cornerRadius = CornerRadius(2f * u), style = line)
+                val diamond = Path().apply {
+                    moveTo(17f * u, 3f * u)
+                    lineTo(21f * u, 7f * u)
+                    lineTo(17f * u, 11f * u)
+                    lineTo(13f * u, 7f * u)
+                    close()
+                }
+                drawPath(diamond, tint, style = line)
+            }
+            SsGlyph.Font -> {
+                val a = Path().apply {
+                    moveTo(3f * u, 20f * u)
+                    lineTo(9.5f * u, 4f * u)
+                    lineTo(16f * u, 20f * u)
+                    moveTo(5.5f * u, 14.5f * u)
+                    lineTo(13.5f * u, 14.5f * u)
+                }
+                drawPath(a, tint, style = line)
+                drawCircle(tint, 2.2f * u, at(19f, 12.5f), style = line)
+            }
+        }
+    }
+}

@@ -26,14 +26,14 @@ jobs:
       - name: Build debug APKs (Hearth, Glimmer, Clawd, Duftschrank, ZENITH, ZENITH Smart)
         run: |
           chmod +x gradlew
-          ./gradlew assembleHearthDebug assembleGlimmerDebug assembleClawdDebug assembleDuftDebug assembleOneDebug assembleSmartDebug
+          ./gradlew assembleHearthDebug assembleGlimmerDebug assembleClawdDebug assembleDuftDebug assembleOneDebug :smart:assembleSmartDebug
           # Clear names in the downloads: ZENITH is the main app (it was called Hearth UI once, so its file was HearthUI.apk).
           cp app/build/outputs/apk/hearth/debug/app-hearth-debug.apk Hearth-alt.apk
           cp app/build/outputs/apk/glimmer/debug/app-glimmer-debug.apk Glimmer.apk
           cp app/build/outputs/apk/clawd/debug/app-clawd-debug.apk Clawd.apk
           cp app/build/outputs/apk/duft/debug/app-duft-debug.apk Duftschrank.apk
           cp app/build/outputs/apk/one/debug/app-one-debug.apk ZENITH.apk
-          cp app/build/outputs/apk/smart/debug/app-smart-debug.apk ZENITH-Smart.apk
+          cp smart/build/outputs/apk/smart/debug/smart-smart-debug.apk ZENITH-Smart.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -98,6 +98,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           v=$(grep -o 'versionName = "[^"]*"' app/build.gradle.kts | cut -d'"' -f2)
+          # ZENITH Smart is an app of its own (smart/) with its own version and its own notes.
+          smart_v=$(grep -o 'versionName = "[^"]*"' smart/build.gradle.kts | cut -d'"' -f2)
           # file|slug (tag and update check, never changes)|file name|title|what it is
           # (Hearth One became Hearth UI, then OMEGA UI, now ZENITH; its slug stays, so installed apps keep finding it.)
           for entry in "Hearth-alt.apk|hearth|Hearth|Hearth (alt)|der alte Launcher allein, ohne Glimmer und Clawd – ZENITH ist sein Nachfolger" \
@@ -107,19 +109,25 @@ jobs:
                        "ZENITH.apk|hearthone|ZENITH|ZENITH|Launcher, Glimmer und Clawd in einer App" \
                        "ZENITH-Smart.apk|smart|ZENITH-Smart|ZENITH Smart|ZENITH im Look des Smart Launchers 6, mit ClaudeOS und ZENITH im Kern der Einstellungen"; do
             IFS='|' read -r file slug name title what <<< "$entry"
-            tag="$slug-v$v"
-            cp "$file" "$name-$v.apk"
+            ver="$v"; notes_file=.github/whatsnew.md
+            if [ "$slug" = smart ]; then ver="$smart_v"; notes_file=.github/whatsnew-smart.md; fi
+            tag="$slug-v$ver"
+            cp "$file" "$name-$ver.apk"
             # What's new (German, shown in each app's software update screen), then the build.
             whatsnew=""
-            if [ -f .github/whatsnew.md ]; then whatsnew="$(cat .github/whatsnew.md)"; fi
-            notes="$(printf '%s\n\n%s\n\nDebug-APK aus Build %s (Commit %s).' "$title $v – $what." "$whatsnew" "${{ github.run_number }}" "${{ github.sha }}")"
+            if [ -f "$notes_file" ]; then whatsnew="$(cat "$notes_file")"; fi
+            notes="$(printf '%s\n\n%s\n\nDebug-APK aus Build %s (Commit %s).' "$title $ver – $what." "$whatsnew" "${{ github.run_number }}" "${{ github.sha }}")"
             if gh release view "$tag" >/dev/null 2>&1; then
-              gh release upload "$tag" "$name-$v.apk" --clobber
+              gh release upload "$tag" "$name-$ver.apk" --clobber
               gh release edit "$tag" --notes "$notes" --latest=false
+              # Only one APK per release: an older build's file under another name (the update check takes the first it finds).
+              for stale in $(gh release view "$tag" --json assets --jq '.assets[].name' | grep '\.apk$' | grep -vx "$name-$ver.apk" || true); do
+                gh release delete-asset "$tag" "$stale" --yes || true
+              done
             else
-              gh release create "$tag" "$name-$v.apk" \
+              gh release create "$tag" "$name-$ver.apk" \
                 --target "${{ github.sha }}" \
-                --title "$title $v" \
+                --title "$title $ver" \
                 --notes "$notes" \
                 --latest=false
             fi
@@ -145,8 +153,17 @@ jobs:
           # The newest version's card (colors, label), so an installed ZENITH can draw it before the update is installed.
           if os.path.exists(".github/card.json"):
               out["card"] = json.load(open(".github/card.json"))
-          for slug, file in [("hearth", "Hearth-alt.apk"), ("glimmer", "Glimmer.apk"), ("clawd", "Clawd.apk"), ("duft", "Duftschrank.apk"), ("hearthone", "ZENITH.apk"), ("smart", "ZENITH-Smart.apk")]:
+          for slug, file in [("hearth", "Hearth-alt.apk"), ("glimmer", "Glimmer.apk"), ("clawd", "Clawd.apk"), ("duft", "Duftschrank.apk"), ("hearthone", "ZENITH.apk")]:
               out[slug] = {"version": v, "build": build, "url": base + file, "size": os.path.getsize(file)}
+          # ZENITH Smart is an app of its own (smart/): its own version, build and notes, no card of ZENITH's.
+          smart = open("smart/build.gradle.kts").read()
+          out["smart"] = {
+              "version": re.search(r'versionName = "([^"]*)"', smart).group(1),
+              "build": int(re.search(r"versionCode = (\d+)", smart).group(1)),
+              "url": base + "ZENITH-Smart.apk",
+              "size": os.path.getsize("ZENITH-Smart.apk"),
+              "notes": open(".github/whatsnew-smart.md").read().strip() if os.path.exists(".github/whatsnew-smart.md") else "",
+          }
           json.dump(out, open("versions.json", "w"), ensure_ascii=False, indent=1)
           PY
           gh release create "build-${{ github.run_number }}" ZENITH.apk ZENITH-Smart.apk Glimmer.apk Clawd.apk Duftschrank.apk Hearth-alt.apk versions.json \

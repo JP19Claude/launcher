@@ -78,6 +78,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
@@ -1925,6 +1926,51 @@ private fun HearthCard(s: LauncherSettings) {
         }.getOrNull()?.takeIf { it.isNotBlank() } ?: Build.MODEL
     }
     val product = if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) HearthUi.NAME else "Hearth"
+    // ZENITH 21's theme: the system card is the version's own picture – the sun over the ridges – not glass.
+    val look = if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) cardFor(version, s.zenithTheme, null) else null
+    if (look != null && look.horizon) {
+        val crystal = rememberCrystalTaps(version)
+        Box(
+            Modifier
+                .padding(vertical = 8.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .drawBehind { drawZenithSpecCard(look, 0f) }
+                .clickable {
+                    runCatching {
+                        context.startActivity(
+                            android.content.Intent().setClassName(context.packageName, "dev.hearth.launcher.AboutPhoneActivity")
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }
+                },
+        ) {
+            Column(Modifier.padding(18.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ZenithLogo(size = 84.dp, number = version.substringBefore('.'), onTap = crystal, cardTint = look.accent)
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(phone, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                        Text("$product $version", color = Color.White.copy(alpha = 0.78f), fontSize = 13.sp)
+                        Text(
+                            "${dev.hearth.launcher.data.ClaudeOs.full} „${dev.hearth.launcher.data.ClaudeOs.CODENAME}“",
+                            color = look.accent,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = Color.White.copy(alpha = 0.78f))
+                }
+                SloganBanner(
+                    Modifier.padding(top = 14.dp, start = 2.dp),
+                    accent = look.accent,
+                    size = 36.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                )
+            }
+        }
+        return
+    }
     LiquidGlass(
         cornerRadius = 28.dp,
         refraction = 16.dp,
@@ -1983,6 +2029,7 @@ private fun HearthCard(s: LauncherSettings) {
                     accent = zenithAccent(version, s.zenithTheme),
                     size = 36.sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                    color = TextPrimary,
                 )
             }
         }

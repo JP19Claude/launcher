@@ -1,11 +1,16 @@
 {
-  "bg": ["#040A1C", "#0B2468", "#2F7BFF"],
-  "glowA": "#9A6BFF",
-  "glowB": "#3FD0FF",
-  "accent": "#62C8FF",
-  "label": "H O R I Z O N T",
-  "os": "ClaudeOS 8.0",
-  "aurora": "Eis",
-  "stars": true,
-  "fireworks": true
+ "bg": [
+  "#040A1C",
+  "#0B2468",
+  "#2F7BFF"
+ ],
+ "glowA": "#9A6BFF",
+ "glowB": "#8FE3FF",
+ "accent": "#62C8FF",
+ "label": "H O R I Z O N T",
+ "os": "ClaudeOS 8.0",
+ "aurora": "Eis",
+ "stars": false,
+ "fireworks": false,
+ "style": "horizon"
 }

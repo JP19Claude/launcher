@@ -1,13 +1,16 @@
 ZENITH 21.0 „Horizont“ auf ClaudeOS 8.0 „Horizon“
 
 ✨ Neu im Hotfix
-• Klare Dateinamen in den Downloads: ZENITH.apk (die Hauptapp, früher HearthUI.apk), ZENITH-Smart.apk, Duftschrank.apk und Hearth-alt.apk (der alte Launcher allein, nicht nötig) – dazu eine Erklärung im Release, welche Datei wofür ist
+• Eine Karte, die wirklich anders aussieht: Horizont zeigt jetzt einen klaren Himmel, eine Sonne, die hinter drei Bergrücken aufgeht, und ein paar blasse Sterne – statt Bögen und Feuerwerk. Dasselbe Bild trägt die Systemkarte oben in den Einstellungen (mit dem Jubiläums-Theme bleibt sie, wie sie war)
+• „Aim Higher.“ ruhiger: eine feine Schrift in einer Farbe, ohne Glühen, Farbverlauf und Lichtband
+• Update-Fehler „INSTALL_FAILED_INVALID_APK“: Die App lädt nur noch eine ganz angekommene Datei, installiert sie als das Paket, das sie ist, und zeigt bei einem Fehler Androids ganze Meldung mit dem Grund auf der Seite des Software-Updates
+• ZENITH Smart ist wieder auf dem Stand von 20.5 und hat jetzt seinen eigenen Code und seine eigene Versionslinie; „Be Smarter“ in ZENITH bleibt, wie es mit 21.0 ist
+• Klare Dateinamen in den Downloads: ZENITH.apk (die Hauptapp, früher HearthUI.apk), ZENITH-Smart.apk, Duftschrank.apk und Hearth-alt.apk (der alte Launcher allein, nicht nötig)
 
 ✨ Neu in 21.0
 • Neues Theme „Horizont“: tiefes Blau ins Licht des Horizonts, eisblaue Akzente – auf der Versionskarte, der Systemkarte der Einstellungen und am Z. Das Jubiläums-Theme von ZENITH 20 behältst du, wenn du willst: Nach dem Update fragt ZENITH einmal, und der Schalter „Jubiläums-Theme behalten“ steht jederzeit unter Einstellungen → ZENITH
-• Der Smart-Modus, viel besser: Kategorien selbst bauen (hinzufügen, umbenennen, Zeichen wählen, verschieben, entfernen), dreizehn Formen für die Icons, eigene Farbe mit Farbwähler, die Suche rechnet auch um („5 km in mi“), zwei Smart-Widgets (Akku-Balken, nächste Termine)
-• Vom Smart Launcher wechseln: der Wechsel-Assistent in fünf Schritten (Thema, Icon-Form, Uhr, Standard-Launcher) und die Seite „Warum ZENITH Smart“ – was hier frei ist und was Smart Launcher laut eigenen Texten nur mit Pro hat
-• ZENITH Smart: die eigene App im Look des Smart Launchers 6 (eigenes Paket, neben ZENITH installierbar), die Einstellungen im Smart-Stil mit ClaudeOS und ZENITH im Kern
+• „Be Smarter“ in ZENITH, viel besser: Kategorien selbst bauen (hinzufügen, umbenennen, Zeichen wählen, verschieben, entfernen), dreizehn Formen für die Icons, eigene Farbe mit Farbwähler, die Suche rechnet auch um („5 km in mi“), zwei Smart-Widgets (Akku-Balken, nächste Termine)
+• Vom Smart Launcher wechseln: der Wechsel-Assistent in fünf Schritten (Thema, Icon-Form, Uhr, Standard-Launcher) und die Seite „Warum ZENITH Smart“ – was hier frei ist und was Smart Launcher laut eigenen Texten nur mit Pro hat (in „Be Smarter“, auch in den Einstellungen)
 • Darunter ClaudeOS 8.0 „Horizon“
 
 Seit 20.5

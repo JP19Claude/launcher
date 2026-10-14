@@ -1,0 +1,205 @@
+package dev.hearth.launcher.ui
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import dev.hearth.launcher.data.ClawdMood
+import dev.hearth.launcher.data.EasterEggs
+
+/** One easter egg: its id, a name, and where it hides. */
+internal class EggSpot(val id: String, val name: String, val where: String)
+
+/** All of Hearth's easter eggs and how to find them. */
+internal val EggSpots = listOf(
+    EggSpot("version", "ZENITH-Version", "Software-Update oder Über das Telefon: fünfmal schnell auf die ZENITH-Version tippen (lange drücken: die Ruhmeshalle mit den Eggs aller großen Versionen). Jede große Version hat ein eigenes Egg (19.5: Z-Sturm, 19: Sonnenlauf, 18.5: Lupe, 18: Schmiede, 17.5: Laterne, 17: Rubin, 16: Glühwürmchen, 15.5: Funken, 15: Tresor, 14.5: Kometen, 14: Prisma, 13.5: Tropfen, 13: Seide …)."),
+    EggSpot("claudeos", "ClaudeOS", "Software-Update oder Über das Telefon: fünfmal schnell auf die ClaudeOS-Version tippen (lange drücken: die ClaudeOS-Ruhmeshalle mit allen Eggs) und dann: ClaudeOS 7 „Apex“ – das Claude-Zeichen mit dem Finger auf den Gipfel ziehen (ClaudeOS 6 „Helios“: bei der Sonnenfinsternis den Mond von der Sonne schieben; ClaudeOS 5 „Mythos“: den Finger halten, bis der Rat erscheint; ClaudeOS 4 „Aurora“: Nordlichter an den Himmel malen; ClaudeOS 3 „Nova“: den Stern zur Supernova bringen)."),
+    EggSpot("footer", "Gebaut mit Claude", "Einstellungen ganz unten: siebenmal auf „${dev.hearth.launcher.data.Brand.name} · gebaut mit Claude“ tippen."),
+    EggSpot("clock", "Uhr", "Startbildschirm: fünfmal schnell auf die Uhr tippen."),
+    EggSpot("spin", "Glas-Uhr", "Das Glas-Uhr-Widget dreimal schnell antippen – es dreht sich."),
+    EggSpot("rainbow", "Regenbogen", "Im Finder nach „Regenbogen“ suchen."),
+    EggSpot("walk", "Clawd suchen", "Im Finder nach „Clawd“ suchen."),
+    EggSpot("wave", "Clawd winkt", "Lange auf Clawd in einer Suchleiste drücken (Startbildschirm oder App-Drawer)."),
+    EggSpot("dizzy", "Schwindelig", "Clawd auf dem Startbildschirm sechsmal schnell antippen."),
+    EggSpot("drag", "Ausflug", "Clawd auf dem Startbildschirm von einem Rand zum anderen ziehen."),
+    EggSpot("wakeup", "Aufwecken", "Clawd antippen, während er schläft."),
+    EggSpot("tickle", "Kitzeln", "Im Clawd-Chat fünfmal auf Clawd oben im Kopf tippen."),
+    EggSpot("42", "Sinn des Lebens", "Clawd nach dem Sinn des Lebens fragen."),
+    EggSpot("love", "Liebe", "Clawd sagen, dass du ihn lieb hast."),
+    EggSpot("dance", "Tanz", "Clawd bitten zu tanzen."),
+    EggSpot("best", "Der Beste", "Clawd fragen, wer der Beste ist."),
+    EggSpot("midnight", "Nachteule", "Nach Mitternacht mit Clawd reden."),
+    EggSpot("rainbowskin", "Regenbogen-Clawd", "Clawd die Farbe „Regenbogen“ geben (Einstellungen → Clawd)."),
+    EggSpot("fashion", "Modenschau", "Clawd gleichzeitig ein Outfit und einen Hut anziehen."),
+    EggSpot("jump100", "Clawd Jump", "100 Punkte in Clawd Jump schaffen."),
+    EggSpot("water", "Wasser", "An einem Tag acht Gläser Wasser mit Clawd trinken."),
+    EggSpot("petlove", "Streicheleinheit", "Clawd im Tamagotchi fünfmal hintereinander streicheln."),
+    EggSpot("breathe", "Atmen", "Eine ganze Minute mit Clawd atmen."),
+    EggSpot("diary", "Tagebuch", "Clawds Stimmungstagebuch sieben Tage am Stück führen."),
+    EggSpot("coin", "Auf der Kante", "Clawds Münze werfen, bis sie auf der Kante landet (1 zu 250)."),
+    EggSpot("rps", "Unschlagbar", "Fünfmal hintereinander gegen Clawd Schnick-Schnack-Schnuck gewinnen."),
+    EggSpot("bigday", "Der große Tag", "Clawds Countdown genau am großen Tag ansehen."),
+    EggSpot("riddles", "Rätselmeister", "Alle Rätsel von Clawd lösen."),
+    EggSpot("codes", "Codeknacker", "Im Finder *#0000# eintippen – die Liste aller Geheimcodes. (Oder lange auf den großen Titel „Einstellungen“ drücken.)"),
+    EggSpot("omega", "Von Alpha bis Omega", "Im Finder nach „Omega“ (oder Ω) suchen und alle griechischen Buchstaben um das Ω kreisen lassen."),
+    EggSpot("labs", "ZENITH Labs", "Über das Telefon: siebenmal auf die Build-Nummer tippen."),
+    EggSpot("illumination", "Clawd Illumination", "So oft auf das ZENITH-Logo tippen, wie ZENITH Nummer hat (jetzt 20)."),
+    // ZENITH 19.6: more hidden menus (codes in the finder) …
+    EggSpot("console", "Z-Konsole", "Ein Terminal – tippe help und probier auch Befehle, die nicht in der Liste stehen. Über das Telefon: fünfmal schnell auf „Kernel“ tippen · Core Enforcer Studio: den Titel lange drücken · Startbildschirm: genau um 13:37 auf die Uhr tippen · oder im Finder *#8376# (T-E-R-M)."),
+    EggSpot("neon", "Neon", "Der Regen aus Zeichen. Über das Telefon: fünfmal schnell auf „Auflösung“ tippen · oder im Finder *#6366# (N-E-O-N)."),
+    EggSpot("snake", "Funken-Schlange", "Wischen, Funken fressen, lang werden. Über das Telefon: fünfmal schnell auf „Ladestand“ tippen · oder im Finder *#7625# (S-N-A-K)."),
+    EggSpot("snake12", "Lange Schlange", "In der Funken-Schlange zwölf Funken fressen."),
+    EggSpot("draw", "Lichtmalerei", "Mit dem Finger Licht malen. ZENITH-Menü: die Kachel „Z-Angriff“ lange drücken · oder im Finder *#3729# (D-R-A-W)."),
+    EggSpot("oracle", "Ω-Orakel", "Eine Frage, ein Tipp auf die Kugel. ZENITH-Menü: die Kachel „Clawd“ lange drücken · oder im Finder *#6725# (O-R-A-K)."),
+    EggSpot("oracle7", "Sieben Fragen", "Dem Ω-Orakel sieben Fragen stellen."),
+    EggSpot("zapp", "Blitz-Test", "Wer ist schneller? ZENITH-Menü: die Kachel „Taschenlampe“ lange drücken · oder im Finder *#9277# (Z-A-P-P)."),
+    EggSpot("zapp250", "Blitzschnell", "Im Blitz-Test unter 250 Millisekunden bleiben."),
+    EggSpot("credits", "Abspann", "Alle Zeiten, alle Namen. Über das Telefon: fünfmal schnell auf „made by …“ tippen · oder im Finder *#2733# (C-R-E-D)."),
+    // … words in the finder, from the Hearth, OMEGA and ZENITH years …
+    EggSpot("kamin", "Hearth-Kamin", "Fünf Scheite nachlegen – wo der Name herkommt. Ruhmeshalle (ZENITH-Version lange drücken): eine Hearth-Zeit lange drücken · oder im Finder nach „Hearth“ suchen."),
+    EggSpot("konami", "Der alte Code", "↑ ↑ ↓ ↓ ← → ← → B A. Einstellungen ganz unten: „… gebaut mit Claude“ lange drücken · oder im Finder nach „Konami“ suchen."),
+    EggSpot("fluid", "OMEGA Fluid", "Sechs Sekunden den Finger auf das Licht halten. Ruhmeshalle: eine OMEGA-UI-Zeit lange drücken · oder im Finder nach „Fluid“ suchen."),
+    EggSpot("zenithword", "Zenith", "Der höchste Punkt. Ruhmeshalle: eine ZENITH-Zeit lange drücken · oder im Finder nach „Zenith“ suchen."),
+    EggSpot("sudo", "Sudo", "Nette Idee. ZENITH-Menü: die Kachel „Ein/Aus“ lange drücken · im Finder „sudo su“ · oder „sudo“ in der Z-Konsole."),
+    EggSpot("hello", "Hallo, Welt", "Das erste Programm von allen. ZENITH-Menü: die Kachel „Einstellungen“ lange drücken · oder im Finder „hello world“."),
+    EggSpot("pi", "Pi", "Startbildschirm: um 3:14 oder 15:14 auf die Uhr tippen · oder im Finder „π“ (oder 3,14)."),
+    // … and a few small ones.
+    EggSpot("monitor", "Monitor-Check", "Beim ZENITH-Monitor-Widget fünfmal schnell auf den Titel tippen."),
+    EggSpot("shield10", "Schildklopfer", "Im Schutzschild zehnmal schnell auf den Kreis tippen."),
+    EggSpot("shield100", "Makellos", "Im Schutzschild 100 von 100 Punkten erreichen."),
+    EggSpot("dice10", "Würfelglück", "Im Core Enforcer Studio zehnmal würfeln."),
+    EggSpot("leet", "Elite", "Auf dem Startbildschirm genau um 13:37 auf die Uhr tippen – das öffnet auch die Z-Konsole."),
+    // … ZENITH 20, the jubilee.
+    EggSpot("nightmoon", "Mondsüchtig", "In der Z-Nacht (Nachttisch-Uhr) siebenmal auf den Mond tippen."),
+    EggSpot("weathershow", "Wettermacher", "In der Zentrale fünfmal schnell auf das Wetterbild tippen – und der Himmel zeigt, was er kann."),
+    EggSpot("twenty", "Zwanzig", "In der Zentrale zwanzigmal auf die Uhr tippen."),
+    // … and the jubilee's own, hidden through the day and the system.
+    EggSpot("twenty2020", "Zwanzig nach Acht", "Auf dem Startbildschirm genau um 20:20 auf die Uhr tippen – das öffnet das Jubiläum."),
+    EggSpot("jubileeword", "Das Jubiläum", "Im Finder nach „Jubiläum“, „Zwanzig“ oder „Zenith 20“ suchen – die Zeremonie noch einmal."),
+    EggSpot("auroraall", "Alle Lichter", "Alle fünf Farben des Polarlichts ausprobieren (Einstellungen → ZENITH → Polarlicht)."),
+    EggSpot("nightowl", "Nachtschicht", "Die Z-Nacht zwischen drei und vier Uhr nachts öffnen."),
+    EggSpot("nightwatch", "Nachtwache", "Die Z-Nacht zwanzig Minuten lang offen lassen."),
+    EggSpot("battery20", "Zwanzig Prozent", "Die Z-Nacht oder die Zentrale öffnen, wenn der Akku genau 20 % hat."),
+    EggSpot("earlybird", "Frühaufsteher", "Die Zentrale zwischen fünf und sechs Uhr morgens öffnen."),
+    EggSpot("twentyth", "Der Zwanzigste", "Die Zentrale an einem 20. des Monats öffnen."),
+    EggSpot("degrees20", "Zwanzig Grad", "In der Zentrale, wenn das Wetter genau 20 °C zeigt."),
+    EggSpot("polyglot", "Weltgewandt", "In der Zentrale fünfmal schnell auf den Gruß tippen."),
+    EggSpot("club20", "Jubiläums-Club", "Zwanzig Eggs finden – dann kommt dieses von allein."),
+    EggSpot("jubilee40", "Vierzig in Gold", "Vierzig Eggs in ihrer Jubiläums-Edition erleben – dann kommt dieses von allein."),
+)
+
+/**
+ * The hidden easter egg map: where all of Hearth's eggs are, and which you've found.
+ * Opened by holding the "made by" line in Über das Telefon.
+ */
+@Composable
+internal fun EggMap(onClose: () -> Unit) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { EasterEggs.init(context) }
+    val found by EasterEggs.found.collectAsState()
+    val jubilee by EasterEggs.jubilee.collectAsState()
+    BackHandler(onBack = onClose)
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF120C22), Color(0xFF07060E)))),
+    ) {
+        FluidBackdrop(AiFluidColors.take(3), strength = 0.5f)
+        LazyColumn(
+            Modifier
+                .fillMaxSize()
+                .statusBarsPadding(),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 40.dp),
+        ) {
+            item {
+                Column(Modifier.padding(top = 50.dp, bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Clawd(Modifier.size(width = 90.dp, height = 76.dp), mood = ClawdMood.Love)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Easter-Egg-Karte",
+                        style = TextStyle(brush = Brush.linearGradient(AiFluidColors), fontSize = 28.sp, fontWeight = FontWeight.Bold),
+                    )
+                    val count = EggSpots.count { it.id in found }
+                    Text(
+                        "$count von ${EggSpots.size} gefunden · ${EggSpots.count { it.id in jubilee }} in Gold (Jubiläums-Edition) · psst, das ist geheim",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 14.sp,
+                    )
+                }
+            }
+            items(EggSpots, key = { it.id }) { egg ->
+                val done = egg.id in found
+                Row(
+                    Modifier
+                        .padding(vertical = 5.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White.copy(alpha = if (done) 0.09f else 0.05f))
+                        .glassSheen(20.dp)
+                        .padding(14.dp),
+                ) {
+                    Box(
+                        Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(if (egg.id in jubilee) ZenithGold else if (done) Color(0xFF34C759) else Color.White.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(if (done) "✓" else "🥚", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(egg.name, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f, fill = false))
+                            // ZENITH 20: the egg has been seen in its jubilee edition.
+                            if (egg.id in jubilee) Text("  ✦ 20", color = ZenithGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Text(egg.where, color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, lineHeight = 18.sp)
+                    }
+                }
+            }
+        }
+        GlassCircle(
+            onClick = onClose,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(12.dp),
+            size = 44.dp,
+        ) {
+            Icon(Icons.Rounded.Close, contentDescription = "Schließen", tint = Color.White)
+        }
+    }
+}

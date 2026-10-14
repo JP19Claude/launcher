@@ -1,30 +1,14 @@
 package dev.hearth.launcher.ui
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextGeometricTransform
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -63,9 +47,10 @@ internal fun SloganLine(
 }
 
 /**
- * ZENITH 20.5: the saying big – "Aim Higher." in heavy slanted letters like the Z's own, in the
- * [accent] with a band of light running over it, and a thin line under it. For the cards that show
- * the system (the settings' system card, the version card).
+ * The saying big – "Aim Higher." for the cards that show the system (the settings' system card,
+ * the version card). Plain: one solid color (the text's own, with a breath of the [accent] in it),
+ * a light weight, no glow, no shine, no rule – it's meant to read like printed type, not like
+ * something a machine lit up.
  */
 @Composable
 internal fun SloganBanner(
@@ -73,47 +58,21 @@ internal fun SloganBanner(
     accent: Color = ZenithGreen,
     size: TextUnit = 34.sp,
     textAlign: TextAlign = TextAlign.Center,
+    color: Color = Color.White,
 ) {
-    val density = LocalDensity.current
-    val shift = if (LocalSettings.current.animations) {
-        rememberInfiniteTransition(label = "sloganShine").animateFloat(
-            0f, 1f,
-            infiniteRepeatable(tween(4600, easing = LinearEasing)),
-            label = "sloganShine",
-        ).value
-    } else {
-        0.45f
-    }
-    val width = with(density) { size.toPx() } * 6.2f
-    val x = -width * 0.5f + width * 2f * shift
-    val bright = lerp(accent, Color.White, 0.5f)
-    val brush = Brush.linearGradient(
-        listOf(accent, bright, Color.White, bright, accent),
-        start = Offset(x, 0f),
-        end = Offset(x + width * 0.8f, 0f),
-    )
     val start = textAlign == TextAlign.Start
     Column(modifier.fillMaxWidth(), horizontalAlignment = if (start) Alignment.Start else Alignment.CenterHorizontally) {
         Text(
             ZenithSlogan.MAIN,
             style = TextStyle(
-                brush = brush,
+                color = lerp(color, accent, 0.14f).copy(alpha = 0.96f),
                 fontSize = size,
-                fontWeight = FontWeight.Black,
-                letterSpacing = (size.value * 0.01f).sp,
-                textGeometricTransform = TextGeometricTransform(skewX = -0.18f),
-                shadow = Shadow(accent.copy(alpha = 0.55f), Offset.Zero, 26f),
+                fontWeight = FontWeight.Light,
+                letterSpacing = (size.value * -0.012f).sp,
             ),
             textAlign = textAlign,
             maxLines = 1,
             softWrap = false,
-        )
-        Box(
-            Modifier
-                .padding(top = 4.dp)
-                .width(64.dp)
-                .height(2.dp)
-                .background(Brush.horizontalGradient(listOf(accent, Color.Transparent))),
         )
     }
 }

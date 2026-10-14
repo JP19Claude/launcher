@@ -1,0 +1,711 @@
+package dev.hearth.launcher
+
+import androidx.compose.ui.unit.DpSize
+import dev.hearth.launcher.system.ClawdLink
+import dev.hearth.launcher.system.ControlsLink
+import dev.hearth.launcher.system.GlimmerLink
+import android.os.SystemClock
+import android.graphics.Bitmap
+import android.app.Application
+import android.content.Intent
+import android.graphics.Rect
+import android.os.Bundle
+import android.provider.Settings
+import androidx.compose.runtime.Immutable
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import dev.hearth.launcher.data.AppInfo
+import dev.hearth.launcher.data.AppLock
+import dev.hearth.launcher.data.AppRepository
+import dev.hearth.launcher.data.AppUsage
+import dev.hearth.launcher.data.CellPos
+import dev.hearth.launcher.data.HomeFolderData
+import dev.hearth.launcher.data.HomeLayoutRepository
+import dev.hearth.launcher.data.CcStyle
+import dev.hearth.launcher.data.AssistantHost
+import dev.hearth.launcher.data.ClaudeAssistant
+import dev.hearth.launcher.data.DesignPreset
+import dev.hearth.launcher.data.AccentColor
+import dev.hearth.launcher.data.GlassTint
+import dev.hearth.launcher.data.ClockStyle
+import dev.hearth.launcher.data.DockStyle
+import dev.hearth.launcher.data.IconConfig
+import dev.hearth.launcher.data.IconPackInfo
+import dev.hearth.launcher.data.IconPackRepository
+import dev.hearth.launcher.data.IconStyle
+import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.data.LibraryCategory
+import dev.hearth.launcher.data.MediaRepository
+import dev.hearth.launcher.data.UsageRepository
+import dev.hearth.launcher.data.SettingsRepository
+import dev.hearth.launcher.data.SystemControls
+import dev.hearth.launcher.data.WallpaperBackdrop
+import dev.hearth.launcher.data.WallpaperRepository
+import dev.hearth.launcher.data.WidgetRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+
+/** Content of the App Library: suggestions, recently added, and one folder per category. */
+@Immutable
+data class AppLibraryData(
+    val suggestions: List<AppInfo> = emptyList(),
+    val recent: List<AppInfo> = emptyList(),
+    val folders: List<Pair<LibraryCategory, List<AppInfo>>> = emptyList(),
+)
+
+class LauncherViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val settingsRepo = SettingsRepository(application)
+    private val iconPackRepo = IconPackRepository(application)
+    private val repo = AppRepository(application, iconPackRepo)
+    private val wallpaper = WallpaperRepository(application)
+    private val usage = UsageRepository(application)
+
+    /** Brightness, volume, flashlight & co. for the launcher's control center. */
+    val controls = SystemControls(application)
+
+    /** Android widgets on the widget page. */
+    val widgets = WidgetRepository(application)
+
+    /** What is playing, for the control center. */
+    val media = MediaRepository(application)
+
+    private val homeLayout = HomeLayoutRepository(application)
+
+    /** Places the user dragged apps to on the home screen. */
+    val homePositions: StateFlow<Map<String, CellPos>> = homeLayout.positions
+
+    /** Folders on the home screen. */
+    val folders: StateFlow<List<HomeFolderData>> = homeLayout.folders
+
+    fun folderOf(appKey: String): HomeFolderData? = folders.value.firstOrNull { appKey in it.apps }
+
+    /** A new folder from two apps; it is named after the first app's App Library category. */
+    fun createFolder(first: AppInfo, second: AppInfo): HomeFolderData {
+        val folder = HomeFolderData(
+            id = System.currentTimeMillis().toString(36),
+            name = first.category.title.substringBefore(" &"),
+            apps = listOf(first.key, second.key),
+        )
+        homeLayout.setFolders(folders.value.map { it.copy(apps = it.apps - first.key - second.key) }.filter { it.apps.isNotEmpty() } + folder)
+        return folder
+    }
+
+    fun addToFolder(folderId: String, app: AppInfo) {
+        homeLayout.setFolders(
+            folders.value.map { f ->
+                when {
+                    f.id == folderId -> if (app.key in f.apps) f else f.copy(apps = f.apps + app.key)
+                    else -> f.copy(apps = f.apps - app.key)
+                }
+            }.filter { it.apps.isNotEmpty() },
+        )
+    }
+
+    /** Takes an app out of its folder; a folder left with one app turns back into that app. */
+    fun removeFromFolder(appKey: String) {
+        val folder = folderOf(appKey) ?: return
+        val rest = folder.apps - appKey
+        if (rest.size <= 1) {
+            dissolveFolder(folder.id)
+        } else {
+            homeLayout.setFolders(folders.value.map { if (it.id == folder.id) it.copy(apps = rest) else it })
+        }
+    }
+
+    /** Removes the folder; its apps go back onto the home screen, the first one in its place. */
+    fun dissolveFolder(folderId: String) {
+        val folder = folders.value.firstOrNull { it.id == folderId } ?: return
+        homeLayout.setFolders(folders.value.filterNot { it.id == folderId })
+        val positions = homePositions.value
+        val place = positions[folder.key]
+        val updated = positions - folder.key
+        homeLayout.set(if (place != null && folder.apps.isNotEmpty()) updated + (folder.apps.first() to place) else updated)
+    }
+
+    fun renameFolder(folderId: String, name: String) {
+        val clean = name.trim().ifBlank { return }
+        homeLayout.setFolders(folders.value.map { if (it.id == folderId) it.copy(name = clean) else it })
+    }
+
+    val settings: StateFlow<LauncherSettings> = settingsRepo.settings
+
+    /** Every launchable app, hidden ones included (for the settings). */
+    val allApps: StateFlow<List<AppInfo>> = repo.apps
+
+    /** Apps shown on the home screen and in search. */
+    val apps: StateFlow<List<AppInfo>> = combine(repo.apps, settings) { all, s ->
+        if (s.hiddenApps.isEmpty()) all else all.filterNot { it.key in s.hiddenApps }
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Own dock order if the user changed it, otherwise phone, messages, browser, camera. */
+    val dock: StateFlow<List<AppInfo>> = combine(apps, settings) { all, s -> pickDock(all, s) }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** How often and when each app was opened (drawer sorting). */
+    val appUsage: StateFlow<Map<String, AppUsage>> = usage.usage
+
+    /** Apps sorted into folders, like the App Library on iOS. */
+    val library: StateFlow<AppLibraryData> = combine(apps, usage.usage) { all, used -> buildLibrary(all, used) }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AppLibraryData())
+
+    /** Wallpaper copy for the glass surfaces, or null if it can't be read. */
+    val backdrop: StateFlow<WallpaperBackdrop?> = wallpaper.backdrop
+
+    /** True while the launcher lacks permission to read the wallpaper. */
+    val needsWallpaperAccess: StateFlow<Boolean> = wallpaper.needsAccess
+
+    private val _iconPacks = MutableStateFlow<List<IconPackInfo>>(emptyList())
+    val iconPacks: StateFlow<List<IconPackInfo>> = _iconPacks.asStateFlow()
+
+    private val _homeEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+
+    /**
+     * Emits on the home button. True: pressed while the launcher was already in front
+     * (jump back to the first page). False: coming back from an app (only close overlays,
+     * instantly, so the next tap reaches an icon right away).
+     */
+    val homeEvents: SharedFlow<Boolean> = _homeEvents.asSharedFlow()
+
+    /** Claude's sheet over the home screen. */
+    private val _assistantOpen = MutableStateFlow(false)
+    val assistantOpen: StateFlow<Boolean> = _assistantOpen.asStateFlow()
+
+    fun closeAssistant() {
+        _assistantOpen.value = false
+    }
+
+    /** What the launcher lets Claude do while it runs. */
+    private val assistantHost = object : AssistantHost {
+        override fun applyPreset(preset: DesignPreset) = this@LauncherViewModel.applyPreset(preset)
+        override fun openLauncherSettings() = requestSettings()
+        override fun openWallpaperPicker() = this@LauncherViewModel.openWallpaperPicker()
+        override fun webSearch(query: String) = this@LauncherViewModel.webSearch(query)
+    }
+
+    init {
+        ClaudeAssistant.init(application)
+        ClaudeAssistant.host = assistantHost
+        dev.hearth.launcher.data.EasterEggs.init(application)
+        AppLock.removeHandler = { pkg -> setLocked(pkg, false) }
+
+        // New default looks, each applied once to existing installs:
+        // 2 = ColorOS × Claude.
+        if (settingsRepo.settings.value.designVersion < LauncherSettings.DESIGN_VERSION) {
+            settingsRepo.update {
+                var s = it
+                if (s.designVersion < 2) s = s.withPreset(DesignPreset.ColorOSClaude)
+                // 3 and 4: control center and notifications as on iOS 27.
+                if (s.designVersion < 4) s = s.withCcStyle(CcStyle.IOS)
+                // 5: more liquid glass everywhere.
+                if (s.designVersion < 5) {
+                    s = s.copy(
+                        glassRefraction = s.glassRefraction.coerceAtLeast(1.6f),
+                        glassDispersion = s.glassDispersion.coerceAtLeast(0.8f),
+                        glassSpecular = s.glassSpecular.coerceAtLeast(1.15f),
+                        ccRefraction = s.ccRefraction.coerceAtLeast(1.6f),
+                    )
+                }
+                // 7: Galaxy × Claude gets One UI's Quick Panel instead of the ColorOS one.
+                if (s.designVersion < 7 && s.galaxyClaude && s.ccStyle == CcStyle.ColorOS) s = s.withCcStyle(CcStyle.OneUI)
+                // 8: OMEGA UI is part of Galaxy × Claude – what was still Galaxy's default turns ruby
+                // (whatever was chosen by hand stays).
+                if (s.designVersion < 8 && s.galaxyClaude) {
+                    s = s.copy(
+                        accent = if (s.accent == AccentColor.Galaxy) AccentColor.Ruby else s.accent,
+                        glassTint = if (s.glassTint == GlassTint.Galaxy) GlassTint.Ruby else s.glassTint,
+                        clockStyle = if (s.clockStyle == ClockStyle.OneUI) ClockStyle.Omega else s.clockStyle,
+                        dockStyle = if (s.dockStyle == DockStyle.Glass) DockStyle.Island else s.dockStyle,
+                    )
+                }
+                // 9: ZENITH 19 – Galaxy × Claude turns to the sun: Zenith green, sunlit glass, the
+                // sun's arc as the clock. Elsewhere, the ruby of OMEGA Glass turns Zenith.
+                if (s.designVersion < 9) {
+                    s = if (s.galaxyClaude) {
+                        s.copy(
+                            omegaColor = dev.hearth.launcher.data.OmegaColor.Zenith,
+                            omegaGlass = true,
+                            accent = AccentColor.Zenith,
+                            glassTint = GlassTint.Zenith,
+                            clockStyle = if (s.clockStyle == ClockStyle.Hidden) s.clockStyle else ClockStyle.Zenith,
+                        )
+                    } else if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.Ruby) {
+                        s.copy(omegaColor = dev.hearth.launcher.data.OmegaColor.Zenith)
+                    } else {
+                        s
+                    }
+                }
+                // 10: ZENITH's new face – the dock becomes a plate of the Z's metal with its green
+                // light, the clock the ZENITH clock, the home screen lit by ZENITH's green.
+                if (s.designVersion < 10) {
+                    s = if (s.galaxyClaude) {
+                        s.copy(
+                            omegaColor = dev.hearth.launcher.data.OmegaColor.Zenith,
+                            omegaGlass = true,
+                            omegaLight = true,
+                            accent = AccentColor.Zenith,
+                            glassTint = GlassTint.Zenith,
+                            dockStyle = DockStyle.Zenith,
+                            clockStyle = if (s.clockStyle == ClockStyle.Hidden) s.clockStyle else ClockStyle.Zenith,
+                        )
+                    } else if (s.omegaColor == dev.hearth.launcher.data.OmegaColor.Zenith && s.dockStyle == DockStyle.Island) {
+                        s.copy(dockStyle = DockStyle.Zenith)
+                    } else {
+                        s
+                    }
+                }
+                // 11: ZENITH Metall – Galaxy × Claude leaves glass behind: every surface of the
+                // logo's dark metal with its green edge light.
+                if (s.designVersion < 11 && s.galaxyClaude) {
+                    s = s.copy(glassLook = dev.hearth.launcher.data.GlassLook.Zenith)
+                }
+                // 12: ZENITH as a product of its own – its own background on the home screen.
+                if (s.designVersion < 12 && s.galaxyClaude) {
+                    s = s.copy(zenithWallpaper = true)
+                }
+                s.copy(designVersion = LauncherSettings.DESIGN_VERSION)
+            }
+        }
+
+        // Hand the control center's look to Glimmer (also on every start), so the one over other
+        // apps looks like Hearth's own.
+        viewModelScope.launch(Dispatchers.IO) {
+            settings
+                .map {
+                    val shared = SettingsRepository.readShared(getApplication<Application>())
+                    shared.keySet().sorted().joinToString(";") { key ->
+                        @Suppress("DEPRECATION")
+                        "$key=${shared.get(key)}"
+                    } to shared
+                }
+                .distinctUntilChanged { a, b -> a.first == b.first }
+                .collect { (_, shared) ->
+                    ControlsLink.syncSettings(getApplication<Application>(), shared)
+                    GlimmerLink.syncSettings(getApplication<Application>(), shared)
+                    ClawdLink.syncSettings(getApplication<Application>(), shared)
+                }
+        }
+
+        // Once: the fly-in style chosen here so far goes to Glimmer too (it plays the fly-in
+        // itself with other launchers); after that, only when it's changed here.
+        viewModelScope.launch(Dispatchers.IO) {
+            val app = getApplication<Application>()
+            val once = app.getSharedPreferences("hearth_once", android.content.Context.MODE_PRIVATE)
+            if (once.getBoolean("flyInHandedOver", false)) return@launch
+            val s = settings.value
+            GlimmerLink.syncSettings(
+                app,
+                android.os.Bundle().apply {
+                    putBoolean("glimmerFlyIn", s.glimmerFlyIn)
+                    putString("glimmerFlyInStyle", s.glimmerFlyInStyle.name)
+                },
+            )
+            if (GlimmerLink.isInstalled(app)) once.edit().putBoolean("flyInHandedOver", true).apply()
+        }
+
+        // Re-render icons whenever the icon pack or icon style changes.
+        viewModelScope.launch {
+            settings
+                .map { s ->
+                    IconConfig(
+                        iconPack = s.iconPack,
+                        glyphs = s.iconStyle != IconStyle.Original,
+                        preferMonochrome = s.iconStyle == IconStyle.Clear || s.iconStyle == IconStyle.Tinted,
+                        adaptUnthemed = s.adaptUnthemedIcons,
+                    )
+                }
+                .distinctUntilChanged()
+                .collect { repo.setIconConfig(it) }
+        }
+    }
+
+    private fun pickDock(all: List<AppInfo>, s: LauncherSettings): List<AppInfo> {
+        if (all.isEmpty()) return emptyList()
+        if (s.dockCustomized) {
+            return s.dockApps.mapNotNull { key -> all.firstOrNull { it.key == key } }
+        }
+        val preferred = repo.defaultDockPackages()
+            .mapNotNull { pkg -> all.firstOrNull { it.packageName == pkg } }
+            .distinctBy { it.key }
+        val filler = all.filterNot { app -> preferred.any { it.key == app.key } }
+        return (preferred + filler).take(s.dockSize.coerceIn(1, LauncherSettings.MAX_DOCK))
+    }
+
+    fun updateSettings(transform: (LauncherSettings) -> LauncherSettings) = settingsRepo.update(transform)
+
+    fun isInDock(app: AppInfo): Boolean = dock.value.any { it.key == app.key }
+
+    fun canAddToDock(): Boolean = dock.value.size < LauncherSettings.MAX_DOCK
+
+    fun addToDock(app: AppInfo) {
+        val current = dock.value.map { it.key }
+        if (app.key in current || current.size >= LauncherSettings.MAX_DOCK) return
+        val keys = current + app.key
+        settingsRepo.update { it.copy(dockCustomized = true, dockApps = keys, dockSize = keys.size) }
+    }
+
+    fun removeFromDock(app: AppInfo) {
+        val keys = dock.value.map { it.key } - app.key
+        settingsRepo.update { it.copy(dockCustomized = true, dockApps = keys, dockSize = keys.size.coerceAtLeast(1)) }
+    }
+
+    /** Moves an app one place left (-1) or right (+1) in the dock. */
+    fun moveInDock(app: AppInfo, direction: Int) {
+        val keys = dock.value.map { it.key }.toMutableList()
+        val from = keys.indexOf(app.key)
+        val to = from + direction
+        if (from < 0 || to !in keys.indices) return
+        keys.add(to, keys.removeAt(from))
+        settingsRepo.update { it.copy(dockCustomized = true, dockApps = keys) }
+    }
+
+    fun resetDock() {
+        settingsRepo.update { it.copy(dockCustomized = false, dockApps = emptyList(), dockSize = 4) }
+    }
+
+    /** Changing the dock size switches back to the automatic dock with that many apps. */
+    fun setDockSize(size: Int) {
+        settingsRepo.update { s ->
+            if (s.dockCustomized) {
+                val keys = dock.value.map { it.key }
+                val filled = if (keys.size >= size) keys.take(size) else {
+                    keys + apps.value.map { it.key }.filterNot { it in keys }.take(size - keys.size)
+                }
+                s.copy(dockSize = size, dockApps = filled)
+            } else {
+                s.copy(dockSize = size)
+            }
+        }
+    }
+
+    fun hide(app: AppInfo) {
+        settingsRepo.update { s ->
+            s.copy(
+                hiddenApps = s.hiddenApps + app.key,
+                dockApps = s.dockApps - app.key,
+            )
+        }
+    }
+
+    fun unhide(key: String) {
+        settingsRepo.update { it.copy(hiddenApps = it.hiddenApps - key) }
+    }
+
+    /** Hides several apps at once (multi-select). */
+    fun hideAll(keys: Collection<String>) {
+        if (keys.isEmpty()) return
+        settingsRepo.update { s ->
+            s.copy(hiddenApps = s.hiddenApps + keys, dockApps = s.dockApps - keys.toSet())
+        }
+    }
+
+    /** Locks an app, or (after the PIN or biometrics) takes the lock off. */
+    fun toggleLock(app: AppInfo) {
+        if (isLocked(app)) AppLock.requestRemove(getApplication(), app.packageName) else setLocked(app.packageName, true)
+    }
+
+    /** App lock on or off for an app (by package, so Glimmer can match it). */
+    fun setLocked(packageName: String, locked: Boolean) {
+        settingsRepo.update { s -> s.copy(lockedApps = if (locked) s.lockedApps + packageName else s.lockedApps - packageName) }
+    }
+
+    fun isLocked(app: AppInfo): Boolean = app.packageName in settings.value.lockedApps
+
+    fun setHidden(key: String, hidden: Boolean) {
+        if (hidden) hideAll(listOf(key)) else unhide(key)
+    }
+
+    fun unhideAll() {
+        settingsRepo.update { it.copy(hiddenApps = emptySet()) }
+    }
+
+    /** Takes apps off the home screen; they stay in the App Library and in search. */
+    fun removeFromHome(keys: Collection<String>) {
+        if (keys.isEmpty()) return
+        settingsRepo.update { it.copy(removedFromHome = it.removedFromHome + keys) }
+    }
+
+    fun addToHome(key: String) {
+        settingsRepo.update { it.copy(removedFromHome = it.removedFromHome - key) }
+    }
+
+    fun addToHome(keys: Collection<String>) {
+        settingsRepo.update { it.copy(removedFromHome = it.removedFromHome - keys.toSet()) }
+    }
+
+    fun unhide(keys: Collection<String>) {
+        settingsRepo.update { it.copy(hiddenApps = it.hiddenApps - keys.toSet()) }
+    }
+
+    fun restoreHome() {
+        settingsRepo.update { it.copy(removedFromHome = emptySet()) }
+    }
+
+    fun setHomePositions(positions: Map<String, CellPos>) = homeLayout.set(positions)
+
+    fun forgetHomePosition(key: String) = homeLayout.forget(key)
+
+    /** Back to automatic order on the home screen. */
+    fun resetHomeLayout() = homeLayout.reset()
+
+    fun isOnHome(app: AppInfo): Boolean = app.key !in settings.value.removedFromHome
+
+    fun refreshIconPacks() {
+        viewModelScope.launch(Dispatchers.Default) {
+            _iconPacks.value = iconPackRepo.installedPacks()
+        }
+    }
+
+    private val _settingsRequests = MutableSharedFlow<Unit>(replay = 1, extraBufferCapacity = 1)
+
+    /** Someone outside the home screen (the control center overlay) wants the settings opened. */
+    val settingsRequests: SharedFlow<Unit> = _settingsRequests.asSharedFlow()
+
+    fun requestSettings() {
+        _settingsRequests.tryEmit(Unit)
+    }
+
+    fun consumeSettingsRequest() {
+        _settingsRequests.resetReplayCache()
+    }
+
+    fun onHomePressed(alreadyInFront: Boolean) {
+        _homeEvents.tryEmit(alreadyInFront)
+    }
+
+    /** An app flying into Glimmer, with the last picture of it (if one could be taken). */
+    class FlyIn(
+        val app: AppInfo,
+        val snapshot: Bitmap?,
+        val island: DpSize?,
+        val ready: Boolean,
+        val landing: GlimmerLink.Landing = GlimmerLink.Landing(),
+    )
+
+    /** The app opened last from Hearth; it flies into Glimmer when we're back home. */
+    private var pendingFlyIn: AppInfo? = null
+    private val _flyIns = MutableSharedFlow<FlyIn>(extraBufferCapacity = 1)
+    val flyIns: SharedFlow<FlyIn> = _flyIns.asSharedFlow()
+
+    /** Back on the home screen after the launcher was in the background. */
+    fun onReturnedHome() {
+        val app = pendingFlyIn
+        pendingFlyIn = null
+        // A picture from just before the home gesture, not one of the window already shrinking.
+        val before = SystemClock.uptimeMillis() - 300
+        viewModelScope.launch(Dispatchers.IO) {
+            // Always tell Glimmer (it stops capturing), even without an app to fly.
+            val back = GlimmerLink.returnedHome(getApplication<Application>(), before)
+            if (app != null && back != null) {
+                _flyIns.emit(FlyIn(app, back.snapshot, back.island, back.ready, back.landing))
+            }
+        }
+    }
+
+    /** Glimmer hops as the app arrives. */
+    fun pulseGlimmer() {
+        viewModelScope.launch(Dispatchers.IO) { GlimmerLink.pulse(getApplication<Application>()) }
+    }
+
+    /** HyperOS fly-in: Glimmer shows the app's icon as it lands. */
+    fun arriveGlimmer(icon: Bitmap?, color: Int) {
+        viewModelScope.launch(Dispatchers.IO) { GlimmerLink.arrive(getApplication<Application>(), icon, color) }
+    }
+
+    private fun buildLibrary(all: List<AppInfo>, used: Map<String, AppUsage>): AppLibraryData {
+        val now = System.currentTimeMillis()
+        val suggestions = all
+            .filter { it.key in used }
+            .sortedByDescending { UsageRepository.score(used.getValue(it.key), now) }
+            .take(4)
+        val recent = all
+            .filter { it.installTime > 0 }
+            .sortedByDescending { it.installTime }
+            .take(4)
+        val folders = all
+            .groupBy { it.category }
+            .toSortedMap(compareBy { it.ordinal })
+            .map { (category, list) -> category to list }
+        return AppLibraryData(suggestions, recent, folders)
+    }
+
+    /** Called on resume: picks up a permission granted in the system settings. */
+    fun onResume() {
+        if (needsWallpaperAccess.value) wallpaper.refresh()
+    }
+
+    fun refreshWallpaper() = wallpaper.refresh()
+
+    fun launch(app: AppInfo, sourceBounds: Rect? = null, options: Bundle? = null) {
+        // "Hearth-Einstellungen": opened right here, no detour through another screen.
+        if (app.packageName == getApplication<Application>().packageName && app.component.className.endsWith(".SettingsShortcutActivity")) {
+            requestSettings()
+            return
+        }
+        // App lock: a locked app opens only after the phone's PIN or biometrics.
+        if (AppLock.guardLaunch(getApplication(), app.component, app.user)) {
+            usage.recordLaunch(app.key)
+            return
+        }
+        usage.recordLaunch(app.key)
+        pendingFlyIn = app
+        // Be Smarter plays no closing animation of its own (Smart Launcher has none, the system's
+        // does it) – unless Glimmer is bound in: then there is nothing to capture, and nothing taking
+        // the screen's picture every second while the app is in front.
+        val look = settingsRepo.settings.value
+        if (look.glimmerFlyIn && (!look.beSmarter || look.smartGlimmer)) {
+            viewModelScope.launch(Dispatchers.IO) { GlimmerLink.appLaunched(getApplication<Application>()) }
+        }
+        // The system's answer can take a moment (it is busy with the closing app's animation): the
+        // main thread doesn't wait for it, so the screen stays alive for the next tap.
+        viewModelScope.launch(Dispatchers.IO) { repo.launch(app, sourceBounds, options) }
+    }
+    fun openAppInfo(app: AppInfo) = repo.openAppInfo(app)
+
+    /**
+     * Shares an app as a file (its APK, and the parts of a split app), through Android's share
+     * sheet – to send it to someone or keep it as a backup.
+     */
+    fun shareApk(app: AppInfo) {
+        val context = getApplication<Application>()
+        viewModelScope.launch {
+            val uris = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    val info = context.packageManager.getApplicationInfo(app.packageName, 0)
+                    val dir = java.io.File(context.cacheDir, "apks").apply {
+                        deleteRecursively()
+                        mkdirs()
+                    }
+                    val name = app.label.replace(Regex("[^A-Za-z0-9äöüÄÖÜß _-]"), "").ifBlank { app.packageName }
+                    val parts = listOf(info.sourceDir) + info.splitSourceDirs.orEmpty().toList()
+                    parts.mapIndexed { i, path ->
+                        val out = java.io.File(dir, if (i == 0) "$name.apk" else "$name-${java.io.File(path).name}")
+                        java.io.File(path).copyTo(out, overwrite = true)
+                        androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.files", out)
+                    }
+                }.getOrNull()
+            }
+            if (uris.isNullOrEmpty()) {
+                runCatching { android.widget.Toast.makeText(context, "APK ließ sich nicht kopieren", android.widget.Toast.LENGTH_SHORT).show() }
+                return@launch
+            }
+            val send = if (uris.size == 1) {
+                Intent(Intent.ACTION_SEND).setType("application/vnd.android.package-archive").putExtra(Intent.EXTRA_STREAM, uris.first())
+            } else {
+                Intent(Intent.ACTION_SEND_MULTIPLE).setType("application/vnd.android.package-archive")
+                    .putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+            }
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val chooser = Intent.createChooser(send, "„${app.label}“ als APK teilen").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            runCatching { context.startActivity(chooser) }
+        }
+    }
+
+    /** Runs something through Shizuku and says how it went. */
+    fun shizukuAction(done: String, action: suspend () -> Boolean) {
+        viewModelScope.launch {
+            val ok = action()
+            runCatching {
+                android.widget.Toast.makeText(
+                    getApplication(),
+                    if (ok) done else "Ging nicht – läuft Shizuku?",
+                    android.widget.Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
+    }
+
+    /** Shares an app: its name and the Play Store link, through Android's share sheet. */
+    fun shareApp(app: AppInfo) {
+        val text = "${app.label}: https://play.google.com/store/apps/details?id=${app.packageName}"
+        val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+        val chooser = Intent.createChooser(send, "„${app.label}“ teilen").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { getApplication<Application>().startActivity(chooser) }
+    }
+    fun shortcuts(app: AppInfo) = repo.shortcuts(app)
+    fun startShortcut(shortcut: dev.hearth.launcher.data.AppShortcut) = repo.startShortcut(shortcut)
+    fun uninstall(app: AppInfo) = repo.uninstall(app)
+    fun webSearch(query: String) = repo.webSearch(query, settings.value.searchEngine)
+    /**
+     * "Frag Claude": Hearth's own assistant, which can act on the phone (or the Claude app,
+     * when it's switched off in the settings).
+     */
+    fun askClaude(question: String? = null) {
+        if (!ClaudeAssistant.settings.value.enabled) {
+            controls.openClaudeApp(question)
+            return
+        }
+        if (!question.isNullOrBlank()) ClaudeAssistant.ask(question)
+        _assistantOpen.value = true
+    }
+
+    fun applyPreset(preset: DesignPreset) = settingsRepo.update { it.withPreset(preset) }
+
+    /**
+     * Saves all launcher settings into the chosen file. ZENITH 19: with a [password], the file
+     * is encrypted (AES-256-GCM) and only opens with it again.
+     */
+    suspend fun exportSettings(uri: android.net.Uri, password: String? = null): Boolean = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        runCatching {
+            val json = settingsRepo.exportJson()
+            val bytes = if (password.isNullOrEmpty()) {
+                json.toByteArray(Charsets.UTF_8)
+            } else {
+                dev.hearth.launcher.data.ZenithCrypto.sealBackup(json, password.toCharArray())
+            }
+            val out = getApplication<Application>().contentResolver.openOutputStream(uri, "wt") ?: error("no stream")
+            out.use { it.write(bytes) }
+        }.isSuccess
+    }
+
+    /** How bringing back a settings file went. */
+    enum class Restore { Ok, NeedsPassword, WrongPassword, Invalid }
+
+    /** Restores settings from a file made by [exportSettings] (asking for its password if it has one). */
+    suspend fun importSettings(uri: android.net.Uri, password: String? = null): Restore = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        val bytes = runCatching { getApplication<Application>().contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+            ?: return@withContext Restore.Invalid
+        val text = if (dev.hearth.launcher.data.ZenithCrypto.isSealedBackup(bytes)) {
+            if (password.isNullOrEmpty()) return@withContext Restore.NeedsPassword
+            dev.hearth.launcher.data.ZenithCrypto.openBackup(bytes, password.toCharArray()) ?: return@withContext Restore.WrongPassword
+        } else {
+            bytes.toString(Charsets.UTF_8)
+        }
+        if (runCatching { settingsRepo.importJson(text) }.getOrDefault(false)) Restore.Ok else Restore.Invalid
+    }
+
+    fun openWallpaperPicker() {
+        val pick = Intent(Intent.ACTION_SET_WALLPAPER)
+        val chooser = Intent.createChooser(pick, "Hintergrundbild wählen").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { getApplication<Application>().startActivity(chooser) }
+    }
+
+    fun openDefaultLauncherSettings() {
+        val intent = Intent(Settings.ACTION_HOME_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { getApplication<Application>().startActivity(intent) }
+    }
+
+    override fun onCleared() {
+        AppLock.removeHandler = null
+        if (ClaudeAssistant.host === assistantHost) ClaudeAssistant.host = null
+        repo.close()
+        wallpaper.close()
+        controls.close()
+    }
+}

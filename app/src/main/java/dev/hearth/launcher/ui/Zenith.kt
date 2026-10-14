@@ -344,7 +344,7 @@ fun ZenithVersionHero(
             .drawBehind { if (look != null) drawZenithSpecCard(look, charge.value) else drawZenithCard(charge.value) },
     ) {
         val cardWidth = maxWidth
-        look?.aurora?.let { ZenithAurora(it, Modifier.matchParentSize(), strength = 0.75f) }
+        look?.aurora?.let { ZenithAurora(it, Modifier.matchParentSize(), strength = if (look?.horizon == true) 0.4f else 0.75f) }
         Column(
             Modifier.fillMaxWidth().padding(top = maxHeight * (if (saying) 0.075f else 0.1f)),
             horizontalAlignment = Alignment.CenterHorizontally,

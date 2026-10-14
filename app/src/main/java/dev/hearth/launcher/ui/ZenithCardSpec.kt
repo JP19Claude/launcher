@@ -1,8 +1,10 @@
 package dev.hearth.launcher.ui
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -36,6 +38,11 @@ class ZenithCardSpec(
     val aurora: AuroraLook? = null,
     val stars: Boolean = true,
     val fireworks: Boolean = true,
+    /**
+     * ZENITH 21's own picture instead of the sky with arcs and fireworks: a clear sky over a sun on the
+     * horizon and three ridges ("style": "horizon" in the update file; older apps ignore it).
+     */
+    val horizon: Boolean = false,
 ) {
     companion object {
         /** ZENITH 20's own card, built in – it also shows when the update file carries none. */
@@ -53,11 +60,14 @@ class ZenithCardSpec(
         val Horizon = ZenithCardSpec(
             bg = listOf(Color(0xFF040A1C), Color(0xFF0B2468), Color(0xFF2F7BFF)),
             glowA = Color(0xFF9A6BFF),
-            glowB = Color(0xFF3FD0FF),
+            glowB = Color(0xFF8FE3FF),
             accent = Color(0xFF62C8FF),
             label = "H O R I Z O N T",
             os = "${ClaudeOs.NAME} 8.0",
             aurora = AuroraLook.Eis,
+            stars = false,
+            fireworks = false,
+            horizon = true,
         )
 
         private fun color(text: String): Color = Color(android.graphics.Color.parseColor(text.trim()))
@@ -80,6 +90,7 @@ class ZenithCardSpec(
                 aurora = AuroraLook.entries.firstOrNull { it.name.equals(o.optString("aurora"), ignoreCase = true) },
                 stars = o.optBoolean("stars", true),
                 fireworks = o.optBoolean("fireworks", true),
+                horizon = o.optString("style").equals("horizon", ignoreCase = true),
             )
         }.getOrNull()
     }
@@ -91,6 +102,10 @@ class ZenithCardSpec(
  * brightens it.
  */
 internal fun DrawScope.drawZenithSpecCard(spec: ZenithCardSpec, charge: Float) {
+    if (spec.horizon) {
+        drawHorizonCard(spec, charge)
+        return
+    }
     val w = size.width
     val h = size.height
     drawRect(Brush.linearGradient(spec.bg, start = Offset.Zero, end = Offset(w, h)))
@@ -134,6 +149,75 @@ internal fun DrawScope.drawZenithSpecCard(spec: ZenithCardSpec, charge: Float) {
             }
         }
     }
+}
+
+/**
+ * ZENITH 21's card: a clear sky – night overhead, the light of the day on the horizon – a sun just
+ * rising behind three ridges, a few faint stars. Quiet where the 20 had arcs and fireworks.
+ * [charge] (0..1, the Z held) brightens the sun.
+ */
+internal fun DrawScope.drawHorizonCard(spec: ZenithCardSpec, charge: Float) {
+    val w = size.width
+    val h = size.height
+    val night = spec.bg.first()
+    val mid = spec.bg[spec.bg.size / 2]
+    val light = lerp(spec.bg.last(), spec.glowB, 0.6f)
+    val horizonY = h * 0.80f
+    // The sky: night overhead, the light of the day lying on the horizon.
+    drawRect(Brush.verticalGradient(listOf(night, mid, light), startY = 0f, endY = horizonY))
+    // A few faint stars in the dark of the upper sky.
+    val r = Random(21)
+    repeat(22) {
+        val x = r.nextFloat() * w
+        val y = r.nextFloat() * horizonY * 0.5f
+        drawCircle(Color.White.copy(alpha = 0.16f + 0.4f * r.nextFloat()), (0.5f + r.nextFloat() * 1.1f) * density, Offset(x, y))
+    }
+    // The sun, low on the right, and the haze around it.
+    val sun = Offset(w * 0.76f, horizonY - w * 0.006f)
+    val haze = w * 0.62f
+    drawCircle(
+        Brush.radialGradient(
+            listOf(Color.White.copy(alpha = 0.5f + 0.25f * charge), spec.glowB.copy(alpha = 0.32f + 0.12f * charge), Color.Transparent),
+            center = sun,
+            radius = haze,
+        ),
+        radius = haze,
+        center = sun,
+    )
+    drawCircle(Color.White.copy(alpha = 0.92f), radius = w * 0.036f, center = sun)
+    // A band of light along the horizon.
+    val band = h * 0.11f
+    drawRect(
+        Brush.verticalGradient(
+            listOf(Color.Transparent, Color.White.copy(alpha = 0.14f), Color.Transparent),
+            startY = horizonY - band,
+            endY = horizonY + band * 0.4f,
+        ),
+        topLeft = Offset(0f, horizonY - band),
+        size = Size(w, band * 1.4f),
+    )
+    // Three ridges, each darker than the one behind it.
+    fun ridge(base: Float, amp: Float, phase: Float, top: Color, bottom: Color) {
+        val path = Path()
+        path.moveTo(0f, h)
+        val steps = 72
+        for (i in 0..steps) {
+            val t = i / steps.toFloat()
+            val twoPi = (2.0 * PI).toFloat()
+            val y = base - amp * (
+                0.55f * sin((t * 1.3f + phase) * twoPi) +
+                    0.30f * sin((t * 2.9f + phase * 1.7f) * twoPi) +
+                    0.15f * sin((t * 6.1f + phase * 0.6f) * twoPi)
+                )
+            path.lineTo(w * t, y)
+        }
+        path.lineTo(w, h)
+        path.close()
+        drawPath(path, Brush.verticalGradient(listOf(top, bottom), startY = base - amp, endY = h))
+    }
+    ridge(horizonY + h * 0.012f, h * 0.045f, 0.10f, lerp(light, mid, 0.55f), lerp(mid, night, 0.55f))
+    ridge(h * 0.87f, h * 0.05f, 0.55f, lerp(mid, night, 0.5f), night)
+    ridge(h * 0.94f, h * 0.035f, 0.90f, lerp(night, Color.Black, 0.3f), Color.Black.copy(alpha = 0.95f))
 }
 
 /** The card a version has of its own, built in: ZENITH 21's, ZENITH 20's (the jubilee), none before. */

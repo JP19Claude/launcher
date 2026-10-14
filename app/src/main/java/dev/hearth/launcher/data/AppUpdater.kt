@@ -244,23 +244,73 @@ object AppUpdater {
                 connection.disconnect()
                 return@runCatching null
             }
-            val total = connection.contentLengthLong.takeIf { it > 0 } ?: release.size
+            val announced = connection.contentLengthLong
+            val total = announced.takeIf { it > 0 } ?: release.size
+            var received = 0L
             connection.inputStream.use { input ->
                 file.outputStream().use { output ->
                     val buffer = ByteArray(64 * 1024)
-                    var done = 0L
                     while (true) {
                         val n = input.read(buffer)
                         if (n < 0) break
                         output.write(buffer, 0, n)
-                        done += n
-                        if (total > 0) progress((done.toFloat() / total).coerceIn(0f, 1f))
+                        received += n
+                        if (total > 0) progress((received.toFloat() / total).coerceIn(0f, 1f))
                     }
                 }
             }
             connection.disconnect()
+            // A connection that drops can end the stream early without an error: a cut-off file is
+            // no APK (Android would only say it is invalid), so it's thrown away here.
+            if ((announced > 0 && received != announced) || archivePackage(context, file) == null) {
+                file.delete()
+                return@runCatching null
+            }
             file
         }.getOrNull()
+    }
+
+    /** The package a downloaded file is for – or null if it isn't a whole APK (a cut-off download). */
+    private fun archivePackage(context: Context, apk: File): String? = runCatching {
+        context.packageManager.getPackageArchiveInfo(apk.path, 0)?.packageName
+    }.getOrNull()
+
+    /** What Android said when it didn't install the last update, in full and in plain words; "" for nothing. */
+    fun installError(context: Context): String = prefs(context).getString("installError", "").orEmpty()
+
+    fun saveInstallError(context: Context, text: String) {
+        prefs(context).edit().putString("installError", text).apply()
+    }
+
+    fun clearInstallError(context: Context) {
+        prefs(context).edit().remove("installError").apply()
+    }
+
+    /** Calls [onError] whenever an install fails; the returned function stops listening. */
+    fun watchInstallError(context: Context, onError: (String) -> Unit): () -> Unit {
+        val preferences = prefs(context)
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
+            if (key == "installError") p.getString(key, "")?.takeIf { it.isNotBlank() }?.let(onError)
+        }
+        preferences.registerOnSharedPreferenceChangeListener(listener)
+        return { preferences.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
+    /** Android's own message for a failed install, with what it means and what to do. */
+    fun explainInstallError(message: String): String {
+        val hint = when {
+            "inconsistent with" in message || "Mismatched package" in message ->
+                "Die Datei gehört zu einer anderen App (ein anderes Paket) und kann diese App nicht ersetzen. Lade sie von GitHub herunter und installiere sie von Hand – sie kommt dann als eigene App daneben."
+            "VERSION_DOWNGRADE" in message ->
+                "Auf dem Handy ist schon eine neuere Version."
+            "UPDATE_INCOMPATIBLE" in message || "SIGNATURE" in message || "CERTIFICATE" in message ->
+                "Die Signatur der installierten App passt nicht zur neuen. Die alte App muss einmal deinstalliert werden."
+            "INSUFFICIENT_STORAGE" in message -> "Auf dem Handy ist zu wenig Platz."
+            "INVALID_APK" in message || "NOT_APK" in message || "MANIFEST" in message ->
+                "Android hält die Datei für ungültig. Meist ist sie unvollständig angekommen – tipp noch einmal auf „Installieren“."
+            else -> ""
+        }
+        return "Nicht installiert: " + message.ifBlank { "Android nennt keinen Grund." } + if (hint.isNotEmpty()) "\n$hint" else ""
     }
 
     /** May this app install updates? Android asks once ("Unbekannte Apps installieren"). */
@@ -285,7 +335,9 @@ object AppUpdater {
     fun install(context: Context, apk: File, packageName: String = context.packageName, downgrade: Boolean = false): Boolean = runCatching {
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
-            setAppPackageName(packageName)
+            // The file's own package: naming a different one is what Android answers with
+            // INSTALL_FAILED_INVALID_APK ("Specified package … inconsistent with …").
+            setAppPackageName(archivePackage(context, apk) ?: packageName)
         }
         // Going back to an older version: Android allows it for Hearth's (debuggable) builds
         // when the installer asks for it – which only works where the system lets an app ask.
@@ -341,11 +393,13 @@ class UpdateReceiver : android.content.BroadcastReceiver() {
             PackageInstaller.STATUS_SUCCESS -> Unit
             PackageInstaller.STATUS_FAILURE_ABORTED -> Unit
             else -> {
-                val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
+                val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE).orEmpty()
+                // The whole text for the update screen (a toast is cut off after a line).
+                AppUpdater.saveInstallError(context, AppUpdater.explainInstallError(message))
                 runCatching {
                     android.widget.Toast.makeText(
                         context,
-                        "Update nicht installiert" + (message?.let { ": $it" } ?: ""),
+                        "Update nicht installiert" + (if (message.isNotBlank()) ": $message" else ""),
                         android.widget.Toast.LENGTH_LONG,
                     ).show()
                 }

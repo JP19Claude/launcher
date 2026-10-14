@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Updates from within each app: asking GitHub for the newest version and installing it
+         (Android asks before every install). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- Needed to open the system uninstall dialog from the long-press menu -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+
+    <!-- Reading the wallpaper for the liquid glass effect -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+
+    <!-- Control center: brightness and rotation (user grants "Modify system settings"),
+         Do not disturb (user grants access), notification shade, connection states -->
+    <uses-permission
+        android:name="android.permission.WRITE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+
+
+    <!-- Hearth and Glimmer talk to each other (the app flying into the island, global
+         actions); only apps signed with the same key get this. -->
+    <permission
+        android:name="dev.hearth.permission.BRIDGE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="dev.hearth.permission.BRIDGE" />
+
+    <!-- Package visibility (Android 11+): which apps the launcher may see -->
+    <queries>
+        <!-- The family: Hearth (launcher), Glimmer (island), control center -->
+        <package android:name="dev.hearth.launcher" />
+        <package android:name="dev.hearth.glimmer" />
+        <package android:name="dev.hearth.controls" />
+        <package android:name="dev.hearth.clawd" />
+        <!-- Claude app, for "Frag Claude" -->
+        <package android:name="com.anthropic.claude" />
+        <!-- Earbud companion apps, opened for noise cancelling -->
+        <package android:name="com.samsung.android.app.watchmanager" />
+        <package android:name="com.sony.songpal.mdr" />
+        <package android:name="com.bose.bosemusic" />
+        <package android:name="com.bose.monet" />
+        <package android:name="com.jabra.moments" />
+        <package android:name="com.sennheiser.control" />
+        <package android:name="com.nothing.ear" />
+        <package android:name="com.nothing.x" />
+        <package android:name="com.oneplus.twspods" />
+        <package android:name="com.heytap.headset" />
+        <package android:name="com.google.android.apps.wearables.maestro.companion" />
+        <package android:name="com.apple.android.beats" />
+        <package android:name="com.harman.jblmusicflow" />
+        <package android:name="com.jbl.headphones" />
+        <package android:name="com.soundcore.android" />
+        <package android:name="com.oppo.melody" />
+        <package android:name="com.huawei.smarthome" />
+        <package android:name="com.xiaomi.wearable" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <!-- Which launcher is home (Glimmer plays the fly-in itself with any other launcher) -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="smsto" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.WEB_SEARCH" />
+        </intent>
+        <!-- Icon packs (ADW / Nova / Apex / Go format) -->
+        <intent>
+            <action android:name="org.adw.launcher.THEMES" />
+        </intent>
+        <intent>
+            <action android:name="org.adw.launcher.icons.ACTION_PICK_ICON" />
+        </intent>
+        <intent>
+            <action android:name="com.novalauncher.THEME" />
+        </intent>
+        <intent>
+            <action android:name="com.teslacoilsw.launcher.THEME" />
+        </intent>
+        <intent>
+            <action android:name="com.gau.go.launcherex.theme" />
+        </intent>
+        <intent>
+            <action android:name="com.anddoes.launcher.THEME" />
+        </intent>
+        <intent>
+            <action android:name="com.fede.launcher.THEME_ICONPACK" />
+        </intent>
+        <intent>
+            <action android:name="ginlemon.smartlauncher.THEMES" />
+        </intent>
+    </queries>
+
+    <application
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Hearth">
+
+
+        <!-- The software update screen (like One UI's), in every app of the family. -->
+        <activity
+            android:name=".UpdateActivity"
+            android:exported="false"
+            android:label="Software-Update" />
+
+
+        <!-- OMEGA UI 17.5: the Clawd Illumination, hidden behind the Ω crystal. -->
+        <activity
+            android:name=".IlluminationActivity"
+            android:exported="false"
+            android:label="Clawd Illumination" />
+
+        <!-- ZENITH 19.3: the Core Enforcer Studio, the workshop for rebuilding the system. -->
+        <activity
+            android:name=".CoreEnforcerActivity"
+            android:exported="false"
+            android:label="Core Enforcer Studio" />
+
+        <!-- ZENITH 19: the ZENITH-Tresor, photos and files encrypted with a password. -->
+        <activity
+            android:name=".VaultActivity"
+            android:exported="false"
+            android:label="ZENITH-Tresor" />
+
+        <!-- ZENITH 19: the ZENITH-Schutzschild, how well the phone is protected. -->
+        <activity
+            android:name=".ShieldActivity"
+            android:exported="false"
+            android:label="ZENITH-Schutzschild" />
+
+        <!-- ZENITH 20: the Zentrale, the day at a glance – weather, brief, the phone, the shortcuts. -->
+        <activity
+            android:name=".ZentraleActivity"
+            android:exported="false"
+            android:label="ZENITH-Zentrale" />
+
+        <!-- ZENITH 20: the Z-Nacht, the nightstand clock under the aurora. -->
+        <activity
+            android:name=".NightstandActivity"
+            android:exported="false"
+            android:label="Z-Nacht" />
+
+        <!-- ZENITH 19.7: Clawd's perfume shelf. -->
+        <activity
+            android:name=".PerfumeActivity"
+            android:exported="false"
+            android:label="Clawd · Duft" />
+
+        <!-- ZENITH 19.6: the hidden menus, opened by touching the system. -->
+        <activity
+            android:name=".SecretActivity"
+            android:exported="false"
+            android:label="ZENITH" />
+
+        <!-- "Telefoninfo": the phone, its specs, Hearth and ClaudeOS. -->
+        <activity
+            android:name=".AboutPhoneActivity"
+            android:exported="false"
+            android:label="Telefoninfo" />
+
+        <!-- Hearth One's welcome after the upgrade (old apps to remove, Glimmer to switch on). -->
+        <activity
+            android:name=".OneWelcomeActivity"
+            android:exported="false"
+            android:label="ZENITH" />
+
+        <!-- Android's installer reports here how an update went (and asks to confirm it). -->
+        <receiver
+            android:name=".data.UpdateReceiver"
+            android:exported="false" />
+
+        <!-- Clawd Jump: Clawd's little game, in every app of the family that has him. -->
+        <activity
+            android:name=".ClawdGameActivity"
+            android:exported="false"
+            android:label="Clawd Jump"
+            android:taskAffinity="dev.hearth.clawd.game" />
+
+        <!-- Only there to get notification access, which Android requires for "now playing". -->
+        <service
+            android:name=".system.MediaListenerService"
+            android:exported="true"
+            android:label="@string/listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+
+        <!-- Sharing an app's APK from its menu. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/hearth_files" />
+        </provider>
+
+        <!-- Shizuku hands Hearth its binder through this (system switches with ADB rights). -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+    </application>
+</manifest>

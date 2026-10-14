@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Be Smarter": the home screen steps back as the app comes in – it grows to 110 % in 125 ms
+     (Smart Launcher 6's default_open_exit_anim), no wait. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:anim/accelerate_decelerate_interpolator"
+    android:shareInterpolator="true">
+    <scale
+        android:duration="125"
+        android:fromXScale="1.0"
+        android:fromYScale="1.0"
+        android:pivotX="50%p"
+        android:pivotY="50%p"
+        android:toXScale="1.1"
+        android:toYScale="1.1" />
+</set>

@@ -50,6 +50,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -251,6 +252,13 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     val history = remember(current) { HearthChangelog.before(current) }
     var state by remember { mutableStateOf<UpdateState>(UpdateState.Checking) }
     var lastCheck by remember { mutableLongStateOf(AppUpdater.lastChecked(context)) }
+    // Android's whole answer when it didn't install the downloaded update ("" for none).
+    var installFailure by remember { mutableStateOf("") }
+    DisposableEffect(Unit) {
+        AppUpdater.clearInstallError(context)
+        val stop = AppUpdater.watchInstallError(context) { installFailure = it }
+        onDispose(stop)
+    }
     var egg by remember { mutableStateOf(false) }
     // ZENITH 19, the egg museum: an old version's easter egg, held in the history.
     var museum by remember { mutableStateOf<String?>(null) }
@@ -277,6 +285,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
 
     fun check() {
         state = UpdateState.Checking
+        installFailure = ""
         scope.launch {
             val result = AppUpdater.check(context)
             lastResult = System.currentTimeMillis() to result
@@ -293,17 +302,21 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
             return
         }
         state = UpdateState.Ready(release, apk)
+        installFailure = ""
+        // Cleared, so the same failure twice still reaches the screen (a preference that doesn't change tells nobody).
+        AppUpdater.clearInstallError(context)
         if (!AppUpdater.install(context, apk)) state = UpdateState.Failed("Die Installation ließ sich nicht starten")
     }
 
     fun download(release: AppUpdater.Release) {
         state = UpdateState.Downloading(release, 0f)
+        installFailure = ""
         scope.launch {
             val apk = AppUpdater.download(context, release) { p ->
                 scope.launch { if (state is UpdateState.Downloading) state = UpdateState.Downloading(release, p) }
             }
             if (apk == null) {
-                state = UpdateState.Failed("Download fehlgeschlagen – bist du online?")
+                state = UpdateState.Failed("Download fehlgeschlagen oder unvollständig – bist du online? Versuch es noch einmal.")
                 return@launch
             }
             install(release, apk)
@@ -410,7 +423,9 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                 Spacer(Modifier.height(16.dp))
                 StatusPill(s, look.accent)
                 val detail = when (s) {
-                    is UpdateState.Ready -> if (AppUpdater.canInstall(context)) {
+                    is UpdateState.Ready -> if (installFailure.isNotBlank()) {
+                        installFailure
+                    } else if (AppUpdater.canInstall(context)) {
                         "Bereit zur Installation. Android fragt gleich, ob du aktualisieren willst."
                     } else {
                         "Erlaube $name einmal „Unbekannte Apps installieren“ und tippe dann auf „Installieren“."

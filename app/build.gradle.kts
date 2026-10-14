@@ -12,12 +12,12 @@ android {
         applicationId = "dev.hearth.launcher"
         minSdk = 28
         targetSdk = 35
-        versionCode = 187
+        versionCode = 188
         // Small updates (fixes, little things) +0.1, big ones (many features, redesign) +0.5.
         versionName = "21.0"
         // Hearth One (everything in one app) says so; the separate apps don't.
         buildConfigField("boolean", "ALL_IN_ONE", "false")
-        // ZENITH Smart: the one app that is "Be Smarter" from the start, with Smart Launcher's settings.
+        // ZENITH Smart is an app of its own now (smart/, the code of ZENITH 20.5); "Be Smarter" in ZENITH goes on here.
         buildConfigField("boolean", "SMART", "false")
     }
 
@@ -63,15 +63,6 @@ android {
             applicationId = "dev.hearth.launcher"
             buildConfigField("boolean", "ALL_IN_ONE", "true")
         }
-        // ZENITH Smart: ZENITH as the Smart Launcher 6 look-alike from the start – "Be Smarter" on, the settings
-        // in Smart Launcher's style with ClaudeOS and ZENITH at their core. An app of its own next to ZENITH
-        // (its own package, its own settings and data), with its own update line.
-        create("smart") {
-            dimension = "app"
-            applicationId = "dev.hearth.smart"
-            buildConfigField("boolean", "ALL_IN_ONE", "true")
-            buildConfigField("boolean", "SMART", "true")
-        }
     }
 
     // Clawd's widgets and his app's screen: in the Clawd app and built into Hearth One.
@@ -81,12 +72,6 @@ android {
             res.srcDirs("src/clawdShared/res")
         }
         getByName("one") {
-            java.srcDirs("src/clawdShared/java")
-            res.srcDirs("src/clawdShared/res")
-        }
-        // ZENITH Smart is ZENITH's manifest and code with a name of its own (src/smart/res).
-        getByName("smart") {
-            manifest.srcFile("src/one/AndroidManifest.xml")
             java.srcDirs("src/clawdShared/java")
             res.srcDirs("src/clawdShared/res")
         }
