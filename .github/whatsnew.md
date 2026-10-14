@@ -1,5 +1,8 @@
 ZENITH 21.0 „Horizont“ auf ClaudeOS 8.0 „Horizon“
 
+✨ Neu im Hotfix
+• Klare Dateinamen in den Downloads: ZENITH.apk (die Hauptapp, früher HearthUI.apk), ZENITH-Smart.apk, Duftschrank.apk und Hearth-alt.apk (der alte Launcher allein, nicht nötig) – dazu eine Erklärung im Release, welche Datei wofür ist
+
 ✨ Neu in 21.0
 • Neues Theme „Horizont“: tiefes Blau ins Licht des Horizonts, eisblaue Akzente – auf der Versionskarte, der Systemkarte der Einstellungen und am Z. Das Jubiläums-Theme von ZENITH 20 behältst du, wenn du willst: Nach dem Update fragt ZENITH einmal, und der Schalter „Jubiläums-Theme behalten“ steht jederzeit unter Einstellungen → ZENITH
 • Der Smart-Modus, viel besser: Kategorien selbst bauen (hinzufügen, umbenennen, Zeichen wählen, verschieben, entfernen), dreizehn Formen für die Icons, eigene Farbe mit Farbwähler, die Suche rechnet auch um („5 km in mi“), zwei Smart-Widgets (Akku-Balken, nächste Termine)

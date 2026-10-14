@@ -27,23 +27,24 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleHearthDebug assembleGlimmerDebug assembleClawdDebug assembleDuftDebug assembleOneDebug assembleSmartDebug
-          cp app/build/outputs/apk/hearth/debug/app-hearth-debug.apk Hearth.apk
+          # Clear names in the downloads: ZENITH is the main app (it was called Hearth UI once, so its file was HearthUI.apk).
+          cp app/build/outputs/apk/hearth/debug/app-hearth-debug.apk Hearth-alt.apk
           cp app/build/outputs/apk/glimmer/debug/app-glimmer-debug.apk Glimmer.apk
           cp app/build/outputs/apk/clawd/debug/app-clawd-debug.apk Clawd.apk
-          cp app/build/outputs/apk/duft/debug/app-duft-debug.apk Duft.apk
-          cp app/build/outputs/apk/one/debug/app-one-debug.apk HearthUI.apk
-          cp app/build/outputs/apk/smart/debug/app-smart-debug.apk ZenithSmart.apk
+          cp app/build/outputs/apk/duft/debug/app-duft-debug.apk Duftschrank.apk
+          cp app/build/outputs/apk/one/debug/app-one-debug.apk ZENITH.apk
+          cp app/build/outputs/apk/smart/debug/app-smart-debug.apk ZENITH-Smart.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: hearth-glimmer-debug-apks
           path: |
-            Hearth.apk
+            ZENITH.apk
+            ZENITH-Smart.apk
             Glimmer.apk
             Clawd.apk
-            Duft.apk
-            HearthUI.apk
-            ZenithSmart.apk
+            Duftschrank.apk
+            Hearth-alt.apk
 
       # Once: every earlier version of every app as its own release (oldest first, so they
       # line up in order). A marker tag remembers it's done.
@@ -99,12 +100,12 @@ jobs:
           v=$(grep -o 'versionName = "[^"]*"' app/build.gradle.kts | cut -d'"' -f2)
           # file|slug (tag and update check, never changes)|file name|title|what it is
           # (Hearth One became Hearth UI, then OMEGA UI, now ZENITH; its slug stays, so installed apps keep finding it.)
-          for entry in "Hearth.apk|hearth|Hearth|Hearth|der Launcher" \
+          for entry in "Hearth-alt.apk|hearth|Hearth|Hearth (alt)|der alte Launcher allein, ohne Glimmer und Clawd – ZENITH ist sein Nachfolger" \
                        "Glimmer.apk|glimmer|Glimmer|Glimmer|die Insel um die Kamera" \
                        "Clawd.apk|clawd|Clawd|Clawd|Clawds Widgets für jeden Launcher, sein Tamagotchi und Chat" \
-                       "Duft.apk|duft|Duftschrank|Duftschrank|Clawds Parfüm-Berater als eigene App: deine Parfüms, das passende für heute, Widget für jeden Launcher" \
-                       "HearthUI.apk|hearthone|ZENITH|ZENITH|Launcher, Glimmer und Clawd in einer App" \
-                       "ZenithSmart.apk|smart|ZENITH-Smart|ZENITH Smart|ZENITH im Look des Smart Launchers 6, mit ClaudeOS und ZENITH im Kern der Einstellungen"; do
+                       "Duftschrank.apk|duft|Duftschrank|Duftschrank|Clawds Parfüm-Berater als eigene App: deine Parfüms, das passende für heute, Widget für jeden Launcher" \
+                       "ZENITH.apk|hearthone|ZENITH|ZENITH|Launcher, Glimmer und Clawd in einer App" \
+                       "ZENITH-Smart.apk|smart|ZENITH-Smart|ZENITH Smart|ZENITH im Look des Smart Launchers 6, mit ClaudeOS und ZENITH im Kern der Einstellungen"; do
             IFS='|' read -r file slug name title what <<< "$entry"
             tag="$slug-v$v"
             cp "$file" "$name-$v.apk"
@@ -144,12 +145,12 @@ jobs:
           # The newest version's card (colors, label), so an installed ZENITH can draw it before the update is installed.
           if os.path.exists(".github/card.json"):
               out["card"] = json.load(open(".github/card.json"))
-          for slug, file in [("hearth", "Hearth.apk"), ("glimmer", "Glimmer.apk"), ("clawd", "Clawd.apk"), ("duft", "Duft.apk"), ("hearthone", "HearthUI.apk"), ("smart", "ZenithSmart.apk")]:
+          for slug, file in [("hearth", "Hearth-alt.apk"), ("glimmer", "Glimmer.apk"), ("clawd", "Clawd.apk"), ("duft", "Duftschrank.apk"), ("hearthone", "ZENITH.apk"), ("smart", "ZENITH-Smart.apk")]:
               out[slug] = {"version": v, "build": build, "url": base + file, "size": os.path.getsize(file)}
           json.dump(out, open("versions.json", "w"), ensure_ascii=False, indent=1)
           PY
-          gh release create "build-${{ github.run_number }}" Hearth.apk Glimmer.apk Clawd.apk Duft.apk HearthUI.apk ZenithSmart.apk versions.json \
+          gh release create "build-${{ github.run_number }}" ZENITH.apk ZENITH-Smart.apk Glimmer.apk Clawd.apk Duftschrank.apk Hearth-alt.apk versions.json \
             --target "${{ github.sha }}" \
-            --title "Hearth Build ${{ github.run_number }}" \
-            --notes "ZenithSmart.apk (ZENITH Smart: ZENITH im Look des Smart Launchers 6), HearthUI.apk (ZENITH: alles in einer App), Hearth.apk (Launcher), Glimmer.apk (Insel), Clawd.apk (Clawds Widgets für jeden Launcher) und Duft.apk (der Duftschrank, Clawds Parfüm-Berater). Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
+            --title "ZENITH Build ${{ github.run_number }}" \
+            --notes "Welche Datei? ZENITH.apk: die Hauptapp (Launcher, Glimmer und Clawd in einer App). ZENITH-Smart.apk: ZENITH im Look des Smart Launchers, eine eigene App daneben. Glimmer.apk: die Insel um die Kamera, Clawd.apk: Clawds Widgets für jeden Launcher, Duftschrank.apk: Clawds Parfüm-Berater – alle drei stecken schon in ZENITH. Hearth-alt.apk: der alte Launcher allein, ohne Glimmer und Clawd – nicht nötig. versions.json ist die Liste für die Update-Suche. Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
             --latest

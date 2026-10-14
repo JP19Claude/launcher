@@ -236,6 +236,15 @@ internal object HearthChangelog {
                     ),
                     hearth,
                 ),
+                ChangeSection(
+                    "Klare Dateinamen in den Downloads (Hotfix)", Icons.Rounded.CheckCircle, Green,
+                    listOf(
+                        "Auf GitHub heißen die Dateien jetzt, was sie sind: ZENITH.apk ist die Hauptapp (früher HearthUI.apk, denn so hieß sie einmal), ZENITH-Smart.apk die eigene Smart-App daneben, Duftschrank.apk Clawds Parfüm-Berater (früher Duft.apk).",
+                        "Hearth-alt.apk ist der alte Launcher allein, ohne Glimmer und Clawd – er hat dasselbe Paket wie ZENITH und ist nicht nötig. Glimmer.apk und Clawd.apk stecken schon in ZENITH.",
+                        "Die Update-Suche in den Apps findet die neuen Namen von selbst; nichts ist neu zu installieren.",
+                    ),
+                    hearth,
+                ),
             ),
         ),
         ChangeRelease(

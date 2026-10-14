@@ -185,7 +185,11 @@ mit Liquid Glass, und Claude dort, wo bei Samsung Galaxy AI sitzt.
   Hearth reicht das Aussehen seines Kontrollzentrums weiter. Die Apps reden über eine
   Schnittstelle, die nur Apps mit derselben Signatur nutzen dürfen.
 
-Download: [Hearth.apk](https://github.com/JP19Claude/launcher/releases/latest/download/Hearth.apk) ·
+Download: [ZENITH.apk](https://github.com/JP19Claude/launcher/releases/latest/download/ZENITH.apk) (die Hauptapp:
+Launcher, Glimmer und Clawd in einer App) ·
+[ZENITH-Smart.apk](https://github.com/JP19Claude/launcher/releases/latest/download/ZENITH-Smart.apk) (ZENITH im Look des Smart Launchers,
+eine eigene App) ·
+[Hearth-alt.apk](https://github.com/JP19Claude/launcher/releases/latest/download/Hearth-alt.apk) (der alte Launcher allein) ·
 [Glimmer.apk](https://github.com/JP19Claude/launcher/releases/latest/download/Glimmer.apk) ·
 [Clawd.apk](https://github.com/JP19Claude/launcher/releases/latest/download/Clawd.apk)
 
