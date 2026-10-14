@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The picker's thumbnail: a planet in the dark. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:endColor="#FF0A1128"
+                android:startColor="#FF01020A" />
+        </shape>
+    </item>
+    <item
+        android:width="150dp"
+        android:height="150dp"
+        android:gravity="center">
+        <shape android:shape="oval">
+            <gradient
+                android:centerX="0.35"
+                android:centerY="0.3"
+                android:endColor="#FF6A5230"
+                android:gradientRadius="110dp"
+                android:startColor="#FFF0D9A0"
+                android:type="radial" />
+        </shape>
+    </item>
+</layer-list>

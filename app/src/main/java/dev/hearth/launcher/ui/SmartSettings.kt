@@ -211,6 +211,7 @@ internal fun SsMainPage(go: (String) -> Unit, onZenith: (String?) -> Unit, onWel
         SsLink("Wechsel-Assistent", "Thema, Icons, Uhr und der Standard-Launcher – Schritt für Schritt", { SsIcon(SsGlyph.Swipe) }) { onWelcome() }
         SsHeader("Launcher")
         SsLink("Allgemeine Darstellung", null, { SsIcon(SsGlyph.Look) }) { go("look") }
+        SsLink("Super-Wallpaper", "Saturn, Erde, Mars … – Hintergründe, die sich bewegen", { SsIcon(SsGlyph.Look) }) { onZenith("superwall") }
         SsLink("Startbildschirm", null, { SsIcon(SsGlyph.Home) }) { go("home") }
         SsLink("App-Raster", null, { SsIcon(SsGlyph.Grid) }) { go("drawer") }
         SsLink("Suchseite", null, { SsIcon(SsGlyph.Search) }) { go("search") }

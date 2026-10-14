@@ -337,6 +337,19 @@ fun LauncherScreen(vm: LauncherViewModel) {
     // Page order: [widgets] home pages… [App Library]; the launcher opens on the first home page.
     val pagerState = rememberPagerState(initialPage = widgetPages) { widgetPages + pages.size + libraryPages }
     val onLibraryPage = libraryPages > 0 && pagerState.currentPage >= widgetPages + pages.size
+    // ZENITH 21.5, Super-Wallpaper: it moves with the home page (the page's position is passed on to it; other wallpapers stay put).
+    val wallpaperView = LocalView.current
+    LaunchedEffect(pagerState) {
+        androidx.compose.runtime.snapshotFlow { pagerState.currentPage + pagerState.currentPageOffsetFraction }.collect { position ->
+            if (!dev.hearth.launcher.wallpaper.SuperWallpaperService.isActive(context)) return@collect
+            val last = (pagerState.pageCount - 1).coerceAtLeast(1)
+            runCatching {
+                val manager = android.app.WallpaperManager.getInstance(context)
+                manager.setWallpaperOffsetSteps(1f / last, 1f)
+                manager.setWallpaperOffsets(wallpaperView.windowToken, (position / last).coerceIn(0f, 1f), 0.5f)
+            }
+        }
+    }
     val editScale by animateFloatAsState(if (editMode) 0.84f else 1f, spring(dampingRatio = 0.85f, stiffness = 380f), label = "editScale")
 
     // Adding a widget: permission dialog (once per app) and the widget's own setup screen.

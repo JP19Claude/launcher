@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import dev.hearth.launcher.wallpaper.SuperScene
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -969,6 +970,12 @@ data class LauncherSettings(
     /** The App Library, the page after the last home page. */
     val cometLibrary: Boolean = true,
     val cometAccent: AccentColor = AccentColor.Galaxy,
+    /** ZENITH 21.5, the Super-Wallpaper (a live wallpaper): its scene, how it moves and how fast. The wallpaper service reads these keys itself. */
+    val superScene: SuperScene = SuperScene.Saturn,
+    val superTilt: Boolean = true,
+    val superZoom: Boolean = true,
+    val superSpeed: Float = 1f,
+    val superStars: Boolean = true,
     /** The glass of that look (Frosted or Liquid) and its four sliders, which are the mode's own. */
     val smartGlass: SmartGlass = SmartGlass.Ambient,
     val smartBlur: Float = SmartGlass.Ambient.blur,
@@ -1659,6 +1666,11 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             cometCapsuleDock = prefs.getBoolean("cometCapsuleDock", d.cometCapsuleDock),
             cometLibrary = prefs.getBoolean("cometLibrary", d.cometLibrary),
             cometAccent = enumOf("cometAccent", d.cometAccent),
+            superScene = enumOf("superScene", d.superScene),
+            superTilt = prefs.getBoolean("superTilt", d.superTilt),
+            superZoom = prefs.getBoolean("superZoom", d.superZoom),
+            superSpeed = prefs.getFloat("superSpeed", d.superSpeed),
+            superStars = prefs.getBoolean("superStars", d.superStars),
             sloganEverywhere = prefs.getBoolean("sloganEverywhere", d.sloganEverywhere),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
             zenithStrike = prefs.getBoolean("zenithStrike", d.zenithStrike),
@@ -1915,6 +1927,11 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putBoolean("cometCapsuleDock", s.cometCapsuleDock)
             .putBoolean("cometLibrary", s.cometLibrary)
             .putString("cometAccent", s.cometAccent.name)
+            .putString("superScene", s.superScene.name)
+            .putBoolean("superTilt", s.superTilt)
+            .putBoolean("superZoom", s.superZoom)
+            .putFloat("superSpeed", s.superSpeed)
+            .putBoolean("superStars", s.superStars)
             .putBoolean("sloganEverywhere", s.sloganEverywhere)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("zenithStrike", s.zenithStrike)

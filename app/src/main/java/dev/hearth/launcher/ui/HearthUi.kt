@@ -226,6 +226,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Super-Wallpaper – Hintergründe, die sich bewegen", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Neu unter Einstellungen → Super-Wallpaper (auch aus den Smart- und Comet-Einstellungen zu öffnen): sechs bewegte Hintergründe, wie manche Telefone sie als „Super-Wallpaper“ haben – Saturn mit seinen Ringen, Jupiter mit dem roten Fleck, die Erde mit Wolken und Dunst, Mars mit Polkappen, der Mond voller Krater und die Geometrie, ein Ikosaeder aus Licht.",
+                        "Die Seite zeigt die Szene live, lässt sie wählen und macht sie mit „Als Hintergrund setzen“ zum Hintergrund des Telefons: ein echtes Live-Wallpaper, das hinter ZENITH läuft (auch hinter anderen Launchern und, wo Android es zulässt, auf dem Sperrbildschirm). Auch in Androids eigener Hintergrund-Auswahl heißt es „ZENITH Super-Wallpaper“.",
+                        "Es bewegt sich: Die Planeten drehen sich, mit der Neigung des Telefons wandert die Szene, beim Einschalten des Bildschirms kommt sie von nahem heran, und mit den Seiten des Startbildschirms rückt sie zur Seite. Neigung, Zoom, Sterne und Geschwindigkeit sind einstellbar.",
+                        "Das Glas in ZENITH bricht und weichzeichnet ein Standbild der Szene, passend zu den Farben des Planeten; es bewegt sich nur der Hintergrund selbst. Ehrlich dazu: Alles ist selbst gezeichnet – aus Rauschen und Farbverläufen beim ersten Start, keine Bilddateien und nicht die Super-Wallpaper eines Herstellers –, und ich konnte es auf keinem Handy ausprobieren.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Hotfix: neue Easter Eggs für ZENITH 21, 21.5 und ClaudeOS 8", Icons.Rounded.Star, Orange,
                     listOf(
                         "ZENITH 21 „Horizont“: Nacht über drei Bergrücken, einundzwanzig blasse Lichter hängen im Dunkeln. Zieh den Horizont mit dem Finger zur Seite – die nahen Berge wandern weiter als die fernen –, tipp die Lichter an, und mit jedem kommt der Morgen näher. Beim einundzwanzigsten geht hinter den Bergen die Sonne auf.",

@@ -147,6 +147,8 @@ private fun CmMainPage(go: (String) -> Unit, onZenith: (String?) -> Unit, back: 
         CmCard {
             CmLink("Hintergrund & Stil", "Akzentfarbe, Icons, Abdunkelung", SsGlyph.Look) { go("look") }
             CmDivider()
+            CmLink("Super-Wallpaper", "Saturn, Erde, Mars … – Hintergründe, die sich bewegen", SsGlyph.Look) { onZenith("superwall") }
+            CmDivider()
             CmLink("Liquid Glass", "Klar oder solide, Stärke, Deckkraft", SsGlyph.Widget) { go("glass") }
             CmDivider()
             CmLink("Startbildschirm", "Uhr, Raster, Suchleiste", SsGlyph.Home) { go("home") }

@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -204,6 +205,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         ClaudeAssistant.host = assistantHost
         dev.hearth.launcher.data.EasterEggs.init(application)
         AppLock.removeHandler = { pkg -> setLocked(pkg, false) }
+        // ZENITH 21.5: another scene of the Super-Wallpaper is another picture for the glass to bend – the copy is made again.
+        viewModelScope.launch {
+            settingsRepo.settings.map { it.superScene }.distinctUntilChanged().drop(1).collect { wallpaper.refresh() }
+        }
 
         // New default looks, each applied once to existing installs:
         // 2 = ColorOS × Claude.

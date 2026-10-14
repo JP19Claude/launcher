@@ -138,8 +138,35 @@ class WallpaperRepository(private val context: Context) {
                 PackageManager.PERMISSION_GRANTED
         }
 
+    /** ZENITH 21.5: the Super-Wallpaper is ZENITH's own live wallpaper – its picture is drawn here, no file access needed. */
+    private fun loadSuper() {
+        _needsAccess.value = false
+        val (screenW, screenH) = screenSize()
+        val factor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) 4 else 16
+        val outW = (screenW / factor).coerceAtLeast(1)
+        val outH = (screenH / factor).coerceAtLeast(1)
+        val bitmap = dev.hearth.launcher.wallpaper.SuperPrefs.snapshot(context, outW, outH)
+        if (bitmap == null) {
+            _backdrop.value = null
+            return
+        }
+        val soft = if (factor <= 4) blurred(bitmap, radius = 9) else bitmap
+        val strong = if (factor <= 4) blurred(bitmap, radius = 10, downscale = 3) else bitmap
+        _backdrop.value = WallpaperBackdrop(
+            image = bitmap.asImageBitmap(),
+            soft = soft.asImageBitmap(),
+            strong = strong.asImageBitmap(),
+            screenWidth = screenW,
+            screenHeight = screenH,
+        )
+    }
+
     @SuppressLint("MissingPermission")
     private fun load() {
+        if (dev.hearth.launcher.wallpaper.SuperWallpaperService.isActiveNow(context)) {
+            loadSuper()
+            return
+        }
         if (!hasAccess()) {
             _backdrop.value = null
             _needsAccess.value = true

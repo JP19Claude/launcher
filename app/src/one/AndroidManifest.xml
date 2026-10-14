@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <!-- Be Smarter: the next event on the clock (asked for once, only when that switch is turned on) -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <!-- ZENITH 21.5: the Super-Wallpaper is a live wallpaper (not needed to run the launcher) -->
+    <uses-feature android:name="android.software.live_wallpaper" android:required="false" />
 
     <queries>
         <!-- What Claude opens for you -->
@@ -627,5 +629,19 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/clawd_rps_info" />
         </receiver>
+
+        <!-- ZENITH 21.5: the Super-Wallpaper – planets and shapes that move; chosen in ZENITH's settings or in the phone's wallpaper picker -->
+        <service
+            android:name="dev.hearth.launcher.wallpaper.SuperWallpaperService"
+            android:exported="true"
+            android:label="@string/super_wallpaper_label"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/super_wallpaper" />
+        </service>
     </application>
 </manifest>

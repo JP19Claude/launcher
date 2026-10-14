@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ZENITH's Super-Wallpaper: the scene and its options are chosen in ZENITH's settings. -->
+<wallpaper xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/super_wallpaper_description"
+    android:thumbnail="@drawable/super_wallpaper_thumb" />
