@@ -226,6 +226,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: neue Easter Eggs für ZENITH 21, 21.5 und ClaudeOS 8", Icons.Rounded.Star, Orange,
+                    listOf(
+                        "ZENITH 21 „Horizont“: Nacht über drei Bergrücken, einundzwanzig blasse Lichter hängen im Dunkeln. Zieh den Horizont mit dem Finger zur Seite – die nahen Berge wandern weiter als die fernen –, tipp die Lichter an, und mit jedem kommt der Morgen näher. Beim einundzwanzigsten geht hinter den Bergen die Sonne auf.",
+                        "ZENITH 21.5 „Comet“: Blasen aus Liquid Glass steigen aus dem Dunkel auf, klar, mit hellem Rand und einem Glanzpunkt. Tipp sie an, und sie platzen; ins Leere getippt, bläst du eine neue. Einundzwanzig Blasen – dann kommt ZENITHs Zeichen.",
+                        "ClaudeOS 8 „Horizon“: Trag das Claude-Zeichen mit dem Finger von links nach rechts über den Horizont – der Himmel geht durch Dämmerung, Tag und Abend, am Ende kommen die Sterne wieder. Zum Schluss erscheint das Zeichen von ClaudeOS 8.",
+                        "Bisher spielten diese Versionen noch die Eggs von ZENITH 20 und ClaudeOS 7. Jetzt haben sie ihre eigenen – in der Ruhmeshalle und der ClaudeOS-Ruhmeshalle (Version halten), in der Zentrale (Jubiläums-Galerie) und im Abspann stehen sie auch.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

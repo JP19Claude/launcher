@@ -4,6 +4,7 @@ ZENITH 21.5 „Comet“ auf ClaudeOS 8.0 „Horizon“
 • „Be Comet“ im Clawd Illuminati, neben „Be Smarter“: der Launcher wie CometOS – klares Liquid Glass oder solide Flächen (mit Stärke und Deckkraft), die Flüssig-Uhr aus Glas mit Datum, Wetter und Wecker, das Dock als gläserne Kapsel, die App-Bibliothek, das Kontrollzentrum von oben rechts, die Mitteilungen von oben links
 • ZENITH im Kern: mit „Be Comet“ werden die Launcher-Einstellungen zu den Comet-Einstellungen, vorneweg ClaudeOS und ZENITH; Claude ersetzt Comet AI
 • Ehrlich dazu: ein Nachbau mit eigenem Code, nicht auf dem Handy ausprobiert; ohne Comets Widgets und eigenen Sperrbildschirm
+• Hotfix: neue Easter Eggs für ZENITH 21 „Horizont“ (einundzwanzig Lichter in den Bergen, die Sonne geht auf), ZENITH 21.5 „Comet“ (einundzwanzig Glasblasen) und ClaudeOS 8 „Horizon“ (das Zeichen über den Horizont tragen) – bisher spielten sie noch die von ZENITH 20 und ClaudeOS 7; auch in der Ruhmeshalle, der ClaudeOS-Ruhmeshalle und der Jubiläums-Galerie
 
 Seit 21.0 (Hotfix)
 • Eine Karte, die wirklich anders aussieht: Horizont zeigt jetzt einen klaren Himmel, eine Sonne, die hinter drei Bergrücken aufgeht, und ein paar blasse Sterne – statt Bögen und Feuerwerk. Dasselbe Bild trägt die Systemkarte oben in den Einstellungen (mit dem Jubiläums-Theme bleibt sie, wie sie war)

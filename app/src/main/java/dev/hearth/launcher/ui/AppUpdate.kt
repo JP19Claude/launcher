@@ -636,6 +636,8 @@ internal fun HearthVersionEgg(version: String, name: String, onClose: () -> Unit
     // ZENITH 20: the jubilee edition lies over every egg of the versions before it.
     androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
         when {
+            number >= 21.5f -> GlassBubbleEgg(version, name, onClose)
+            number >= 21f -> HorizonEgg(version, name, onClose)
             number >= 20f -> JubileeEgg(version, name, onClose)
             number >= 19.5f -> ZStormEgg(version, name, onClose)
             number >= 19f -> SunRunEgg(version, name, onClose)

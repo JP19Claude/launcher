@@ -89,6 +89,7 @@ internal fun ClaudeOsVersionEgg(version: String = ClaudeOs.VERSION, onClose: () 
         // ZENITH 20: the jubilee edition lies over the eggs of the ClaudeOS before 7.
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
             when {
+                number >= 8f -> HorizonOsEgg(onClose)
                 number >= 7f -> ApexEgg(onClose)
                 number >= 6f -> HeliosEgg(onClose)
                 number >= 5f -> MythosEgg(onClose)
