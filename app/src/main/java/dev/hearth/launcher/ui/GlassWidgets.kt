@@ -101,6 +101,8 @@ fun InternalWidget(repo: WidgetRepository, id: Int, modifier: Modifier = Modifie
         HearthWidget.OmegaClock -> OmegaClockWidget(modifier)
         HearthWidget.RubyAnalog -> RubyAnalogWidget(modifier)
         HearthWidget.WorldClock -> WorldClockWidget(modifier)
+        HearthWidget.SmartBattery -> SmartBatteryWidget(modifier)
+        HearthWidget.SmartEvents -> SmartEventsWidget(modifier)
     }
 }
 

@@ -1,36 +1,17 @@
-ZENITH 20.5 „Be Smarter“ auf ClaudeOS 7.0 „Apex“
+ZENITH 21.0 „Horizont“ auf ClaudeOS 8.0 „Horizon“
 
-✨ Neu im Hotfix
-• ZENITH Smart: eine eigene App im Look des Smart Launchers 6 (Be Smarter von Anfang an) mit den Einstellungen im Stil des Smart Launchers – dunkler Grund, große Titel, Zeilen mit Linien-Symbol, blaue Schalter, Regler mit Wert und Zurücksetzen, Thema mit Vorschau und „Thema Bearbeiten“
-• Im Kern der Einstellungen: ClaudeOS (Claude & KI, Clawd, Glimmer, Update) und ZENITH (Zentrale, Design, Illuminati, Datenschutz, System, der Spruch); der Rest von ZENITHs Einstellungen öffnet sich von dort
-• Eine App für sich, kein Update für ZENITH: eigenes Paket, beide nebeneinander installierbar, eigene Einstellungen und Daten (eine Sicherung aus ZENITH lässt sich in ZENITH Smart wiederherstellen), eigene Update-Linie; auch in ZENITH zeigt „Be Smarter“ jetzt diese Einstellungen
-• Be Smarter nach der echten Smart-Launcher-6.6-Datei umgebaut: Maße (Leiste 64 dp, Knöpfe 48 dp, Blatt 24 dp rund), App-Öffnen wie dort (125 ms, 90 → 100 %, der Startbildschirm tritt auf 110 % zurück), eigene Suche im Drawer (Lupe → Suchfeld, filtert alle Kategorien)
-• Neu im Drawer: Kategorieleiste, Kategorientitel, letzte Kategorie geöffnet, sechs Übergangseffekte der Kategorien, Abstand zwischen den Icons
-• Neu am Startbildschirm: Indikator ein/aus, Lesbarkeit verbessern, Eckenradius der Widgets; an der Uhr: Stundenformat, Fahrenheit, ganztägige Ereignisse ausblenden
-• „Aim Higher.“ groß auf der Systemkarte: oben in den Einstellungen (auf der Karte mit dem Z, dem Handy und der Version), auf der Versionskarte in „Über das Telefon“ und im Software-Update – in schweren, schrägen Buchstaben in der Farbe der Karte, mit einem Lichtband darüber
-• Der Spruch überall deutlich sichtbarer: größer und heller auf Startbildschirm, Sperrbildschirm, Z-Nacht und im Blatt des Startbildschirms, groß im ZENITH-Hintergrund und in Projekt Zenith, in der Zentrale und in „Über das Telefon“
-• Be Smarter: der nächste Termin an der Uhr („Termin · 11:00 Zahnarzt“; einschaltbar im Illuminati, Android fragt einmal nach dem Zugriff auf den Kalender)
-• Be Smarter: Apps im Menü (Halten) in eine andere Kategorie des Smart-Drawers verschieben, und zurücksetzen
-• Be Smarter: die Ecken der Widgets einstellbar (0 bis 44 dp)
-• „Aim Higher.“ überall im System: auf dem Startbildschirm und in seinem Hintergrund (ZENITH-Hintergrund, Projekt Zenith), auf dem Sperrbildschirm und dem Always-On-Display, in den Einstellungen, in der Z-Nacht, im Illuminati, im Blatt des Startbildschirms und beim Z-Angriff – abschaltbar unter Einstellungen → ZENITH
-• Noch einmal gegen die Wartezeit nach dem Schließen: Glimmers Anfragen legen keine Einstellungs-Leser mehr an (jeder las alles und blieb bis zur Speicherbereinigung hängen), die Suche nach alten Apps läuft einmal pro Start, Glas und fließende Farben gehen die ersten Zehntelsekunden nach dem Zurückkommen leicht
-• Kein Warten mehr nach dem Schließen einer App: die Widgets bleiben angeschlossen (sie wurden nach 15 Sekunden getrennt und beim Zurückkommen alle auf einmal neu gezeichnet), Be Smarter spielt keine eigene Schließ-Animation und macht keine Bilder der App (außer mit „Glimmer ins System binden“), die flachen Themes zeichnen ohne Linsen-Shader, Apps starten nicht mehr auf dem Hauptthread
-• Mehr einstellen: sieben Formen für die Icons, Größe, Spalten und Reihen, Smart-Suche an oder aus; die Uhr in Größe, Schrift, Anordnung (zentriert oder kompakt), Wetter und Wecker einzeln; der Drawer mit Spalten, Namen und deren Größe; die Farbe der Flächen im Ambient Design
-• Das Datum wie im Smart Launcher: „So., 11. Oktober ⛅ 10°C“
-• Be Smarter nach Bildschirmfotos von Smart Launcher 6 angeglichen
-• Die Uhr in der Mitte: Zeit groß, darunter „Datum ⛅ Wetter“, darunter „Wecker · 07:00“
-• Icons ohne Namen als abgerundete Quadrate (im Liquid Glass runde Glas-Kacheln), das Dock ohne Leiste, ganz unten die Pille „Smart-Suche“
-• Der Drawer sitzt tief: groß der Name der Kategorie mit Suche, Store und Menü, die Apps in vier Spalten, unten die Leiste mit sechs Kategorien (Kommunikation, Social, Spiele, Medien, Dienstprogramme, Einstellungen)
-• Fünf Themes wie dort: Ambient Design, Material You, Frostetes Glas, Opakisches Glas, Liquid Glass – mit den Reglern Unschärferadius, Lebendigkeit verwischen, Brechung, Tiefe und Streuung
-• Halten auf dem Startbildschirm öffnet das Blatt „Startbildschirm“ von unten
-• Noch nicht dabei: Your Feed, Private Space, Widget-Paket, Dock mit mehreren Reihen, freie Symbolformen und Farben
+✨ Neu in 21.0
+• Neues Theme „Horizont“: tiefes Blau ins Licht des Horizonts, eisblaue Akzente – auf der Versionskarte, der Systemkarte der Einstellungen und am Z. Das Jubiläums-Theme von ZENITH 20 behältst du, wenn du willst: Nach dem Update fragt ZENITH einmal, und der Schalter „Jubiläums-Theme behalten“ steht jederzeit unter Einstellungen → ZENITH
+• Der Smart-Modus, viel besser: Kategorien selbst bauen (hinzufügen, umbenennen, Zeichen wählen, verschieben, entfernen), dreizehn Formen für die Icons, eigene Farbe mit Farbwähler, die Suche rechnet auch um („5 km in mi“), zwei Smart-Widgets (Akku-Balken, nächste Termine)
+• Vom Smart Launcher wechseln: der Wechsel-Assistent in fünf Schritten (Thema, Icon-Form, Uhr, Standard-Launcher) und die Seite „Warum ZENITH Smart“ – was hier frei ist und was Smart Launcher laut eigenen Texten nur mit Pro hat
+• ZENITH Smart: die eigene App im Look des Smart Launchers 6 (eigenes Paket, neben ZENITH installierbar), die Einstellungen im Smart-Stil mit ClaudeOS und ZENITH im Kern
+• Darunter ClaudeOS 8.0 „Horizon“
 
-✨ Neu in 20.5
-• Be Smarter: ein Modus im Clawd Illuminati (Versionsnummer in „Über das Telefon“ antippen), der aus dem Launcher Smart Launcher 6 macht – ohne dass etwas von dem überschrieben wird, was du gewählt hast. Aus: alles wie vorher
-• Ohne Verzögerung: Apps öffnen sich im Moment des Tippens (kein Fluid-Spritzer, keine Feder, nur ein kurzes Einblenden); aus, klappt die App wie beim Smart Launcher aus ihrem Icon auf
-• Glimmer ins System binden: ein Schalter für Glimmer, sein Schließ-Fly-in für alle Launcher und das Verdecken der Launcher-Animation – mit dem neuen Stil „Smart Launcher“: die App schrumpft in einer weichen Bewegung zurück in ihr Icon
-
-Eine Annäherung, kein Abpausen: wo es abweicht, lässt es sich mit einem weiteren Bildschirmfoto angleichen.
+Seit 20.5
+• Be Smarter nach der Smart-Launcher-6.6-Datei umgebaut: Maße, App-Öffnen wie dort (125 ms), eigene Suche im Drawer, Kategorieleiste mit Titeln, sechs Übergangseffekte, Indikator, Lesbarkeit verbessern, Stundenformat und Fahrenheit, der nächste Termin an der Uhr
+• „Aim Higher.“ groß auf der Systemkarte und überall sichtbarer
+• Ohne Verzögerung: Apps öffnen sich im Moment des Tippens; Glimmer ins System binden
+• Weniger Wartezeit nach dem Schließen einer App (Widgets bleiben angeschlossen, keine Einstellungs-Leser mehr pro Anfrage)
 
 Seit 20.0
 • Jubiläum: Zentrale, Wetter mit dem Himmel als Bild, Polarlicht, Z-Nacht, Jubiläums-Zeremonie, 69 Easter Eggs

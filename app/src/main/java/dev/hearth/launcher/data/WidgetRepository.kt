@@ -84,6 +84,10 @@ enum class HearthWidget(val label: String, val description: String, val spanX: I
     OmegaClock("ZENITH-Uhr", "Dünne Ziffern im Licht der Systemfarbe, das Datum und die Sekunden als Linie", 4, 2, 170),
     RubyAnalog("Rubin-Analoguhr", "Ein Zifferblatt aus Glas mit einem Rubin bei zwölf", 2, 2, 200),
     WorldClock("Weltuhr", "Hier, New York, London und Tokio – mit Tag und Nacht", 4, 2, 160),
+    /** ZENITH 21: Smart Launcher's battery – a bar that fills with it, the percent big. */
+    SmartBattery("Smart-Akku", "Ein Balken, der sich mit dem Akku füllt – groß die Prozent, wie beim Smart Launcher (blau, beim Laden grün, fast leer rot)", 2, 1, 110),
+    /** ZENITH 21: the next events of the calendar on a card. */
+    SmartEvents("Smart-Termine", "Deine nächsten Termine aus dem Kalender auf einer Karte – der Zugriff auf den Kalender wird einmal in den Smart-Einstellungen unter „Uhr und Wetter“ erlaubt", 4, 2, 180),
     ;
 
     /** One of Clawd's widgets (shown with him in the picker). */

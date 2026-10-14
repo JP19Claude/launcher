@@ -25,6 +25,13 @@ enum class IconShape(val label: String) {
     Teardrop("Tropfen"),
     Leaf("Blatt"),
     Cut("Kante"),
+    /** ZENITH 21: the other shapes of Smart Launcher's list, free here. */
+    Hexagon("Sechseck"),
+    Octagon("Achteck"),
+    Diamond("Raute"),
+    Star("Stern"),
+    Flower("Blume"),
+    Shield("Schild"),
 }
 
 enum class ClockStyle(val label: String) {
@@ -218,6 +225,21 @@ enum class SmartHours(val label: String) {
     H12("12 Stunden"),
 }
 
+/**
+ * ZENITH 21, the theme of the system's cards: "Horizont", the new one – deep blue into the light of the horizon –
+ * or "Jubiläum", the midnight and gold of ZENITH 20, kept.
+ */
+enum class ZenithTheme(val label: String, val note: String) {
+    Horizon("ZENITH 21 · Horizont", "Das neue Theme: tiefes Blau ins Licht des Horizonts, eisblaue Akzente."),
+    Jubilee("Jubiläum · Gold", "Das Theme von ZENITH 20 bleibt: Mitternacht ins Gold, die goldene Karte, goldene Akzente."),
+}
+
+/** ZENITH 21, the whole system in a theme's colors at once (the aurora, the Z, the glass …) – and the theme itself. */
+fun LauncherSettings.withZenithTheme(theme: ZenithTheme): LauncherSettings = when (theme) {
+    ZenithTheme.Horizon -> CoreProfiles.horizonLook(this)
+    ZenithTheme.Jubilee -> CoreProfiles.jubileeLook(this)
+}.copy(zenithTheme = theme)
+
 /** ZENITH 20.5, "Thema bearbeiten": the color Ambient Design tints its surfaces with – the wallpaper's, or one of these. */
 enum class SmartColor(val label: String, val color: Color?) {
     Auto("Wie das Hintergrundbild", null),
@@ -229,6 +251,8 @@ enum class SmartColor(val label: String, val color: Color?) {
     Red("Rot", Color(0xFF8A2F3A)),
     Rose("Rosé", Color(0xFF9A3F6F)),
     Slate("Schiefer", Color(0xFF3A444E)),
+    /** ZENITH 21: a color of one's own, from the picker ([LauncherSettings.smartCustomColor]). */
+    Custom("Eigene Farbe", null),
 }
 
 /**
@@ -274,12 +298,46 @@ fun LauncherSettings.withSmartGlass(glass: SmartGlass): LauncherSettings = copy(
 val LauncherSettings.showSlogan: Boolean get() = sloganEverywhere && dev.hearth.launcher.BuildConfig.ALL_IN_ONE
 
 /** Apps open the moment they are tapped (only in "Be Smarter", and only while that is chosen). */
-/** The drawer's moved apps as they are kept: "package=tab;package=tab". */
-fun parseSmartCategories(text: String?): Map<String, Int> =
+/**
+ * ZENITH 21: a tab of the Smart drawer. [id] is what apps are sorted into, [title] its name, [glyph] the name of its sign
+ * (a SmartGlyph). The six of Smart Launcher are the start; tabs can be added, renamed, moved and removed.
+ */
+data class SmartTab(val id: String, val title: String, val glyph: String)
+
+/** The six tabs the drawer starts with. */
+val DefaultSmartTabs: List<SmartTab> = listOf(
+    SmartTab("comm", "Kommunikation", "Chat"),
+    SmartTab("social", "Social", "Social"),
+    SmartTab("games", "Spiele", "Games"),
+    SmartTab("media", "Medien", "Media"),
+    SmartTab("tools", "Dienstprogramme", "Tools"),
+    SmartTab("prefs", "Einstellungen", "Gear"),
+)
+
+/** The tabs as they are kept: "id|name|sign;id|name|sign". */
+fun smartTabsText(tabs: List<SmartTab>): String =
+    tabs.joinToString(";") { "${it.id.filter { c -> c.isLetterOrDigit() }}|${it.title.filter { c -> c != ';' && c != '|' }}|${it.glyph.filter { c -> c.isLetterOrDigit() }}" }
+
+/** The tabs from [smartTabsText]; the six of the start when there is nothing (usable) kept. */
+fun parseSmartTabs(text: String?): List<SmartTab> {
+    val tabs = text.orEmpty().split(';').mapNotNull { part ->
+        val bits = part.split('|')
+        if (bits.size == 3 && bits[0].isNotBlank() && bits[1].isNotBlank()) SmartTab(bits[0], bits[1], bits[2]) else null
+    }
+    return tabs.ifEmpty { DefaultSmartTabs }
+}
+
+/** The drawer's moved apps as they are kept: "package=tab;package=tab" (older versions kept the tab's number). */
+fun parseSmartCategories(text: String?): Map<String, String> =
     text.orEmpty().split(';').mapNotNull { part ->
         val at = part.lastIndexOf('=')
-        val tab = if (at > 0) part.substring(at + 1).toIntOrNull() else null
-        if (tab == null) null else part.substring(0, at) to tab
+        if (at <= 0 || at == part.length - 1) {
+            null
+        } else {
+            val tab = part.substring(at + 1)
+            val id = tab.toIntOrNull()?.let { DefaultSmartTabs.getOrNull(it)?.id } ?: tab
+            part.substring(0, at) to id
+        }
     }.toMap()
 
 val LauncherSettings.instantOpen: Boolean get() = beSmarter && smartInstant
@@ -838,7 +896,9 @@ data class LauncherSettings(
     /** How round the widgets' corners are (dp). */
     val smartWidgetRadius: Int = 28,
     /** Apps the user moved to another tab of the drawer: package name → the tab's number. */
-    val smartCategories: Map<String, Int> = emptyMap(),
+    val smartCategories: Map<String, String> = emptyMap(),
+    /** ZENITH 21: the tabs of the drawer – the six of Smart Launcher, or the ones made. */
+    val smartTabs: List<SmartTab> = DefaultSmartTabs,
     /** The drawer: the bar of the categories, its titles, remembering the last one, the pages' effect, the room between rows. */
     val smartCategoryBar: Boolean = true,
     val smartCategoryTitles: Boolean = false,
@@ -853,6 +913,10 @@ data class LauncherSettings(
     val smartFahrenheit: Boolean = false,
     val smartHours: SmartHours = SmartHours.System,
     val smartHideAllDay: Boolean = false,
+    /** ZENITH 21: the color picked for Ambient Design with "Eigene Farbe" (ARGB). */
+    val smartCustomColor: Int = 0xFF3A3F8F.toInt(),
+    /** ZENITH 21: the theme of the system's cards – the new one, or the jubilee's gold kept. */
+    val zenithTheme: ZenithTheme = ZenithTheme.Horizon,
     /** ZENITH 20.5: the saying "Aim Higher." in every place of the system that has room for it. */
     val sloganEverywhere: Boolean = true,
     /** ZENITH 19: after the phone starts, the Z lights up once before the home screen. */
@@ -1298,7 +1362,13 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
     // ZENITH Smart: "Be Smarter" is on from its first start (once – after that it is for the user to switch).
     init {
         if (dev.hearth.launcher.BuildConfig.SMART && !prefs.getBoolean("smartVariantApplied", false)) {
-            prefs.edit().putBoolean("beSmarter", true).putBoolean("smartVariantApplied", true).apply()
+            prefs.edit()
+                .putBoolean("beSmarter", true)
+                // ZENITH Smart starts like a launcher, not with ZENITH's ceremonies (all of them switchable in the settings).
+                .putBoolean("zenithBootIntro", false)
+                .putBoolean("strikeOnUpdate", false)
+                .putBoolean("smartVariantApplied", true)
+                .apply()
         }
     }
 
@@ -1462,6 +1532,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             smartClockEvent = prefs.getBoolean("smartClockEvent", d.smartClockEvent),
             smartWidgetRadius = prefs.getInt("smartWidgetRadius", d.smartWidgetRadius),
             smartCategories = parseSmartCategories(prefs.getString("smartCategories", null)),
+            smartTabs = parseSmartTabs(prefs.getString("smartTabs", null)),
             smartCategoryBar = prefs.getBoolean("smartCategoryBar", d.smartCategoryBar),
             smartCategoryTitles = prefs.getBoolean("smartCategoryTitles", d.smartCategoryTitles),
             smartLastCategory = prefs.getBoolean("smartLastCategory", d.smartLastCategory),
@@ -1472,6 +1543,8 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             smartFahrenheit = prefs.getBoolean("smartFahrenheit", d.smartFahrenheit),
             smartHours = enumOf("smartHours", d.smartHours),
             smartHideAllDay = prefs.getBoolean("smartHideAllDay", d.smartHideAllDay),
+            smartCustomColor = prefs.getInt("smartCustomColor", d.smartCustomColor),
+            zenithTheme = enumOf("zenithTheme", d.zenithTheme),
             sloganEverywhere = prefs.getBoolean("sloganEverywhere", d.sloganEverywhere),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
             zenithStrike = prefs.getBoolean("zenithStrike", d.zenithStrike),
@@ -1701,6 +1774,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putBoolean("smartClockEvent", s.smartClockEvent)
             .putInt("smartWidgetRadius", s.smartWidgetRadius)
             .putString("smartCategories", s.smartCategories.entries.joinToString(";") { "${it.key}=${it.value}" })
+            .putString("smartTabs", smartTabsText(s.smartTabs))
             .putBoolean("smartCategoryBar", s.smartCategoryBar)
             .putBoolean("smartCategoryTitles", s.smartCategoryTitles)
             .putBoolean("smartLastCategory", s.smartLastCategory)
@@ -1711,6 +1785,8 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putBoolean("smartFahrenheit", s.smartFahrenheit)
             .putString("smartHours", s.smartHours.name)
             .putBoolean("smartHideAllDay", s.smartHideAllDay)
+            .putInt("smartCustomColor", s.smartCustomColor)
+            .putString("zenithTheme", s.zenithTheme.name)
             .putBoolean("sloganEverywhere", s.sloganEverywhere)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("zenithStrike", s.zenithStrike)

@@ -202,6 +202,82 @@ val SquircleShape: Shape = GenericShape { size, _ ->
 
 private val RoundedIconShape = RoundedCornerShape(percent = 22)
 
+/** The path through [points] with each corner rounded off by [rounding] of the edges meeting there. */
+private fun androidx.compose.ui.graphics.Path.roundedCorners(points: List<Offset>, rounding: Float) {
+    val n = points.size
+    for (i in 0 until n) {
+        val p = points[i]
+        val prev = points[(i + n - 1) % n]
+        val next = points[(i + 1) % n]
+        val inX = p.x + (prev.x - p.x) * rounding
+        val inY = p.y + (prev.y - p.y) * rounding
+        val outX = p.x + (next.x - p.x) * rounding
+        val outY = p.y + (next.y - p.y) * rounding
+        if (i == 0) moveTo(inX, inY) else lineTo(inX, inY)
+        cubicTo(p.x, p.y, p.x, p.y, outX, outY)
+    }
+    close()
+}
+
+/** ZENITH 21: a regular polygon of [sides] corners, the first one [rotationDeg] degrees round from the right, softly rounded. */
+private fun polygonShape(sides: Int, rotationDeg: Float, rounding: Float): Shape = GenericShape { size, _ ->
+    val cx = size.width / 2f
+    val cy = size.height / 2f
+    val r = minOf(cx, cy)
+    val points = List(sides) { i ->
+        val angle = (rotationDeg + 360f * i / sides) * (PI.toFloat() / 180f)
+        Offset(cx + r * cos(angle), cy + r * sin(angle))
+    }
+    roundedCorners(points, rounding)
+}
+
+private val HexagonIconShape: Shape = polygonShape(6, -90f, 0.2f)
+private val OctagonIconShape: Shape = polygonShape(8, -22.5f, 0.18f)
+private val DiamondIconShape: Shape = polygonShape(4, -90f, 0.24f)
+
+/** ZENITH 21: a five-pointed star with soft points. */
+private val StarIconShape: Shape = GenericShape { size, _ ->
+    val cx = size.width / 2f
+    val cy = size.height / 2f
+    val r = minOf(cx, cy)
+    val points = List(10) { i ->
+        val radius = if (i % 2 == 0) r else r * 0.58f
+        val angle = (-90f + 36f * i) * (PI.toFloat() / 180f)
+        Offset(cx + radius * cos(angle), cy + radius * sin(angle))
+    }
+    roundedCorners(points, 0.22f)
+}
+
+/** ZENITH 21: a circle with eight soft bulges. */
+private val FlowerIconShape: Shape = GenericShape { size, _ ->
+    val cx = size.width / 2f
+    val cy = size.height / 2f
+    val r = minOf(cx, cy)
+    val steps = 160
+    for (i in 0..steps) {
+        val angle = 2.0 * PI * i / steps
+        val radius = r * (0.88f + 0.12f * cos(8.0 * angle).toFloat())
+        val x = cx + radius * cos(angle).toFloat()
+        val y = cy + radius * sin(angle).toFloat()
+        if (i == 0) moveTo(x, y) else lineTo(x, y)
+    }
+    close()
+}
+
+/** ZENITH 21: a shield – wide at the top, drawn in to a point below. */
+private val ShieldIconShape: Shape = GenericShape { size, _ ->
+    val w = size.width
+    val h = size.height
+    moveTo(w * 0.5f, h * 0.03f)
+    cubicTo(w * 0.68f, h * 0.14f, w * 0.84f, h * 0.16f, w * 0.94f, h * 0.16f)
+    lineTo(w * 0.94f, h * 0.5f)
+    cubicTo(w * 0.94f, h * 0.78f, w * 0.74f, h * 0.92f, w * 0.5f, h * 0.99f)
+    cubicTo(w * 0.26f, h * 0.92f, w * 0.06f, h * 0.78f, w * 0.06f, h * 0.5f)
+    lineTo(w * 0.06f, h * 0.16f)
+    cubicTo(w * 0.16f, h * 0.16f, w * 0.32f, h * 0.14f, w * 0.5f, h * 0.03f)
+    close()
+}
+
 fun IconShape.clipShape(): Shape = when (this) {
     IconShape.Squircle -> SquircleShape
     IconShape.Circle -> CircleShape
@@ -210,6 +286,12 @@ fun IconShape.clipShape(): Shape = when (this) {
     IconShape.Teardrop -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 8, bottomStartPercent = 50)
     IconShape.Leaf -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 8, bottomEndPercent = 50, bottomStartPercent = 8)
     IconShape.Cut -> CutCornerShape(percent = 22)
+    IconShape.Hexagon -> HexagonIconShape
+    IconShape.Octagon -> OctagonIconShape
+    IconShape.Diamond -> DiamondIconShape
+    IconShape.Star -> StarIconShape
+    IconShape.Flower -> FlowerIconShape
+    IconShape.Shield -> ShieldIconShape
 }
 
 /** Corner radius for glass tiles; the glass shader works with rounded rectangles. */
@@ -221,6 +303,7 @@ fun IconShape.glassCorner(size: Dp): Dp = when (this) {
     IconShape.Teardrop -> size * 0.4f
     IconShape.Leaf -> size * 0.4f
     IconShape.Cut -> size * 0.2f
+    IconShape.Hexagon, IconShape.Octagon, IconShape.Diamond, IconShape.Star, IconShape.Flower, IconShape.Shield -> size * 0.28f
 }
 
 /** Text drawn on the wallpaper gets a soft shadow so it stays readable on bright images. */

@@ -38,6 +38,8 @@ import kotlin.math.pow
  * Returns null if the text isn't a calculation.
  */
 fun calculate(input: String): String? {
+    // ZENITH 21: "5 km in mi", "20 c in f", "3 lb nach kg" – units, too.
+    convertUnits(input)?.let { return it }
     val text = input.replace(" ", "").replace(',', '.').replace('×', '*').replace('÷', '/').replace(':', '/')
     if (text.length < 3 || text.none { it.isDigit() } || text.none { it in "+-*/^%" }) return null
     if (text.any { !(it.isDigit() || it in "+-*/^%.()") }) return null
@@ -92,6 +94,87 @@ fun calculate(input: String): String? {
         val rounded = BigDecimal(result).round(MathContext(12, RoundingMode.HALF_UP)).stripTrailingZeros()
         rounded.toPlainString().replace('.', ',')
     }.getOrNull()
+}
+
+/** A unit the search can convert: what it measures and how many base units one of it is. */
+private class UnitDef(val kind: String, val factor: Double)
+
+private val UnitTable: Map<String, UnitDef> = buildMap {
+    fun add(kind: String, factor: Double, vararg names: String) {
+        names.forEach { put(it, UnitDef(kind, factor)) }
+    }
+    // Length (meters)
+    add("length", 0.001, "mm")
+    add("length", 0.01, "cm")
+    add("length", 1.0, "m", "meter")
+    add("length", 1000.0, "km", "kilometer")
+    add("length", 0.0254, "in", "zoll", "inch")
+    add("length", 0.3048, "ft", "fuß", "fuss", "foot", "feet")
+    add("length", 0.9144, "yd", "yard")
+    add("length", 1609.344, "mi", "meile", "meilen", "mile", "miles")
+    // Mass (kilograms)
+    add("mass", 0.000001, "mg")
+    add("mass", 0.001, "g", "gramm")
+    add("mass", 1.0, "kg", "kilo")
+    add("mass", 1000.0, "t", "tonne", "tonnen")
+    add("mass", 0.028349523125, "oz", "unze", "unzen")
+    add("mass", 0.45359237, "lb", "lbs", "pfund", "pound", "pounds")
+    // Volume (liters)
+    add("volume", 0.001, "ml")
+    add("volume", 0.01, "cl")
+    add("volume", 1.0, "l", "liter")
+    add("volume", 3.785411784, "gal", "gallone", "gallonen")
+    add("volume", 0.0295735295625, "floz")
+    // Speed (meters per second)
+    add("speed", 1.0, "m/s")
+    add("speed", 1.0 / 3.6, "km/h", "kmh", "kph")
+    add("speed", 0.44704, "mph")
+    add("speed", 0.514444, "kn", "knoten", "kt")
+    // Data (bytes)
+    add("data", 1.0, "byte", "bytes")
+    add("data", 1_000.0, "kb")
+    add("data", 1_000_000.0, "mb")
+    add("data", 1_000_000_000.0, "gb")
+    add("data", 1_000_000_000_000.0, "tb")
+    // Time (seconds)
+    add("time", 1.0, "s", "sek", "sec")
+    add("time", 60.0, "min")
+    add("time", 3600.0, "h", "std")
+    add("time", 86400.0, "d", "tag", "tage", "tagen")
+    // Temperature has its own rule
+    add("temp", 0.0, "c", "f", "k")
+}
+
+private val ConversionPattern =
+    Regex("""^(-?\d+(?:[.,]\d+)?)\s*([\p{L}°/²]+)\s*(?:in|to|nach|zu|=|->|→)\s*([\p{L}°/²]+)$""", RegexOption.IGNORE_CASE)
+
+/** "5 km in mi" → "3,10686 mi"; null if the text isn't a conversion between two units of one kind. */
+fun convertUnits(input: String): String? {
+    val match = ConversionPattern.matchEntire(input.trim()) ?: return null
+    val value = match.groupValues[1].replace(',', '.').toDoubleOrNull() ?: return null
+    val fromName = match.groupValues[2].lowercase().replace("°", "").replace(".", "")
+    val toName = match.groupValues[3].lowercase().replace("°", "").replace(".", "")
+    val from = UnitTable[fromName] ?: return null
+    val to = UnitTable[toName] ?: return null
+    if (from.kind != to.kind) return null
+    val result = if (from.kind == "temp") {
+        val celsius = when (fromName) {
+            "c" -> value
+            "f" -> (value - 32.0) * 5.0 / 9.0
+            else -> value - 273.15
+        }
+        when (toName) {
+            "c" -> celsius
+            "f" -> celsius * 9.0 / 5.0 + 32.0
+            else -> celsius + 273.15
+        }
+    } else {
+        value * from.factor / to.factor
+    }
+    if (result.isNaN() || result.isInfinite()) return null
+    val shown = BigDecimal(result).round(MathContext(6, RoundingMode.HALF_UP)).stripTrailingZeros().toPlainString().replace('.', ',')
+    val unit = match.groupValues[3].replace(".", "").let { typed -> if (toName == "c" || toName == "f") "°" + typed.uppercase() else typed }
+    return "$shown $unit"
 }
 
 /** A system setting the search can jump to. */

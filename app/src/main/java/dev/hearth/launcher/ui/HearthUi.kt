@@ -137,6 +137,20 @@ object HearthUi {
         prefs(context).edit().putBoolean("zenith20Jubilee", true).apply()
     }
 
+    /** ZENITH 21: asked once whether the jubilee's theme stays. */
+    fun themeAsked(context: Context): Boolean = prefs(context).getBoolean("zenith21ThemeAsked", false)
+
+    fun markThemeAsked(context: Context) {
+        prefs(context).edit().putBoolean("zenith21ThemeAsked", true).apply()
+    }
+
+    /** ZENITH Smart: the welcome that helps you move over from Smart Launcher has been shown. */
+    fun smartWelcomeSeen(context: Context): Boolean = prefs(context).getBoolean("smartWelcome", false)
+
+    fun markSmartWelcomeSeen(context: Context) {
+        prefs(context).edit().putBoolean("smartWelcome", true).apply()
+    }
+
     /** OMEGA Labs: show the welcome tour again next time. */
     fun resetIntro(context: Context) {
         prefs(context).edit().remove("introSeen").apply()
@@ -187,6 +201,43 @@ internal object HearthChangelog {
     private val Slate = Color(0xFF5E6C84)
 
     val releases: List<ChangeRelease> = listOf(
+        ChangeRelease(
+            version = "21.0",
+            name = "Horizont",
+            summary = "ZENITH 21: ein Smart-Modus, der Leute vom Smart Launcher überzeugen soll – eigene Kategorien, dreizehn Icon-Formen, Farbwähler, Smart-Widgets und ein Wechsel-Assistent – und ein neues Theme „Horizont“. Das Jubiläums-Theme von ZENITH 20 behältst du mit einem Schalter. Darunter ClaudeOS 8.0 „Horizon“.",
+            sections = listOf(
+                ChangeSection(
+                    "Neues Theme „Horizont“ – das Jubiläum bleibt, wenn du willst", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "ZENITH 21 hat eine neue Karte: tiefes Blau ins Licht des Horizonts, eisblaue Akzente – auf der Versionskarte, der Systemkarte der Einstellungen und am Z.",
+                        "Nach dem Update fragt ZENITH einmal: das neue Theme – oder das Jubiläum behalten? Wer das Jubiläum wählt, behält die goldene Karte und die goldenen Akzente von ZENITH 20, auch mit 21.",
+                        "Ändern lässt es sich jederzeit: Einstellungen → ZENITH → Theme (in den Smart-Einstellungen auf der Seite „ZENITH“: der Schalter „Jubiläums-Theme behalten“). „Theme auf das ganze System anwenden“ setzt dazu Polarlicht, Glas, Z-Angriff und ZENITH-Hintergrund passend – Eisblau oder das Jubiläums-Gold –, einzeln änderbar wie immer.",
+                        "Darunter ClaudeOS 8.0 „Horizon“.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Der Smart-Modus, viel besser", Icons.Rounded.Settings, Pink,
+                    listOf(
+                        "Kategorien selbst bauen: In den Einstellungen unter App-Raster → Kategorien bearbeiten: hinzufügen, umbenennen, ein Zeichen wählen (fünfzehn zur Auswahl), nach oben oder unten schieben, entfernen. Sind es mehr als sieben, scrollt die Leiste. Apps ordnen sich von selbst ein; in eine andere legst du eine App im Menü (Halten).",
+                        "Dreizehn Formen für die Icons – dazu Sechseck, Achteck, Raute, Stern, Blume und Schild, alle frei.",
+                        "Eigene Farbe mit Farbwähler: Farbfeld, Farbton und der Wert als #RRGGBB, dazu die acht Farben der Liste zum Starten – für Ambient Design.",
+                        "Die Suche rechnet um: „5 km in mi“, „20 c in f“, „3 lb nach kg“ – Länge, Gewicht, Volumen, Tempo, Daten, Zeit und Temperatur, gleich im Suchfeld (Rechnen konnte sie schon).",
+                        "Zwei Smart-Widgets: der Smart-Akku – ein Balken, der sich mit dem Akku füllt, die Prozent groß (blau, beim Laden grün, fast leer rot) – und die Smart-Termine, die nächsten drei Termine aus dem Kalender auf einer Karte.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Vom Smart Launcher wechseln", Icons.Rounded.CheckCircle, Green,
+                    listOf(
+                        "ZENITH Smart begrüßt neue Nutzer mit einem Wechsel-Assistenten in fünf Schritten: das Thema, die Icon-Form, was unter der Uhr steht, der Standard-Launcher. Zu öffnen ist er jederzeit wieder in den Einstellungen („Wechsel-Assistent“).",
+                        "Dazu die Seite „Warum ZENITH Smart“: was hier frei ist und was Smart Launcher laut eigenen Texten nur mit Pro hat – Kategorien bearbeiten, mehr Formen, keine Werbung, Schutz für Apps.",
+                        "Ehrlich dazu: Das Layout des Smart Launchers lässt sich nicht übernehmen, das Format ist ein anderes – aber alle Apps ordnet ZENITH Smart sofort selbst in Kategorien. Und ZENITH Smart ist ein Nachbau mit eigenem Code, kein Smart Launcher.",
+                    ),
+                    hearth,
+                ),
+            ),
+        ),
         ChangeRelease(
             version = "20.5",
             name = "Be Smarter",

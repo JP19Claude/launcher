@@ -1,11 +1,11 @@
 {
-  "bg": ["#080612", "#241506", "#B8780F"],
-  "glowA": "#7C5CFF",
-  "glowB": "#FFC94D",
-  "accent": "#FFC94D",
-  "label": "J U B I L Ä U M",
-  "os": "ClaudeOS 7.0",
-  "aurora": "Gold",
+  "bg": ["#040A1C", "#0B2468", "#2F7BFF"],
+  "glowA": "#9A6BFF",
+  "glowB": "#3FD0FF",
+  "accent": "#62C8FF",
+  "label": "H O R I Z O N T",
+  "os": "ClaudeOS 8.0",
+  "aurora": "Eis",
   "stars": true,
   "fireworks": true
 }

@@ -409,7 +409,7 @@ fun WidgetPicker(
                                 title = kind.label,
                                 subtitle = "${dev.hearth.launcher.data.Brand.name}-Widget: ${kind.description}",
                                 glyph = when (kind) {
-                                    HearthWidget.Battery -> Glyph.Battery
+                                    HearthWidget.Battery, HearthWidget.SmartBattery -> Glyph.Battery
                                     HearthWidget.Clock, HearthWidget.OmegaClock, HearthWidget.RubyAnalog, HearthWidget.WorldClock -> Glyph.Alarm
                                     HearthWidget.Toggles -> Glyph.Torch
                                     else -> Glyph.Tiles

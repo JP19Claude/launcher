@@ -244,9 +244,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
     remember { HearthLabs.init(context) }
     val scope = rememberCoroutineScope()
     // Hearth UI 14: the tour of what's new, once after the big update.
-    var showIntro by remember { mutableStateOf(!HearthUi.introSeen(context)) }
+    var showIntro by remember { mutableStateOf(!dev.hearth.launcher.BuildConfig.SMART && !HearthUi.introSeen(context)) }
     // ZENITH 19: once, "OMEGA UI is now ZENITH" – the sun rises; the tour follows.
-    var showOmega by remember { mutableStateOf(dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !HearthUi.omegaSeen(context)) }
+    var showOmega by remember { mutableStateOf(dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !dev.hearth.launcher.BuildConfig.SMART && !HearthUi.omegaSeen(context)) }
     // Glimmer Drop: "devices nearby" asked once, so two phones held together just work.
     val dropPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         dev.hearth.launcher.data.GlimmerDrop.setReady(context, dev.hearth.launcher.data.GlimmerDrop.ready.value)
@@ -611,10 +611,31 @@ fun LauncherScreen(vm: LauncherViewModel) {
     // ZENITH 19: after the phone starts, the Z lights up once.
     var bootIntro by remember { mutableStateOf(settings.zenithBootIntro && dev.hearth.launcher.BuildConfig.ALL_IN_ONE && ZenithBoot.isNewStart(context)) }
     // ZENITH 20: the jubilee's ceremony, once – it takes the place of the update's Z-Angriff.
-    var jubilee by remember { mutableStateOf(dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !HearthUi.jubileeSeen(context)) }
+    // (From ZENITH 21 on it is no ceremony for new installs, and ZENITH Smart has none.)
+    var jubilee by remember {
+        mutableStateOf(
+            dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !dev.hearth.launcher.BuildConfig.SMART && !HearthUi.jubileeSeen(context) &&
+                versionNumber(dev.hearth.launcher.BuildConfig.VERSION_NAME) < 21f,
+        )
+    }
     // ZENITH 19.5: the Z-Angriff – after an update, on a double tap or from the ZENITH menu.
     var strikeNow by remember {
         mutableStateOf(dev.hearth.launcher.BuildConfig.ALL_IN_ONE && ZenithBoot.isNewVersion(context) && settings.strikeOnUpdate && !jubilee)
+    }
+    // ZENITH Smart: the welcome that moves you over from Smart Launcher – on the first start, or from the settings.
+    var smartWelcome by remember { mutableStateOf(dev.hearth.launcher.BuildConfig.SMART && !HearthUi.smartWelcomeSeen(context)) }
+    // ZENITH 21: once, after the update – the new theme, or the jubilee's kept? (Not for a fresh install, not in ZENITH Smart.)
+    var themeAsk by remember {
+        mutableStateOf(
+            dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !dev.hearth.launcher.BuildConfig.SMART &&
+                versionNumber(dev.hearth.launcher.BuildConfig.VERSION_NAME) >= 21f && !HearthUi.themeAsked(context),
+        )
+    }
+    LaunchedEffect(themeAsk) {
+        if (themeAsk && !HearthUi.jubileeSeen(context)) {
+            HearthUi.markThemeAsked(context)
+            themeAsk = false
+        }
     }
     val menuBlur by animateDpAsState(
         targetValue = when {
@@ -1293,6 +1314,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             SmartSettingsScreen(
                                 vm = vm,
                                 onClose = { settingsOpen = false },
+                                onWelcome = {
+                                    settingsOpen = false
+                                    smartWelcome = true
+                                },
                                 onZenith = { target ->
                                     zenithPage = target
                                     zenithOpen = true
@@ -1529,6 +1554,21 @@ fun LauncherScreen(vm: LauncherViewModel) {
             if (strikeNow && !bootIntro && !showOmega && !showIntro) {
                 ZenithStrikeOverlay { strikeNow = false }
             }
+            // ZENITH Smart: the welcome over everything.
+            if (smartWelcome) {
+                SmartWelcome(vm) {
+                    HearthUi.markSmartWelcomeSeen(context)
+                    smartWelcome = false
+                }
+            }
+            // ZENITH 21: the question of the theme, after all that.
+            if (themeAsk && !bootIntro && !showOmega && !showIntro && !jubilee && !strikeNow) {
+                ZenithThemeChoice { theme ->
+                    vm.updateSettings { it.copy(zenithTheme = theme) }
+                    HearthUi.markThemeAsked(context)
+                    themeAsk = false
+                }
+            }
 
             drag?.let { d ->
                 DragOverlay(
@@ -1622,7 +1662,7 @@ private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Un
     // Be Smarter: sort the app into another tab of the Smart drawer by hand.
     val smartNow = vm.settings.value
     if (smartNow.beSmarter) {
-        smartCategoryMenu(app, smartNow.smartCategories) { moved -> vm.updateSettings { it.copy(smartCategories = moved) } }.forEach { add(it) }
+        smartCategoryMenu(app, smartNow.smartCategories, smartNow.smartTabs) { moved -> vm.updateSettings { it.copy(smartCategories = moved) } }.forEach { add(it) }
     }
     add(GlassMenuItem("Auswählen", Icons.Rounded.CheckCircle, onClick = onSelect))
     add(GlassMenuItem("Ausblenden", Icons.Rounded.Clear) { vm.hide(app) })

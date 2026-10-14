@@ -15,6 +15,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +35,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -97,6 +99,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.hearth.launcher.data.AppInfo
 import dev.hearth.launcher.data.ClockFont
+import dev.hearth.launcher.data.DefaultSmartTabs
 import dev.hearth.launcher.data.IconShape
 import dev.hearth.launcher.data.LabelSize
 import dev.hearth.launcher.data.LauncherSettings
@@ -106,6 +109,7 @@ import dev.hearth.launcher.data.SmartColor
 import dev.hearth.launcher.data.SmartGlass
 import dev.hearth.launcher.data.SmartHours
 import dev.hearth.launcher.data.SmartPageEffect
+import dev.hearth.launcher.data.SmartTab
 import dev.hearth.launcher.data.WallpaperBackdrop
 import dev.hearth.launcher.data.showSlogan
 import dev.hearth.launcher.data.withSmartGlass
@@ -191,7 +195,7 @@ internal fun rememberSmartPalette(settings: LauncherSettings, backdrop: Wallpape
     val on = settings.beSmarter
     val theme = settings.smartGlass
     // "Thema bearbeiten → Farbe": one of the chosen colors instead of the wallpaper's.
-    val base = settings.smartColor.color ?: ambient
+    val base = if (settings.smartColor == SmartColor.Custom) Color(settings.smartCustomColor) else settings.smartColor.color ?: ambient
     return remember(on, theme, base) {
         if (!on) {
             null
@@ -209,7 +213,10 @@ internal fun rememberSmartPalette(settings: LauncherSettings, backdrop: Wallpape
 // The categories and their line icons
 // ---------------------------------------------------------------------------------------------
 
-internal enum class SmartGlyph { Chat, Social, Games, Media, Tools, Gear, Bag }
+internal enum class SmartGlyph { Chat, Social, Games, Media, Tools, Gear, Bag, Camera, Music, Star, Heart, Cart, Book, Pin, Cloud, Folder }
+
+/** The sign named in a tab ([dev.hearth.launcher.data.SmartTab.glyph]); the tools' one if the name is unknown. */
+internal fun smartGlyphOf(name: String): SmartGlyph = SmartGlyph.entries.firstOrNull { it.name == name } ?: SmartGlyph.Tools
 
 /** A line icon of Smart Launcher's kind, drawn in a 24 × 24 box. */
 @Composable
@@ -298,18 +305,118 @@ internal fun SmartGlyphIcon(glyph: SmartGlyph, color: Color, modifier: Modifier 
                 }
                 drawPath(handle, color, style = line)
             }
+            SmartGlyph.Camera -> {
+                drawRoundRect(color, topLeft = at(3f, 7f), size = Size(18f * u, 12.5f * u), cornerRadius = CornerRadius(3f * u), style = line)
+                val bump = Path().apply {
+                    moveTo(8.5f * u, 7f * u)
+                    lineTo(10f * u, 4.5f * u)
+                    lineTo(14f * u, 4.5f * u)
+                    lineTo(15.5f * u, 7f * u)
+                }
+                drawPath(bump, color, style = line)
+                drawCircle(color, 3.6f * u, at(12f, 13.2f), style = line)
+            }
+            SmartGlyph.Music -> {
+                drawCircle(color, 2.6f * u, at(7.5f, 18f), style = line)
+                drawCircle(color, 2.6f * u, at(17f, 16f), style = line)
+                drawLine(color, at(10.1f, 18f), at(10.1f, 6f), 1.8f * u, StrokeCap.Round)
+                drawLine(color, at(19.6f, 16f), at(19.6f, 4f), 1.8f * u, StrokeCap.Round)
+                drawLine(color, at(10.1f, 6f), at(19.6f, 4f), 1.8f * u, StrokeCap.Round)
+            }
+            SmartGlyph.Star -> {
+                val star = Path()
+                for (i in 0 until 10) {
+                    val radius = if (i % 2 == 0) 9.5f else 4.2f
+                    val angle = Math.toRadians(-90.0 + 36.0 * i)
+                    val x = (12f + radius * kotlin.math.cos(angle).toFloat()) * u
+                    val y = (12.5f + radius * kotlin.math.sin(angle).toFloat()) * u
+                    if (i == 0) star.moveTo(x, y) else star.lineTo(x, y)
+                }
+                star.close()
+                drawPath(star, color, style = line)
+            }
+            SmartGlyph.Heart -> {
+                val heart = Path().apply {
+                    moveTo(12f * u, 20f * u)
+                    cubicTo(5f * u, 15f * u, 3f * u, 10f * u, 6f * u, 7f * u)
+                    cubicTo(8.5f * u, 4.5f * u, 11f * u, 6f * u, 12f * u, 8f * u)
+                    cubicTo(13f * u, 6f * u, 15.5f * u, 4.5f * u, 18f * u, 7f * u)
+                    cubicTo(21f * u, 10f * u, 19f * u, 15f * u, 12f * u, 20f * u)
+                    close()
+                }
+                drawPath(heart, color, style = line)
+            }
+            SmartGlyph.Cart -> {
+                val cart = Path().apply {
+                    moveTo(3f * u, 4f * u)
+                    lineTo(5.5f * u, 4f * u)
+                    lineTo(8f * u, 15f * u)
+                    lineTo(18f * u, 15f * u)
+                    lineTo(20f * u, 7f * u)
+                    lineTo(6.5f * u, 7f * u)
+                }
+                drawPath(cart, color, style = line)
+                drawCircle(color, 1.4f * u, at(9.5f, 19f), style = line)
+                drawCircle(color, 1.4f * u, at(16.5f, 19f), style = line)
+            }
+            SmartGlyph.Book -> {
+                val book = Path().apply {
+                    moveTo(12f * u, 7f * u)
+                    lineTo(5f * u, 5.5f * u)
+                    lineTo(5f * u, 18f * u)
+                    lineTo(12f * u, 19.5f * u)
+                    lineTo(19f * u, 18f * u)
+                    lineTo(19f * u, 5.5f * u)
+                    close()
+                    moveTo(12f * u, 7f * u)
+                    lineTo(12f * u, 19.5f * u)
+                }
+                drawPath(book, color, style = line)
+            }
+            SmartGlyph.Pin -> {
+                val pin = Path().apply {
+                    moveTo(12f * u, 21f * u)
+                    cubicTo(6f * u, 14f * u, 5f * u, 11f * u, 5f * u, 9.5f * u)
+                    cubicTo(5f * u, 6f * u, 8f * u, 3f * u, 12f * u, 3f * u)
+                    cubicTo(16f * u, 3f * u, 19f * u, 6f * u, 19f * u, 9.5f * u)
+                    cubicTo(19f * u, 11f * u, 18f * u, 14f * u, 12f * u, 21f * u)
+                    close()
+                }
+                drawPath(pin, color, style = line)
+                drawCircle(color, 2.8f * u, at(12f, 9.5f), style = line)
+            }
+            SmartGlyph.Cloud -> {
+                val cloud = Path().apply {
+                    moveTo(7f * u, 18.5f * u)
+                    cubicTo(2.5f * u, 18.5f * u, 2.5f * u, 11f * u, 8f * u, 11f * u)
+                    cubicTo(8.5f * u, 5f * u, 17f * u, 5f * u, 17.5f * u, 11.5f * u)
+                    cubicTo(22f * u, 11.5f * u, 22f * u, 18.5f * u, 17.5f * u, 18.5f * u)
+                    close()
+                }
+                drawPath(cloud, color, style = line)
+            }
+            SmartGlyph.Folder -> {
+                drawRoundRect(color, topLeft = at(3f, 8f), size = Size(18f * u, 11f * u), cornerRadius = CornerRadius(2.5f * u), style = line)
+                val tab = Path().apply {
+                    moveTo(3f * u, 8f * u)
+                    lineTo(3f * u, 5.5f * u)
+                    lineTo(9f * u, 5.5f * u)
+                    lineTo(11f * u, 8f * u)
+                }
+                drawPath(tab, color, style = line)
+            }
         }
     }
 }
 
-/** The six tabs of the drawer, in the order of its bar. */
-private enum class SmartCategory(val title: String, val glyph: SmartGlyph) {
-    Communication("Kommunikation", SmartGlyph.Chat),
-    Social("Social", SmartGlyph.Social),
-    Games("Spiele", SmartGlyph.Games),
-    Media("Medien", SmartGlyph.Media),
-    Utilities("Dienstprogramme", SmartGlyph.Tools),
-    Preferences("Einstellungen", SmartGlyph.Gear),
+/** The kinds apps are sorted into by themselves – each the id of one of the six tabs the drawer starts with. */
+private enum class SmartCategory(val id: String) {
+    Communication("comm"),
+    Social("social"),
+    Games("games"),
+    Media("media"),
+    Utilities("tools"),
+    Preferences("prefs"),
 }
 
 /** Packages (parts of their names) of the apps that talk to people: phone, messages, mail, messengers. */
@@ -319,9 +426,8 @@ private val CommunicationHints = listOf(
     "k9mail", "com.android.phone", "telecom",
 )
 
-/** Which tab an app belongs to: the one it was moved to, else by what it declares and what it is called. */
-private fun smartCategoryOf(app: AppInfo, moved: Map<String, Int> = emptyMap()): SmartCategory {
-    moved[app.packageName]?.let { tab -> SmartCategory.entries.getOrNull(tab)?.let { return it } }
+/** Which kind an app is, by what it declares and what it is called. */
+private fun smartAutoCategory(app: AppInfo): SmartCategory {
     val pkg = app.packageName.lowercase()
     if (pkg == "com.android.settings" || pkg.endsWith(".settings") || pkg.contains(".settings.") || app.component.className.endsWith(".SettingsShortcutActivity")) {
         return SmartCategory.Preferences
@@ -336,15 +442,28 @@ private fun smartCategoryOf(app: AppInfo, moved: Map<String, Int> = emptyMap()):
 }
 
 /**
+ * Which tab an app is in: the one it was moved to; else the one of its kind – or, if that tab was removed, the tools'
+ * (or the first).
+ */
+internal fun smartCategoryOf(app: AppInfo, moved: Map<String, String>, tabs: List<SmartTab>): String {
+    moved[app.packageName]?.let { id -> if (tabs.any { it.id == id }) return id }
+    val auto = smartAutoCategory(app).id
+    if (tabs.any { it.id == auto }) return auto
+    return (tabs.firstOrNull { it.id == "tools" } ?: tabs.first()).id
+}
+
+/**
  * ZENITH 20.5: the app menu's way to move an app to another tab of the drawer (Smart Launcher lets you
  * sort them by hand): the app goes to the next tab on each press, and "Kategorie zurücksetzen" brings
  * it back to where it belongs by itself. [save] gets the new list of moved apps.
  */
-internal fun smartCategoryMenu(app: AppInfo, moved: Map<String, Int>, save: (Map<String, Int>) -> Unit): List<GlassMenuItem> {
-    val here = smartCategoryOf(app, moved)
-    val next = SmartCategory.entries[(here.ordinal + 1) % SmartCategory.entries.size]
+internal fun smartCategoryMenu(app: AppInfo, moved: Map<String, String>, tabs: List<SmartTab>, save: (Map<String, String>) -> Unit): List<GlassMenuItem> {
+    if (tabs.size < 2) return emptyList()
+    val here = smartCategoryOf(app, moved, tabs)
+    val at = tabs.indexOfFirst { it.id == here }.coerceAtLeast(0)
+    val next = tabs[(at + 1) % tabs.size]
     return buildList {
-        add(GlassMenuItem("In „${next.title}“ verschieben", Icons.Rounded.Edit) { save(moved + (app.packageName to next.ordinal)) })
+        add(GlassMenuItem("In „${next.title}“ verschieben", Icons.Rounded.Edit) { save(moved + (app.packageName to next.id)) })
         if (app.packageName in moved) {
             add(GlassMenuItem("Kategorie zurücksetzen", Icons.Rounded.Home) { save(moved - app.packageName) })
         }
@@ -431,10 +550,11 @@ fun SmartDrawer(
 
     val moved = settings.smartCategories
     val sorted = remember(apps) { apps.sortedBy { it.label.lowercase() } }
-    val byCategory = remember(sorted, moved) { sorted.groupBy { smartCategoryOf(it, moved) } }
+    val tabList = settings.smartTabs.ifEmpty { DefaultSmartTabs }
+    val byCategory = remember(sorted, moved, tabList) { sorted.groupBy { smartCategoryOf(it, moved, tabList) } }
     // "Kategorieleiste": off, the drawer is one page with all the apps. "Letzte Kategorie geöffnet": it opens where it was left.
     val bar = settings.smartCategoryBar
-    val tabs = if (bar) SmartCategory.entries.size else 1
+    val tabs = if (bar) tabList.size else 1
     val pagerState = rememberPagerState(initialPage = (if (settings.smartLastCategory) rememberedTab else 0).coerceIn(0, tabs - 1)) { tabs }
     LaunchedEffect(pagerState.currentPage) { if (bar) rememberedTab = pagerState.currentPage }
 
@@ -565,10 +685,10 @@ fun SmartDrawer(
                             .weight(1f)
                             .fillMaxWidth(),
                     ) { page ->
-                        val category = if (bar) SmartCategory.entries[page] else null
+                        val category = if (bar) tabList.getOrNull(page) else null
                         SmartPage(
                             title = category?.title ?: "Alle Apps",
-                            apps = if (category != null) byCategory[category].orEmpty() else sorted,
+                            apps = if (category != null) byCategory[category.id].orEmpty() else sorted,
                             columns = columns,
                             actions = actions,
                             onLaunch = onLaunch,
@@ -590,6 +710,7 @@ fun SmartDrawer(
                 }
                 if (bar && !searching) {
                     SmartTabBar(
+                        tabs = tabList,
                         selected = pagerState.currentPage,
                         titles = settings.smartCategoryTitles,
                         onSelect = { index -> scope.launch { pagerState.animateScrollToPage(index) } },
@@ -771,8 +892,10 @@ private fun SmartTopButton(onClick: () -> Unit, content: @Composable () -> Unit)
 
 /** The bar of the six categories, a rounded pill of the theme's color; the chosen tab has a short line under its icon. */
 @Composable
-private fun SmartTabBar(selected: Int, titles: Boolean, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+private fun SmartTabBar(tabs: List<SmartTab>, selected: Int, titles: Boolean, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
     val palette = LocalSmartPalette.current
+    // More than seven tabs (the ones made) no longer fit side by side: the bar scrolls.
+    val many = tabs.size > 7
     LiquidGlass(
         cornerRadius = 30.dp,
         refraction = 12.dp,
@@ -782,18 +905,20 @@ private fun SmartTabBar(selected: Int, titles: Boolean, onSelect: (Int) -> Unit,
         Row(
             Modifier
                 .fillMaxWidth()
+                .then(if (many) Modifier.horizontalScroll(rememberScrollState()) else Modifier)
                 .padding(horizontal = 6.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SmartCategory.entries.forEachIndexed { index, category ->
-                SmartTabCell(category, index == selected, titles, palette?.accent ?: SmartAccent, Modifier.weight(1f)) { onSelect(index) }
+            tabs.forEachIndexed { index, tab ->
+                val cell = if (many) Modifier.width(66.dp) else Modifier.weight(1f)
+                SmartTabCell(tab, index == selected, titles, palette?.accent ?: SmartAccent, cell) { onSelect(index) }
             }
         }
     }
 }
 
 @Composable
-private fun SmartTabCell(category: SmartCategory, on: Boolean, titles: Boolean, accent: Color, modifier: Modifier, onClick: () -> Unit) {
+private fun SmartTabCell(tab: SmartTab, on: Boolean, titles: Boolean, accent: Color, modifier: Modifier, onClick: () -> Unit) {
     val line by animateDpAsState(if (on) 24.dp else 0.dp, tween(200), label = "smartTabLine")
     Column(
         modifier
@@ -802,11 +927,11 @@ private fun SmartTabCell(category: SmartCategory, on: Boolean, titles: Boolean, 
             .padding(top = 12.dp, bottom = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        SmartGlyphIcon(category.glyph, Color.White)
+        SmartGlyphIcon(smartGlyphOf(tab.glyph), Color.White)
         if (titles) {
             // "Kategorientitel": the name under the sign.
             Text(
-                category.title,
+                tab.title,
                 color = Color.White.copy(alpha = if (on) 0.95f else 0.6f),
                 fontSize = 10.sp,
                 maxLines = 1,

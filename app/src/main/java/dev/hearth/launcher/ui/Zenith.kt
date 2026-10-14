@@ -315,7 +315,7 @@ fun ZenithVersionHero(
     // ZENITH 20: from the jubilee on every version has a card of its own – midnight into gold for
     // 20, the aurora moving in it, the number and the Z's edge light in the card's color; the card
     // of ZENITH 19 stays green. A newer version brings its card in the update file.
-    val look = spec ?: if (versionNumber(version) >= 20f) ZenithCardSpec.Jubilee else null
+    val look = cardFor(version, LocalSettings.current.zenithTheme, spec)
     // Held until it's charged, the Z strikes as ever (the Core Enforcer) – and on a version's own card
     // fireworks go up over it, like ColorOS 16's.
     val scope = rememberCoroutineScope()

@@ -462,7 +462,7 @@ fun ZentraleScreen(onClose: () -> Unit, onUpdate: ((LauncherSettings) -> Launche
             }
             item {
                 Text(
-                    "ZENITH ${HearthUi.major(BuildConfig.VERSION_NAME)} · Jubiläum · ${ClaudeOs.full} „${ClaudeOs.CODENAME}“",
+                    "ZENITH ${HearthUi.major(BuildConfig.VERSION_NAME)} · ${if (versionNumber(BuildConfig.VERSION_NAME) >= 21f && LocalSettings.current.zenithTheme != dev.hearth.launcher.data.ZenithTheme.Jubilee) "Horizont" else "Jubiläum"} · ${ClaudeOs.full} „${ClaudeOs.CODENAME}“",
                     color = VaultDim,
                     fontSize = 11.sp,
                     fontFamily = HudFont,

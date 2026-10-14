@@ -49,6 +49,17 @@ class ZenithCardSpec(
             aurora = AuroraLook.Gold,
         )
 
+        /** ZENITH 21's own card, built in – deep blue into the light of the horizon. */
+        val Horizon = ZenithCardSpec(
+            bg = listOf(Color(0xFF040A1C), Color(0xFF0B2468), Color(0xFF2F7BFF)),
+            glowA = Color(0xFF9A6BFF),
+            glowB = Color(0xFF3FD0FF),
+            accent = Color(0xFF62C8FF),
+            label = "H O R I Z O N T",
+            os = "${ClaudeOs.NAME} 8.0",
+            aurora = AuroraLook.Eis,
+        )
+
         private fun color(text: String): Color = Color(android.graphics.Color.parseColor(text.trim()))
 
         /** The card an update file carries, or null if there is none or it can't be read. */
@@ -124,3 +135,21 @@ internal fun DrawScope.drawZenithSpecCard(spec: ZenithCardSpec, charge: Float) {
         }
     }
 }
+
+/** The card a version has of its own, built in: ZENITH 21's, ZENITH 20's (the jubilee), none before. */
+internal fun zenithBuiltInCard(version: String): ZenithCardSpec? = when {
+    versionNumber(version) >= 21f -> ZenithCardSpec.Horizon
+    versionNumber(version) >= 20f -> ZenithCardSpec.Jubilee
+    else -> null
+}
+
+/**
+ * The card to draw for [version]: with the jubilee's theme kept, the jubilee's whatever the version; else the one the
+ * update file carries ([spec]), else the version's own built in.
+ */
+internal fun cardFor(version: String, theme: dev.hearth.launcher.data.ZenithTheme, spec: ZenithCardSpec?): ZenithCardSpec? =
+    if (theme == dev.hearth.launcher.data.ZenithTheme.Jubilee && versionNumber(version) >= 20f) ZenithCardSpec.Jubilee else spec ?: zenithBuiltInCard(version)
+
+/** The color of the system cards and the Z for [version] in [theme]. */
+internal fun zenithAccent(version: String, theme: dev.hearth.launcher.data.ZenithTheme): Color =
+    cardFor(version, theme, null)?.accent ?: ZenithGreen

@@ -52,6 +52,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.input.pointer.pointerInput
 import dev.hearth.launcher.data.AppInfo
 import dev.hearth.launcher.data.withZenithTint
+import dev.hearth.launcher.data.withZenithTheme
 import dev.hearth.launcher.data.showSlogan
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -413,6 +414,19 @@ fun SettingsScreen(
                             }
                         },
                     )
+                    // ZENITH 21: the theme of the cards – the new one, or the jubilee's gold kept.
+                    ChoiceRow(
+                        label = "Theme",
+                        options = dev.hearth.launcher.data.ZenithTheme.entries,
+                        selected = s.zenithTheme,
+                        optionLabel = { it.label },
+                        onSelect = { v -> update { it.copy(zenithTheme = v) } },
+                    )
+                    Note("ZENITH 21 bringt ein neues Theme für die Karte der Version und die Karten des Systems. Das Jubiläums-Theme von ZENITH 20 – Mitternacht ins Gold – behältst du, indem du „Jubiläum · Gold“ wählst.")
+                    ActionRow(
+                        "Theme auf das ganze System anwenden",
+                        "Polarlicht, Glas, Z-Angriff und ZENITH-Hintergrund passend zum Theme setzen",
+                    ) { update { it.withZenithTheme(it.zenithTheme) } }
                     // ZENITH 20.1: ZENITH's color, system-wide – the green, or the jubilee's gold and others.
                     ChoiceRow(
                         label = "ZENITH-Farbe",
@@ -1966,7 +1980,7 @@ private fun HearthCard(s: LauncherSettings) {
             if (dev.hearth.launcher.BuildConfig.ALL_IN_ONE) {
                 SloganBanner(
                     Modifier.padding(top = 14.dp, start = 2.dp),
-                    accent = if (versionNumber(version) >= 20f) ZenithCardSpec.Jubilee.accent else ZenithGreen,
+                    accent = zenithAccent(version, s.zenithTheme),
                     size = 36.sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Start,
                 )

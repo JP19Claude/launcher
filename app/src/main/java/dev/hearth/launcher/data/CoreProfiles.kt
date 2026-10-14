@@ -73,6 +73,15 @@ object CoreProfiles {
         zenithWallpaper = true,
     )
 
+    /**
+     * ZENITH 21, the Horizon look in one tap: the aurora and the glass in ice blue, ZENITH's own background and a
+     * blue Z-Angriff.
+     */
+    fun horizonLook(s: LauncherSettings): LauncherSettings = s.withZenithTint(ZenithTint.Ice).copy(
+        zenithAurora = true,
+        zenithWallpaper = true,
+    )
+
     /** A look rolled at random – bold, but always something that works. */
     fun rolled(s: LauncherSettings, r: Random = Random.Default): LauncherSettings {
         fun step(from: Float, to: Float) = (Math.round((from + r.nextFloat() * (to - from)) * 20f) / 20f)

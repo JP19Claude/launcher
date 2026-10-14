@@ -68,6 +68,57 @@ internal fun nextCalendarEvent(context: Context, hideAllDay: Boolean = false, no
     }.getOrNull()
 }
 
+/** The next [limit] events of the next week (today's all-day ones too), for a widget; nothing without the calendar's permission. */
+internal fun upcomingCalendarEvents(context: Context, limit: Int, now: Long = System.currentTimeMillis()): List<SmartEvent> {
+    if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) return emptyList()
+    val uri = CalendarContract.Instances.CONTENT_URI.buildUpon().also {
+        ContentUris.appendId(it, now)
+        ContentUris.appendId(it, now + 7L * 24L * 60L * 60L * 1000L)
+    }.build()
+    val today = LocalDate.now(ZoneId.systemDefault())
+    val found = ArrayList<SmartEvent>()
+    runCatching {
+        context.contentResolver.query(
+            uri,
+            arrayOf(
+                CalendarContract.Instances.TITLE,
+                CalendarContract.Instances.BEGIN,
+                CalendarContract.Instances.END,
+                CalendarContract.Instances.ALL_DAY,
+            ),
+            null,
+            null,
+            "${CalendarContract.Instances.BEGIN} ASC",
+        )?.use { c ->
+            while (c.moveToNext() && found.size < limit) {
+                val title = c.getString(0)?.takeIf { it.isNotBlank() } ?: "Termin"
+                val begin = c.getLong(1)
+                val end = c.getLong(2)
+                if (c.getInt(3) == 1) {
+                    val first = Instant.ofEpochMilli(begin).atZone(ZoneOffset.UTC).toLocalDate()
+                    val last = Instant.ofEpochMilli(end).atZone(ZoneOffset.UTC).toLocalDate().minusDays(1)
+                    if (!today.isBefore(first) && !today.isAfter(last)) found += SmartEvent(title, now, true)
+                } else if (end > now) {
+                    found += SmartEvent(title, begin, false)
+                }
+            }
+        }
+    }
+    return found
+}
+
+/** "Jetzt", "11:00", "Mo. 09:30" or "Ganztägig": when it is. */
+internal fun SmartEvent.timeLabel(now: Long = System.currentTimeMillis(), locale: Locale = Locale.getDefault()): String {
+    if (allDay) return "Ganztägig"
+    val zone = ZoneId.systemDefault()
+    val start = Instant.ofEpochMilli(begin).atZone(zone)
+    return when {
+        begin <= now -> "Jetzt"
+        start.toLocalDate() == LocalDate.now(zone) -> start.format(DateTimeFormatter.ofPattern("HH:mm", locale))
+        else -> start.format(DateTimeFormatter.ofPattern("EEE HH:mm", locale))
+    }
+}
+
 /** What the clock says of it: "Termin · 11:00 Zahnarzt", "Morgen · 09:30 …", "Jetzt · …" or "Heute · …". */
 internal fun SmartEvent.line(now: Long = System.currentTimeMillis(), locale: Locale = Locale.getDefault()): String {
     if (allDay) return "Heute · $title"
