@@ -1,6 +1,11 @@
-ZENITH 21.0 „Horizont“ auf ClaudeOS 8.0 „Horizon“
+ZENITH 21.5 „Comet“ auf ClaudeOS 8.0 „Horizon“
 
-✨ Neu im Hotfix
+✨ Neu in 21.5
+• „Be Comet“ im Clawd Illuminati, neben „Be Smarter“: der Launcher wie CometOS – klares Liquid Glass oder solide Flächen (mit Stärke und Deckkraft), die Flüssig-Uhr aus Glas mit Datum, Wetter und Wecker, das Dock als gläserne Kapsel, die App-Bibliothek, das Kontrollzentrum von oben rechts, die Mitteilungen von oben links
+• ZENITH im Kern: mit „Be Comet“ werden die Launcher-Einstellungen zu den Comet-Einstellungen, vorneweg ClaudeOS und ZENITH; Claude ersetzt Comet AI
+• Ehrlich dazu: ein Nachbau mit eigenem Code, nicht auf dem Handy ausprobiert; ohne Comets Widgets und eigenen Sperrbildschirm
+
+Seit 21.0 (Hotfix)
 • Eine Karte, die wirklich anders aussieht: Horizont zeigt jetzt einen klaren Himmel, eine Sonne, die hinter drei Bergrücken aufgeht, und ein paar blasse Sterne – statt Bögen und Feuerwerk. Dasselbe Bild trägt die Systemkarte oben in den Einstellungen (mit dem Jubiläums-Theme bleibt sie, wie sie war)
 • „Aim Higher.“ ruhiger: eine feine Schrift in einer Farbe, ohne Glühen, Farbverlauf und Lichtband
 • Update-Fehler „INSTALL_FAILED_INVALID_APK“: Die App lädt nur noch eine ganz angekommene Datei, installiert sie als das Paket, das sie ist, und zeigt bei einem Fehler Androids ganze Meldung mit dem Grund auf der Seite des Software-Updates

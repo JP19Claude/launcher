@@ -202,6 +202,40 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "21.5",
+            name = "Comet",
+            summary = "ZENITH 21.5: „Be Comet“ – im Clawd Illuminati, neben „Be Smarter“, baut ein zweiter Modus den Launcher um wie bei CometOS: klares Liquid Glass, eine große Uhr aus Glas, das Dock als gläserne Kapsel, die App-Bibliothek, das Kontrollzentrum von oben rechts – und ZENITH und ClaudeOS im Kern der Einstellungen.",
+            sections = listOf(
+                ChangeSection(
+                    "Be Comet – der Launcher wie CometOS", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Der Schalter „Be Comet“ steht im Clawd Illuminati gleich unter „Be Smarter“ (und in den Smart-Einstellungen unter ZENITH → Aussehen). Beide Looks sind für denselben Bildschirm gedacht, darum schaltet der eine den anderen aus. Aus: alles wie vorher, nichts geht verloren.",
+                        "Liquid Glass oder solide Flächen: klares Glas, das den Hintergrund bricht und Licht an seinem Rand sammelt – mit den Reglern „Stärke“ und „Deckkraft der Flächen“ – oder ruhige, flache Flächen ohne Linse, die ältere Telefone schonen.",
+                        "Die Flüssig-Uhr: große weiche Ziffern aus Glas auf dem Hintergrund, das Datum klein darüber mit dem Wetter daneben, der nächste Wecker darunter. Wahlweise in Serif oder als Analog-Uhr, mit eigener Schrift und Deckkraft.",
+                        "Das Dock als schwebende Kapsel aus Glas, App-Namen unter den Icons (auszuschalten), Icon-Form und -Darstellung frei, die App-Bibliothek als Seite nach der letzten, die Suche mit Claude statt mit Comet AI.",
+                        "Das Kontrollzentrum zieht man von oben rechts herunter, die Mitteilungen von oben links; Akzentfarbe und Abdunkelung des Hintergrunds sind einstellbar.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "ZENITH im Kern der Comet-Einstellungen", Icons.Rounded.Settings, Pink,
+                    listOf(
+                        "Mit „Be Comet“ werden die Launcher-Einstellungen zu den Comet-Einstellungen: dunkler Grund wie bei Comet, Karten aus klarem Glas, geordnet nach Hintergrund & Stil, Liquid Glass, Startbildschirm, Dock & App-Bibliothek.",
+                        "Vorneweg, unter der Systemkarte mit dem „Aim Higher.“: ClaudeOS (Claude & KI, Clawd, Glimmer, Software-Update, Über das Telefon) und ZENITH (Zentrale, Design, Illuminati, Datenschutz, System, das Theme). Was keine eigene Seite hat – Claudes Schlüssel, der Sperrbildschirm von Glimmer, der Tresor –, öffnet sich von dort in den Einstellungen von ZENITH selbst.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
+                    listOf(
+                        "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",
+                        "Nicht dabei: Comet AI (hier antwortet Claude), Comets eigene Widgets (Weltuhr, Notiz) und sein eigener Sperrbildschirm (den macht weiter Glimmer). Und: Ich konnte es nicht auf einem Handy ausprobieren – wo etwas anders aussieht als bei Comet, hilft ein Bildschirmfoto.",
+                    ),
+                    hearth,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "21.0",
             name = "Horizont",
             summary = "ZENITH 21: ein Smart-Modus, der Leute vom Smart Launcher überzeugen soll – eigene Kategorien, dreizehn Icon-Formen, Farbwähler, Smart-Widgets und ein Wechsel-Assistent – und ein neues Theme „Horizont“. Das Jubiläums-Theme von ZENITH 20 behältst du mit einem Schalter. Darunter ClaudeOS 8.0 „Horizon“.",

@@ -91,6 +91,8 @@ import dev.hearth.launcher.data.SwipeDownAction
 import dev.hearth.launcher.data.ZenithTheme
 import dev.hearth.launcher.data.withSmartGlass
 import dev.hearth.launcher.data.withSmartGlimmer
+import dev.hearth.launcher.data.withComet
+import dev.hearth.launcher.data.withSmarter
 import dev.hearth.launcher.data.withZenithTheme
 import kotlin.math.roundToInt
 
@@ -469,7 +471,12 @@ internal fun SsZenithPage(s: LauncherSettings, update: ((LauncherSettings) -> La
             "Smart-Look (Be Smarter)",
             "Aus: ZENITH sieht wieder aus wie ZENITH – mit seinen eigenen Einstellungen. Alles Gewählte bleibt.",
             s.beSmarter,
-        ) { v -> update { it.copy(beSmarter = v) } }
+        ) { v -> update { it.withSmarter(v) } }
+        SsSwitchRow(
+            "Comet-Look (Be Comet)",
+            "Der Launcher wie CometOS: Liquid Glass, die Flüssig-Uhr, die App-Bibliothek – mit ZENITH im Kern. Schaltet „Be Smarter“ aus.",
+            s.beComet,
+        ) { v -> update { it.withComet(v) } }
     }
 }
 

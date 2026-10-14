@@ -54,6 +54,8 @@ enum class ClockStyle(val label: String) {
     Large("Groß"),
     /** ZENITH 20.5, "Be Smarter": the Smart Launcher's clock – light digits, the date, the weather beside them. */
     Smart("Smart"),
+    /** ZENITH 21.5, "Be Comet": big soft digits of glass, the date over them. */
+    Comet("Comet (Flüssig-Uhr)"),
     Hidden("Aus"),
 }
 
@@ -427,6 +429,84 @@ fun LauncherSettings.withSmartGlimmer(on: Boolean): LauncherSettings = if (on) {
         glimmerFlyInStyle = if (glimmerFlyInStyle == FlyInStyle.Smart) FlyInStyle.HarmonyOS else glimmerFlyInStyle,
     )
 }
+
+/** ZENITH 21.5, "Be Comet": the surfaces – Liquid Glass (clear, bending what is behind it) or solid. */
+enum class CometGlass(val label: String, val note: String) {
+    Liquid("Liquid Glass", "Klares Glas, das den Hintergrund bricht und Licht an seinem Rand sammelt."),
+    Solid("Solide Flächen", "Ruhige, flache Flächen ohne Linse – schonend für ältere Telefone."),
+}
+
+/** ZENITH 21.5, "Be Comet": the home clock. */
+enum class CometClockKind(val label: String) {
+    Liquid("Flüssig-Uhr (Glas)"),
+    Serif("Serif"),
+    Analog("Analog"),
+}
+
+/**
+ * ZENITH 21.5, "Be Comet": the launcher dressed after CometOS, when drawing – Liquid Glass or solid
+ * surfaces, big glass digits for the clock, the labels, the dock as a capsule of glass, the App Library
+ * after the last page, the control center and notifications from the top corners. Never written back, so
+ * switching it off brings everything exactly as it was; ZENITH's own looks and effects step aside meanwhile.
+ * (If "Be Smarter" is on too, that one is drawn.)
+ */
+fun LauncherSettings.withCometLook(): LauncherSettings = if (!beComet || beSmarter) {
+    this
+} else {
+    val liquid = cometGlass == CometGlass.Liquid
+    copy(
+        projectZenith = false,
+        projectColorOs = false,
+        galaxyClaude = false,
+        zenithWallpaper = false,
+        zenithAurora = false,
+        omegaGlass = false,
+        fluidDesign = false,
+        omegaOverdrive = false,
+        hyperGlass = false,
+        colorWorld = ColorWorld.Off,
+        omegaRain = false,
+        weightless = false,
+        clawdParade = false,
+        giantClawd = false,
+        allSeeingEye = false,
+        clawdHalo = false,
+        clawdCompanion = false,
+        omegaLight = false,
+        omegaZeros = false,
+        perks = emptySet(),
+        showClaudeCard = false,
+        iconStyle = cometIcons,
+        iconShape = cometShape,
+        clockStyle = if (cometClock == CometClockKind.Analog) ClockStyle.Analog else ClockStyle.Comet,
+        clockFont = if (cometClock == CometClockKind.Serif) ClockFont.Serif else cometClockFont,
+        // The digits are glass on Liquid Glass; plain, soft white on solid surfaces.
+        glassClocks = liquid,
+        dockStyle = if (cometCapsuleDock) DockStyle.Floating else DockStyle.Clear,
+        showLabels = cometLabels,
+        showGreeting = false,
+        showAppLibrary = cometLibrary,
+        animations = true,
+        accent = cometAccent,
+        glassLook = if (liquid) GlassLook.Liquid else GlassLook.Omega,
+        glassTint = if (liquid) GlassTint.Clear else GlassTint.Dark,
+        dimWallpaper = cometDim,
+        // Pulled down from the left corner: the notifications; from the right: the control center.
+        swipeDownAction = SwipeDownAction.Split,
+        glassBlur = if (liquid) 0.6f + 1.6f * cometStrength else 2.2f,
+        glassRefraction = if (liquid) 0.4f + 2.0f * cometStrength else 0.1f,
+        glassDispersion = if (liquid) 0.1f + 0.9f * cometStrength else 0f,
+        glassSpecular = if (liquid) 0.6f + 1.2f * cometStrength else 0.3f,
+        glassTintStrength = if (liquid) 0.3f + 1.7f * cometOpacity else 1f + 1.2f * cometOpacity,
+        glassInteractive = true,
+    )
+}
+
+/** ZENITH 21.5: "Be Comet" on or off – it and "Be Smarter" are two looks for the same screen, never both. */
+fun LauncherSettings.withComet(on: Boolean): LauncherSettings = copy(beComet = on, beSmarter = if (on) false else beSmarter)
+
+/** ZENITH 21.5: "Be Smarter" on or off (on turns "Be Comet" off). */
+fun LauncherSettings.withSmarter(on: Boolean): LauncherSettings = copy(beSmarter = on, beComet = if (on) false else beComet)
 
 /** ZENITH 19.3: the clock as it's shown – in the ColorOS 17.1 look, that look's own choice. */
 val LauncherSettings.shownClock: ClockStyle get() = if (colorOsLook) colorOsClock else clockStyle
@@ -869,6 +949,26 @@ data class LauncherSettings(
     val homeLightFloor: Boolean = true,
     /** ZENITH 20.5, "Be Smarter": the Illuminati's mode that makes the launcher a copy of the Smart Launcher. */
     val beSmarter: Boolean = false,
+    /** ZENITH 21.5, "Be Comet": the Illuminati's second mode – the launcher dressed after CometOS, with ZENITH at its core. */
+    val beComet: Boolean = false,
+    val cometGlass: CometGlass = CometGlass.Liquid,
+    /** How much the glass frosts and bends what lies behind it (0–1). */
+    val cometStrength: Float = 0.7f,
+    /** How strongly the glass is tinted – how see-through the dock and the widgets are (0 clear … 1 milky). */
+    val cometOpacity: Float = 0.35f,
+    val cometShape: IconShape = IconShape.Squircle,
+    val cometIcons: IconStyle = IconStyle.Original,
+    val cometLabels: Boolean = true,
+    val cometClock: CometClockKind = CometClockKind.Liquid,
+    val cometClockFont: ClockFont = ClockFont.Default,
+    val cometClockOpacity: Float = 0.92f,
+    /** The wallpaper's dimming (0–0.6). */
+    val cometDim: Float = 0.14f,
+    /** The dock as a floating capsule of glass (off: the icons sit on the wallpaper). */
+    val cometCapsuleDock: Boolean = true,
+    /** The App Library, the page after the last home page. */
+    val cometLibrary: Boolean = true,
+    val cometAccent: AccentColor = AccentColor.Galaxy,
     /** The glass of that look (Frosted or Liquid) and its four sliders, which are the mode's own. */
     val smartGlass: SmartGlass = SmartGlass.Ambient,
     val smartBlur: Float = SmartGlass.Ambient.blur,
@@ -1545,6 +1645,20 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             smartHideAllDay = prefs.getBoolean("smartHideAllDay", d.smartHideAllDay),
             smartCustomColor = prefs.getInt("smartCustomColor", d.smartCustomColor),
             zenithTheme = enumOf("zenithTheme", d.zenithTheme),
+            beComet = prefs.getBoolean("beComet", d.beComet),
+            cometGlass = enumOf("cometGlass", d.cometGlass),
+            cometStrength = prefs.getFloat("cometStrength", d.cometStrength),
+            cometOpacity = prefs.getFloat("cometOpacity", d.cometOpacity),
+            cometShape = enumOf("cometShape", d.cometShape),
+            cometIcons = enumOf("cometIcons", d.cometIcons),
+            cometLabels = prefs.getBoolean("cometLabels", d.cometLabels),
+            cometClock = enumOf("cometClock", d.cometClock),
+            cometClockFont = enumOf("cometClockFont", d.cometClockFont),
+            cometClockOpacity = prefs.getFloat("cometClockOpacity", d.cometClockOpacity),
+            cometDim = prefs.getFloat("cometDim", d.cometDim),
+            cometCapsuleDock = prefs.getBoolean("cometCapsuleDock", d.cometCapsuleDock),
+            cometLibrary = prefs.getBoolean("cometLibrary", d.cometLibrary),
+            cometAccent = enumOf("cometAccent", d.cometAccent),
             sloganEverywhere = prefs.getBoolean("sloganEverywhere", d.sloganEverywhere),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
             zenithStrike = prefs.getBoolean("zenithStrike", d.zenithStrike),
@@ -1787,6 +1901,20 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putBoolean("smartHideAllDay", s.smartHideAllDay)
             .putInt("smartCustomColor", s.smartCustomColor)
             .putString("zenithTheme", s.zenithTheme.name)
+            .putBoolean("beComet", s.beComet)
+            .putString("cometGlass", s.cometGlass.name)
+            .putFloat("cometStrength", s.cometStrength)
+            .putFloat("cometOpacity", s.cometOpacity)
+            .putString("cometShape", s.cometShape.name)
+            .putString("cometIcons", s.cometIcons.name)
+            .putBoolean("cometLabels", s.cometLabels)
+            .putString("cometClock", s.cometClock.name)
+            .putString("cometClockFont", s.cometClockFont.name)
+            .putFloat("cometClockOpacity", s.cometClockOpacity)
+            .putFloat("cometDim", s.cometDim)
+            .putBoolean("cometCapsuleDock", s.cometCapsuleDock)
+            .putBoolean("cometLibrary", s.cometLibrary)
+            .putString("cometAccent", s.cometAccent.name)
             .putBoolean("sloganEverywhere", s.sloganEverywhere)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("zenithStrike", s.zenithStrike)

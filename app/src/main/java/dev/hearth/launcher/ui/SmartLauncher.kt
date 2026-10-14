@@ -113,6 +113,7 @@ import dev.hearth.launcher.data.SmartTab
 import dev.hearth.launcher.data.WallpaperBackdrop
 import dev.hearth.launcher.data.showSlogan
 import dev.hearth.launcher.data.withSmartGlass
+import dev.hearth.launcher.data.withSmarter
 import dev.hearth.launcher.data.withSmartGlimmer
 import dev.hearth.launcher.system.GlimmerService
 import kotlinx.coroutines.delay
@@ -1140,7 +1141,7 @@ internal fun SmartSection(settings: LauncherSettings, onChange: ((LauncherSettin
         }
     }
 
-    SmartCard(settings.beSmarter) { v -> onChange { it.copy(beSmarter = v) } }
+    SmartCard(settings.beSmarter) { v -> onChange { it.withSmarter(v) } }
     Spacer(Modifier.height(18.dp))
 
     IlluminationSection("Be Smarter · Launcher-Thema") {

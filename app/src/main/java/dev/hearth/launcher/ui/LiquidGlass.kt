@@ -143,6 +143,9 @@ data class GlassStyle(
                     // and go without the lens shader (it is what makes many glass surfaces heavy).
                     lensMinDp = if (s.smartGlass == dev.hearth.launcher.data.SmartGlass.Liquid) glass.lensMinDp else 100_000f,
                 )
+            } else if (s.beComet && s.cometGlass == dev.hearth.launcher.data.CometGlass.Solid) {
+                // "Be Comet" with solid surfaces: flat, no lens shader.
+                glass.copy(lensMinDp = 100_000f)
             } else {
                 glass
             }

@@ -171,6 +171,7 @@ import dev.hearth.launcher.data.SwipeDownAction
 import dev.hearth.launcher.data.hologram
 import dev.hearth.launcher.data.colorOsLook
 import dev.hearth.launcher.data.withColorOsLook
+import dev.hearth.launcher.data.withCometLook
 import dev.hearth.launcher.data.withSmartLook
 import dev.hearth.launcher.data.SmartClockLayout
 import dev.hearth.launcher.data.SmartHours
@@ -196,7 +197,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
     val night by remember(systemDark) { derivedStateOf { storedSettings.nightActive(clock.value.hour, systemDark) } }
     // OMEGA UI 18: Claude Mythos lays its takeover over everything chosen.
-    val settings = remember(storedSettings, night) { (if (night) storedSettings.forNight() else storedSettings).mythic().withSmartLook().withColorOsLook() }
+    val settings = remember(storedSettings, night) { (if (night) storedSettings.forNight() else storedSettings).mythic().withSmartLook().withCometLook().withColorOsLook() }
     val library by vm.library.collectAsStateWithLifecycle()
     val assistantOpen by vm.assistantOpen.collectAsStateWithLifecycle()
     val appUsage by vm.appUsage.collectAsStateWithLifecycle()
@@ -1300,8 +1301,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             projectColorOs = false,
                             glassLook = dev.hearth.launcher.data.GlassLook.Zenith,
                         )
-                    } else if (settings.beSmarter) {
-                        // Be Smarter: the settings show what is really chosen, not the Smart look laid over it.
+                    } else if (settings.beSmarter || settings.beComet) {
+                        // Be Smarter, Be Comet: the settings show what is really chosen, not the look laid over it.
                         storedSettings
                     } else {
                         null
@@ -1318,6 +1319,15 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                     settingsOpen = false
                                     smartWelcome = true
                                 },
+                                onZenith = { target ->
+                                    zenithPage = target
+                                    zenithOpen = true
+                                },
+                            )
+                        } else if (settings.beComet && !zenithOpen) {
+                            CometSettingsScreen(
+                                vm = vm,
+                                onClose = { settingsOpen = false },
                                 onZenith = { target ->
                                     zenithPage = target
                                     zenithOpen = true
@@ -1815,12 +1825,95 @@ private fun HomeHeaderContent(settings: LauncherSettings, modifier: Modifier = M
         ClockStyle.OneUI -> OneUIClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Large -> LargeClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Smart -> SmartClock(settings, modifier)
+        ClockStyle.Comet -> CometClock(settings, modifier)
         ClockStyle.Glass -> GlassClockCard(settings, modifier)
         ClockStyle.Zenith -> ZenithHomeClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Omega -> OmegaHomeClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Analog -> AnalogHomeClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Words -> WordsHomeClock(settings, modifier.padding(start = 8.dp))
         ClockStyle.Split -> SplitHomeClock(settings, modifier.padding(start = 8.dp))
+    }
+}
+
+/**
+ * ZENITH 21.5, "Be Comet": the home clock after CometOS's "Liquid clock" – big soft digits of glass on the
+ * wallpaper (plain soft white on solid surfaces), the date small above them with the weather beside it, the
+ * next alarm under them. A tap on the date opens the calendar, on the weather the ZENITH-Zentrale, on the
+ * alarm the alarms. It is as clear as "Deckkraft der Uhr" says.
+ */
+@Composable
+private fun CometClock(settings: LauncherSettings, modifier: Modifier = Modifier) {
+    val now by rememberNow()
+    val locale = Locale.getDefault()
+    val context = LocalContext.current
+    val pattern = if (android.text.format.DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm"
+    val time = remember(now, pattern) { now.format(DateTimeFormatter.ofPattern(pattern, locale)) }
+    val date = remember(now) {
+        now.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", locale)).replaceFirstChar { it.titlecase(locale) }
+    }
+    val alarm = remember(now) {
+        runCatching {
+            context.getSystemService(android.app.AlarmManager::class.java)?.nextAlarmClock?.triggerTime?.let { at ->
+                val ring = java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault())
+                val pattern = if (ring.toLocalDate() == now.toLocalDate()) "HH:mm" else "EEE HH:mm"
+                ring.format(DateTimeFormatter.ofPattern(pattern, locale))
+            }
+        }.getOrNull()
+    }
+    val weather = rememberWeather()
+    Column(
+        modifier
+            .fillMaxWidth()
+            .padding(top = 30.dp)
+            .graphicsLayer { alpha = settings.cometClockOpacity.coerceIn(0.2f, 1f) },
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = date,
+                color = Color.White.copy(alpha = 0.95f),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Medium,
+                style = OnWallpaperText,
+                modifier = Modifier.clickable { openCalendar(context) },
+            )
+            weather?.let { w ->
+                Row(
+                    Modifier.clickable { runCatching { context.startActivity(Intent(context, dev.hearth.launcher.ZentraleActivity::class.java)) } },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Spacer(Modifier.width(10.dp))
+                    WeatherGlyph(w.code, w.night, Modifier.size(22.dp))
+                    Text(
+                        text = " ${w.now.roundToInt()}°",
+                        color = Color.White.copy(alpha = 0.95f),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Medium,
+                        style = OnWallpaperText,
+                    )
+                }
+            }
+        }
+        ClockDigits(
+            settings,
+            text = time,
+            color = Color.White,
+            fontFamily = clockFamily(settings, null),
+            fontWeight = clockWeight(settings, FontWeight.Light),
+            fontSize = 104.sp,
+            lineHeight = 108.sp,
+            letterSpacing = (-2).sp,
+            style = OnWallpaperText,
+        )
+        if (alarm != null) {
+            Text(
+                text = "Wecker · $alarm",
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = 14.sp,
+                style = OnWallpaperText,
+                modifier = Modifier.clickable { openAlarms(context) },
+            )
+        }
     }
 }
 

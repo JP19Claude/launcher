@@ -275,6 +275,9 @@ fun ClawdIlluminationScreen(
             // ZENITH 20.5: Be Smarter – the launcher as the Smart Launcher, with Frosted or Liquid glass.
             SmartSection(settings, onChange)
 
+            // ZENITH 21.5: Be Comet – the launcher after CometOS, with ZENITH at its core.
+            CometSection(settings, onChange)
+
             // ZENITH 19: Projekt Zenith lives only here, behind a secret password.
             IlluminationSection("◈ Projekt Zenith") {
                 ProjectZenithGate(settings, onChange)
