@@ -182,22 +182,22 @@ private fun CmLookPage(s: LauncherSettings, update: ((LauncherSettings) -> Launc
             CmSwatches(
                 listOf(AccentColor.Galaxy, AccentColor.Blue, AccentColor.Mint, AccentColor.Rose, AccentColor.Lilac, AccentColor.Ochre, AccentColor.White, AccentColor.Claude),
                 s.cometAccent,
-            ) { accent -> update { it.copy(cometAccent = accent) } }
+            ) { accent -> update { it.copy(cometStyle = it.cometStyle.copy(accent = accent)) } }
         }
         CmHeader("Hintergrund")
         CmCard {
             CmSliderRow("Abdunkelung", "${(s.cometDim / 0.6f * 100f).roundToInt()} %", (s.cometDim / 0.6f).coerceIn(0f, 1f)) { f ->
-                update { it.copy(cometDim = (f * 0.6f).coerceIn(0f, 0.6f)) }
+                update { it.copy(cometStyle = it.cometStyle.copy(dim = (f * 0.6f).coerceIn(0f, 0.6f))) }
             }
         }
         CmNote("Dunkelt das Hintergrundbild unter den Icons ab – hilft bei hellen Bildern.")
         CmHeader("Icons")
         CmCard {
-            CmChoiceRow("Darstellung", IconStyle.entries, s.cometIcons, { it.label }) { style -> update { it.copy(cometIcons = style) } }
+            CmChoiceRow("Darstellung", IconStyle.entries, s.cometIcons, { it.label }) { style -> update { it.copy(cometStyle = it.cometStyle.copy(icons = style)) } }
             CmDivider()
-            CmChoiceRow("Form", IconShape.entries, s.cometShape, { it.label }) { shape -> update { it.copy(cometShape = shape) } }
+            CmChoiceRow("Form", IconShape.entries, s.cometShape, { it.label }) { shape -> update { it.copy(cometStyle = it.cometStyle.copy(shape = shape)) } }
             CmDivider()
-            CmSwitchRow("App-Namen zeigen", null, s.cometLabels) { v -> update { it.copy(cometLabels = v) } }
+            CmSwitchRow("App-Namen zeigen", null, s.cometLabels) { v -> update { it.copy(cometStyle = it.cometStyle.copy(labels = v)) } }
         }
     }
 }
@@ -206,23 +206,23 @@ private fun CmLookPage(s: LauncherSettings, update: ((LauncherSettings) -> Launc
 private fun CmGlassPage(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, back: () -> Unit) {
     CmPage("Liquid Glass", back) {
         Row(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
-            CmGlassTile(CometGlass.Liquid, s.cometGlass == CometGlass.Liquid, Modifier.weight(1f)) { update { it.copy(cometGlass = CometGlass.Liquid) } }
+            CmGlassTile(CometGlass.Liquid, s.cometGlass == CometGlass.Liquid, Modifier.weight(1f)) { update { it.copy(cometStyle = it.cometStyle.copy(glass = CometGlass.Liquid)) } }
             Spacer(Modifier.width(12.dp))
-            CmGlassTile(CometGlass.Solid, s.cometGlass == CometGlass.Solid, Modifier.weight(1f)) { update { it.copy(cometGlass = CometGlass.Solid) } }
+            CmGlassTile(CometGlass.Solid, s.cometGlass == CometGlass.Solid, Modifier.weight(1f)) { update { it.copy(cometStyle = it.cometStyle.copy(glass = CometGlass.Solid)) } }
         }
         CmNote(s.cometGlass.note)
         CmCard {
             CmSliderRow("Stärke", "${(s.cometStrength * 100f).roundToInt()} %", s.cometStrength.coerceIn(0f, 1f)) { f ->
-                update { it.copy(cometStrength = f.coerceIn(0f, 1f)) }
+                update { it.copy(cometStyle = it.cometStyle.copy(strength = f.coerceIn(0f, 1f))) }
             }
             CmDivider()
             CmSliderRow("Deckkraft der Flächen", "${(s.cometOpacity * 100f).roundToInt()} %", s.cometOpacity.coerceIn(0f, 1f)) { f ->
-                update { it.copy(cometOpacity = f.coerceIn(0f, 1f)) }
+                update { it.copy(cometStyle = it.cometStyle.copy(opacity = f.coerceIn(0f, 1f))) }
             }
         }
         CmNote("Die Stärke bestimmt, wie sehr das Glas den Hintergrund weichzeichnet und bricht; die Deckkraft, wie milchig Dock, Widgets und Menüs sind. Mit „Solide Flächen“ gibt es keine Linse – das schont ältere Telefone.")
         CmCard {
-            CmLink("Zurücksetzen", "Stärke und Deckkraft wie am Anfang", SsGlyph.Look) { update { it.copy(cometStrength = 0.7f, cometOpacity = 0.35f) } }
+            CmLink("Zurücksetzen", "Stärke und Deckkraft wie am Anfang", SsGlyph.Look) { update { it.copy(cometStyle = it.cometStyle.copy(strength = 0.7f, opacity = 0.35f)) } }
         }
     }
 }
@@ -232,12 +232,12 @@ private fun CmHomePage(s: LauncherSettings, update: ((LauncherSettings) -> Launc
     CmPage("Startbildschirm", back) {
         CmHeader("Uhr")
         CmCard {
-            CmChoiceRow("Uhr", CometClockKind.entries, s.cometClock, { it.label }) { kind -> update { it.copy(cometClock = kind) } }
+            CmChoiceRow("Uhr", CometClockKind.entries, s.cometClock, { it.label }) { kind -> update { it.copy(cometStyle = it.cometStyle.copy(clock = kind)) } }
             CmDivider()
-            CmChoiceRow("Schrift", ClockFont.entries, s.cometClockFont, { it.label }) { font -> update { it.copy(cometClockFont = font) } }
+            CmChoiceRow("Schrift", ClockFont.entries, s.cometClockFont, { it.label }) { font -> update { it.copy(cometStyle = it.cometStyle.copy(clockFont = font)) } }
             CmDivider()
             CmSliderRow("Deckkraft der Uhr", "${(s.cometClockOpacity * 100f).roundToInt()} %", ((s.cometClockOpacity - 0.2f) / 0.8f).coerceIn(0f, 1f)) { f ->
-                update { it.copy(cometClockOpacity = (0.2f + 0.8f * f).coerceIn(0.2f, 1f)) }
+                update { it.copy(cometStyle = it.cometStyle.copy(clockOpacity = (0.2f + 0.8f * f).coerceIn(0.2f, 1f))) }
             }
         }
         CmNote("Die Flüssig-Uhr ist aus Glas, wenn „Liquid Glass“ gewählt ist, sonst weiß und weich. Datum, Wetter und Wecker stehen dabei: ein Tipp aufs Datum öffnet den Kalender, aufs Wetter die ZENITH-Zentrale, auf den Wecker die Wecker.")
@@ -262,14 +262,14 @@ private fun CmDockPage(s: LauncherSettings, update: ((LauncherSettings) -> Launc
     CmPage("Dock & App-Bibliothek", back) {
         CmCard {
             CmSwitchRow("Dock als Glas-Kapsel", "Aus: die Icons sitzen direkt auf dem Hintergrund.", s.cometCapsuleDock) { v ->
-                update { it.copy(cometCapsuleDock = v) }
+                update { it.copy(cometStyle = it.cometStyle.copy(capsuleDock = v)) }
             }
             CmDivider()
             CmSwitchRow(
                 "App-Bibliothek",
                 "Die Seite nach der letzten: alle Apps nach Art geordnet, dazu „Vorgeschlagen“ und die Suche.",
                 s.cometLibrary,
-            ) { v -> update { it.copy(cometLibrary = v) } }
+            ) { v -> update { it.copy(cometStyle = it.cometStyle.copy(library = v)) } }
         }
         CmNote("Apps legst du mit langem Druck auf einen Platz im Dock oder auf den Startbildschirm; aus dem Dock nimmst du sie mit „Aus dem Dock entfernen“. Sie bleiben installiert und in der App-Bibliothek.")
     }

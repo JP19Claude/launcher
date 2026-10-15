@@ -252,7 +252,16 @@ internal object HearthChangelog {
                         "Drei Abstürze innerhalb von zwei Minuten starten ZENITH im abgesicherten Modus: Be Smarter, Be Comet, der ZENITH-Hintergrund, Polarlicht, Omega, Hyperglas, Farbwelt und die Zeremonien nach einem Update bleiben aus – deine Einstellungen werden dafür nicht verändert. Ist das Super-Wallpaper der Hintergrund des Telefons, wird es abgenommen und Android zeigt wieder seinen normalen.",
                         "Auf dem Bildschirm nach dem Absturz: „Abgesichert starten“, „Normal starten“ und – zweimal tippen – „Einstellungen von ZENITH zurücksetzen“ als letzter Ausweg (Apps, Widgets und Daten bleiben). Beim nächsten Start steht der Bericht noch einmal im Launcher, dort lässt sich der abgesicherte Modus auch wieder beenden.",
                         "Das Super-Wallpaper fängt Fehler jetzt selbst ab: Geht beim Zeichnen etwas schief, bleibt es schwarz stehen, und ZENITH läuft weiter.",
-                        "Ehrlich dazu: Warum es bei dir abstürzt, weiß ich noch nicht – ich habe keinen Fehlerbericht und konnte es auf keinem Handy nachstellen. Das hier macht ZENITH wieder benutzbar und liefert beim nächsten Absturz den Bericht, mit dem sich die Ursache finden lässt.",
+                        "Ehrlich dazu: Gebaut habe ich das, ohne die Ursache zu kennen – der erste Bericht, der damit aufkam, hat sie dann gezeigt (siehe „Absturz beim Start behoben“). Der Schutz bleibt für alles, was noch kommen kann.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Hotfix: Absturz beim Start behoben", Icons.Rounded.CheckCircle, Orange,
+                    listOf(
+                        "Seit dem Super-Wallpaper-Hotfix (21.5, Version 191) ließ sich ZENITH nicht mehr öffnen: Android lehnte beim Laden eine Klasse des Launchers ab („VerifyError: expected 3 argument registers“). Grund: Die Einstellungen von ZENITH sind eine Klasse mit inzwischen 249 Feldern, und Androids Code-Format erlaubt für das Kopieren einer solchen Klasse höchstens 255 Register – mit den fünf neuen Feldern des Super-Wallpapers waren es 259.",
+                        "Jetzt liegen die Wahlen von „Be Comet“ (13 Felder) und die des Super-Wallpapers (5 Felder) je in einer eigenen kleinen Klasse; die Einstellungen haben 233 Felder, 243 Register. Für dich ändert sich nichts: Alle Einstellungen und ihre gespeicherten Werte bleiben, wie sie waren.",
+                        "Damit das nicht noch einmal passiert, prüft der Bau ab jetzt bei jedem Lauf, wie groß diese Klassen sind, und bricht ab, bevor eine zu groß wird.",
                     ),
                     hearth,
                 ),

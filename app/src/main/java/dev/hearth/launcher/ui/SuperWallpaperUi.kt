@@ -73,9 +73,7 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
     var active by remember { mutableStateOf(SuperWallpaperService.isActiveNow(context)) }
     // Back from Android's preview: is it the wallpaper now?
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { active = SuperWallpaperService.isActiveNow(context) }
-    val params = remember(s.superScene, s.superTilt, s.superZoom, s.superSpeed, s.superStars) {
-        SuperParams(s.superScene, s.superTilt, s.superZoom, s.superSpeed, s.superStars)
-    }
+    val params = s.superParams
     Section("Super-Wallpaper") {
         Box(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)) {
             SuperScenePreview(params, Modifier.fillMaxWidth().aspectRatio(0.72f).clip(RoundedCornerShape(24.dp)))
@@ -85,7 +83,7 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             options = SuperScene.entries,
             selected = s.superScene,
             optionLabel = { it.label },
-            onSelect = { scene -> update { it.copy(superScene = scene) } },
+            onSelect = { scene -> update { it.copy(superParams = it.superParams.copy(scene = scene)) } },
         )
         Note(s.superScene.note)
         ActionRow(
@@ -108,23 +106,23 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             label = "Neigung",
             description = "Die Szene wandert mit, wenn du das Telefon kippst",
             checked = s.superTilt,
-        ) { v -> update { it.copy(superTilt = v) } }
+        ) { v -> update { it.copy(superParams = it.superParams.copy(tilt = v)) } }
         SwitchRow(
             label = "Zoom beim Aufwachen und Seitenwechsel",
             description = "Beim Einschalten kommt die Szene von nahem heran; mit den Seiten des Startbildschirms rückt sie zur Seite",
             checked = s.superZoom,
-        ) { v -> update { it.copy(superZoom = v) } }
+        ) { v -> update { it.copy(superParams = it.superParams.copy(zoomOnWake = v)) } }
         SwitchRow(
             label = "Sterne",
             description = "Der Sternenhimmel hinter der Szene",
             checked = s.superStars,
-        ) { v -> update { it.copy(superStars = v) } }
+        ) { v -> update { it.copy(superParams = it.superParams.copy(stars = v)) } }
         SliderRow(
             label = "Geschwindigkeit",
             value = s.superSpeed,
             range = 0.2f..3f,
             valueText = "${"%.1f".format(s.superSpeed)}×",
-        ) { v -> update { it.copy(superSpeed = v) } }
+        ) { v -> update { it.copy(superParams = it.superParams.copy(speed = v)) } }
         Note("Alles ist in ZENITH selbst gezeichnet – Saturn, Erde, Mars und die anderen entstehen beim ersten Start aus Rauschen und Farbverläufen, es sind keine Bilddateien und nicht die Super-Wallpaper eines Telefonherstellers. Das Glas in ZENITH bricht ein Standbild der Szene; es bewegt sich nur der Hintergrund selbst.")
     }
 }

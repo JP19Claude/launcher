@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import dev.hearth.launcher.wallpaper.SuperParams
 import dev.hearth.launcher.wallpaper.SuperScene
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -436,6 +437,28 @@ enum class CometGlass(val label: String, val note: String) {
     Liquid("Liquid Glass", "Klares Glas, das den Hintergrund bricht und Licht an seinem Rand sammelt."),
     Solid("Solide Flächen", "Ruhige, flache Flächen ohne Linse – schonend für ältere Telefone."),
 }
+
+/** ZENITH 21.5, "Be Comet": the look's own choices (see [LauncherSettings.cometStyle]). */
+data class CometStyle(
+    val glass: CometGlass = CometGlass.Liquid,
+    /** How much the glass frosts and bends what lies behind it (0–1). */
+    val strength: Float = 0.7f,
+    /** How strongly the glass is tinted – how see-through the dock and the widgets are (0 clear … 1 milky). */
+    val opacity: Float = 0.35f,
+    val shape: IconShape = IconShape.Squircle,
+    val icons: IconStyle = IconStyle.Original,
+    val labels: Boolean = true,
+    val clock: CometClockKind = CometClockKind.Liquid,
+    val clockFont: ClockFont = ClockFont.Default,
+    val clockOpacity: Float = 0.92f,
+    /** The wallpaper's dimming (0–0.6). */
+    val dim: Float = 0.14f,
+    /** The dock as a floating capsule of glass (off: the icons sit on the wallpaper). */
+    val capsuleDock: Boolean = true,
+    /** The App Library, the page after the last home page. */
+    val library: Boolean = true,
+    val accent: AccentColor = AccentColor.Galaxy,
+)
 
 /** ZENITH 21.5, "Be Comet": the home clock. */
 enum class CometClockKind(val label: String) {
@@ -952,30 +975,14 @@ data class LauncherSettings(
     val beSmarter: Boolean = false,
     /** ZENITH 21.5, "Be Comet": the Illuminati's second mode – the launcher dressed after CometOS, with ZENITH at its core. */
     val beComet: Boolean = false,
-    val cometGlass: CometGlass = CometGlass.Liquid,
-    /** How much the glass frosts and bends what lies behind it (0–1). */
-    val cometStrength: Float = 0.7f,
-    /** How strongly the glass is tinted – how see-through the dock and the widgets are (0 clear … 1 milky). */
-    val cometOpacity: Float = 0.35f,
-    val cometShape: IconShape = IconShape.Squircle,
-    val cometIcons: IconStyle = IconStyle.Original,
-    val cometLabels: Boolean = true,
-    val cometClock: CometClockKind = CometClockKind.Liquid,
-    val cometClockFont: ClockFont = ClockFont.Default,
-    val cometClockOpacity: Float = 0.92f,
-    /** The wallpaper's dimming (0–0.6). */
-    val cometDim: Float = 0.14f,
-    /** The dock as a floating capsule of glass (off: the icons sit on the wallpaper). */
-    val cometCapsuleDock: Boolean = true,
-    /** The App Library, the page after the last home page. */
-    val cometLibrary: Boolean = true,
-    val cometAccent: AccentColor = AccentColor.Galaxy,
-    /** ZENITH 21.5, the Super-Wallpaper (a live wallpaper): its scene, how it moves and how fast. The wallpaper service reads these keys itself. */
-    val superScene: SuperScene = SuperScene.Saturn,
-    val superTilt: Boolean = true,
-    val superZoom: Boolean = true,
-    val superSpeed: Float = 1f,
-    val superStars: Boolean = true,
+    /**
+     * ZENITH 21.5, "Be Comet": the look's own choices – in one field of their own, because a data class with more than about
+     * 245 fields can't be copied on the phone any more (its copy needs more registers than Android's code format allows).
+     * Read them by the old names (cometGlass, cometAccent …); write with `copy(cometStyle = cometStyle.copy(accent = …))`.
+     */
+    val cometStyle: CometStyle = CometStyle(),
+    /** ZENITH 21.5, the Super-Wallpaper (a live wallpaper): its scene, how it moves and how fast – one field, for the same reason. The wallpaper service reads the keys itself. */
+    val superParams: SuperParams = SuperParams(),
     /** The glass of that look (Frosted or Liquid) and its four sliders, which are the mode's own. */
     val smartGlass: SmartGlass = SmartGlass.Ambient,
     val smartBlur: Float = SmartGlass.Ambient.blur,
@@ -1252,6 +1259,26 @@ data class LauncherSettings(
     /** Bumped when a new default look should be applied once to existing installs. */
     val designVersion: Int = 0,
 ) {
+    // Be Comet's choices and the Super-Wallpaper's, by the names they had before they moved into their own classes.
+    val cometGlass: CometGlass get() = cometStyle.glass
+    val cometStrength: Float get() = cometStyle.strength
+    val cometOpacity: Float get() = cometStyle.opacity
+    val cometShape: IconShape get() = cometStyle.shape
+    val cometIcons: IconStyle get() = cometStyle.icons
+    val cometLabels: Boolean get() = cometStyle.labels
+    val cometClock: CometClockKind get() = cometStyle.clock
+    val cometClockFont: ClockFont get() = cometStyle.clockFont
+    val cometClockOpacity: Float get() = cometStyle.clockOpacity
+    val cometDim: Float get() = cometStyle.dim
+    val cometCapsuleDock: Boolean get() = cometStyle.capsuleDock
+    val cometLibrary: Boolean get() = cometStyle.library
+    val cometAccent: AccentColor get() = cometStyle.accent
+    val superScene: SuperScene get() = superParams.scene
+    val superTilt: Boolean get() = superParams.tilt
+    val superZoom: Boolean get() = superParams.zoomOnWake
+    val superSpeed: Float get() = superParams.speed
+    val superStars: Boolean get() = superParams.stars
+
     /** Glimmer's size and place as they come: normal width, right over the camera. */
     fun withGlimmerSizeReset(): LauncherSettings {
         val d = LauncherSettings()
@@ -1653,24 +1680,28 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             smartCustomColor = prefs.getInt("smartCustomColor", d.smartCustomColor),
             zenithTheme = enumOf("zenithTheme", d.zenithTheme),
             beComet = prefs.getBoolean("beComet", d.beComet),
-            cometGlass = enumOf("cometGlass", d.cometGlass),
-            cometStrength = prefs.getFloat("cometStrength", d.cometStrength),
-            cometOpacity = prefs.getFloat("cometOpacity", d.cometOpacity),
-            cometShape = enumOf("cometShape", d.cometShape),
-            cometIcons = enumOf("cometIcons", d.cometIcons),
-            cometLabels = prefs.getBoolean("cometLabels", d.cometLabels),
-            cometClock = enumOf("cometClock", d.cometClock),
-            cometClockFont = enumOf("cometClockFont", d.cometClockFont),
-            cometClockOpacity = prefs.getFloat("cometClockOpacity", d.cometClockOpacity),
-            cometDim = prefs.getFloat("cometDim", d.cometDim),
-            cometCapsuleDock = prefs.getBoolean("cometCapsuleDock", d.cometCapsuleDock),
-            cometLibrary = prefs.getBoolean("cometLibrary", d.cometLibrary),
-            cometAccent = enumOf("cometAccent", d.cometAccent),
-            superScene = enumOf("superScene", d.superScene),
-            superTilt = prefs.getBoolean("superTilt", d.superTilt),
-            superZoom = prefs.getBoolean("superZoom", d.superZoom),
-            superSpeed = prefs.getFloat("superSpeed", d.superSpeed),
-            superStars = prefs.getBoolean("superStars", d.superStars),
+            cometStyle = CometStyle(
+                glass = enumOf("cometGlass", d.cometGlass),
+                strength = prefs.getFloat("cometStrength", d.cometStrength),
+                opacity = prefs.getFloat("cometOpacity", d.cometOpacity),
+                shape = enumOf("cometShape", d.cometShape),
+                icons = enumOf("cometIcons", d.cometIcons),
+                labels = prefs.getBoolean("cometLabels", d.cometLabels),
+                clock = enumOf("cometClock", d.cometClock),
+                clockFont = enumOf("cometClockFont", d.cometClockFont),
+                clockOpacity = prefs.getFloat("cometClockOpacity", d.cometClockOpacity),
+                dim = prefs.getFloat("cometDim", d.cometDim),
+                capsuleDock = prefs.getBoolean("cometCapsuleDock", d.cometCapsuleDock),
+                library = prefs.getBoolean("cometLibrary", d.cometLibrary),
+                accent = enumOf("cometAccent", d.cometAccent),
+            ),
+            superParams = SuperParams(
+                scene = enumOf("superScene", d.superScene),
+                tilt = prefs.getBoolean("superTilt", d.superTilt),
+                zoomOnWake = prefs.getBoolean("superZoom", d.superZoom),
+                speed = prefs.getFloat("superSpeed", d.superSpeed),
+                stars = prefs.getBoolean("superStars", d.superStars),
+            ),
             sloganEverywhere = prefs.getBoolean("sloganEverywhere", d.sloganEverywhere),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
             zenithStrike = prefs.getBoolean("zenithStrike", d.zenithStrike),

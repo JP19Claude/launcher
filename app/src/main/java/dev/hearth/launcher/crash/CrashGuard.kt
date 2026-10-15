@@ -39,6 +39,13 @@ object CrashGuard {
     /** Reads what the last crashes decided; call at the start of the process. */
     fun load(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        // A new version: what the crashes of the old one decided (the safe mode, the report waiting) doesn't hold for it.
+        val code = runCatching {
+            PackageInfoCompat.getLongVersionCode(context.packageManager.getPackageInfo(context.packageName, 0))
+        }.getOrDefault(0L)
+        if (prefs.getLong("code", -1L) != code) {
+            prefs.edit().putLong("code", code).putBoolean("safe", false).putBoolean("pending", false).remove("times").commit()
+        }
         safe = prefs.getBoolean("safe", false)
         pending = prefs.getBoolean("pending", false)
     }

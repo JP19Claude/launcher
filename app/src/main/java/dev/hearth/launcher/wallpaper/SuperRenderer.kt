@@ -41,15 +41,15 @@ enum class SuperScene(val label: String, val note: String) {
 }
 
 /** What the wallpaper is set to (read from ZENITH's settings). */
-class SuperParams(
-    val scene: SuperScene,
+data class SuperParams(
+    val scene: SuperScene = SuperScene.Saturn,
     /** The scene shifts with the phone's tilt. */
-    val tilt: Boolean,
+    val tilt: Boolean = true,
     /** It zooms in when the screen wakes, and moves with the home page. */
-    val zoomOnWake: Boolean,
+    val zoomOnWake: Boolean = true,
     /** How fast everything turns (0.2 … 3). */
-    val speed: Float,
-    val stars: Boolean,
+    val speed: Float = 1f,
+    val stars: Boolean = true,
 )
 
 /** What moves the scene right now: the home page (-1 … 1), the tilt (-1 … 1) and the zoom (1 = rest). */

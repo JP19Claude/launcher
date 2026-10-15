@@ -21,6 +21,9 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: No data class too big to be copied on the phone
+        run: python3 .github/check-data-classes.py
+
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Build debug APKs (Hearth, Glimmer, Clawd, Duftschrank, ZENITH, ZENITH Smart)
