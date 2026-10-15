@@ -246,6 +246,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Wallpaper-Galerie – 73 Hintergründe, 40 davon vom Mond", Icons.Rounded.Star, Violet,
+                    listOf(
+                        "Neu unter Einstellungen → Wallpaper-Galerie (auch aus den Smart- und Comet-Einstellungen zu öffnen): Hintergründe zum Auswählen und Herunterladen, sortiert nach Mond (40), Planeten (7), Weltraum (9), Landschaft (7), Abstrakt (6) und ZENITH (4).",
+                        "Der Mond in allen Lagen: Vollmond, Riesenmond, zunehmende und abnehmende Sichel, erstes und letztes Viertel, Neumond unter der Milchstraße, Blutmond und Mondfinsternis, Supermond, Blue Moon, goldener, silberner und rosa Mond, Erdbeer-, Jäger-, Schnee- und Wolfsmond, über Meer, Bergen, Stadt, Dünen und See, hinter Wolken und mit Hof, mit Polarlicht, mit Venus und mit Saturn, als Mondaufgang, als Erdaufgang vom Mond aus gesehen, als Nahaufnahme der Krater und als alle acht Phasen auf einem Bild.",
+                        "Antippen zeigt das Bild groß. Von dort: „Als Hintergrund“ (Startbildschirm, Sperrbildschirm oder beide), „Herunterladen“ (als Bild in Bilder/ZENITH) und „Teilen“. Gezeichnet wird jedes Bild erst, wenn du es brauchst – in der Größe deines Bildschirms.",
+                        "Alles ist in ZENITH selbst gezeichnet, aus Rauschen, Verläufen und Formen: keine Bilddateien, nichts aus dem Netz, keine Fotos von irgendwem. Ehrlich dazu: Ich konnte es auf keinem Handy ausprobieren; große Bilder (der Riesenmond, die Nahaufnahme) brauchen ein, zwei Sekunden, bis sie fertig sind.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Hotfix: Absturzschutz – ZENITH fällt nicht mehr still um", Icons.Rounded.CheckCircle, Terracotta,
                     listOf(
                         "Stürzt ZENITH ab, schreibt es jetzt auf, was kaputt gegangen ist (Fehler, Stelle, Telefon, Version) und zeigt es auf einem eigenen Bildschirm, der in einem getrennten Prozess läuft und nur aus einfachen Ansichten besteht – damit er selbst nicht mit abstürzen kann. Der Bericht lässt sich kopieren oder teilen.",

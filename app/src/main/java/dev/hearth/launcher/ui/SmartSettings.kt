@@ -212,6 +212,7 @@ internal fun SsMainPage(go: (String) -> Unit, onZenith: (String?) -> Unit, onWel
         SsHeader("Launcher")
         SsLink("Allgemeine Darstellung", null, { SsIcon(SsGlyph.Look) }) { go("look") }
         SsLink("Super-Wallpaper", "Saturn, Erde, Mars … – Hintergründe, die sich bewegen", { SsIcon(SsGlyph.Look) }) { onZenith("superwall") }
+        SsLink("Wallpaper-Galerie", "Mond, Planeten, Weltraum … – zum Auswählen und Herunterladen", { SsIcon(SsGlyph.Look) }) { onZenith("wallpapers") }
         SsLink("Startbildschirm", null, { SsIcon(SsGlyph.Home) }) { go("home") }
         SsLink("App-Raster", null, { SsIcon(SsGlyph.Grid) }) { go("drawer") }
         SsLink("Suchseite", null, { SsIcon(SsGlyph.Search) }) { go("search") }
