@@ -164,8 +164,13 @@ class WallpaperRepository(private val context: Context) {
     @SuppressLint("MissingPermission")
     private fun load() {
         if (dev.hearth.launcher.wallpaper.SuperWallpaperService.isActiveNow(context)) {
-            loadSuper()
-            return
+            if (dev.hearth.launcher.crash.CrashGuard.safe) {
+                // The safe mode: the Super-Wallpaper is taken off the phone again (the wallpaper goes back to the default).
+                runCatching { wallpaperManager.clear() }
+            } else {
+                loadSuper()
+                return
+            }
         }
         if (!hasAccess()) {
             _backdrop.value = null

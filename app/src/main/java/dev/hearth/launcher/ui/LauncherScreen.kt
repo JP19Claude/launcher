@@ -171,6 +171,8 @@ import dev.hearth.launcher.data.SwipeDownAction
 import dev.hearth.launcher.data.hologram
 import dev.hearth.launcher.data.colorOsLook
 import dev.hearth.launcher.data.withColorOsLook
+import dev.hearth.launcher.crash.CrashGuard
+import dev.hearth.launcher.crash.safeLook
 import dev.hearth.launcher.data.withCometLook
 import dev.hearth.launcher.data.withSmartLook
 import dev.hearth.launcher.data.SmartClockLayout
@@ -197,7 +199,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
     val night by remember(systemDark) { derivedStateOf { storedSettings.nightActive(clock.value.hour, systemDark) } }
     // OMEGA UI 18: Claude Mythos lays its takeover over everything chosen.
-    val settings = remember(storedSettings, night) { (if (night) storedSettings.forNight() else storedSettings).mythic().withSmartLook().withCometLook().withColorOsLook() }
+    val settings = remember(storedSettings, night) { (if (night) storedSettings.forNight() else storedSettings).mythic().safeLook().withSmartLook().withCometLook().withColorOsLook() }
     val library by vm.library.collectAsStateWithLifecycle()
     val assistantOpen by vm.assistantOpen.collectAsStateWithLifecycle()
     val appUsage by vm.appUsage.collectAsStateWithLifecycle()
@@ -245,9 +247,9 @@ fun LauncherScreen(vm: LauncherViewModel) {
     remember { HearthLabs.init(context) }
     val scope = rememberCoroutineScope()
     // Hearth UI 14: the tour of what's new, once after the big update.
-    var showIntro by remember { mutableStateOf(!dev.hearth.launcher.BuildConfig.SMART && !HearthUi.introSeen(context)) }
+    var showIntro by remember { mutableStateOf(!CrashGuard.safe && !dev.hearth.launcher.BuildConfig.SMART && !HearthUi.introSeen(context)) }
     // ZENITH 19: once, "OMEGA UI is now ZENITH" – the sun rises; the tour follows.
-    var showOmega by remember { mutableStateOf(dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !dev.hearth.launcher.BuildConfig.SMART && !HearthUi.omegaSeen(context)) }
+    var showOmega by remember { mutableStateOf(!CrashGuard.safe && dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !dev.hearth.launcher.BuildConfig.SMART && !HearthUi.omegaSeen(context)) }
     // Glimmer Drop: "devices nearby" asked once, so two phones held together just work.
     val dropPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         dev.hearth.launcher.data.GlimmerDrop.setReady(context, dev.hearth.launcher.data.GlimmerDrop.ready.value)
@@ -340,6 +342,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     // ZENITH 21.5, Super-Wallpaper: it moves with the home page (the page's position is passed on to it; other wallpapers stay put).
     val wallpaperView = LocalView.current
     LaunchedEffect(pagerState) {
+        if (CrashGuard.safe) return@LaunchedEffect
         androidx.compose.runtime.snapshotFlow { pagerState.currentPage + pagerState.currentPageOffsetFraction }.collect { position ->
             if (!dev.hearth.launcher.wallpaper.SuperWallpaperService.isActive(context)) return@collect
             val last = (pagerState.pageCount - 1).coerceAtLeast(1)
@@ -628,7 +631,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     // (From ZENITH 21 on it is no ceremony for new installs, and ZENITH Smart has none.)
     var jubilee by remember {
         mutableStateOf(
-            dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !dev.hearth.launcher.BuildConfig.SMART && !HearthUi.jubileeSeen(context) &&
+            !CrashGuard.safe && dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !dev.hearth.launcher.BuildConfig.SMART && !HearthUi.jubileeSeen(context) &&
                 versionNumber(dev.hearth.launcher.BuildConfig.VERSION_NAME) < 21f,
         )
     }
@@ -641,7 +644,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     // ZENITH 21: once, after the update – the new theme, or the jubilee's kept? (Not for a fresh install, not in ZENITH Smart.)
     var themeAsk by remember {
         mutableStateOf(
-            dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !dev.hearth.launcher.BuildConfig.SMART &&
+            !CrashGuard.safe && dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !dev.hearth.launcher.BuildConfig.SMART &&
                 versionNumber(dev.hearth.launcher.BuildConfig.VERSION_NAME) >= 21f && !HearthUi.themeAsked(context),
         )
     }
@@ -1583,6 +1586,11 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     HearthUi.markSmartWelcomeSeen(context)
                     smartWelcome = false
                 }
+            }
+            // After a crash, or in the safe mode: what happened and the way back – over everything.
+            var crashNotice by remember { mutableStateOf(CrashGuard.safe || CrashGuard.pending) }
+            if (crashNotice) {
+                CrashNotice { crashNotice = false }
             }
             // ZENITH 21: the question of the theme, after all that.
             if (themeAsk && !bootIntro && !showOmega && !showIntro && !jubilee && !strikeNow) {

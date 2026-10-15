@@ -11,8 +11,10 @@ import android.hardware.SensorManager
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.graphics.Color
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
+import dev.hearth.launcher.crash.CrashGuard
 import dev.hearth.launcher.data.SettingsRepository
 import kotlin.math.abs
 
@@ -43,21 +45,39 @@ class SuperWallpaperService : WallpaperService() {
         private var wakeAt = 0L
         private var sensing = false
 
+        /** Something went wrong (or ZENITH runs in the safe mode): the wallpaper stands still and black, the launcher lives on. */
+        private var broken = CrashGuard.safe
+
+        /** An error here must never take ZENITH down with it: it is written down for the next start and the wallpaper stops. */
+        private inline fun guarded(block: () -> Unit) {
+            try {
+                block()
+            } catch (t: Throwable) {
+                broken = true
+                visible = false
+                runCatching { handler.removeCallbacksAndMessages(null) }
+                runCatching { stopSensing() }
+                CrashGuard.note(this@SuperWallpaperService, t)
+            }
+        }
+
         private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key != null && key.startsWith("super")) handler.post { reload() }
+            if (key != null && key.startsWith("super")) handler.post { guarded { reload() } }
         }
 
         private val frame = object : Runnable {
             override fun run() {
-                drawFrame()
-                if (visible) handler.postDelayed(this, 33L)
+                guarded {
+                    drawFrame()
+                    if (visible) handler.postDelayed(this, 33L)
+                }
             }
         }
 
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
             prefs.registerOnSharedPreferenceChangeListener(listener)
-            prepare(renderer)
+            guarded { if (!broken) prepare(renderer) }
         }
 
         override fun onDestroy() {
@@ -72,7 +92,7 @@ class SuperWallpaperService : WallpaperService() {
             super.onSurfaceChanged(holder, format, width, height)
             this.width = width
             this.height = height
-            drawFrame()
+            guarded { drawFrame() }
         }
 
         override fun onSurfaceDestroyed(holder: SurfaceHolder) {
@@ -84,12 +104,14 @@ class SuperWallpaperService : WallpaperService() {
         override fun onVisibilityChanged(visible: Boolean) {
             this.visible = visible
             handler.removeCallbacks(frame)
-            if (visible) {
-                wakeAt = SystemClock.uptimeMillis()
-                startSensing()
-                handler.post(frame)
-            } else {
-                stopSensing()
+            guarded {
+                if (visible) {
+                    wakeAt = SystemClock.uptimeMillis()
+                    if (!broken) startSensing()
+                    handler.post(frame)
+                } else {
+                    stopSensing()
+                }
             }
         }
 
@@ -115,8 +137,13 @@ class SuperWallpaperService : WallpaperService() {
         /** The planet's texture is made off the main thread; until it is there the stars show. */
         private fun prepare(r: SuperRenderer) {
             Thread {
-                r.prepare()
-                handler.post { drawFrame() }
+                try {
+                    r.prepare()
+                    handler.post { guarded { drawFrame() } }
+                } catch (t: Throwable) {
+                    broken = true
+                    CrashGuard.note(this@SuperWallpaperService, t)
+                }
             }.start()
         }
 
@@ -136,8 +163,10 @@ class SuperWallpaperService : WallpaperService() {
         }
 
         override fun onSensorChanged(event: SensorEvent) {
-            rawX = (-event.values[0] / 9.81f).coerceIn(-1f, 1f)
-            rawY = ((event.values[2] - 4f) / 6f).coerceIn(-1f, 1f)
+            guarded {
+                rawX = (-event.values[0] / 9.81f).coerceIn(-1f, 1f)
+                rawY = ((event.values[2] - 4f) / 6f).coerceIn(-1f, 1f)
+            }
         }
 
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
@@ -148,6 +177,10 @@ class SuperWallpaperService : WallpaperService() {
             var canvas: Canvas? = null
             try {
                 canvas = holder.lockCanvas() ?: return
+                if (broken) {
+                    canvas.drawColor(Color.BLACK)
+                    return
+                }
                 val now = SystemClock.uptimeMillis()
                 // Smoothed: the picture follows the phone, it doesn't jitter with it.
                 motion.tiltX += (rawX - motion.tiltX) * 0.1f

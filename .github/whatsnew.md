@@ -6,6 +6,7 @@ ZENITH 21.5 „Comet“ auf ClaudeOS 8.0 „Horizon“
 • Ehrlich dazu: ein Nachbau mit eigenem Code, nicht auf dem Handy ausprobiert; ohne Comets Widgets und eigenen Sperrbildschirm
 • Hotfix: Super-Wallpaper – sechs bewegte Hintergründe (Saturn, Jupiter, Erde, Mars, Mond, Geometrie), unter Einstellungen → Super-Wallpaper zu wählen und als Live-Wallpaper zu setzen; sie drehen sich, folgen der Neigung, zoomen beim Einschalten und rücken mit den Seiten des Startbildschirms; selbst gezeichnet, nicht auf dem Handy ausprobiert
 • Hotfix: neue Easter Eggs für ZENITH 21 „Horizont“ (einundzwanzig Lichter in den Bergen, die Sonne geht auf), ZENITH 21.5 „Comet“ (einundzwanzig Glasblasen) und ClaudeOS 8 „Horizon“ (das Zeichen über den Horizont tragen) – bisher spielten sie noch die von ZENITH 20 und ClaudeOS 7; auch in der Ruhmeshalle, der ClaudeOS-Ruhmeshalle und der Jubiläums-Galerie
+• Hotfix: Absturzschutz – stürzt ZENITH ab, zeigt es auf einem eigenen Bildschirm den Fehlerbericht (kopieren, teilen); nach drei Abstürzen in zwei Minuten startet es abgesichert (ohne Be Smarter, Be Comet, ZENITH-Hintergrund, Zeremonien; ein gesetztes Super-Wallpaper wird abgenommen); das Super-Wallpaper fängt eigene Fehler ab
 
 Seit 21.0 (Hotfix)
 • Eine Karte, die wirklich anders aussieht: Horizont zeigt jetzt einen klaren Himmel, eine Sonne, die hinter drei Bergrücken aufgeht, und ein paar blasse Sterne – statt Bögen und Feuerwerk. Dasselbe Bild trägt die Systemkarte oben in den Einstellungen (mit dem Jubiläums-Theme bleibt sie, wie sie war)

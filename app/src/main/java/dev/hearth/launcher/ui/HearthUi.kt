@@ -246,6 +246,17 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Absturzschutz – ZENITH fällt nicht mehr still um", Icons.Rounded.CheckCircle, Terracotta,
+                    listOf(
+                        "Stürzt ZENITH ab, schreibt es jetzt auf, was kaputt gegangen ist (Fehler, Stelle, Telefon, Version) und zeigt es auf einem eigenen Bildschirm, der in einem getrennten Prozess läuft und nur aus einfachen Ansichten besteht – damit er selbst nicht mit abstürzen kann. Der Bericht lässt sich kopieren oder teilen.",
+                        "Drei Abstürze innerhalb von zwei Minuten starten ZENITH im abgesicherten Modus: Be Smarter, Be Comet, der ZENITH-Hintergrund, Polarlicht, Omega, Hyperglas, Farbwelt und die Zeremonien nach einem Update bleiben aus – deine Einstellungen werden dafür nicht verändert. Ist das Super-Wallpaper der Hintergrund des Telefons, wird es abgenommen und Android zeigt wieder seinen normalen.",
+                        "Auf dem Bildschirm nach dem Absturz: „Abgesichert starten“, „Normal starten“ und – zweimal tippen – „Einstellungen von ZENITH zurücksetzen“ als letzter Ausweg (Apps, Widgets und Daten bleiben). Beim nächsten Start steht der Bericht noch einmal im Launcher, dort lässt sich der abgesicherte Modus auch wieder beenden.",
+                        "Das Super-Wallpaper fängt Fehler jetzt selbst ab: Geht beim Zeichnen etwas schief, bleibt es schwarz stehen, und ZENITH läuft weiter.",
+                        "Ehrlich dazu: Warum es bei dir abstürzt, weiß ich noch nicht – ich habe keinen Fehlerbericht und konnte es auf keinem Handy nachstellen. Das hier macht ZENITH wieder benutzbar und liefert beim nächsten Absturz den Bericht, mit dem sich die Ursache finden lässt.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",
