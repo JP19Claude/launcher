@@ -13,7 +13,7 @@ class SuperPlace(val name: String, val lon: Float, val lat: Float) {
 
 /*
  * Where the body lands when it has finished turning: the places of every body that can be turned (the Moon and the planets;
- * the Earth is a photograph and the photos and the geometry have no surface to choose from). The numbers come from the maps
+ * the photos and the geometry have no surface to choose from). The numbers come from the maps
  * the bodies are turned from (every map is checked against its own picture, with the places' names known from the
  * missions: Tycho, Olympus Mons, Pele …). The list's last number – [count] – is the "surprise": a different place every time.
  */
@@ -109,9 +109,21 @@ object SuperPlaces {
         SuperPlace("Dunkle Felder", -60f, 35f),
     )
 
+    private val earth = listOf(
+        SuperPlace("Alpen und Mittelmeer", 10f, 44f),
+        SuperPlace("Himalaya", 86f, 29f),
+        SuperPlace("Sahara und Nil", 20f, 24f),
+        SuperPlace("Amazonas", -62f, -5f),
+        SuperPlace("Australien", 134f, -25f),
+        SuperPlace("Grönland", -42f, 70f),
+        SuperPlace("Nordamerika", -100f, 40f),
+        SuperPlace("Japan", 138f, 36f),
+    )
+
     /** The places of [scene]; none if it has no surface to choose from. */
     fun of(scene: SuperScene): List<SuperPlace> = when (scene) {
         SuperScene.Moon -> moon
+        SuperScene.Earth -> earth
         SuperScene.Mars -> mars
         SuperScene.Venus -> venus
         SuperScene.Jupiter -> jupiter

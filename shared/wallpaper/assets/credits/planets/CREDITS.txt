@@ -24,6 +24,19 @@ Solar System Scope aus Daten der NASA erstellt; hier über das Projekt pyvista/v
 unverändert eingebaut. Die feinen Wolken, die beim Heranzoomen auf Jupiter, Saturn und Neptun erscheinen, rechnet die Grafikeinheit
 dazu (Rauschen, das entlang der Bänder gezogen wird); sie sind keine Aufnahmen.
 
+Gelände (Relief) und feinere Karten, ab Version 2.0: Mars – MOLA-Höhenmodell 463 m (NASA/GSFC/MOLA Science Team, aus dem USGS-Archiv,
+Mars_MGS_MOLA_DEM_mosaic_global_463m.tif) für die Geländenormalen (4096 x 2048) und das Viking-Farbmosaik 925 m auf 16384 x 8192 Pixeln für
+die Helligkeit (die Farben liegen in einer Karte mit 2048 x 1024 daneben); Pluto – das New-Horizons-Höhenmodell 300 m (NASA/JHUAPL/SwRI,
+USGS-Archiv, leicht geglättet; die nicht aufgenommene Südhalbkugel ist flach) für die Geländenormalen (8192 x 4096) und das Mosaik 300 m auf
+16384 x 8192; Europa – das Voyager/Galileo-Mosaik 500 m auf 16384 x 8192 (schwarzweiß); Venus – das Magellan-Höhenmodell 4641 m (NASA/JPL,
+USGS-Archiv) für die Geländenormalen (4096 x 2048). Für Io, Europa und Ganymed gibt es keine globalen Höhendaten: dort liest der Shader das
+Relief aus der Helligkeit des Bildes (errechnet, keine Messung). Alle Karten sind NASA/USGS-Daten, in der Regel gemeinfrei.
+
+Erde (Kugel, ab Version 2.0): die Karten (4096 x 2048: Blue Marble mit Meerestiefen, Nachtaufnahme, Wolken, Höhen und Meeresmaske) liegen
+dem Projekt three-globe von Vasco Asturiano bei (https://github.com/vasturiano/three-globe, Ordner example, MIT-Lizenz); es sind Karten
+der NASA (Visible Earth); die genaue Herkunft jedes einzelnen Bildes habe ich nicht geprüft. Die Lichter der Städte sind aus der
+Nachtaufnahme herausgezogen, die Geländenormalen aus der Höhenkarte gerechnet. Die Wolken ziehen im Shader langsam über die Erde.
+
 Iwo Jima (iwojima.jpg): Foto des Iwo-Jima-Denkmals (U.S. Marine Corps War Memorial) mit dem Vollmond und der US-Flagge, nach einer
 Bildschirmaufnahme aus ZENITHs Wallpaper-Galerie, deren Fotos aus der NASA-Bildbibliothek (images.nasa.gov) kommen. Den Fotografen
 und die Bildnummer kenne ich nicht; NASA-Bilder sind in der Regel gemeinfrei, bei einzelnen können andere Rechte gelten.

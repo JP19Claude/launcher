@@ -53,7 +53,11 @@ internal class SuperGl(
     private var scene = SuperScene.Moon
     private var albedoTex = 0
     private var normalTex = 0
+    private var extraTex = 0
     private var spriteTex = 0
+    /** What the albedo map is: 0 a colour map, 1 the Moon's brightness, 2 a brightness map with a colour map beside it, 3 the Earth. */
+    private var albedoKind = 0
+    private var look = Look(0, 0f, 0f)
     private var photoW = 1
     private var photoH = 1
     private var layer: Bitmap? = null
@@ -187,13 +191,15 @@ internal class SuperGl(
     }
 
     private fun freeTextures() {
-        val ids = intArrayOf(albedoTex, normalTex, spriteTex)
+        val ids = intArrayOf(albedoTex, normalTex, extraTex, spriteTex)
         if (display != EGL14.EGL_NO_DISPLAY && context != EGL14.EGL_NO_CONTEXT) {
             for (id in ids) if (id != 0) GLES20.glDeleteTextures(1, intArrayOf(id), 0)
         }
         albedoTex = 0
         normalTex = 0
+        extraTex = 0
         spriteTex = 0
+        albedoKind = 0
         layer = null
         layerRenderer = null
     }
@@ -223,17 +229,27 @@ internal class SuperGl(
             when (forScene) {
                 SuperScene.Moon -> {
                     kind = Kind.SPHERE
+                    albedoKind = 1
                     albedoTex = loadMoonAlbedo()
                     if (albedoTex == 0) return false
-                    normalTex = loadMoonNormals()
+                    normalTex = loadMoonNormals("moon_normal")
                     normalTex != 0
                 }
                 SuperScene.Earth -> {
-                    kind = Kind.DISC
-                    val disc = decodeAsset("planets/earth.webp") ?: return false
-                    spriteTex = upload(disc, true, false)
-                    disc.recycle()
-                    true
+                    if (loadEarth()) {
+                        kind = Kind.SPHERE
+                        albedoKind = 3
+                        look = lookOf(forScene)
+                        true
+                    } else {
+                        // The maps of the sphere can't be read: the old photograph of the disc.
+                        freeTextures()
+                        kind = Kind.DISC
+                        val disc = decodeAsset("planets/earth.webp") ?: return false
+                        spriteTex = upload(disc, true, false)
+                        disc.recycle()
+                        true
+                    }
                 }
                 SuperScene.Photo, SuperScene.Flag -> {
                     kind = Kind.PHOTO
@@ -256,13 +272,24 @@ internal class SuperGl(
                 else -> {
                     kind = Kind.SPHERE
                     val name = planetFile(forScene) ?: return false
-                    albedoTex = loadHdMap(name)
+                    look = lookOf(forScene)
+                    if (hasAsset("planets/${name}_y_00_0.webp")) {
+                        // A map of the brightness (16384 × 8192) with a small map of the colours beside it.
+                        albedoTex = loadLuma("${name}_y", LUMA_W, LUMA_H, LUMA_ROWS)
+                        if (albedoTex != 0) {
+                            albedoKind = 2
+                            extraTex = loadChroma(name)
+                        }
+                    }
+                    if (albedoTex == 0) albedoTex = loadHdMap(name)
                     if (albedoTex == 0) {
                         // No big map (the gas planets) or no room for it: the 2048 × 1024 picture.
                         val map = decodeAsset("planets/$name.jpg") ?: return false
                         albedoTex = upload(map, true, true)
                         map.recycle()
                     }
+                    // The terrain, where its heights are known.
+                    normalTex = if (look.relief > 0f) loadNormalStrips(name) else 0
                     albedoTex != 0
                 }
             }
@@ -299,19 +326,26 @@ internal class SuperGl(
      * once. Where the phone is short of memory, or the chip can't take such a texture, every 2 × 2 (or 4 × 4) pixels are
      * averaged: 8192 × 4096. 0 if a picture can't be read.
      */
-    private fun loadMoonAlbedo(): Int {
-        var step = textureStep(MOON_W, if (fullDetail) 1 else 2)
+    private fun loadMoonAlbedo(): Int = loadLuma("moon_albedo", MOON_W, MOON_H, MOON_ROWS)
+
+    /**
+     * A map of brightness of [width] × [height] pixels, one byte each, from [rows] rows of tiles named "<prefix>_<row>_<half>.webp"
+     * (the halves of a row, as a picture can't be wider than 16383 pixels; maps of 8192 or less come whole). 0 if a tile can't be read.
+     */
+    private fun loadLuma(prefix: String, width: Int, height: Int, rows: Int): Int {
+        var step = textureStep(width, if (fullDetail) 1 else 2)
         while (true) {
-            val id = tryLoadMoonAlbedo(step)
+            val id = tryLoadLuma(prefix, width, height, rows, step)
             if (id != 0 || step >= 4) return id
             // The graphics memory is full: with less.
             step *= 2
         }
     }
 
-    private fun tryLoadMoonAlbedo(step: Int): Int {
-        val w = MOON_W / step
-        val h = MOON_H / step
+    private fun tryLoadLuma(prefix: String, width: Int, height: Int, tileRows: Int, step: Int): Int {
+        val halves = if (width > 8192) 2 else 1
+        val w = width / step
+        val h = height / step
         val id = newTexture(true)
         GLES20.glGetError()
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES30.GL_R8, w, h, 0, GLES30.GL_RED, GLES20.GL_UNSIGNED_BYTE, null)
@@ -323,14 +357,14 @@ internal class SuperGl(
         // One buffer for all the tiles (they are all the same size).
         var px = IntArray(0)
         var bytes: ByteBuffer? = null
-        for (i in 0 until MOON_ROWS) {
+        for (i in 0 until tileRows) {
             var column = 0
             var outH = 0
-            for (half in 0 until 2) {
-                val tile = decodeAsset("planets/moon_albedo_%02d_%d.webp".format(i, half)) ?: return fail(id)
+            for (half in 0 until halves) {
+                val tile = decodeAsset("planets/%s_%02d_%d.webp".format(prefix, i, half)) ?: return fail(id)
                 val sw = tile.width
                 val sh = tile.height
-                if (sw != MOON_W / 2) {
+                if (sw != width / halves) {
                     tile.recycle()
                     return fail(id)
                 }
@@ -458,9 +492,9 @@ internal class SuperGl(
         return 0
     }
 
-    /** The Moon's terrain, from LOLA: the east and north parts of the surface normal, 4096 × 2048, two bytes per pixel. 0 if it can't be read. */
-    private fun loadMoonNormals(): Int {
-        val east = decodeAsset("planets/moon_normal_east.webp") ?: return 0
+    /** The terrain (the Moon's from LOLA, the Earth's): the east and north parts of the surface normal, two bytes per pixel, from [prefix]_east and _north. 0 if it can't be read. */
+    private fun loadMoonNormals(prefix: String): Int {
+        val east = decodeAsset("planets/${prefix}_east.webp") ?: return 0
         val w = east.width
         val h = east.height
         val bytes = ByteBuffer.allocateDirect(w * h * 2)
@@ -473,7 +507,7 @@ internal class SuperGl(
             y += rows
         }
         east.recycle()
-        val north = decodeAsset("planets/moon_normal_north.webp") ?: return 0
+        val north = decodeAsset("planets/${prefix}_north.webp") ?: return 0
         if (north.width != w || north.height != h) return 0
         y = 0
         while (y < h) {
@@ -488,6 +522,156 @@ internal class SuperGl(
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES30.GL_RG8, w, h, 0, GLES30.GL_RG, GLES20.GL_UNSIGNED_BYTE, bytes)
         GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D)
         return id
+    }
+
+    /**
+     * The terrain of a planet or moon from its heights (MOLA, Magellan, New Horizons): the east and north parts of the surface normal, in
+     * [NORMAL_STRIPS] strips named "<name>_n_<strip>_e.webp" and "_n.webp" (one byte each, coded so that the deflection is ±(t · t) of
+     * the byte's distance from the middle). Where the phone is short of memory every 2 × 2 pixels are averaged. 0 if there are none.
+     */
+    private fun loadNormalStrips(name: String): Int {
+        if (!hasAsset("planets/${name}_n_00_e.webp")) return 0
+        var step = if (fullDetail) 1 else 2
+        while (true) {
+            val id = tryLoadNormalStrips(name, step)
+            if (id != 0 || step >= 4) return id
+            step *= 2
+        }
+    }
+
+    private fun tryLoadNormalStrips(name: String, step: Int): Int {
+        val first = decodeAsset("planets/%s_n_00_e.webp".format(name)) ?: return 0
+        val sw = first.width
+        val sh = first.height
+        first.recycle()
+        val w = sw / step
+        val stripH = sh / step
+        val id = newTexture(true)
+        GLES20.glGetError()
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES30.GL_RG8, w, stripH * NORMAL_STRIPS, 0, GLES30.GL_RG, GLES20.GL_UNSIGNED_BYTE, null)
+        if (GLES20.glGetError() != GLES20.GL_NO_ERROR) {
+            GLES20.glDeleteTextures(1, intArrayOf(id), 0)
+            return 0
+        }
+        val buffer = ByteBuffer.allocateDirect(w * stripH * 2)
+        val raw = ByteArray(w * stripH * 2)
+        val pe = IntArray(sw * sh)
+        val pn = IntArray(sw * sh)
+        val area = step * step
+        for (i in 0 until NORMAL_STRIPS) {
+            val east = decodeAsset("planets/%s_n_%02d_e.webp".format(name, i)) ?: return fail(id)
+            if (east.width != sw || east.height != sh) {
+                east.recycle()
+                return fail(id)
+            }
+            east.getPixels(pe, 0, sw, 0, 0, sw, sh)
+            east.recycle()
+            val north = decodeAsset("planets/%s_n_%02d_n.webp".format(name, i)) ?: return fail(id)
+            if (north.width != sw || north.height != sh) {
+                north.recycle()
+                return fail(id)
+            }
+            north.getPixels(pn, 0, sw, 0, 0, sw, sh)
+            north.recycle()
+            var o = 0
+            for (y in 0 until stripH) {
+                for (x in 0 until w) {
+                    var e = 0
+                    var n = 0
+                    for (dy in 0 until step) {
+                        val base = (y * step + dy) * sw + x * step
+                        for (dx in 0 until step) {
+                            e += (pe[base + dx] shr 16) and 0xFF
+                            n += (pn[base + dx] shr 16) and 0xFF
+                        }
+                    }
+                    raw[o++] = (e / area).toByte()
+                    raw[o++] = (n / area).toByte()
+                }
+            }
+            buffer.clear()
+            buffer.put(raw)
+            buffer.position(0)
+            GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, 0, i * stripH, w, stripH, GLES30.GL_RG, GLES20.GL_UNSIGNED_BYTE, buffer)
+        }
+        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D)
+        return id
+    }
+
+    /** The colours of a body drawn from a map of brightness (each place's colour divided by its brightness, halved); grey if there is none. */
+    private fun loadChroma(name: String): Int {
+        val map = decodeAsset("planets/${name}_chroma.webp")
+        if (map != null) {
+            val id = upload(map, true, true)
+            map.recycle()
+            return id
+        }
+        val id = newTexture(false)
+        val grey = ByteBuffer.allocateDirect(3)
+        grey.put(byteArrayOf(127, 127, 127))
+        grey.position(0)
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES30.GL_RGB8, 1, 1, 0, GLES20.GL_RGB, GLES20.GL_UNSIGNED_BYTE, grey)
+        return id
+    }
+
+    /**
+     * The Earth as a sphere: the day (NASA's Blue Marble, 4096 × 2048), its terrain, and in a second map the lights of the cities (red), the
+     * clouds (green) and the sea (blue). False if a map can't be read.
+     */
+    private fun loadEarth(): Boolean {
+        val day = decodeAsset("planets/earth_day.webp") ?: return false
+        albedoTex = upload(day, true, true)
+        day.recycle()
+        extraTex = loadEarthMasks()
+        normalTex = loadMoonNormals("earth_normal")
+        return albedoTex != 0 && extraTex != 0
+    }
+
+    private fun loadEarthMasks(): Int {
+        var bytes: ByteBuffer? = null
+        var w = 0
+        var h = 0
+        for ((k, part) in arrayOf("lights", "clouds", "water").withIndex()) {
+            val map = decodeAsset("planets/earth_$part.webp") ?: return 0
+            if (k == 0) {
+                w = map.width
+                h = map.height
+                bytes = ByteBuffer.allocateDirect(w * h * 3)
+            } else if (map.width != w || map.height != h) {
+                map.recycle()
+                return 0
+            }
+            val out = bytes ?: return 0
+            val chunk = IntArray(w * 128)
+            var y = 0
+            while (y < h) {
+                val rows = minOf(128, h - y)
+                map.getPixels(chunk, 0, w, 0, y, w, rows)
+                for (i in 0 until w * rows) out.put((y * w + i) * 3 + k, ((chunk[i] shr 16) and 0xFF).toByte())
+                y += rows
+            }
+            map.recycle()
+        }
+        val out = bytes ?: return 0
+        out.position(0)
+        val id = newTexture(true)
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES30.GL_RGB8, w, h, 0, GLES20.GL_RGB, GLES20.GL_UNSIGNED_BYTE, out)
+        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D)
+        return id
+    }
+
+    /** How a body is drawn: what its maps are, how strongly its terrain shows, and how strongly relief is read from its brightness. */
+    private class Look(val kind: Int, val relief: Float, val pseudo: Float)
+
+    private fun lookOf(s: SuperScene): Look = when (s) {
+        SuperScene.Mars -> Look(2, 3.5f, 0f)
+        SuperScene.Pluto -> Look(2, 2.2f, 0f)
+        SuperScene.Venus -> Look(0, 6.0f, 0f)
+        SuperScene.Europa -> Look(2, 0f, 1.5f)
+        SuperScene.Io -> Look(0, 0f, 1.2f)
+        SuperScene.Ganymede -> Look(0, 0f, 1.4f)
+        SuperScene.Earth -> Look(3, 6.0f, 0f)
+        else -> Look(0, 0f, 0f)
     }
 
     /** How strongly the fine cloud structure is drawn on [s] when the camera is close (0 for the solid bodies). */
@@ -526,7 +710,7 @@ internal class SuperGl(
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA)
         when (kind) {
-            Kind.SPHERE -> drawSphere(w, h, p, m)
+            Kind.SPHERE -> drawSphere(w, h, timeMs, p, m)
             Kind.DISC -> drawDisc(w, h, p, m)
             Kind.PHOTO -> drawPhoto(w, h, m)
             Kind.GEOMETRY -> drawGeometry(w, h, timeMs, p, m)
@@ -571,7 +755,7 @@ internal class SuperGl(
         rot[8] = ct * c
     }
 
-    private fun drawSphere(w: Int, h: Int, p: SuperParams, m: SuperMotion) {
+    private fun drawSphere(w: Int, h: Int, timeMs: Long, p: SuperParams, m: SuperMotion) {
         val prog = sphere ?: return
         val d = m.depth.coerceIn(0f, 1f)
         SuperCamera.pose(scene, m.lockFly, d, pose)
@@ -612,23 +796,32 @@ internal class SuperGl(
             GLES20.glUniform1f(prog.u("uLimb"), 0f)
             GLES20.glUniform1f(prog.u("uDetail"), 0.08f * near)
             GLES20.glUniform1f(prog.u("uGas"), 0f)
+            GLES20.glUniform1f(prog.u("uPseudo"), 0f)
         } else {
-            val sx = -0.52f
-            val sy = 0.40f
-            val sz = 0.75f
+            val terrain = normalTex != 0 && look.relief > 0f
+            // The sun lies low, as on the Moon, where the terrain is to show.
+            val low = terrain || look.pseudo > 0f
+            val sx = if (low) -0.60f else -0.52f
+            val sy = if (low) 0.45f else 0.40f
+            val sz = if (low) 0.66f else 0.75f
             val len = sqrt(sx * sx + sy * sy + sz * sz)
             GLES20.glUniform3f(prog.u("uSun"), sx / len, sy / len, sz / len)
-            GLES20.glUniform1i(prog.u("uKind"), 0)
-            GLES20.glUniform1f(prog.u("uRelief"), 0f)
+            GLES20.glUniform1i(prog.u("uKind"), albedoKind)
+            // The terrain of the bodies whose heights are known; where they are not, relief is read from the picture's brightness.
+            GLES20.glUniform1f(prog.u("uRelief"), if (terrain) look.relief * (0.8f + 0.5f * near) else 0f)
+            GLES20.glUniform1f(prog.u("uPseudo"), look.pseudo * (0.6f + 0.6f * near))
             // A little sharpening where the picture is magnified; the gas planets get fine cloud structure on top (their
             // maps end where the spacecraft's pictures end).
             GLES20.glUniform1f(prog.u("uSharp"), 0.10f + 0.25f * near)
             GLES20.glUniform1f(prog.u("uGas"), gasDetail(scene) * near)
             GLES20.glUniform3f(prog.u("uTint"), 1f, 1f, 1f)
-            GLES20.glUniform1f(prog.u("uAmbient"), 0.10f)
-            GLES20.glUniform1f(prog.u("uGain"), 1.05f)
-            GLES20.glUniform1f(prog.u("uLimb"), 1f)
+            val earth = albedoKind == 3
+            GLES20.glUniform1f(prog.u("uAmbient"), if (earth) 0.045f else 0.10f)
+            GLES20.glUniform1f(prog.u("uGain"), if (earth) 1.15f else 1.05f)
+            GLES20.glUniform1f(prog.u("uLimb"), if (earth) 0.5f else 1f)
             GLES20.glUniform1f(prog.u("uDetail"), 0f)
+            // The clouds of the Earth drift against the ground: once round in forty minutes.
+            GLES20.glUniform1f(prog.u("uCloud"), (timeMs % 2_400_000L) / 2_400_000f)
         }
         // The haze round some planets.
         when (scene) {
@@ -637,6 +830,7 @@ internal class SuperGl(
             SuperScene.Saturn -> GLES20.glUniform4f(prog.u("uGlow"), 0.910f, 0.824f, 0.627f, 0.20f)
             SuperScene.Jupiter -> GLES20.glUniform4f(prog.u("uGlow"), 0.910f, 0.784f, 0.627f, 0.20f)
             SuperScene.Neptune -> GLES20.glUniform4f(prog.u("uGlow"), 0.353f, 0.549f, 1.000f, 0.30f)
+            SuperScene.Earth -> GLES20.glUniform4f(prog.u("uGlow"), 0.290f, 0.639f, 1.000f, 0.34f)
             else -> GLES20.glUniform4f(prog.u("uGlow"), 0f, 0f, 0f, 0f)
         }
         // Saturn's rings: lying at 17° to the picture's horizontal, seen from a little above – opening up the more the axis leans.
@@ -649,6 +843,9 @@ internal class SuperGl(
         GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, if (normalTex != 0) normalTex else albedoTex)
         GLES20.glUniform1i(prog.u("uNormal"), 1)
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE2)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, if (extraTex != 0) extraTex else albedoTex)
+        GLES20.glUniform1i(prog.u("uExtra"), 2)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         lastCenterX = cx.toInt().coerceIn(0, w - 1)
@@ -756,6 +953,12 @@ internal class SuperGl(
         const val MOON_H = 8192
         const val MOON_ROWS = 64
 
+        /** The brightness maps of Mars, Pluto and Europa: 16384 × 8192 in 64 rows of tiles; the terrain in 16 strips. */
+        const val LUMA_W = 16384
+        const val LUMA_H = 8192
+        const val LUMA_ROWS = 64
+        const val NORMAL_STRIPS = 16
+
         /** The big maps of the solid planets: 8192 × 4096 in 16 strips. */
         const val HD_W = 8192
         const val HD_H = 4096
@@ -858,6 +1061,9 @@ uniform mat3 uRot;
 uniform vec3 uSun;
 uniform sampler2D uAlbedo;
 uniform sampler2D uNormal;
+uniform sampler2D uExtra;
+uniform float uPseudo;
+uniform float uCloud;
 uniform int uKind;
 uniform float uRelief;
 uniform float uSharp;
@@ -906,6 +1112,12 @@ float fbm(vec3 q) {
   return s;
 }
 
+// The brightness of the map at [p] (the colour maps' mean, the brightness maps' value).
+float lumAt(vec2 p, vec2 gx, vec2 gy) {
+  vec3 c = textureGrad(uAlbedo, p, gx, gy).rgb;
+  return (uKind == 2) ? c.r : dot(c, vec3(0.299, 0.587, 0.114));
+}
+
 vec4 ringColor(float rho, float aa) {
   float edge = smoothstep(1.27, 1.27 + aa, rho) * (1.0 - smoothstep(2.25 - aa, 2.25, rho));
   if (edge <= 0.0) return vec4(0.0);
@@ -941,11 +1153,28 @@ void main() {
   vec2 gy = useA ? dyA : dyB;
   vec2 uv = vec2(uf, v);
   vec3 albedo;
+  vec3 ex = vec3(0.0);
+  float cl = 0.0;
   if (uKind == 1) {
     float a = textureGrad(uAlbedo, uv, gx, gy).r;
     float lo = textureGrad(uAlbedo, uv, gx * 3.0, gy * 3.0).r;
     a = clamp(a + uSharp * (a - lo), 0.0, 1.0);
     albedo = vec3(a) * uTint;
+  } else if (uKind == 2) {
+    // A map of the brightness (16384 × 8192) and a small map of the colours (the colour divided by the brightness, halved).
+    float y = textureGrad(uAlbedo, uv, gx, gy).r;
+    float lo = textureGrad(uAlbedo, uv, gx * 3.0, gy * 3.0).r;
+    y = clamp(y + uSharp * (y - lo), 0.0, 1.0);
+    albedo = clamp(textureGrad(uExtra, uv, gx, gy).rgb * (2.0 * y), 0.0, 1.0);
+  } else if (uKind == 3) {
+    // The Earth: the day, and in the second map the lights of the cities (red), the clouds (green; they drift) and the sea (blue).
+    albedo = textureGrad(uAlbedo, uv, gx, gy).rgb;
+    if (uSharp > 0.0) {
+      vec3 lo = textureGrad(uAlbedo, uv, gx * 3.0, gy * 3.0).rgb;
+      albedo = clamp(albedo + uSharp * (albedo - lo), 0.0, 1.0);
+    }
+    ex = textureGrad(uExtra, uv, gx, gy).rgb;
+    cl = textureGrad(uExtra, vec2(uf + uCloud, v), gx, gy).g;
   } else {
     vec2 uvl = uv;
     vec3 qa = vec3(b.x, b.y * 5.0, b.z);
@@ -975,9 +1204,19 @@ void main() {
     albedo *= 1.0 + uDetail * (nz - 0.5);
   }
   vec3 nv = n;
-  if (uKind == 1) {
+  vec2 ne = vec2(0.0);
+  if (uRelief > 0.0) {
     vec2 t = textureGrad(uNormal, uv, gx, gy).rg * 2.0 - 1.0;
-    vec2 ne = sign(t) * t * t * uRelief;
+    ne = sign(t) * t * t * uRelief;
+  }
+  if (uPseudo > 0.0) {
+    // Where no heights are known the brightness of the picture is read as height (the darker, the deeper).
+    vec2 st = vec2(max(abs(gx.x), abs(gy.x)), max(abs(gx.y), abs(gy.y))) * 1.4;
+    float du = lumAt(uv + vec2(st.x, 0.0), gx, gy) - lumAt(uv - vec2(st.x, 0.0), gx, gy);
+    float dv = lumAt(uv + vec2(0.0, st.y), gx, gy) - lumAt(uv - vec2(0.0, st.y), gx, gy);
+    ne += clamp(-vec2(du, -dv) * uPseudo, -0.5, 0.5);
+  }
+  if (uRelief > 0.0 || uPseudo > 0.0) {
     float up = sqrt(max(1.0 - dot(ne, ne), 0.05));
     vec3 east = normalize(vec3(b.z, 0.0, -b.x) + vec3(0.0001, 0.0, 0.0));
     vec3 north = cross(b, east);
@@ -988,6 +1227,20 @@ void main() {
   float shade = uAmbient + uGain * pow(lit, 0.85);
   shade *= mix(1.0, 0.55 + 0.45 * n.z, uLimb);
   vec3 col = clamp(albedo * shade, 0.0, 1.0);
+  if (uKind == 3) {
+    float day = clamp(dot(n, uSun) * 3.0 + 0.4, 0.0, 1.0);
+    // The glint of the sun on the sea, the clouds (lit by the sun, not by the terrain), the lights of the cities on the night side and
+    // the blue of the air at the rim.
+    vec3 hv = normalize(uSun + vec3(0.0, 0.0, 1.0));
+    float glint = pow(max(dot(nv, hv), 0.0), 60.0) * ex.b * (1.0 - cl) * day;
+    col += vec3(1.0, 0.95, 0.85) * glint * 0.6;
+    float cshade = clamp(uAmbient + 1.1 * pow(clamp(dot(n, uSun), 0.0, 1.0), 0.8), 0.0, 1.0);
+    col = mix(col, vec3(cshade), cl * 0.92);
+    col += vec3(1.0, 0.76, 0.42) * (ex.r * 1.4) * (1.0 - day) * (1.0 - cl * 0.8);
+    float rim = pow(1.0 - n.z, 2.6);
+    col += vec3(0.30, 0.58, 1.0) * rim * (0.12 + 0.88 * day) * 0.9;
+    col = clamp(col, 0.0, 1.0);
+  }
   float edge = clamp((1.0 - rr) * uPlanet.z, 0.0, 1.0);
   vec4 res = vec4(col * edge, edge);
   float g = uGlow.a * pow(clamp(1.0 - (rr - 1.0) / 0.28, 0.0, 1.0), 2.0);

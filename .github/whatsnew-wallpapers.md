@@ -1,3 +1,4 @@
+Neu in 2.0: alle Planeten und Monde auf Mond-Niveau – Mars, Venus und Pluto mit echtem Gelände (Reliefschatten aus den Höhendaten der Sonden), Mars, Pluto und Europa mit 16k-Karten, die Erde als drehende Kugel mit Wolken, Nachtlichtern und Meeresglanz; Landeplätze auch für die Erde.
 Neu in 1.9: alle Planeten zoomen so nah wie der Mond – Mars, Venus, Io, Europa, Ganymed und Pluto mit 8k-Karten, Jupiter, Saturn und Neptun mit neuen, feineren Karten und errechneten Wolken beim Heranzoomen; neue Landeplätze für Jupiter, Saturn und Neptun.
 Neu in 1.8: viel schärfer beim Heranzoomen (Mond 16k, Planeten 4k aus echten USGS-Mosaiken) und „10 Bilder … herunterladen“ in jeder App.
 Neu in 1.7: Die App aktualisiert sich selbst – Update-Knopf in der App, ohne GitHub zu öffnen.

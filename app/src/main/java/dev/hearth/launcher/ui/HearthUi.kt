@@ -365,6 +365,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Alle Planeten und Monde auf Mond-Niveau – mit Gelände, 16k und einer Erde als Kugel", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Die anderen Planeten und Monde sollen alle auf dem gleichen Level sein wie der Mond. Was den Mond ausmacht, ist nicht nur die feine Karte, sondern vor allem sein Gelände: Das tiefe Sonnenlicht wirft Schatten in Krater und über Berge. Das gibt es jetzt auch bei Mars, Venus und Pluto, aus den echten Höhendaten der Sonden: Mars (MOLA-Laserhöhenmesser, 463 Meter), Venus (Magellan-Radar) und Pluto (New Horizons). Olympus Mons mit seiner Caldera, der Valles Marineris, das Hellas-Becken, Venus' Maxwell Montes und Plutos Berge und Krater stehen jetzt plastisch im Licht.",
+                        "Mars, Pluto und Europa haben außerdem Karten mit 16384 × 8192 Pixeln, genauso fein wie die des Mondes (Mars: Viking-Mosaik, Pluto: New Horizons, Europa: Voyager/Galileo, alle aus dem USGS-Archiv); die Farben liegen in einer kleinen Karte daneben. Europa, Io und Ganymed haben keine Höhendaten – dort liest die Grafikeinheit das Relief aus der Helligkeit des Bildes (Europas Risse, Ganymeds Krater, Ios Vulkankessel treten ein wenig hervor); das ist errechnet, keine Messung.",
+                        "Neu: die Erde ist jetzt eine echte Kugel wie der Mond, kein flaches Foto mehr. Sie dreht sich, zoomt bis auf Gebirge und Küsten, zeigt ihr Gelände im Streiflicht (Himalaya, Alpen, Anden), Wolken, die langsam über die Erde ziehen, den Glanz der Sonne auf dem Meer, die Lichter der Städte auf der Nachtseite und das Blau der Luft am Rand. Auch für die Erde gibt es Landeplätze: Alpen und Mittelmeer, Himalaya, Sahara und Nil, Amazonas, Australien, Grönland, Nordamerika, Japan oder eine Überraschung.",
+                        "Ehrlich dazu: Die Karten der Erde haben 4096 × 2048 Pixel (die Erde ist damit nicht ganz so fein wie der Mond: etwa 11 Pixel je Grad statt 45). Io ist die weichste Karte (die Quelle selbst ist grob), deshalb zoomt sie nicht ganz so nah. Auf der Grafikkarte brauchen Mars, Pluto und Europa je etwa 250 MB (Mond etwa 270 MB): Handys unter 5 GB Arbeitsspeicher und die Vorschau nehmen die halbe Auflösung. Das erste Laden dauert ein paar Sekunden. Die Pakete sind größer (ZENITH etwa 17 MB). Auf einem Handy habe ich nichts davon ausprobiert; ich habe die Bilder mit denselben Shadern am Rechner gerendert (Software-Grafik).",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",
