@@ -1702,6 +1702,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
                 speed = prefs.getFloat("superSpeed", d.superSpeed),
                 stars = prefs.getBoolean("superStars", d.superStars),
                 size = prefs.getFloat("superSize", d.superParams.size).coerceIn(0.5f, 1.6f),
+                place = prefs.getInt("superPlace", d.superParams.place).coerceAtLeast(0),
                 photo = prefs.getLong("superPhoto", d.superParams.photo),
             ),
             sloganEverywhere = prefs.getBoolean("sloganEverywhere", d.sloganEverywhere),
@@ -1966,6 +1967,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putFloat("superSpeed", s.superSpeed)
             .putBoolean("superStars", s.superStars)
             .putFloat("superSize", s.superParams.size)
+            .putInt("superPlace", s.superParams.place)
             .putLong("superPhoto", s.superParams.photo)
             .putBoolean("sloganEverywhere", s.sloganEverywhere)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)

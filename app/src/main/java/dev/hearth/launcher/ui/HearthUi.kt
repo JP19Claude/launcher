@@ -318,6 +318,15 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Landeplatz wählbar – wo der Mond und die Planeten landen", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Man soll verschiedene Orte wählen können, wo der Mond landet, wenn er sich fertig gedreht hat – und das auch für alle anderen Planeten. Neu: „Landeplatz“ unter Einstellungen → Super-Wallpaper. Beim Entsperren dreht sich der Körper schnell und wird langsamer und bleibt genau auf dem gewählten Ort stehen; dort zoomt die Kamera dann heran. Danach kriecht er nur noch ganz langsam weiter.",
+                        "Der Mond hat 13 Orte: Tycho, Kopernikus, Apollo 11, Apollo 15, Apollo 17, Mare Imbrium, Mare Crisium, Aristarchus, Plato, Clavius, Mare Orientale sowie Tsiolkovsky und Mare Moscoviense auf der Rückseite. Mars: Olympus Mons, Tharsis-Vulkane, Valles Marineris, Syrtis Major, Hellas und beide Polkappen. Venus: Maxwell Montes, Aphrodite Terra, Beta Regio, Alpha Regio, Atla Regio. Jupiter: Großer Roter Fleck, Weiße Ovale, Dunkler Sturm, Äquator und die Bänder im Norden und Süden. Dazu Saturn, Neptun, Pluto, Io (Loki Patera, Pele, Prometheus), Europa und Ganymed (Tros, Galileo Regio, Osiris).",
+                        "„Überraschung“ nimmt bei jedem Entsperren einen anderen Ort. Auch die Hintergrund-Apps haben „Landeplatz“ (Version 1.6). Ehrlich dazu: Jeden Ort habe ich auf seiner Karte nachgesehen und die Mitte des Bildes genau dorthin gelegt – bei Mond, Mars, Venus, Io und Ganymed stimmen die Namen mit den bekannten Orten überein. Bei Saturn, Neptun, Pluto und Europa weiß ich nicht, wie genau die Karten zur Wirklichkeit passen; dort sind die Namen eher Beschreibungen dessen, was man sieht. Die Karten der Planeten sind klein (1024 Pixel breit), nur der Mond ist hoch aufgelöst. Die Erde ist ein Foto und hat keine Orte; Iwo Jima, „Eigenes Foto“ und Geometrie auch nicht. Auf Handys ohne OpenGL ES 3 dreht sich der Körper nur zur richtigen Länge, ohne sich zu neigen; der Mond ist dort eine feste Scheibe. Auf einem Handy habe ich es nicht ausprobiert.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

@@ -20,6 +20,7 @@ internal object SceneConfig {
             speed = p.getFloat("speed", 1f).coerceIn(0.2f, 3f),
             stars = p.getBoolean("stars", true),
             size = p.getFloat("size", 1f).coerceIn(0.5f, 1.6f),
+            place = p.getInt("place", 0).coerceAtLeast(0),
         )
     }
 }

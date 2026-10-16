@@ -17,6 +17,7 @@ object SuperPrefs {
             speed = p.getFloat("superSpeed", 1f).coerceIn(0.2f, 3f),
             stars = p.getBoolean("superStars", true),
             size = p.getFloat("superSize", 1f).coerceIn(0.5f, 1.6f),
+            place = p.getInt("superPlace", 0).coerceAtLeast(0),
             photo = p.getLong("superPhoto", 0L),
         )
     }
@@ -27,7 +28,10 @@ object SuperPrefs {
         val renderer = SuperRenderer(params.scene, SuperPhoto.file(context), context.assets)
         renderer.prepare()
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        renderer.draw(Canvas(bitmap), w, h, 5000L, params, SuperMotion())
+        // The body on the place that was chosen (the surprise shows the first).
+        val place = SuperPlaces.of(params.scene).let { it.getOrNull(params.place) ?: it.firstOrNull() }
+        val motion = SuperMotion().also { m -> place?.let { m.spin = it.spin; m.lat = it.tilt } }
+        renderer.draw(Canvas(bitmap), w, h, 5000L, params, motion)
         bitmap
     }.getOrNull()
 }

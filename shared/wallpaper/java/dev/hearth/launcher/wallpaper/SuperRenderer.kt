@@ -72,6 +72,8 @@ data class SuperParams(
     val stars: Boolean = true,
     /** How big the planet or the Moon is, as a factor of its normal size (0.5 … 1.6; the photos ignore it). */
     val size: Float = 1f,
+    /** Where the body lands when it has turned: a choice of [SuperPlaces] (its count = a different place every time). */
+    val place: Int = 0,
     /** Which photo the "Foto" scene shows: a stamp that changes whenever another one is chosen (the file itself is [SuperPhoto]). */
     val photo: Long = 0L,
 )
@@ -98,8 +100,10 @@ class SuperMotion(
     var tiltY: Float = 0f,
     var zoom: Float = 1f,
     var depth: Float = 1f,
-    /** How far the body has turned because of the flight and the time on the home screen (radians). */
+    /** How far the body has turned about its axis (radians): the longitude in the middle of the picture is the minus of it. */
     var spin: Float = 0f,
+    /** The latitude in the middle of the picture (radians): the body's axis leans towards or away from us by this much. */
+    var lat: Float = -0.2f,
     /** The flight in from the upper left on the lock screen: 0 = just begun, 1 = in the middle of the screen. */
     var lockFly: Float = 1f,
 )
@@ -389,14 +393,15 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
     private var lastTurn = Int.MIN_VALUE
 
     /**
-     * The disc at [seconds]: the texture turned (smoothly, between two texels), the clouds (if any) turning faster, the
-     * light on it. [pan] – the home page, -1 … 1 – turns the planet a little further. The picture is only made again
-     * when it would look different (a quarter of a texel), so a zoom on the lock screen costs nothing.
+     * The disc at [seconds]: the texture turned by [spin] (smoothly, between two texels; spin 0 shows the map's middle, the
+     * same longitude as on the graphics chip – this path leans the axis never, so only the longitude of a place is kept),
+     * the clouds (if any) turning faster, the light on it. The picture is only made again when it would look different (a
+     * quarter of a texel), so a zoom on the lock screen costs nothing.
      */
-    private fun fillSphere(seconds: Float, speed: Float, pan: Float, spin: Float) {
+    private fun fillSphere(seconds: Float, speed: Float, spin: Float) {
         val s = SPHERE
         val bitmap = planet ?: return
-        val turn = seconds * 6f * speed + pan * 90f + spin * (TW / (2f * PI.toFloat()))
+        val turn = spin * (TW / (2f * PI.toFloat())) + TW / 2f
         val key = (turn * 4f).toInt()
         if (key == lastTurn) return
         lastTurn = key
@@ -457,7 +462,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
             return
         }
         if (!ready) return
-        fillSphere(seconds, p.speed, m.panX, m.spin)
+        fillSphere(seconds, p.speed, m.spin)
         val bitmap = planet ?: return
         val d = m.depth.coerceIn(0f, 1f)
         // Lock screen: small in the upper left; unlocked: it flies to the bottom centre, then comes closer (SuperCamera).

@@ -1,6 +1,7 @@
 package dev.hearth.wallpaper
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Context
@@ -16,6 +17,7 @@ import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
+import dev.hearth.launcher.wallpaper.SuperPlaces
 import dev.hearth.launcher.wallpaper.SuperScene
 import kotlin.math.roundToInt
 
@@ -106,6 +108,39 @@ class MainActivity : Activity() {
                 )
             },
         )
+        // Where the body lands when it has finished turning (the Earth is a photograph and "Iwo Jima" a photo: no places).
+        val placeCount = SuperPlaces.count(scene)
+        if (placeCount > 0) {
+            val names = Array(placeCount + 1) { SuperPlaces.label(scene, it) }
+            var chosen = prefs.getInt("place", 0).coerceIn(0, placeCount)
+            column.addView(
+                TextView(this).apply {
+                    text = "Beim Entsperren dreht sich der Körper und bleibt auf diesem Ort stehen – dort zoomt die Kamera heran."
+                    setTextColor(0xFFB9C1CC.toInt())
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                    setPadding(0, dp(14), 0, 0)
+                },
+            )
+            column.addView(
+                Button(this).apply {
+                    isAllCaps = false
+                    text = "Landeplatz: ${names[chosen]}"
+                    setOnClickListener {
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle("Landeplatz")
+                            .setSingleChoiceItems(names, chosen) { dialog, which ->
+                                chosen = which
+                                prefs.edit().putInt("place", which).apply()
+                                text = "Landeplatz: ${names[which]}"
+                                preview.reload()
+                                dialog.dismiss()
+                            }
+                            .show()
+                    }
+                },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
+            )
+        }
         // The size of the planet or the Moon (the photo of "Iwo Jima" has none to resize).
         if (scene != SuperScene.Flag && scene != SuperScene.Photo) {
             val sizeLabel = TextView(this).apply {

@@ -16,6 +16,7 @@ import android.opengl.GLUtils
 import android.view.Surface
 import java.io.File
 import java.nio.ByteBuffer
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -431,7 +432,7 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
         val y1 = minOf(h.toFloat(), cy + reach)
         if (x1 <= x0 || y1 <= y0) return
 
-        rotation(m.spin, if (moon) -0.117f else -0.2f)
+        rotation(m.spin, m.lat)
         GLES20.glUseProgram(prog.id)
         GLES20.glUniform2f(prog.u("uRes"), w.toFloat(), h.toFloat())
         GLES20.glUniform4f(prog.u("uBox"), x0, y0, x1, y1)
@@ -477,8 +478,9 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
             SuperScene.Neptune -> GLES20.glUniform4f(prog.u("uGlow"), 0.353f, 0.549f, 1.000f, 0.30f)
             else -> GLES20.glUniform4f(prog.u("uGlow"), 0f, 0f, 0f, 0f)
         }
-        // Saturn's rings: lying at 17° to the picture's horizontal, seen from a little above.
-        GLES20.glUniform4f(prog.u("uRing"), if (rings) 1f else 0f, 0.297f, 0.30f, 0f)
+        // Saturn's rings: lying at 17° to the picture's horizontal, seen from a little above – opening up the more the axis leans.
+        val open = (0.30f + (abs(sin(m.lat)) - 0.199f) * 0.8f).coerceIn(0.12f, 0.6f)
+        GLES20.glUniform4f(prog.u("uRing"), if (rings) 1f else 0f, 0.297f, open, 0f)
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, albedoTex)

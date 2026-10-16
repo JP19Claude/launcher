@@ -25,7 +25,7 @@ object SuperCamera {
 
     /** The home flight in the time of the depth: moving up until [UP_END], turning in place until [ZOOM_START], then the zoom. */
     private const val UP_END = 0.25f
-    private const val ZOOM_START = 0.45f
+    const val ZOOM_START = 0.45f
 
     private fun lerp(a: Float, b: Float, t: Float): Float = a + (b - a) * t
 
@@ -35,9 +35,6 @@ object SuperCamera {
         val k = t.coerceIn(0f, 1f)
         return if (k < 0.5f) 4f * k * k * k else 1f - (-2f * k + 2f).pow(3) / 2f
     }
-
-    /** How far the body has turned because of the home flight (radians): a good part of a quarter turn while it moves up and turns. */
-    fun spinKick(depth: Float): Float = 1.1f * easeInOutCubic(depth / ZOOM_START)
 
     /**
      * Start of the lock flight (cx, cy, r), then the lock screen's rest, the home position and the closest zoom of [scene].

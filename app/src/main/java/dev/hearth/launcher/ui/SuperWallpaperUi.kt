@@ -33,6 +33,7 @@ import dev.hearth.launcher.wallpaper.SuperLiveView
 import dev.hearth.launcher.wallpaper.SuperMotion
 import dev.hearth.launcher.wallpaper.SuperParams
 import dev.hearth.launcher.wallpaper.SuperPhoto
+import dev.hearth.launcher.wallpaper.SuperPlaces
 import dev.hearth.launcher.wallpaper.SuperRenderer
 import dev.hearth.launcher.wallpaper.SuperScene
 import dev.hearth.launcher.wallpaper.SuperWallpaperService
@@ -76,6 +77,18 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             onSelect = { scene -> update { it.copy(superParams = it.superParams.copy(scene = scene)) } },
         )
         Note(s.superScene.note)
+        // Where the body lands when it has finished turning: the place in the middle of the zoom.
+        val placeCount = SuperPlaces.count(s.superScene)
+        if (placeCount > 0) {
+            ChoiceRow(
+                label = "Landeplatz",
+                options = (0..placeCount).toList(),
+                selected = params.place.coerceAtMost(placeCount),
+                optionLabel = { SuperPlaces.label(s.superScene, it) },
+                onSelect = { index -> update { it.copy(superParams = it.superParams.copy(place = index)) } },
+            )
+            Note("Beim Entsperren dreht sich ${if (s.superScene == SuperScene.Moon) "der Mond" else "der Körper"} und bleibt auf diesem Ort stehen – dort zoomt die Kamera heran. „Überraschung“ nimmt jedes Mal einen anderen.")
+        }
         if (s.superScene == SuperScene.Photo) {
             ActionRow(
                 label = if (SuperPhoto.file(context).exists()) "Anderes Foto wählen" else "Foto wählen",
