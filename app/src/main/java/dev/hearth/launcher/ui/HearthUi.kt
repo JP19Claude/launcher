@@ -336,6 +336,14 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Alle Hintergründe in einer App", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Man soll alle Wallpapers in einer App anwenden können. Neu: die App „ZENITH Hintergründe“ (Datei ZENITH-Hintergrund-Alle.apk) mit allen Szenen – Mond, Erde, Mars, Venus, Jupiter, Saturn, Neptun, Pluto, Io, Europa, Ganymed, Iwo Jima und Geometrie. In der App wählst du oben die Szene; darunter stellst du für sie Landeplatz, Größe, Geschwindigkeit, Neigung und Sterne ein, und „Als Hintergrund festlegen“ macht sie zum Live-Wallpaper. Wechselst du später die Szene in der App, wechselt der Hintergrund sofort mit; jede Szene merkt sich ihren eigenen Landeplatz.",
+                        "Sie ist etwa so groß wie der Mond allein plus ein paar Megabyte: alle Bilder sind im Paket, es braucht kein Internet. Auch sie aktualisiert sich über die App (Version 1.7), und ZENITH zeigt sie in Einstellungen → Super-Wallpaper als „Alle Szenen“ mit an. Die einzelnen Apps pro Szene gibt es weiter. „Eigenes Foto“ aus der Wallpaper-Galerie gibt es nur in ZENITH. Auf einem Handy habe ich es nicht ausprobiert.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

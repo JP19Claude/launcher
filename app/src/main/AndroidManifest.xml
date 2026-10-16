@@ -49,6 +49,7 @@
         <package android:name="dev.hearth.controls" />
         <package android:name="dev.hearth.clawd" />
         <!-- The wallpaper apps (ZENITH Hintergründe), whose updates ZENITH offers -->
+        <package android:name="dev.hearth.wallpaper.alle" />
         <package android:name="dev.hearth.wallpaper.moon" />
         <package android:name="dev.hearth.wallpaper.earth" />
         <package android:name="dev.hearth.wallpaper.mars" />

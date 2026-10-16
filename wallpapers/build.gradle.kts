@@ -23,6 +23,8 @@ val scenes = listOf(
     Triple("ganymede", "Ganymede", "Ganymed"),
     Triple("flag", "Flag", "Iwo Jima"),
     Triple("geometry", "Geometry", "Geometrie"),
+    // The one app that has every scene in it: the scene is chosen in the app ("All" is no SuperScene).
+    Triple("alle", "All", "Hintergründe"),
 )
 
 android {
@@ -71,6 +73,10 @@ android {
                     assets.srcDirs(dir)
                 }
             }
+        }
+        // The app with every scene carries the pictures of all of them (a few MB; the Moon's are most of it).
+        getByName("alle") {
+            file("../shared/wallpaper/assets").listFiles { f -> f.isDirectory && f.name != "credits" }.orEmpty().forEach { assets.srcDirs(it) }
         }
     }
 

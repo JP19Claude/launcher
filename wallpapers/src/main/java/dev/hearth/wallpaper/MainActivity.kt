@@ -32,7 +32,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val scene = SceneConfig.scene
+        val scene = SceneConfig.scene(this)
         val density = resources.displayMetrics.density
         fun dp(v: Int) = (v * density).toInt()
         val prefs = getSharedPreferences(SceneConfig.PREFS, Context.MODE_PRIVATE)
@@ -48,7 +48,7 @@ class MainActivity : Activity() {
         )
         column.addView(
             TextView(this).apply {
-                text = "ZENITH ${scene.label}"
+                text = if (SceneConfig.all) "ZENITH Hintergründe" else "ZENITH ${scene.label}"
                 setTextColor(Color.WHITE)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
                 setTypeface(typeface, Typeface.BOLD)
@@ -63,6 +63,30 @@ class MainActivity : Activity() {
                 setPadding(0, 0, 0, dp(12))
             },
         )
+
+        // The app with every scene: the scene is chosen here (the screen is built anew for it).
+        if (SceneConfig.all) {
+            val names = Array(SceneConfig.choices.size) { SceneConfig.choices[it].label }
+            column.addView(
+                Button(this).apply {
+                    isAllCaps = false
+                    text = "Szene: ${scene.label}"
+                    setOnClickListener {
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle("Szene")
+                            .setSingleChoiceItems(names, SceneConfig.choices.indexOf(scene).coerceAtLeast(0)) { dialog, which ->
+                                dialog.dismiss()
+                                if (SceneConfig.choices[which] != scene) {
+                                    SceneConfig.choose(this@MainActivity, SceneConfig.choices[which])
+                                    recreate()
+                                }
+                            }
+                            .show()
+                    }
+                },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(8) },
+            )
+        }
 
         fun option(label: String, key: String) {
             column.addView(
@@ -113,7 +137,8 @@ class MainActivity : Activity() {
         val placeCount = SuperPlaces.count(scene)
         if (placeCount > 0) {
             val names = Array(placeCount + 1) { SuperPlaces.label(scene, it) }
-            var chosen = prefs.getInt("place", 0).coerceIn(0, placeCount)
+            val placeKey = SceneConfig.placeKey(scene)
+            var chosen = prefs.getInt(placeKey, 0).coerceIn(0, placeCount)
             column.addView(
                 TextView(this).apply {
                     text = "Beim Entsperren dreht sich der Körper und bleibt auf diesem Ort stehen – dort zoomt die Kamera heran."
@@ -131,7 +156,7 @@ class MainActivity : Activity() {
                             .setTitle("Landeplatz")
                             .setSingleChoiceItems(names, chosen) { dialog, which ->
                                 chosen = which
-                                prefs.edit().putInt("place", which).apply()
+                                prefs.edit().putInt(placeKey, which).apply()
                                 text = "Landeplatz: ${names[which]}"
                                 preview.reload()
                                 dialog.dismiss()

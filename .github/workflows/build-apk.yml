@@ -38,7 +38,7 @@ jobs:
           cp app/build/outputs/apk/one/debug/app-one-debug.apk ZENITH.apk
           cp smart/build/outputs/apk/smart/debug/smart-smart-debug.apk ZENITH-Smart.apk
           # ZENITH Hintergründe: every scene of the Super-Wallpaper as an app (a live wallpaper) of its own.
-          for entry in moon:Mond earth:Erde mars:Mars venus:Venus jupiter:Jupiter saturn:Saturn neptune:Neptun pluto:Pluto io:Io europa:Europa ganymede:Ganymed flag:Iwo-Jima geometry:Geometrie; do
+          for entry in alle:Alle moon:Mond earth:Erde mars:Mars venus:Venus jupiter:Jupiter saturn:Saturn neptune:Neptun pluto:Pluto io:Io europa:Europa ganymede:Ganymed flag:Iwo-Jima geometry:Geometrie; do
             id="${entry%%:*}"; name="${entry#*:}"
             cp "wallpapers/build/outputs/apk/$id/debug/wallpapers-$id-debug.apk" "ZENITH-Hintergrund-$name.apk"
           done
@@ -148,7 +148,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           wv=$(grep -o 'versionName = "[^"]*"' wallpapers/build.gradle.kts | cut -d'"' -f2)
-          notes="$(printf 'ZENITH Hintergründe %s – jede Szene des Super-Wallpapers als eigene App (ein Live-Wallpaper), einzeln zu installieren: ZENITH-Hintergrund-Mond.apk, -Erde, -Mars, -Venus, -Jupiter, -Saturn, -Neptun, -Pluto, -Io, -Europa, -Ganymed, -Iwo-Jima und -Geometrie. Die Bilder sind von der NASA (frei, ohne Copyright). Debug-APKs aus Build %s (Commit %s).' "$wv" "${{ github.run_number }}" "${{ github.sha }}")"
+          notes="$(printf 'ZENITH Hintergründe %s – ZENITH-Hintergrund-Alle.apk hat alle Szenen des Super-Wallpapers in einer App (Szene in der App wählen); dazu jede Szene als eigene App (ein Live-Wallpaper), einzeln zu installieren: ZENITH-Hintergrund-Mond.apk, -Erde, -Mars, -Venus, -Jupiter, -Saturn, -Neptun, -Pluto, -Io, -Europa, -Ganymed, -Iwo-Jima und -Geometrie. Die Bilder sind von der NASA (frei, ohne Copyright). Debug-APKs aus Build %s (Commit %s).' "$wv" "${{ github.run_number }}" "${{ github.sha }}")"
           if gh release view hintergruende >/dev/null 2>&1; then
             gh release upload hintergruende ZENITH-Hintergrund-*.apk --clobber
             gh release edit hintergruende --notes "$notes" --latest=false
@@ -194,7 +194,7 @@ jobs:
           # The wallpaper apps (ZENITH Hintergründe, wallpapers/): one version and build for all of them, a file for each.
           # The apps themselves and ZENITH look here; a bigger build number than the installed one is an update.
           wp = open("wallpapers/build.gradle.kts").read()
-          names = {"moon": "Mond", "earth": "Erde", "mars": "Mars", "venus": "Venus", "jupiter": "Jupiter", "saturn": "Saturn",
+          names = {"alle": "Alle", "moon": "Mond", "earth": "Erde", "mars": "Mars", "venus": "Venus", "jupiter": "Jupiter", "saturn": "Saturn",
                    "neptune": "Neptun", "pluto": "Pluto", "io": "Io", "europa": "Europa", "ganymede": "Ganymed",
                    "flag": "Iwo-Jima", "geometry": "Geometrie"}
           out["wallpapers"] = {
@@ -208,5 +208,5 @@ jobs:
           gh release create "build-${{ github.run_number }}" ZENITH.apk ZENITH-Smart.apk Glimmer.apk Clawd.apk Duftschrank.apk Hearth-alt.apk ZENITH-Hintergrund-*.apk versions.json \
             --target "${{ github.sha }}" \
             --title "ZENITH Build ${{ github.run_number }}" \
-            --notes "Welche Datei? ZENITH.apk: die Hauptapp (Launcher, Glimmer und Clawd in einer App). ZENITH-Smart.apk: ZENITH im Look des Smart Launchers, eine eigene App daneben. Glimmer.apk: die Insel um die Kamera, Clawd.apk: Clawds Widgets für jeden Launcher, Duftschrank.apk: Clawds Parfüm-Berater – alle drei stecken schon in ZENITH. Hearth-alt.apk: der alte Launcher allein, ohne Glimmer und Clawd – nicht nötig. ZENITH-Hintergrund-….apk: jede Szene des Super-Wallpapers als eigene App (Mond, Erde, Mars …), einzeln zu installieren. versions.json ist die Liste für die Update-Suche. Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
+            --notes "Welche Datei? ZENITH.apk: die Hauptapp (Launcher, Glimmer und Clawd in einer App). ZENITH-Smart.apk: ZENITH im Look des Smart Launchers, eine eigene App daneben. Glimmer.apk: die Insel um die Kamera, Clawd.apk: Clawds Widgets für jeden Launcher, Duftschrank.apk: Clawds Parfüm-Berater – alle drei stecken schon in ZENITH. Hearth-alt.apk: der alte Launcher allein, ohne Glimmer und Clawd – nicht nötig. ZENITH-Hintergrund-Alle.apk: alle Szenen des Super-Wallpapers in einer App. ZENITH-Hintergrund-….apk: jede Szene als eigene App (Mond, Erde, Mars …), einzeln zu installieren. versions.json ist die Liste für die Update-Suche. Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
             --latest

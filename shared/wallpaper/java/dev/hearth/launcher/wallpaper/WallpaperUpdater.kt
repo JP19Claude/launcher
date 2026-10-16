@@ -32,6 +32,7 @@ object WallpaperUpdater {
 
     /** Every wallpaper app: the ending of its package and the name of its scene. */
     val NAMES = listOf(
+        "alle" to "Alle Szenen",
         "moon" to "Mond",
         "earth" to "Erde",
         "mars" to "Mars",
