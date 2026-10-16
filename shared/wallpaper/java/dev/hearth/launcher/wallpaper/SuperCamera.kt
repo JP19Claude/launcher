@@ -50,7 +50,8 @@ object SuperCamera {
         SuperScene.Flag -> floatArrayOf(0.10f, 0.22f, 2.6f, 0.24f, 0.40f, 1.50f, 0.24f, 0.35f, 1.60f, 0.17f, 0.33f, 2.0f)
         SuperScene.Photo -> floatArrayOf(0.15f, 0.15f, 1.9f, 0.50f, 0.50f, 1.06f, 0.50f, 0.47f, 1.10f, 0.50f, 0.50f, 1.35f)
         else -> {
-            // The planets: the maps are small, so they come only a little closer than the home position.
+            // The planets: as close as the Moon. The solid ones have maps of 8192 × 4096; the gas planets' maps are smaller and a fine
+            // cloud structure is drawn on them, and Saturn's rings fill the screen when it comes too close.
             val k = when (scene) {
                 SuperScene.Saturn -> 0.75f
                 SuperScene.Jupiter -> 1.15f
@@ -58,7 +59,13 @@ object SuperCamera {
                 SuperScene.Pluto -> 0.85f
                 else -> 1.0f
             }
-            floatArrayOf(0.08f, 0.07f, 0.09f * k, 0.50f, 0.48f, 0.27f * k, 0.50f, 0.40f, 0.30f * k, 0.50f, 0.58f, 0.75f * k)
+            val closest = when (scene) {
+                SuperScene.Saturn -> 1.35f
+                SuperScene.Jupiter, SuperScene.Neptune -> 1.70f
+                SuperScene.Venus -> 1.60f
+                else -> 1.90f
+            }
+            floatArrayOf(0.08f, 0.07f, 0.09f * k, 0.50f, 0.48f, 0.27f * k, 0.50f, 0.40f, 0.30f * k, 0.50f, 0.62f, closest)
         }
     }
 

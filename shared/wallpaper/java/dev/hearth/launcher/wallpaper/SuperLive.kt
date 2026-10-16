@@ -232,7 +232,7 @@ class SuperLive(
         }
     }
 
-    /** Is there room for the Moon's finest pictures (about 270 MB on the graphics chip)? Not on phones with little memory, not in a preview (that runs next to the wallpaper itself). */
+    /** Is there room for the finest maps (the Moon's about 270 MB on the graphics chip, a planet's 8192 × 4096 about 134 MB)? Not on phones with little memory, not in a preview (that runs next to the wallpaper itself). */
     private fun roomForDetail(): Boolean = runCatching {
         val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
         val info = android.app.ActivityManager.MemoryInfo()

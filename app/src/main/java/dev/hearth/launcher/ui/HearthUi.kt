@@ -354,6 +354,17 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Alle Planeten zoomen so nah wie der Mond – und sind hoch aufgelöst", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Bei Neptun und den anderen Planeten funktioniert das Heranzoomen noch nicht, und sie sind nicht hoch aufgelöst. Stimmte: Die Planeten kamen nur etwa 2,5-mal näher, der Mond fast 7-mal, weil ihre Karten zu klein waren. Jetzt zoomt die Kamera bei allen Planeten und Monden auf dem Startbildschirm viel näher heran (Saturn etwas weniger, weil seine Ringe sonst den Bildschirm füllen).",
+                        "Mars, Venus, Io, Europa, Ganymed und Pluto haben neue Karten mit 8192 × 4096 Pixeln (vorher 4096 × 2048), aus den vollen USGS-Mosaiken (Viking, Magellan, Galileo, Voyager, New Horizons): Olympus Mons, Valles Marineris, Sputnik Planitia, die Risse von Europa und die Strahlenkrater von Ganymed sind jetzt scharf. Beim Heranzoomen wird das Bild zusätzlich ein wenig nachgeschärft.",
+                        "Jupiter, Saturn und Neptun haben neue Karten mit 2048 × 1024 Pixeln (vorher 1024 × 512 und unsauber): Jupiter mit dem Großen Roten Fleck, Saturn mit dem Sechseck am Nordpol, Neptun mit dem Großen Dunklen Fleck und seinen hellen Wolken (Solar System Scope, CC BY 4.0, aus Aufnahmen der NASA). Weil es von den Gasplaneten keine feineren Karten gibt, rechnet die Grafikeinheit beim Heranzoomen feine Wolken dazu – gewundene Gürtelkanten und feine Streifen entlang der Winde. Die sind errechnet, keine Fotos.",
+                        "Neue Landeplätze: Jupiter (Großer Roter Fleck, Weiße Ovale, Dunkle Löcher, Äquator, Nördliche Ovale, Südliche Bänder), Saturn (Äquatorzone, Heller Gürtel, Nördliche und Südliche Bänder, Nordpolregion) und Neptun (Großer Dunkler Fleck, Scooter, Zweiter Dunkler Fleck, Helle Wolken Süd, Nördliche Wolken, Heller Äquator). Hattest du bei diesen Planeten einen Landeplatz gewählt, prüfe ihn noch einmal.",
+                        "Ehrlich dazu: Die 8k-Karten brauchen Speicher (etwa 134 MB auf der Grafikkarte je Planet): Handys mit weniger als 5 GB Arbeitsspeicher und die Vorschau in den Einstellungen nehmen die halbe Auflösung. Das erste Laden eines Planeten dauert eine Sekunde länger. Die Pakete sind größer (ZENITH etwa 8 MB). Die Erde ist weiter ein Foto der NASA und zoomt nur wenig. Auf einem Handy habe ich nichts davon ausprobiert; ich habe die Bilder mit denselben Shadern am Rechner gerendert (Software-Grafik).",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

@@ -256,10 +256,14 @@ internal class SuperGl(
                 else -> {
                     kind = Kind.SPHERE
                     val name = planetFile(forScene) ?: return false
-                    val map = decodeAsset("planets/$name.jpg") ?: return false
-                    albedoTex = upload(map, true, true)
-                    map.recycle()
-                    true
+                    albedoTex = loadHdMap(name)
+                    if (albedoTex == 0) {
+                        // No big map (the gas planets) or no room for it: the 2048 × 1024 picture.
+                        val map = decodeAsset("planets/$name.jpg") ?: return false
+                        albedoTex = upload(map, true, true)
+                        map.recycle()
+                    }
+                    albedoTex != 0
                 }
             }
         } catch (t: Throwable) {
@@ -358,6 +362,96 @@ internal class SuperGl(
         return id
     }
 
+    private fun hasAsset(path: String): Boolean = runCatching { assets.open(path).close() }.isSuccess
+
+    /**
+     * The big map of a solid planet or moon: 8192 × 4096 pixels of three bytes (134 MB with its smaller sizes on the graphics chip),
+     * from [HD_STRIPS] strips of 8192 × 256 – a strip at a time, so that no more than a few megabytes are in memory at once. Where
+     * the phone is short of memory (or the chip can't take it) every 2 × 2 pixels are averaged: 4096 × 2048. 0 if there are no
+     * strips (the gas planets) or one can't be read.
+     */
+    private fun loadHdMap(name: String): Int {
+        if (!hasAsset("planets/${name}_hd_00.webp")) return 0
+        var step = textureStep(HD_W, if (fullDetail) 1 else 2)
+        while (true) {
+            val id = tryLoadHdMap(name, step)
+            if (id != 0 || step >= 4) return id
+            // The graphics memory is full: with less.
+            step *= 2
+        }
+    }
+
+    private fun tryLoadHdMap(name: String, step: Int): Int {
+        val w = HD_W / step
+        val h = HD_H / step
+        val id = newTexture(true)
+        GLES20.glGetError()
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES30.GL_RGB8, w, h, 0, GLES20.GL_RGB, GLES20.GL_UNSIGNED_BYTE, null)
+        if (GLES20.glGetError() != GLES20.GL_NO_ERROR) {
+            GLES20.glDeleteTextures(1, intArrayOf(id), 0)
+            return 0
+        }
+        var row = 0
+        var px = IntArray(0)
+        var out: ByteBuffer? = null
+        var raw = ByteArray(0)
+        for (i in 0 until HD_STRIPS) {
+            val tile = decodeAsset("planets/%s_hd_%02d.webp".format(name, i)) ?: return fail(id)
+            val sw = tile.width
+            val sh = tile.height
+            if (sw != HD_W || sh != HD_H / HD_STRIPS) {
+                tile.recycle()
+                return fail(id)
+            }
+            if (px.size != sw * sh) px = IntArray(sw * sh)
+            tile.getPixels(px, 0, sw, 0, 0, sw, sh)
+            tile.recycle()
+            val outW = sw / step
+            val outH = sh / step
+            val size = outW * outH * 3
+            if (raw.size != size) raw = ByteArray(size)
+            if (step == 1) {
+                var o = 0
+                for (k in 0 until sw * sh) {
+                    val c = px[k]
+                    raw[o++] = (c shr 16).toByte()
+                    raw[o++] = (c shr 8).toByte()
+                    raw[o++] = c.toByte()
+                }
+            } else {
+                val area = step * step
+                var o = 0
+                for (y in 0 until outH) {
+                    for (x in 0 until outW) {
+                        var r = 0
+                        var g = 0
+                        var b = 0
+                        for (dy in 0 until step) {
+                            val base = (y * step + dy) * sw + x * step
+                            for (dx in 0 until step) {
+                                val c = px[base + dx]
+                                r += (c shr 16) and 0xFF
+                                g += (c shr 8) and 0xFF
+                                b += c and 0xFF
+                            }
+                        }
+                        raw[o++] = (r / area).toByte()
+                        raw[o++] = (g / area).toByte()
+                        raw[o++] = (b / area).toByte()
+                    }
+                }
+            }
+            val buffer = out?.takeIf { it.capacity() == size } ?: ByteBuffer.allocateDirect(size).also { out = it }
+            buffer.clear()
+            buffer.put(raw)
+            buffer.position(0)
+            GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, 0, row, outW, outH, GLES20.GL_RGB, GLES20.GL_UNSIGNED_BYTE, buffer)
+            row += outH
+        }
+        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D)
+        return id
+    }
+
     /** Drops a texture that couldn't be made whole; 0. */
     private fun fail(id: Int): Int {
         GLES20.glDeleteTextures(1, intArrayOf(id), 0)
@@ -394,6 +488,14 @@ internal class SuperGl(
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES30.GL_RG8, w, h, 0, GLES30.GL_RG, GLES20.GL_UNSIGNED_BYTE, bytes)
         GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D)
         return id
+    }
+
+    /** How strongly the fine cloud structure is drawn on [s] when the camera is close (0 for the solid bodies). */
+    private fun gasDetail(s: SuperScene): Float = when (s) {
+        SuperScene.Jupiter -> 1.0f
+        SuperScene.Saturn -> 0.6f
+        SuperScene.Neptune -> 0.7f
+        else -> 0f
     }
 
     private fun planetFile(s: SuperScene): String? = when (s) {
@@ -479,6 +581,8 @@ internal class SuperGl(
         val cy = h - cyTop
         val moon = scene == SuperScene.Moon
         val rings = scene == SuperScene.Saturn
+        // How close the camera is (0 on the lock screen and at the home position, 1 at the closest zoom).
+        val near = ((d - 0.4f) / 0.4f).coerceIn(0f, 1f)
         val reach = radius * (if (rings) 2.45f else 1.32f)
         val x0 = maxOf(0f, cx - reach)
         val x1 = minOf(w.toFloat(), cx + reach)
@@ -498,7 +602,6 @@ internal class SuperGl(
             val sz = 0.66f
             val len = sqrt(sx * sx + sy * sy + sz * sz)
             GLES20.glUniform3f(prog.u("uSun"), sx / len, sy / len, sz / len)
-            val near = ((d - 0.4f) / 0.4f).coerceIn(0f, 1f)
             GLES20.glUniform1i(prog.u("uKind"), 1)
             // The terrain's shadows are felt more the closer the camera is; a little sharpening where the picture is magnified.
             GLES20.glUniform1f(prog.u("uRelief"), 1.3f + 0.4f * near)
@@ -508,6 +611,7 @@ internal class SuperGl(
             GLES20.glUniform1f(prog.u("uGain"), 1.25f)
             GLES20.glUniform1f(prog.u("uLimb"), 0f)
             GLES20.glUniform1f(prog.u("uDetail"), 0.08f * near)
+            GLES20.glUniform1f(prog.u("uGas"), 0f)
         } else {
             val sx = -0.52f
             val sy = 0.40f
@@ -516,7 +620,10 @@ internal class SuperGl(
             GLES20.glUniform3f(prog.u("uSun"), sx / len, sy / len, sz / len)
             GLES20.glUniform1i(prog.u("uKind"), 0)
             GLES20.glUniform1f(prog.u("uRelief"), 0f)
-            GLES20.glUniform1f(prog.u("uSharp"), 0f)
+            // A little sharpening where the picture is magnified; the gas planets get fine cloud structure on top (their
+            // maps end where the spacecraft's pictures end).
+            GLES20.glUniform1f(prog.u("uSharp"), 0.10f + 0.25f * near)
+            GLES20.glUniform1f(prog.u("uGas"), gasDetail(scene) * near)
             GLES20.glUniform3f(prog.u("uTint"), 1f, 1f, 1f)
             GLES20.glUniform1f(prog.u("uAmbient"), 0.10f)
             GLES20.glUniform1f(prog.u("uGain"), 1.05f)
@@ -649,6 +756,11 @@ internal class SuperGl(
         const val MOON_H = 8192
         const val MOON_ROWS = 64
 
+        /** The big maps of the solid planets: 8192 × 4096 in 16 strips. */
+        const val HD_W = 8192
+        const val HD_H = 4096
+        const val HD_STRIPS = 16
+
         const val BOX_VERTEX = """#version 300 es
 uniform vec2 uRes;
 uniform vec4 uBox;
@@ -754,6 +866,7 @@ uniform float uAmbient;
 uniform float uGain;
 uniform float uLimb;
 uniform float uDetail;
+uniform float uGas;
 uniform vec4 uGlow;
 uniform vec4 uRing;
 out vec4 fragColor;
@@ -769,7 +882,7 @@ float h3(vec3 p) {
 float vn(vec3 x) {
   vec3 i = floor(x);
   vec3 f = fract(x);
-  f = f * f * (3.0 - 2.0 * f);
+  f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
   return mix(mix(mix(h3(i + vec3(0.0, 0.0, 0.0)), h3(i + vec3(1.0, 0.0, 0.0)), f.x),
                  mix(h3(i + vec3(0.0, 1.0, 0.0)), h3(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
              mix(mix(h3(i + vec3(0.0, 0.0, 1.0)), h3(i + vec3(1.0, 0.0, 1.0)), f.x),
@@ -778,6 +891,19 @@ float vn(vec3 x) {
 
 float hr(float x) {
   return fract(sin(x * 12.9898) * 43758.5453);
+}
+
+// Fine cloud structure for the gas planets (the maps end where the spacecraft's pictures end): noise with its cells pressed
+// together in the direction of the poles, so that everything is drawn out along the bands, as the winds draw it.
+float fbm(vec3 q) {
+  float s = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 4; i++) {
+    s += a * vn(q);
+    q = q * 2.07 + vec3(11.3, 7.1, 3.7);
+    a *= 0.5;
+  }
+  return s;
 }
 
 vec4 ringColor(float rho, float aa) {
@@ -821,7 +947,27 @@ void main() {
     a = clamp(a + uSharp * (a - lo), 0.0, 1.0);
     albedo = vec3(a) * uTint;
   } else {
-    albedo = textureGrad(uAlbedo, uv, gx, gy).rgb;
+    vec2 uvl = uv;
+    vec3 qa = vec3(b.x, b.y * 5.0, b.z);
+    if (uGas > 0.0) {
+      // The belts' edges meander and curl: the map is read a little to the side, by a noise that is drawn out along the bands.
+      float wu = fbm(qa * 40.0 + 17.0) - 0.47;
+      float wv = fbm(qa * 40.0) - 0.47;
+      float bu = fbm(qa * 9.0 + 5.0) - 0.47;
+      float bv = fbm(qa * 9.0 + 29.0) - 0.47;
+      uvl += uGas * vec2(wu * 0.0012 + bu * 0.0050, wv * 0.0016 + bv * 0.0056);
+    }
+    albedo = textureGrad(uAlbedo, uvl, gx, gy).rgb;
+    if (uSharp > 0.0) {
+      vec3 lo = textureGrad(uAlbedo, uvl, gx * 3.0, gy * 3.0).rgb;
+      albedo = clamp(albedo + uSharp * (albedo - lo), 0.0, 1.0);
+    }
+    if (uGas > 0.0) {
+      // Thin streaks of cloud along the winds.
+      float st = fbm(vec3(b.x, b.y * 5.0, b.z) * 110.0);
+      float fi = fbm(vec3(b.x, b.y * 3.0, b.z) * 340.0);
+      albedo *= 1.0 + uGas * (0.13 * (st - 0.47) + 0.06 * (fi - 0.47));
+    }
   }
   if (uDetail > 0.0) {
     vec3 q = b * 90.0;

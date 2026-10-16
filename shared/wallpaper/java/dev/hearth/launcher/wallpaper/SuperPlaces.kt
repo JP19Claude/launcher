@@ -53,28 +53,32 @@ object SuperPlaces {
         SuperPlace("Atla Regio", -158f, 6f),
     )
 
+    // The gas planets: read off the maps (2048 × 1024) the way they are turned: Jupiter's from Cassini, Neptune's with the Great Dark Spot of Voyager.
     private val jupiter = listOf(
-        SuperPlace("Großer Roter Fleck", -108f, -29f),
-        SuperPlace("Weiße Ovale", -60f, -43f),
-        SuperPlace("Dunkler Sturm", 134f, 15f),
-        SuperPlace("Äquator", 30f, 0f),
-        SuperPlace("Nördliche Bänder", 60f, 40f),
-        SuperPlace("Südliche Bänder", 150f, -42f),
+        SuperPlace("Großer Roter Fleck", -48f, -20f),
+        SuperPlace("Weiße Ovale", -76f, -41f),
+        SuperPlace("Dunkle Löcher", 135f, 8f),
+        SuperPlace("Äquator", -110f, -3f),
+        SuperPlace("Nördliche Ovale", 80f, 40f),
+        SuperPlace("Südliche Bänder", 150f, -40f),
     )
 
     // Saturn's rings stay as they are, so the bands are only turned a little to the north or the south.
     private val saturn = listOf(
-        SuperPlace("Heller Sturm", -30f, 13f),
-        SuperPlace("Äquatorband", 60f, -3f),
-        SuperPlace("Nördliche Bänder", 130f, 24f),
-        SuperPlace("Südliche Bänder", 100f, -24f),
+        SuperPlace("Äquatorzone", 0f, 2f),
+        SuperPlace("Heller Gürtel", -90f, 12f),
+        SuperPlace("Nördliche Bänder", 130f, 40f),
+        SuperPlace("Südliche Bänder", 100f, -40f),
+        SuperPlace("Nordpolregion", 20f, 78f),
     )
 
     private val neptune = listOf(
-        SuperPlace("Wirbelgürtel", -46f, 14f),
-        SuperPlace("Heller Äquator", -30f, -12f),
-        SuperPlace("Nördliche Bänder", 60f, 45f),
-        SuperPlace("Südliche Bänder", 0f, -45f),
+        SuperPlace("Großer Dunkler Fleck", 18f, -16f),
+        SuperPlace("Scooter", 6f, -23f),
+        SuperPlace("Zweiter Dunkler Fleck", 74f, -54f),
+        SuperPlace("Helle Wolken Süd", 144f, -41f),
+        SuperPlace("Nördliche Wolken", -97f, 28f),
+        SuperPlace("Heller Äquator", -60f, 0f),
     )
 
     private val pluto = listOf(

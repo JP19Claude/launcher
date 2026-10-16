@@ -11,12 +11,18 @@ kommen aus dem Laser-Höhenmesser LOLA (LDEM_64). Die schattenfreie Albedo und d
 von Anirudh (https://github.com/asrijanga/solar-system, MIT-Lizenz), das sie aus diesen NASA-Daten erzeugt (docs/data/moon.md).
 NASA- und USGS-Daten sind in der Regel gemeinfrei.
 
-Mars, Venus, Io, Europa, Ganymed, Pluto (je 4096 x 2048): Globale Mosaike aus dem Archiv des USGS Astrogeology Science Center –
-Mars: Viking-Farbmosaik 925 m; Venus: Magellan C3-MDIR, koloriert, 4641 m; Io: Galileo-SSI-Farbmosaik 1 km; Europa: Voyager/Galileo
-500 m (schwarzweiß); Ganymed: Voyager/Galileo-Farbmosaik 1435 m; Pluto: New-Horizons-Mosaik 300 m (schwarzweiß; die Farben sind nach
-Plutos Tönen ergänzt, die nicht aufgenommene Südhalbkugel ist aus ihrer Umgebung aufgefüllt). Auf 4096 x 2048 gebracht, die Längen
-von Europa, Ganymed und Pluto in die Mitte bei 0° gerollt; leere Stellen an den Polen aufgefüllt. NASA/USGS-Daten sind in der Regel
-gemeinfrei. Jupiter, Saturn und Neptun nutzen weiter die kleineren Karten aus NASA 3D Resources.
+Mars, Venus, Io, Europa, Ganymed, Pluto (je 8192 x 4096, in 16 Streifen zu 8192 x 256; dazu je eine Karte mit 2048 x 1024): Globale
+Mosaike aus dem Archiv des USGS Astrogeology Science Center – Mars: Viking-Farbmosaik 925 m; Venus: Magellan C3-MDIR, koloriert, 4641 m;
+Io: Galileo-SSI-Farbmosaik 1 km; Europa: Voyager/Galileo 500 m (schwarzweiß); Ganymed: Voyager/Galileo-Farbmosaik 1435 m; Pluto:
+New-Horizons-Mosaik 300 m (schwarzweiß; die Farben sind nach Plutos Tönen ergänzt, die nicht aufgenommene Südhalbkugel ist aus ihrer
+Umgebung aufgefüllt). Auf 8192 x 4096 gebracht (Mittelwert über die Pixel des Mosaiks), die Längen von Europa, Ganymed und Pluto in die
+Mitte bei 0° gerollt; leere Stellen an den Polen aufgefüllt. NASA/USGS-Daten sind in der Regel gemeinfrei.
+
+Jupiter, Saturn, Neptun (je 2048 x 1024): die Karten aus den "Solar Textures" von Solar System Scope (https://www.solarsystemscope.com/textures/),
+Lizenz Creative Commons Attribution 4.0 International (CC BY 4.0, frei für jeden Zweck, auch gewerblich; mit Namensnennung), nach Angabe von
+Solar System Scope aus Daten der NASA erstellt; hier über das Projekt pyvista/vtk-data (https://github.com/pyvista/vtk-data, Data/solar_textures) bezogen und
+unverändert eingebaut. Die feinen Wolken, die beim Heranzoomen auf Jupiter, Saturn und Neptun erscheinen, rechnet die Grafikeinheit
+dazu (Rauschen, das entlang der Bänder gezogen wird); sie sind keine Aufnahmen.
 
 Iwo Jima (iwojima.jpg): Foto des Iwo-Jima-Denkmals (U.S. Marine Corps War Memorial) mit dem Vollmond und der US-Flagge, nach einer
 Bildschirmaufnahme aus ZENITHs Wallpaper-Galerie, deren Fotos aus der NASA-Bildbibliothek (images.nasa.gov) kommen. Den Fotografen
