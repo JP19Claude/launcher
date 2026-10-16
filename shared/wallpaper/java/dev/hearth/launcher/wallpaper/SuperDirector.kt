@@ -37,8 +37,39 @@ class SuperDirector(context: Context, private val demo: Boolean = false) {
 
     private var lastAt = 0L
     private var pan = 0f
-    private var zoomOut = 0f
     private var zoomOutTarget = 0f
+
+    /**
+     * A critically damped spring: it runs towards its goal with a soft start and a soft landing, never overshoots, and takes the same
+     * path at any frame rate (the step is the exact solution, not an approximation per frame).
+     */
+    private class Spring {
+        var x = 0f
+        var v = 0f
+
+        fun snap(to: Float) {
+            x = to
+            v = 0f
+        }
+
+        /** Moves on by [dtMs] towards [target]; [omega] is how quick it is (1/s: 8 settles in about half a second). */
+        fun step(target: Float, dtMs: Float, omega: Float): Float {
+            val t = dtMs / 1000f
+            val d = x - target
+            val e = exp(-omega * t)
+            val k = (v + omega * d) * t
+            x = target + (d + k) * e
+            v = (v - omega * k) * e
+            return x
+        }
+
+        fun settled(target: Float): Boolean = abs(x - target) < 0.003f && abs(v) < 0.02f
+    }
+
+    private val panSpring = Spring()
+    private val tiltXSpring = Spring()
+    private val tiltYSpring = Spring()
+    private val zoomSpring = Spring()
     private var demoStart = 0L
     private var demoLoop = -1L
     private var demoFlown = false
@@ -189,18 +220,20 @@ class SuperDirector(context: Context, private val demo: Boolean = false) {
 
         val targetPan = if (p.zoomOnWake) (xOffset - 0.5f) * 2f else 0f
         if (snapPan) {
-            pan = targetPan
+            panSpring.snap(targetPan)
             snapPan = false
         }
-        pan += (targetPan - pan) * follow(dt, 160f)
-        if (abs(targetPan - pan) > 0.003f) moving = true
+        // The pages, the tilt and the launcher's zoom move the picture on springs (a soft start and a soft landing).
+        pan = panSpring.step(targetPan, dt, 8.5f)
+        if (!panSpring.settled(targetPan)) moving = true
         motion.panX = pan
 
-        motion.tiltX += (rawX - motion.tiltX) * follow(dt, 120f)
-        motion.tiltY += (rawY - motion.tiltY) * follow(dt, 120f)
+        motion.tiltX = tiltXSpring.step(rawX, dt, 9f)
+        motion.tiltY = tiltYSpring.step(rawY, dt, 9f)
+        if (!tiltXSpring.settled(rawX) || !tiltYSpring.settled(rawY)) moving = true
 
-        zoomOut += (zoomOutTarget - zoomOut) * follow(dt, 120f)
-        if (abs(zoomOutTarget - zoomOut) > 0.003f) moving = true
+        val zoomOut = zoomSpring.step(zoomOutTarget, dt, 8f)
+        if (!zoomSpring.settled(zoomOutTarget)) moving = true
         motion.zoom = 1f - 0.12f * zoomOut
 
         // The turning: slowly on the lock screen, then – with the home flight – on to the chosen place, where it only creeps;
@@ -297,9 +330,6 @@ class SuperDirector(context: Context, private val demo: Boolean = false) {
         turnAt = now
         turnMs = 1L
     }
-
-    /** How far to go towards the goal in [dt] ms when the motion catches up with a time constant of [tau] ms. */
-    private fun follow(dt: Float, tau: Float): Float = 1f - exp(-dt / tau)
 
     companion object {
         /** What Android's lock screen sends a wallpaper just before it is gone (the platform names it, but hides the constant). */

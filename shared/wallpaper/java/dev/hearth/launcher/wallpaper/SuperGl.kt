@@ -17,6 +17,7 @@ import android.view.Surface
 import java.io.File
 import java.nio.ByteBuffer
 import kotlin.math.abs
+import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -48,12 +49,14 @@ internal class SuperGl(
     private var sky: Prog? = null
     private var sphere: Prog? = null
     private var sprite: Prog? = null
+    private var moonProg: Prog? = null
 
     private var kind = Kind.SPHERE
     private var scene = SuperScene.Moon
     private var albedoTex = 0
     private var normalTex = 0
     private var extraTex = 0
+    private var ringTex = 0
     private var spriteTex = 0
     /** What the albedo map is: 0 a colour map, 1 the Moon's brightness, 2 a brightness map with a colour map beside it, 3 the Earth. */
     private var albedoKind = 0
@@ -107,6 +110,7 @@ internal class SuperGl(
             sky = link(SKY_VERTEX, SKY_FRAGMENT)
             sphere = link(BOX_VERTEX, SPHERE_FRAGMENT)
             sprite = link(BOX_VERTEX, SPRITE_FRAGMENT)
+            moonProg = link(BOX_VERTEX, MOON_FRAGMENT)
             return true
         } catch (t: Throwable) {
             stop()
@@ -138,6 +142,7 @@ internal class SuperGl(
         sky = null
         sphere = null
         sprite = null
+        moonProg = null
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -191,13 +196,14 @@ internal class SuperGl(
     }
 
     private fun freeTextures() {
-        val ids = intArrayOf(albedoTex, normalTex, extraTex, spriteTex)
+        val ids = intArrayOf(albedoTex, normalTex, extraTex, ringTex, spriteTex)
         if (display != EGL14.EGL_NO_DISPLAY && context != EGL14.EGL_NO_CONTEXT) {
             for (id in ids) if (id != 0) GLES20.glDeleteTextures(1, intArrayOf(id), 0)
         }
         albedoTex = 0
         normalTex = 0
         extraTex = 0
+        ringTex = 0
         spriteTex = 0
         albedoKind = 0
         layer = null
@@ -226,6 +232,8 @@ internal class SuperGl(
             scene = forScene
             verifyNext = true
             bodyShown = true
+            orbiters = orbitersOf(forScene)
+            distant = distantOf(forScene)
             when (forScene) {
                 SuperScene.Moon -> {
                     kind = Kind.SPHERE
@@ -290,6 +298,7 @@ internal class SuperGl(
                     }
                     // The terrain, where its heights are known.
                     normalTex = if (look.relief > 0f) loadNormalStrips(name) else 0
+                    if (forScene == SuperScene.Saturn) ringTex = loadRingProfile()
                     albedoTex != 0
                 }
             }
@@ -674,6 +683,64 @@ internal class SuperGl(
         else -> Look(0, 0f, 0f)
     }
 
+    /** What Saturn's ring is made of, 2048 steps from its inner to its outer edge: red the opacity, green the brightness. 0 if it can't be read. */
+    private fun loadRingProfile(): Int {
+        val map = decodeAsset("planets/saturn_ring.webp") ?: return 0
+        val id = upload(map, false, false)
+        map.recycle()
+        return id
+    }
+
+    /** A body that goes round the planet: [a] its distance in radii of the planet, [size] its radius in radii, [period] in seconds. */
+    private class Orbiter(
+        val a: Float,
+        val size: Float,
+        val period: Float,
+        val phase: Float,
+        val style: Int,
+        val colA: FloatArray,
+        val colB: FloatArray,
+        val seed: Float,
+        val retro: Boolean = false,
+    )
+
+    /** The Earth or Jupiter hanging in the sky of a moon: [x], [y] in fractions of the screen (y from the top), [r] of the width. */
+    private class Distant(val style: Int, val x: Float, val y: Float, val r: Float)
+
+    private var orbiters: List<Orbiter> = emptyList()
+    private var distant: Distant? = null
+
+    private fun rgb(r: Float, g: Float, b: Float) = floatArrayOf(r, g, b)
+
+    // The sizes are bigger than the real ones (so that they can be seen), the periods much shorter, the distances drawn in.
+    private fun orbitersOf(s: SuperScene): List<Orbiter> = when (s) {
+        SuperScene.Earth -> listOf(Orbiter(1.85f, 0.17f, 95f, 0.6f, ROCK, rgb(0.80f, 0.78f, 0.75f), rgb(0.40f, 0.39f, 0.38f), 1.3f))
+        SuperScene.Mars -> listOf(
+            Orbiter(1.45f, 0.045f, 26f, 0.2f, ROCK, rgb(0.52f, 0.46f, 0.41f), rgb(0.30f, 0.27f, 0.25f), 2.1f),
+            Orbiter(2.05f, 0.030f, 70f, 2.4f, ROCK, rgb(0.58f, 0.52f, 0.46f), rgb(0.34f, 0.31f, 0.28f), 4.7f),
+        )
+        SuperScene.Jupiter -> listOf(
+            Orbiter(1.50f, 0.050f, 34f, 0.9f, VOLCANIC, rgb(0.93f, 0.80f, 0.34f), rgb(0.62f, 0.34f, 0.16f), 3.3f),
+            Orbiter(1.90f, 0.045f, 68f, 3.0f, ICE, rgb(0.94f, 0.91f, 0.84f), rgb(0.62f, 0.45f, 0.34f), 5.2f),
+            Orbiter(2.35f, 0.070f, 137f, 5.1f, ROCK, rgb(0.62f, 0.58f, 0.52f), rgb(0.36f, 0.32f, 0.28f), 7.7f),
+            Orbiter(2.95f, 0.065f, 320f, 1.7f, ROCK, rgb(0.42f, 0.38f, 0.34f), rgb(0.24f, 0.22f, 0.20f), 9.1f),
+        )
+        SuperScene.Saturn -> listOf(
+            Orbiter(3.10f, 0.085f, 200f, 0.4f, ROCK, rgb(0.92f, 0.68f, 0.34f), rgb(0.70f, 0.48f, 0.22f), 11.3f),
+            Orbiter(2.55f, 0.028f, 60f, 2.2f, ICE, rgb(0.97f, 0.97f, 0.98f), rgb(0.80f, 0.84f, 0.90f), 12.9f),
+            Orbiter(2.90f, 0.034f, 100f, 4.4f, ICE, rgb(0.86f, 0.86f, 0.85f), rgb(0.58f, 0.58f, 0.58f), 14.2f),
+        )
+        SuperScene.Neptune -> listOf(Orbiter(2.30f, 0.070f, 90f, 1.1f, ICE, rgb(0.90f, 0.82f, 0.78f), rgb(0.66f, 0.55f, 0.52f), 15.5f, retro = true))
+        SuperScene.Pluto -> listOf(Orbiter(1.90f, 0.45f, 160f, 0.7f, ROCK, rgb(0.66f, 0.62f, 0.58f), rgb(0.36f, 0.31f, 0.29f), 17.7f))
+        else -> emptyList()
+    }
+
+    private fun distantOf(s: SuperScene): Distant? = when (s) {
+        SuperScene.Moon -> Distant(EARTH_STYLE, 0.80f, 0.15f, 0.070f)
+        SuperScene.Io, SuperScene.Europa, SuperScene.Ganymede -> Distant(JUPITER_STYLE, 0.82f, 0.15f, 0.16f)
+        else -> null
+    }
+
     /** How strongly the fine cloud structure is drawn on [s] when the camera is close (0 for the solid bodies). */
     private fun gasDetail(s: SuperScene): Float = when (s) {
         SuperScene.Jupiter -> 1.0f
@@ -755,16 +822,138 @@ internal class SuperGl(
         rot[8] = ct * c
     }
 
+    private var lastSunX = -0.52f
+    private var lastSunY = 0.40f
+    private var lastSunZ = 0.75f
+    private val sun = FloatArray(3)
+
+    // Where the bodies that go round the planet are now: in radii of the planet, [oX] to the right, [oY] up, [oZ] towards us.
+    private val oX = FloatArray(MAX_ORBITERS)
+    private val oY = FloatArray(MAX_ORBITERS)
+    private val oZ = FloatArray(MAX_ORBITERS)
+
+    /**
+     * Puts every orbiter on its orbit at [timeMs]: a circle seen from [elev] above its plane, the plane turned by [roll] about the view
+     * axis. The angle comes from the time itself (a whole number of periods is exactly one turn), so that nothing ever jumps.
+     */
+    private fun placeOrbiters(timeMs: Long, cx: Float, cy: Float, radius: Float, roll: Float, elev: Float) {
+        val seconds = timeMs / 1000.0
+        val se = sin(elev)
+        val ce = cos(elev)
+        val cr = cos(roll)
+        val sr = sin(roll)
+        for ((i, o) in orbiters.withIndex()) {
+            val turns = (seconds / o.period) % 1.0
+            val th = o.phase + (if (o.retro) -1 else 1) * 6.2831855f * turns.toFloat()
+            val px = o.a * cos(th)
+            val py = o.a * sin(th)
+            // In the orbit's plane (x right, y towards the far side of the plane, as seen from above), then tilted to the view.
+            val x = px
+            val y = -py * se
+            oX[i] = x * cr - y * sr
+            oY[i] = x * sr + y * cr
+            oZ[i] = py * ce
+        }
+    }
+
+    /** The Earth (in the sky of the Moon) or Jupiter (in the sky of its moons): behind everything, fading out when the camera comes close. */
+    private fun drawDistant(w: Int, h: Int, tsec: Float, depth: Float, m: SuperMotion) {
+        val far = distant ?: return
+        val prog = moonProg ?: return
+        val alpha = 1f - smooth(0.25f, 0.75f, depth)
+        if (alpha <= 0.01f) return
+        val r = w * far.r * (1f + 0.05f * depth)
+        val x = w * far.x - m.panX * w * 0.025f + m.tiltX * w * 0.012f
+        val y = h - (h * far.y - m.tiltY * h * 0.008f)
+        GLES20.glUseProgram(prog.id)
+        GLES20.glUniform2f(prog.u("uRes"), w.toFloat(), h.toFloat())
+        GLES20.glUniform4f(prog.u("uBox"), x - r * 1.3f, y - r * 1.3f, x + r * 1.3f, y + r * 1.3f)
+        GLES20.glUniform3f(prog.u("uMoon"), x, y, r)
+        GLES20.glUniform3f(prog.u("uSun"), sun[0], sun[1], sun[2])
+        GLES20.glUniform1i(prog.u("uStyle"), far.style)
+        GLES20.glUniform1f(prog.u("uAlpha"), alpha)
+        GLES20.glUniform1f(prog.u("uTimeM"), tsec)
+        GLES20.glUniform1f(prog.u("uSeed"), 3.7f)
+        GLES20.glUniform3f(prog.u("uColA"), 0f, 0f, 0f)
+        GLES20.glUniform3f(prog.u("uColB"), 0f, 0f, 0f)
+        GLES20.glUniform4f(prog.u("uPlanetC"), 0f, 0f, 1f, 0f)
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+    }
+
+    private fun smooth(a: Float, b: Float, x: Float): Float {
+        val t = ((x - a) / (b - a)).coerceIn(0f, 1f)
+        return t * t * (3f - 2f * t)
+    }
+
+    /**
+     * The orbiters that are behind the planet ([behind]) or in front of it, drawn as little lit spheres; in front of the planet their
+     * shadows fall on it (Io's on Jupiter, the Moon's on the Earth).
+     */
+    private fun drawOrbiters(w: Int, h: Int, tsec: Float, radius: Float, cx: Float, cy: Float, behind: Boolean) {
+        if (orbiters.isEmpty()) return
+        val prog = moonProg ?: return
+        GLES20.glUseProgram(prog.id)
+        GLES20.glUniform2f(prog.u("uRes"), w.toFloat(), h.toFloat())
+        GLES20.glUniform3f(prog.u("uSun"), sun[0], sun[1], sun[2])
+        GLES20.glUniform1f(prog.u("uTimeM"), tsec)
+        GLES20.glUniform1f(prog.u("uAlpha"), 1f)
+        for ((i, o) in orbiters.withIndex()) {
+            val front = oZ[i] >= 0f
+            val x = cx + radius * oX[i]
+            val y = cy + radius * oY[i]
+            // A little nearer is a little bigger.
+            val r = radius * o.size * (1f + 0.06f * oZ[i] / o.a)
+            if (r < 0.6f || x < -r * 2f || x > w + r * 2f || y < -r * 2f || y > h + r * 2f) continue
+            if (front != behind) {
+                GLES20.glUniform4f(prog.u("uBox"), x - r * 1.3f, y - r * 1.3f, x + r * 1.3f, y + r * 1.3f)
+                GLES20.glUniform3f(prog.u("uMoon"), x, y, r)
+                GLES20.glUniform1i(prog.u("uStyle"), o.style)
+                GLES20.glUniform3f(prog.u("uColA"), o.colA[0], o.colA[1], o.colA[2])
+                GLES20.glUniform3f(prog.u("uColB"), o.colB[0], o.colB[1], o.colB[2])
+                GLES20.glUniform1f(prog.u("uSeed"), o.seed)
+                GLES20.glUniform4f(prog.u("uPlanetC"), cx, cy, radius, 0f)
+                GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+            }
+            if (!behind && o.size * 2f < 0.5f) {
+                // The shadow: the ray from the moon along the sun's light, to where it meets the planet's sphere (in radii).
+                val mx = oX[i]
+                val my = oY[i]
+                val mz = oZ[i]
+                val ms = mx * sun[0] + my * sun[1] + mz * sun[2]
+                val disc = ms * ms - (mx * mx + my * my + mz * mz - 1f)
+                if (ms > 0f && disc > 0f) {
+                    val t = ms - sqrt(disc)
+                    val sz = mz - t * sun[2]
+                    if (sz > 0.1f) {
+                        val sx = cx + radius * (mx - t * sun[0])
+                        val sy = cy + radius * (my - t * sun[1])
+                        val sr = r * 1.05f
+                        GLES20.glUniform4f(prog.u("uBox"), sx - sr * 1.4f, sy - sr * 1.4f, sx + sr * 1.4f, sy + sr * 1.4f)
+                        GLES20.glUniform3f(prog.u("uMoon"), sx, sy, sr)
+                        GLES20.glUniform1i(prog.u("uStyle"), SHADOW_STYLE)
+                        GLES20.glUniform4f(prog.u("uPlanetC"), cx, cy, radius, 0f)
+                        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+                    }
+                }
+            }
+        }
+    }
+
     private fun drawSphere(w: Int, h: Int, timeMs: Long, p: SuperParams, m: SuperMotion) {
         val prog = sphere ?: return
         val d = m.depth.coerceIn(0f, 1f)
         SuperCamera.pose(scene, m.lockFly, d, pose)
-        val radius = w * pose.r * m.zoom * p.size
-        val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.08f, d) + m.tiltX * w * lerp(0.015f, 0.035f, d)
-        val cyTop = h * pose.cy + m.tiltY * h * 0.015f
+        // The 600 seconds the shaders' clock counts: everything that moves on its own makes whole turns in them, so that nothing jumps.
+        val tsec = (timeMs % 600000L) / 1000f
+        val tw = 6.2831855f / 600f
+        // The camera breathes a little (never still, never quick).
+        val breathe = 1f + 0.005f * sin(tw * 3f * tsec)
+        val radius = w * pose.r * m.zoom * p.size * breathe
+        val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.08f, d) + m.tiltX * w * lerp(0.015f, 0.035f, d) + w * 0.004f * sin(tw * 5f * tsec)
+        val cyTop = h * pose.cy + m.tiltY * h * 0.015f + h * 0.003f * sin(tw * 7f * tsec + 1.3f)
         val cy = h - cyTop
         val moon = scene == SuperScene.Moon
-        val rings = scene == SuperScene.Saturn
+        val rings = scene == SuperScene.Saturn && ringTex != 0
         // How close the camera is (0 on the lock screen and at the home position, 1 at the closest zoom).
         val near = ((d - 0.4f) / 0.4f).coerceIn(0f, 1f)
         val reach = radius * (if (rings) 2.45f else 1.32f)
@@ -786,12 +975,15 @@ internal class SuperGl(
             val sz = 0.66f
             val len = sqrt(sx * sx + sy * sy + sz * sz)
             GLES20.glUniform3f(prog.u("uSun"), sx / len, sy / len, sz / len)
+            lastSunX = sx / len
+            lastSunY = sy / len
+            lastSunZ = sz / len
             GLES20.glUniform1i(prog.u("uKind"), 1)
             // The terrain's shadows are felt more the closer the camera is; a little sharpening where the picture is magnified.
             GLES20.glUniform1f(prog.u("uRelief"), 1.3f + 0.4f * near)
             GLES20.glUniform1f(prog.u("uSharp"), 0.15f + 0.25f * near)
             GLES20.glUniform3f(prog.u("uTint"), 1.70f, 1.66f, 1.58f)
-            GLES20.glUniform1f(prog.u("uAmbient"), 0.035f)
+            GLES20.glUniform1f(prog.u("uAmbient"), 0.05f)
             GLES20.glUniform1f(prog.u("uGain"), 1.25f)
             GLES20.glUniform1f(prog.u("uLimb"), 0f)
             GLES20.glUniform1f(prog.u("uDetail"), 0.08f * near)
@@ -806,6 +998,9 @@ internal class SuperGl(
             val sz = if (low) 0.66f else 0.75f
             val len = sqrt(sx * sx + sy * sy + sz * sz)
             GLES20.glUniform3f(prog.u("uSun"), sx / len, sy / len, sz / len)
+            lastSunX = sx / len
+            lastSunY = sy / len
+            lastSunZ = sz / len
             GLES20.glUniform1i(prog.u("uKind"), albedoKind)
             // The terrain of the bodies whose heights are known; where they are not, relief is read from the picture's brightness.
             GLES20.glUniform1f(prog.u("uRelief"), if (terrain) look.relief * (0.8f + 0.5f * near) else 0f)
@@ -833,9 +1028,37 @@ internal class SuperGl(
             SuperScene.Earth -> GLES20.glUniform4f(prog.u("uGlow"), 0.290f, 0.639f, 1.000f, 0.34f)
             else -> GLES20.glUniform4f(prog.u("uGlow"), 0f, 0f, 0f, 0f)
         }
-        // Saturn's rings: lying at 17° to the picture's horizontal, seen from a little above – opening up the more the axis leans.
-        val open = (0.30f + (abs(sin(m.lat)) - 0.199f) * 0.8f).coerceIn(0.12f, 0.6f)
-        GLES20.glUniform4f(prog.u("uRing"), if (rings) 1f else 0f, 0.297f, open, 0f)
+        GLES20.glUniform1f(prog.u("uTime"), tsec)
+        // The air of some planets: wisps that turn faster than the ground (Venus, Mars), and the glow at the rim of the day side.
+        if (moon) {
+            GLES20.glUniform4f(prog.u("uHaze"), 0f, 0f, 0f, 0f)
+            GLES20.glUniform1f(prog.u("uRim"), 0f)
+        } else {
+            when (scene) {
+                SuperScene.Venus -> GLES20.glUniform4f(prog.u("uHaze"), 1.00f, 0.93f, 0.74f, 0.55f)
+                SuperScene.Mars -> GLES20.glUniform4f(prog.u("uHaze"), 0.93f, 0.74f, 0.55f, 0.14f)
+                else -> GLES20.glUniform4f(prog.u("uHaze"), 0f, 0f, 0f, 0f)
+            }
+            GLES20.glUniform1f(prog.u("uHazeSpin"), if (scene == SuperScene.Venus) 3f else 1f)
+            GLES20.glUniform1f(
+                prog.u("uRim"),
+                when (scene) {
+                    SuperScene.Venus -> 0.70f
+                    SuperScene.Mars -> 0.30f
+                    SuperScene.Neptune -> 0.45f
+                    SuperScene.Jupiter, SuperScene.Saturn -> 0.22f
+                    else -> 0f
+                },
+            )
+        }
+        // Saturn's ring lies at 17° to the picture's horizontal, seen from a little above – opening up the more the axis leans. It
+        // follows the tilt of the phone and the pages a little (so it seems to turn), and sways slowly on its own.
+        val ringAngle = 0.297f + 0.16f * m.tiltX + 0.05f * m.panX + 0.022f * sin(tw * 5f * tsec)
+        val open = (0.30f + (abs(sin(m.lat)) - 0.199f) * 0.8f + 0.05f * m.tiltY + 0.016f * sin(tw * 4f * tsec + 0.9f)).coerceIn(0.12f, 0.62f)
+        GLES20.glUniform4f(prog.u("uRing"), if (rings) 1f else 0f, ringAngle, open, 0f)
+        sun[0] = lastSunX
+        sun[1] = lastSunY
+        sun[2] = lastSunZ
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, albedoTex)
@@ -846,7 +1069,17 @@ internal class SuperGl(
         GLES20.glActiveTexture(GLES20.GL_TEXTURE2)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, if (extraTex != 0) extraTex else albedoTex)
         GLES20.glUniform1i(prog.u("uExtra"), 2)
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE3)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, if (ringTex != 0) ringTex else albedoTex)
+        GLES20.glUniform1i(prog.u("uRingTex"), 3)
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+        // What hangs behind the planet (a far-off Earth or Jupiter, the moons on the far side of their orbits), the planet, then what is in front.
+        placeOrbiters(timeMs, cx, cy, radius, if (rings) ringAngle else ORBIT_ROLL, if (rings) asin(open.coerceIn(0f, 1f)) else ORBIT_ELEV)
+        drawDistant(w, h, tsec, d, m)
+        drawOrbiters(w, h, tsec, radius, cx, cy, behind = true)
+        GLES20.glUseProgram(prog.id)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+        drawOrbiters(w, h, tsec, radius, cx, cy, behind = false)
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         lastCenterX = cx.toInt().coerceIn(0, w - 1)
         lastCenterY = cy.toInt().coerceIn(0, h - 1)
@@ -959,6 +1192,19 @@ internal class SuperGl(
         const val LUMA_ROWS = 64
         const val NORMAL_STRIPS = 16
 
+        /** The bodies that go round a planet (and the Earth or Jupiter in the sky of a moon): how MOON_FRAGMENT draws them. */
+        const val ROCK = 0
+        const val ICE = 1
+        const val VOLCANIC = 2
+        const val EARTH_STYLE = 3
+        const val JUPITER_STYLE = 4
+        const val SHADOW_STYLE = 5
+        const val MAX_ORBITERS = 4
+
+        /** The plane the moons go round in (when it isn't Saturn's ring): turned by this about the view axis, seen from this far above it (radians). */
+        const val ORBIT_ROLL = 0.20f
+        const val ORBIT_ELEV = 0.30f
+
         /** The big maps of the solid planets: 8192 × 4096 in 16 strips. */
         const val HD_W = 8192
         const val HD_H = 4096
@@ -993,12 +1239,29 @@ float hash(vec2 p) {
   return fract(p.x * p.y);
 }
 
+float vn2(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
 void main() {
   vec2 frag = gl_FragCoord.xy;
-  float t = frag.y / uRes.y;
+  float unit = uRes.x / 1080.0;
+  vec2 uvn = frag / uRes;
+  float t = uvn.y;
   vec3 c = mix(vec3(0.039, 0.067, 0.157), vec3(0.004, 0.008, 0.039), smoothstep(0.0, 1.0, t));
+  // The sun is beyond the upper left corner: a warm glow there.
+  float sunG = pow(clamp(1.0 - length((uvn - vec2(0.0, 1.0)) * vec2(1.0, 0.55)) * 0.95, 0.0, 1.0), 3.0);
+  c += vec3(1.0, 0.86, 0.66) * sunG * 0.085;
   if (uStars > 0.5) {
-    float unit = uRes.x / 1080.0;
+    // A faint band of the Milky Way: stars too far off to tell apart, a little dust in it.
+    vec2 qb = (frag - uRes * 0.5 - uShift * 0.15) / uRes.y;
+    float across = dot(qb, vec2(-0.5, 0.866)) + 0.08;
+    float band = exp(-across * across / 0.03);
+    float mw = band * (0.30 + 0.70 * vn2(qb * 5.0 + 7.0)) * (0.55 + 0.45 * vn2(qb * 17.0 + 2.0));
+    c += vec3(0.085, 0.100, 0.165) * mw;
     vec2 mid = uRes * 0.5;
     for (int i = 0; i < 3; i++) {
       float fi = float(i);
@@ -1012,13 +1275,144 @@ void main() {
         vec2 pos = 0.2 + 0.6 * vec2(hash(id + 11.3), hash(id + 57.1));
         float d = length((f - pos) * cs);
         float rad = (0.8 + 1.5 * hash(id + 3.7)) * unit;
-        float tw = 0.6 + 0.4 * sin(uTime * 0.9 + 6.2831 * hash(id + 5.5));
+        // 86 cycles in the 600 seconds uTime counts: the twinkle never jumps when the count starts again.
+        float tw = 0.6 + 0.4 * sin(uTime * 0.90058 + 6.2831 * hash(id + 5.5));
         float b = (1.0 - smoothstep(rad * 0.35, rad, d)) * tw * (0.55 + 0.45 * hash(id + 9.9));
-        c += vec3(0.92, 0.94, 1.0) * b;
+        // Some stars are blue, some orange.
+        float kind = hash(id + 21.7);
+        vec3 starCol = kind > 0.80 ? vec3(0.70, 0.82, 1.0) : (kind > 0.62 ? vec3(1.0, 0.82, 0.62) : vec3(0.92, 0.94, 1.0));
+        c += starCol * b;
+      }
+    }
+    // Now and then a shooting star crosses the sky.
+    for (int k = 0; k < 2; k++) {
+      float tt = uTime + float(k) * 8.5;
+      float slot = floor(tt / 17.0);
+      float lt = tt - slot * 17.0;
+      if (lt < 1.1) {
+        float h1 = hash(vec2(slot, float(k) + 3.1));
+        float h2 = hash(vec2(slot + 7.7, float(k)));
+        vec2 start = vec2(0.10 + 0.55 * h1, 0.55 + 0.40 * h2) * uRes;
+        vec2 dir = normalize(vec2(0.78 + 0.2 * h2, -0.55 - 0.2 * h1));
+        vec2 head = start + dir * (0.9 * uRes.x) * lt;
+        float tail = 0.16 * uRes.x * smoothstep(0.0, 0.2, lt);
+        vec2 dd = frag - head;
+        float along = dot(dd, dir);
+        float perp = length(dd - dir * along);
+        float inTail = step(-tail, along) * step(along, 0.0);
+        float fade = smoothstep(0.0, 0.12, lt) * (1.0 - smoothstep(0.7, 1.1, lt));
+        float core = (1.0 - smoothstep(0.0, 1.6 * unit, perp)) * pow(clamp(1.0 + along / max(tail, 1.0), 0.0, 1.0), 2.0);
+        c += vec3(0.95, 0.97, 1.0) * core * inTail * fade * 0.9;
       }
     }
   }
   fragColor = vec4(c, 1.0);
+}
+"""
+
+        /**
+         * A little lit sphere: a moon of a planet, the Earth or Jupiter hanging in the sky of a moon (styles ROCK … JUPITER_STYLE), or the
+         * soft dark spot a moon's shadow makes on its planet (SHADOW_STYLE, only where the planet is). Premultiplied.
+         */
+        const val MOON_FRAGMENT = """#version 300 es
+precision highp float;
+uniform vec3 uMoon;
+uniform vec3 uSun;
+uniform vec3 uColA;
+uniform vec3 uColB;
+uniform float uSeed;
+uniform int uStyle;
+uniform vec4 uPlanetC;
+uniform float uAlpha;
+uniform float uTimeM;
+out vec4 fragColor;
+
+float h3(vec3 p) {
+  p = fract(p * 0.3183099 + 0.1);
+  p *= 17.0;
+  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+
+float vn(vec3 x) {
+  vec3 i = floor(x);
+  vec3 f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(h3(i + vec3(0.0, 0.0, 0.0)), h3(i + vec3(1.0, 0.0, 0.0)), f.x),
+                 mix(h3(i + vec3(0.0, 1.0, 0.0)), h3(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
+             mix(mix(h3(i + vec3(0.0, 0.0, 1.0)), h3(i + vec3(1.0, 0.0, 1.0)), f.x),
+                 mix(h3(i + vec3(0.0, 1.0, 1.0)), h3(i + vec3(1.0, 1.0, 1.0)), f.x), f.y), f.z);
+}
+
+float fbm(vec3 q) {
+  float s = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 4; i++) {
+    s += a * vn(q);
+    q = q * 2.07 + vec3(11.3, 7.1, 3.7);
+    a *= 0.5;
+  }
+  return s;
+}
+
+void main() {
+  vec2 p = (gl_FragCoord.xy - uMoon.xy) / uMoon.z;
+  float r = length(p);
+  if (uStyle == 5) {
+    float pr = length((gl_FragCoord.xy - uPlanetC.xy) / uPlanetC.z);
+    float inside = 1.0 - smoothstep(0.97, 0.995, pr);
+    float a = (1.0 - smoothstep(0.35, 1.0, r)) * 0.60 * inside;
+    fragColor = vec4(0.0, 0.0, 0.0, a);
+    return;
+  }
+  float edge = clamp((1.0 - r) * uMoon.z, 0.0, 1.0);
+  if (edge <= 0.0) {
+    fragColor = vec4(0.0);
+    return;
+  }
+  vec3 n = vec3(p, sqrt(max(1.0 - r * r, 0.0)));
+  float ang = 6.2831853 * uTimeM / 600.0;
+  vec3 q = vec3(n.x * cos(ang) - n.z * sin(ang), n.y, n.x * sin(ang) + n.z * cos(ang));
+  vec3 albedo;
+  if (uStyle == 3) {
+    // The Earth: sea, land, white caps and clouds that drift.
+    float land = fbm(q * 2.2 + uSeed);
+    vec3 landc = mix(vec3(0.20, 0.36, 0.13), vec3(0.64, 0.54, 0.34), smoothstep(0.52, 0.78, fbm(q * 5.0 + 9.0)));
+    albedo = mix(vec3(0.03, 0.13, 0.38), landc, smoothstep(0.50, 0.53, land));
+    albedo = mix(albedo, vec3(0.94, 0.96, 0.98), smoothstep(0.80, 0.90, abs(q.y)));
+    float cl = smoothstep(0.50, 0.78, fbm(vec3(q.x * 3.3 + uTimeM * 0.0105, q.y * 3.3, q.z * 3.3) + 20.0));
+    albedo = mix(albedo, vec3(1.0), cl * 0.85);
+  } else if (uStyle == 4) {
+    // Jupiter: belts, and the Great Red Spot that comes round.
+    float lon = atan(q.x, q.z);
+    float wob = fbm(vec3(q.x * 3.0, q.y * 9.0, q.z * 3.0));
+    float band = 0.5 + 0.5 * sin(q.y * 17.0 + 3.2 * wob);
+    albedo = mix(vec3(0.62, 0.42, 0.28), vec3(0.94, 0.86, 0.74), band);
+    albedo *= 0.88 + 0.24 * fbm(vec3(q.x * 8.0, q.y * 26.0, q.z * 8.0));
+    float dl = mod(lon - 0.4 + 3.14159, 6.28318) - 3.14159;
+    float spot = 1.0 - smoothstep(0.55, 1.0, length(vec2(dl / 0.34, (q.y + 0.30) / 0.11)));
+    albedo = mix(albedo, vec3(0.76, 0.36, 0.22), spot * 0.9);
+  } else if (uStyle == 2) {
+    // Io: yellow sulphur with dark vents.
+    float v = fbm(q * 3.0 + uSeed);
+    albedo = mix(uColA, vec3(0.90, 0.64, 0.24), smoothstep(0.35, 0.70, v));
+    albedo = mix(albedo, uColB * 0.6, smoothstep(0.62, 0.72, fbm(q * 7.0 + uSeed * 3.0)) * 0.9);
+  } else if (uStyle == 1) {
+    // Ice: bright, with brown cracks.
+    float v = fbm(q * 2.0 + uSeed);
+    float cr = abs(sin((q.x * 7.0 + q.y * 5.0 + 2.5 * fbm(q * 3.0 + uSeed)) * 3.0));
+    albedo = mix(uColA, uColB, smoothstep(0.85, 1.0, cr) * 0.8 + (1.0 - smoothstep(0.3, 0.7, v)) * 0.25);
+  } else {
+    // Rock: light and dark patches.
+    float v = fbm(q * 3.2 + uSeed);
+    float c = fbm(q * 9.0 + uSeed * 2.0);
+    albedo = mix(uColB, uColA, smoothstep(0.30, 0.70, v)) * (0.85 + 0.30 * c);
+  }
+  float lit = clamp(dot(n, uSun), 0.0, 1.0);
+  float shade = (0.04 + 1.05 * pow(lit, 0.8)) * (0.55 + 0.45 * n.z);
+  vec3 col = albedo * shade;
+  if (uStyle == 3) col += vec3(0.30, 0.58, 1.0) * pow(1.0 - n.z, 2.6) * (0.15 + 0.85 * lit) * 0.8;
+  float a = edge * uAlpha;
+  fragColor = vec4(col * a, a);
 }
 """
 
@@ -1075,6 +1469,11 @@ uniform float uDetail;
 uniform float uGas;
 uniform vec4 uGlow;
 uniform vec4 uRing;
+uniform sampler2D uRingTex;
+uniform float uTime;
+uniform vec4 uHaze;
+uniform float uHazeSpin;
+uniform float uRim;
 out vec4 fragColor;
 
 const float PI = 3.14159265;
@@ -1118,16 +1517,52 @@ float lumAt(vec2 p, vec2 gx, vec2 gy) {
   return (uKind == 2) ? c.r : dot(c, vec3(0.299, 0.587, 0.114));
 }
 
-vec4 ringColor(float rho, float aa) {
-  float edge = smoothstep(1.27, 1.27 + aa, rho) * (1.0 - smoothstep(2.25 - aa, 2.25, rho));
-  if (edge <= 0.0) return vec4(0.0);
-  float idx = floor((rho - 1.27) / 0.022);
-  float a = 0.30 + 0.5 * hr(idx);
-  if (rho > 1.76 && rho < 1.83) a = 0.06;
-  if (rho < 1.5) a *= 0.6;
-  if (rho > 1.83) a *= 0.85;
-  vec3 col = (mod(idx, 2.0) < 1.0) ? vec3(0.886, 0.808, 0.627) : vec3(0.804, 0.722, 0.549);
-  a = min(a * 1.25, 0.95) * edge;
+const float RING_IN = 1.236;
+const float RING_OUT = 2.326;
+
+// What Saturn's ring is made of at the distance [rho] (in radii of the planet): x how much light it stops, y how bright it is.
+vec2 ringProfile(float rho) {
+  float t = (rho - RING_IN) / (RING_OUT - RING_IN);
+  if (t <= 0.0 || t >= 1.0) return vec2(0.0);
+  return texture(uRingTex, vec2(t, 0.5)).rg;
+}
+
+// Noise that runs round a circle ([cells] cells, so it closes).
+float angNoise(float ang, float cells, float seed) {
+  float x = ang * 0.15915494 * cells;
+  float i = floor(x);
+  float f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(hr(mod(i, cells) + seed), hr(mod(i + 1.0, cells) + seed), f);
+}
+
+// The ring at the point [r] of its plane (view coordinates, in planet radii; [rn] is the plane's normal), premultiplied. Its lanes turn
+// at their own speeds (whole turns in the 600 seconds [uTime] counts, so that the loop never jumps), the spokes of the B ring turn as one,
+// and the planet's shadow lies across it.
+vec4 ringColor(vec3 r, float rho, vec3 rn) {
+  vec2 pr = ringProfile(rho);
+  float a = pr.x;
+  if (a <= 0.004) return vec4(0.0);
+  vec3 e1 = normalize(vec3(rn.y, -rn.x, 0.0));
+  vec3 e2 = cross(rn, e1);
+  float az = atan(dot(r, e2), dot(r, e1));
+  float lane = floor((rho - RING_IN) / 0.011);
+  float rev = clamp(floor(9.2 / pow(rho, 1.5) + 0.5), 2.0, 10.0);
+  float turn = uTime * (6.2831853 / 600.0);
+  float ang = az - rev * turn;
+  float g = angNoise(ang, 29.0, lane * 7.31) * 0.6 + angNoise(ang, 71.0, lane * 3.17 + 50.0) * 0.4;
+  float lanes = 0.82 + 0.36 * hr(lane * 1.7);
+  a = clamp(a * (0.84 + 0.32 * g), 0.0, 1.0);
+  float sp = angNoise(az - 2.0 * turn, 11.0, 91.0);
+  float spokes = smoothstep(0.60, 0.90, sp) * smoothstep(1.50, 1.58, rho) * (1.0 - smoothstep(1.90, 1.98, rho));
+  float come = 0.5 + 0.5 * sin(turn * 4.0 + 1.7);
+  float bright = pr.y * lanes * (0.9 + 0.2 * g) * (1.0 - 0.5 * spokes * come);
+  vec3 col = vec3(0.90, 0.81, 0.65) * (0.22 + 0.78 * bright);
+  float lit = mix(0.70, 1.0, smoothstep(0.0, 0.30, abs(dot(rn, uSun))));
+  float sb = dot(r, uSun);
+  float miss = sqrt(max(dot(r, r) - sb * sb, 0.0));
+  float shadow = (sb < 0.0) ? 1.0 - smoothstep(0.97, 1.05, miss) : 0.0;
+  col *= lit * (1.0 - 0.9 * shadow);
   return vec4(col * a, a);
 }
 
@@ -1138,6 +1573,20 @@ void main() {
   vec2 pc = (rr > 0.0001) ? p * (rc / rr) : p;
   vec3 n = vec3(pc, sqrt(max(1.0 - rc * rc, 0.0)));
   vec3 b = uRot * n;
+  vec3 rn = vec3(0.0, 0.0, 1.0);
+  float ringShadow = 0.0;
+  if (uRing.x > 0.5) {
+    // The ring's plane: its normal leans to the picture's top by [uRing.z], turned about the view axis by [uRing.y].
+    float rcs = cos(uRing.y);
+    float rsn = sin(uRing.y);
+    float nzr = uRing.z;
+    float nyr = sqrt(1.0 - nzr * nzr);
+    rn = vec3(-nyr * rsn, nyr * rcs, nzr);
+    // The shadow of the ring on the planet: from the point towards the sun, through the plane.
+    float dn = dot(rn, uSun);
+    float tt = -dot(rn, n) / (abs(dn) > 0.02 ? dn : 0.02);
+    if (tt > 0.0 && rr < 1.0) ringShadow = ringProfile(length(n + tt * uSun)).x;
+  }
   float lon = atan(b.x, b.z);
   float lat = asin(clamp(b.y, -1.0, 1.0));
   float u = lon * 0.15915494 + 0.5;
@@ -1180,11 +1629,16 @@ void main() {
     vec3 qa = vec3(b.x, b.y * 5.0, b.z);
     if (uGas > 0.0) {
       // The belts' edges meander and curl: the map is read a little to the side, by a noise that is drawn out along the bands.
-      float wu = fbm(qa * 40.0 + 17.0) - 0.47;
-      float wv = fbm(qa * 40.0) - 0.47;
-      float bu = fbm(qa * 9.0 + 5.0) - 0.47;
-      float bv = fbm(qa * 9.0 + 29.0) - 0.47;
+      // The noise slides in a circle (twice in the 600 seconds) so that the edges of the belts keep curling, and the bands sway
+      // against each other, as the winds of the planet pull them.
+      float w1 = uTime * (6.2831853 * 2.0 / 600.0);
+      vec3 qt = qa + vec3(0.012 * sin(w1), 0.0, 0.012 * cos(w1));
+      float wu = fbm(qt * 40.0 + 17.0) - 0.47;
+      float wv = fbm(qt * 40.0) - 0.47;
+      float bu = fbm(qt * 9.0 + 5.0) - 0.47;
+      float bv = fbm(qt * 9.0 + 29.0) - 0.47;
       uvl += uGas * vec2(wu * 0.0012 + bu * 0.0050, wv * 0.0016 + bv * 0.0056);
+      uvl.x += uGas * 0.0035 * sin(lat * 7.0 + 1.3) * sin(uTime * (6.2831853 * 3.0 / 600.0));
     }
     albedo = textureGrad(uAlbedo, uvl, gx, gy).rgb;
     if (uSharp > 0.0) {
@@ -1197,6 +1651,14 @@ void main() {
       float fi = fbm(vec3(b.x, b.y * 3.0, b.z) * 340.0);
       albedo *= 1.0 + uGas * (0.13 * (st - 0.47) + 0.06 * (fi - 0.47));
     }
+  }
+  if (uHaze.a > 0.0) {
+    float ha = uHazeSpin * uTime * (6.2831853 / 600.0);
+    float hc = cos(ha);
+    float hs = sin(ha);
+    vec3 bh = vec3(b.x * hc - b.z * hs, b.y, b.x * hs + b.z * hc);
+    float wisp = fbm(vec3(bh.x, bh.y * 2.6, bh.z) * 5.0 + 3.0);
+    albedo = mix(albedo, uHaze.rgb, smoothstep(0.40, 0.78, wisp) * uHaze.a);
   }
   if (uDetail > 0.0) {
     vec3 q = b * 90.0;
@@ -1224,9 +1686,16 @@ void main() {
     nv = bn * uRot;
   }
   float lit = clamp(dot(nv, uSun), 0.0, 1.0);
-  float shade = uAmbient + uGain * pow(lit, 0.85);
+  // The dark side of the Moon is lit a little by the Earth (bluish).
+  vec3 shade = vec3(uAmbient) * ((uKind == 1) ? vec3(0.80, 0.95, 1.30) : vec3(1.0)) + vec3(uGain * pow(lit, 0.85));
   shade *= mix(1.0, 0.55 + 0.45 * n.z, uLimb);
+  shade *= 1.0 - 0.85 * ringShadow;
   vec3 col = clamp(albedo * shade, 0.0, 1.0);
+  if (uRim > 0.0 && uKind != 3) {
+    // The air at the rim of the day side.
+    float dayR = clamp(dot(n, uSun) * 2.0 + 0.3, 0.0, 1.0);
+    col = clamp(col + uGlow.rgb * (uRim * pow(1.0 - n.z, 3.0) * dayR), 0.0, 1.0);
+  }
   if (uKind == 3) {
     float day = clamp(dot(n, uSun) * 3.0 + 0.4, 0.0, 1.0);
     // The glint of the sun on the sea, the clouds (lit by the sun, not by the terrain), the lights of the cities on the night side and
@@ -1239,6 +1708,13 @@ void main() {
     col += vec3(1.0, 0.76, 0.42) * (ex.r * 1.4) * (1.0 - day) * (1.0 - cl * 0.8);
     float rim = pow(1.0 - n.z, 2.6);
     col += vec3(0.30, 0.58, 1.0) * rim * (0.12 + 0.88 * day) * 0.9;
+    // The aurora: curtains round the poles that come and go on the night side.
+    float alat = abs(lat);
+    float zone = smoothstep(1.10, 1.20, alat) * (1.0 - smoothstep(1.28, 1.38, alat));
+    float fl = uTime * (6.2831853 * 6.0 / 600.0);
+    float rays = fbm(vec3(b.x * 7.0, b.y * 1.2, b.z * 7.0) + vec3(0.0, 0.5 * sin(fl), 0.5 * cos(fl)));
+    float au = zone * smoothstep(0.30, 0.78, rays) * (1.0 - smoothstep(0.0, 0.7, day)) * (1.0 - cl * 0.7);
+    col += mix(vec3(0.15, 1.0, 0.45), vec3(0.55, 0.30, 1.0), smoothstep(0.55, 0.95, rays)) * au * 0.75;
     col = clamp(col, 0.0, 1.0);
   }
   float edge = clamp((1.0 - rr) * uPlanet.z, 0.0, 1.0);
@@ -1246,14 +1722,9 @@ void main() {
   float g = uGlow.a * pow(clamp(1.0 - (rr - 1.0) / 0.28, 0.0, 1.0), 2.0);
   res = res + vec4(uGlow.rgb * g, g) * (1.0 - res.a);
   if (uRing.x > 0.5) {
-    float cs = cos(uRing.y);
-    float sn = sin(uRing.y);
-    float nzr = uRing.z;
-    float nyr = sqrt(1.0 - nzr * nzr);
-    vec3 rn = vec3(-nyr * sn, nyr * cs, nzr);
     float zr = -(rn.x * p.x + rn.y * p.y) / rn.z;
-    float rho = length(vec3(p, zr));
-    vec4 ring = ringColor(rho, 2.0 / uPlanet.z);
+    vec3 rp = vec3(p, zr);
+    vec4 ring = ringColor(rp, length(rp), rn);
     float zs = (rr < 1.0) ? sqrt(1.0 - rr * rr) : -10.0;
     if (zr > zs) {
       res = ring + res * (1.0 - ring.a);

@@ -37,6 +37,11 @@ dem Projekt three-globe von Vasco Asturiano bei (https://github.com/vasturiano/t
 der NASA (Visible Earth); die genaue Herkunft jedes einzelnen Bildes habe ich nicht geprüft. Die Lichter der Städte sind aus der
 Nachtaufnahme herausgezogen, die Geländenormalen aus der Höhenkarte gerechnet. Die Wolken ziehen im Shader langsam über die Erde.
 
+Saturns Ring (saturn_ring.webp, ab Version 2.1): das Profil des Rings (Durchlässigkeit und Helligkeit auf 2048 Schritten von innen nach außen)
+stammt aus dem Ringbild "saturn_ring_alpha" der Solar Textures von Solar System Scope (https://www.solarsystemscope.com/textures/,
+CC BY 4.0), über pyvista/vtk-data bezogen; die drehenden Bänder und Speichen, die Schatten und die Monde (kleine berechnete Kugeln) rechnet
+der Shader.
+
 Iwo Jima (iwojima.jpg): Foto des Iwo-Jima-Denkmals (U.S. Marine Corps War Memorial) mit dem Vollmond und der US-Flagge, nach einer
 Bildschirmaufnahme aus ZENITHs Wallpaper-Galerie, deren Fotos aus der NASA-Bildbibliothek (images.nasa.gov) kommen. Den Fotografen
 und die Bildnummer kenne ich nicht; NASA-Bilder sind in der Regel gemeinfrei, bei einzelnen können andere Rechte gelten.

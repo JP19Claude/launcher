@@ -375,6 +375,17 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Saturns Ring dreht sich – mehr Details und sanftere Animationen", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Für alles mehr Details, zum Beispiel soll sich beim Saturn der Ring auf dem Startbildschirm drehen, und es sollen mehr und saubere Animationen her. Der Ring hat jetzt seine echte Struktur: den dunklen C-Ring innen, den hellen B-Ring, die Cassini-Teilung und den A-Ring. Saturns Schatten liegt auf dem Ring, der Schatten des Rings auf dem Planeten. Die Bänder des Rings drehen sich mit eigener Geschwindigkeit (innen schneller), im B-Ring ziehen dunkle Speichen mit, und der Ring neigt und dreht sich mit dem Handy und beim Wischen der Seiten und schwingt langsam von allein. Auf dem Startbildschirm kommt Saturn nur so nah, dass der Ring noch quer durchs Bild zieht.",
+                        "Monde: Die Planeten werden jetzt umkreist – die Erde vom Mond, Mars von Phobos und Deimos, Jupiter von Io, Europa, Ganymed und Kallisto (ihre Schatten fallen auf Jupiter), Saturn von Titan, Enceladus und Dione, Neptun von Triton (gegenläufig), Pluto von Charon. Am Himmel des Mondes hängt die Erde, am Himmel von Io, Europa und Ganymed Jupiter. Größen und Abstände sind gezeichnet, nicht maßstabsgetreu, die Umlaufzeiten stark verkürzt.",
+                        "Lebendige Atmosphären: Auf Jupiter, Saturn und Neptun schwingen die Bänder gegeneinander und die Ränder der Gürtel kräuseln sich; Venus bekommt ziehende Wolken, Mars Dunst; die Planeten schimmern am Rand der Tagseite; die Erde hat Polarlicht, die dunkle Seite des Mondes Erdlicht.",
+                        "Himmel und Kamera: Sonnenglanz oben links, ein Band der Milchstraße, blaue und orange Sterne, ab und zu eine Sternschnuppe. Seiten, Neigung und Zoom bewegen das Bild auf weichen Federn (weicher Start, weiche Landung, auf 60 und 120 Hertz derselbe Weg), die Kamera atmet sacht.",
+                        "Ehrlich dazu: Ich habe nichts davon auf einem Handy ausprobiert, nur am Rechner mit Software-Grafik gerendert. Die Ringstruktur kommt aus dem Ringbild von Solar System Scope (CC BY 4.0). Die Monde sind kleine berechnete Kugeln ohne Karten. Die Grafikeinheit hat mehr zu tun, der Akku wird etwas mehr beansprucht. Wenn der Grafikchip nicht mitkommt, zeichnet weiter der Prozessor – ohne Monde, Ringschatten und die neuen Atmosphären.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

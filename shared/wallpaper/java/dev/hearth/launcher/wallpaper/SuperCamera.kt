@@ -51,7 +51,7 @@ object SuperCamera {
         SuperScene.Photo -> floatArrayOf(0.15f, 0.15f, 1.9f, 0.50f, 0.50f, 1.06f, 0.50f, 0.47f, 1.10f, 0.50f, 0.50f, 1.35f)
         else -> {
             // The planets: as close as the Moon. The solid ones have maps of 8192 × 4096 or 16384 × 8192 (Io's, the softest, not quite as close); the gas planets' maps are smaller and a fine
-            // cloud structure is drawn on them, and Saturn's rings fill the screen when it comes too close.
+            // cloud structure is drawn on them, Saturn only comes as close as its ring still sweeps across the picture.
             val k = when (scene) {
                 SuperScene.Saturn -> 0.75f
                 SuperScene.Jupiter -> 1.15f
@@ -60,13 +60,15 @@ object SuperCamera {
                 else -> 1.0f
             }
             val closest = when (scene) {
-                SuperScene.Saturn -> 1.35f
+                SuperScene.Saturn -> 0.72f
                 SuperScene.Jupiter, SuperScene.Neptune -> 1.70f
                 SuperScene.Venus -> 1.60f
                 SuperScene.Io -> 1.50f
                 else -> 1.90f
             }
-            floatArrayOf(0.08f, 0.07f, 0.09f * k, 0.50f, 0.48f, 0.27f * k, 0.50f, 0.40f, 0.30f * k, 0.50f, 0.62f, closest)
+            // Saturn stays far enough away for its ring to sweep across the picture, with the planet's shadow on it.
+            val lowest = if (scene == SuperScene.Saturn) 0.56f else 0.62f
+            floatArrayOf(0.08f, 0.07f, 0.09f * k, 0.50f, 0.48f, 0.27f * k, 0.50f, 0.40f, 0.30f * k, 0.50f, lowest, closest)
         }
     }
 
