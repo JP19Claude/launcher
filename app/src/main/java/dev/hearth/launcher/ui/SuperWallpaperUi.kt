@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.wallpaper.SuperDirector
 import dev.hearth.launcher.wallpaper.SuperMotion
 import dev.hearth.launcher.wallpaper.SuperParams
 import dev.hearth.launcher.wallpaper.SuperPhoto
@@ -44,7 +45,7 @@ import kotlin.math.sin
  * runs), the scenes to choose from, how it moves, and the button that makes it the phone's wallpaper.
  */
 
-/** The scene as it runs, in a box: with a slow sway as if the phone were tilted. */
+/** The scene as it runs, in a box: with a slow sway as if the phone were tilted, and the flight from the lock screen to the home screen and back, round and round. */
 @Composable
 internal fun SuperScenePreview(params: SuperParams, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -55,7 +56,7 @@ internal fun SuperScenePreview(params: SuperParams, modifier: Modifier = Modifie
         var last = 0L
         while (true) {
             withFrameMillis { t ->
-                if (t - last >= 33L) {
+                if (t - last >= 16L) {
                     last = t
                     now = t
                 }
@@ -64,7 +65,8 @@ internal fun SuperScenePreview(params: SuperParams, modifier: Modifier = Modifie
     }
     Canvas(modifier) {
         val t = now
-        val motion = SuperMotion(panX = 0f, tiltX = sin(t / 2600f) * 0.4f, tiltY = 0f, zoom = 1f)
+        val depth = if (params.zoomOnWake) SuperDirector.demoDepth(t) else 1f
+        val motion = SuperMotion(panX = 0f, tiltX = sin(t / 2600f) * 0.4f, tiltY = 0f, zoom = 1f, depth = depth)
         drawIntoCanvas { c -> renderer.draw(c.nativeCanvas, size.width.roundToInt(), size.height.roundToInt(), t, params, motion) }
     }
 }
@@ -122,8 +124,8 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             checked = s.superTilt,
         ) { v -> update { it.copy(superParams = it.superParams.copy(tilt = v)) } }
         SwitchRow(
-            label = "Zoom beim Aufwachen und Seitenwechsel",
-            description = "Beim Einschalten kommt die Szene von nahem heran; mit den Seiten des Startbildschirms rückt sie zur Seite",
+            label = "Entsperr-Flug und Seitenwechsel",
+            description = "Auf dem Sperrbildschirm hängt der Körper klein und ruhig; beim Entsperren fliegt die Kamera schnell heran, beim Sperren wieder zurück – wie beim Super-Wallpaper von Xiaomi HyperOS. Mit den Seiten des Startbildschirms dreht oder rückt er weiter",
             checked = s.superZoom,
         ) { v -> update { it.copy(superParams = it.superParams.copy(zoomOnWake = v)) } }
         SwitchRow(

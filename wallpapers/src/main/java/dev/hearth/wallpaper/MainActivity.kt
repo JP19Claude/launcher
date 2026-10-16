@@ -75,7 +75,7 @@ class MainActivity : Activity() {
             )
         }
         option("Neigung folgen", "tilt")
-        option("Zoom beim Einschalten und Seitenwechsel", "zoom")
+        option("Entsperr-Flug und Seitenwechsel", "zoom")
         option("Sterne", "stars")
 
         column.addView(

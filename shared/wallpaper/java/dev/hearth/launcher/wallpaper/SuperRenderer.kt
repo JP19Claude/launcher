@@ -28,13 +28,15 @@ import kotlin.random.Random
  * ZENITH's Super-Wallpaper: wallpapers that move, in the manner of the "super wallpapers" some phones have. The Moon and
  * the Earth are real photographs of NASA, the other planets and moons are turned from real maps of NASA (they ship inside
  * the app, see app/src/one/assets/planets/CREDITS.txt) laid round a sphere pixel by pixel. They turn or hang in the dark,
- * drift with the phone's tilt and with the home page, and zoom in when the screen wakes. "Foto" shows any photo of the
- * gallery in the same way. One renderer for the live wallpaper, the settings' preview and the glass.
+ * drift with the phone's tilt and with the home page. On the lock screen the whole body hangs calm and small; when the phone
+ * is unlocked the camera dives in towards the surface, and out again when it locks (the "depth", see [SuperMotion] and
+ * SuperDirector). "Foto" shows any photo of the gallery in the same way. One renderer for the live wallpaper, the
+ * settings' preview and the glass.
  */
 
 /** The scenes ("mods") one can choose. */
 enum class SuperScene(val label: String, val note: String) {
-    Moon("Mond", "Der echte Mond: eine Aufnahme der NASA (Apollo), groß im Dunkeln – er wandert mit der Neigung und kommt beim Einschalten von nahem heran."),
+    Moon("Mond", "Der echte Mond: eine Aufnahme der NASA (Apollo), klein und ruhig auf dem Sperrbildschirm, beim Entsperren fliegt die Kamera heran; er wandert mit der Neigung und den Seiten."),
     Earth("Erde", "Die Erde aus dem All, eine Aufnahme der NASA – Wolken, Ozeane, Kontinente, mit dem Glanz der Atmosphäre am Rand."),
     Mars("Mars", "Der rote Planet, gedreht aus der echten Karte der NASA: dunkle Ebenen, Schluchten, die Polkappe."),
     Venus("Venus", "Die Venus, wie das Radar der Raumsonde Magellan sie sah (NASA): Hochländer, Lavaebenen, Krater unter den Wolken."),
@@ -48,7 +50,7 @@ enum class SuperScene(val label: String, val note: String) {
     Geometry("Geometrie", "Ein Ikosaeder aus Licht mit einem zweiten Körper darin, die beide umeinander drehen."),
     Photo(
         "Eigenes Foto",
-        "Ein Foto der NASA aus der Galerie als Hintergrund – was du wählst. Es folgt der Neigung des Telefons, rückt mit den Seiten und kommt beim Einschalten von nahem heran. Das Foto suchst du in der Wallpaper-Galerie aus („Als Live-Wallpaper“).",
+        "Ein Foto der NASA aus der Galerie als Hintergrund – was du wählst. Es folgt der Neigung des Telefons, rückt mit den Seiten und kommt beim Entsperren näher. Das Foto suchst du in der Wallpaper-Galerie aus („Als Live-Wallpaper“).",
     ),
 }
 
@@ -57,7 +59,7 @@ data class SuperParams(
     val scene: SuperScene = SuperScene.Moon,
     /** The scene shifts with the phone's tilt. */
     val tilt: Boolean = true,
-    /** It zooms in when the screen wakes, and moves with the home page. */
+    /** The flight from the lock screen to the home screen (and back), and moving with the home page. */
     val zoomOnWake: Boolean = true,
     /** How fast everything turns (0.2 … 3). */
     val speed: Float = 1f,
@@ -77,13 +79,19 @@ object SuperPhoto {
     }
 }
 
-/** What moves the scene right now: the home page (-1 … 1), the tilt (-1 … 1) and the zoom (1 = rest). */
-class SuperMotion(var panX: Float = 0f, var tiltX: Float = 0f, var tiltY: Float = 0f, var zoom: Float = 1f)
+/**
+ * What moves the scene right now: the home page (-1 … 1), the tilt (-1 … 1), the zoom the launcher asks for (1 = rest) and
+ * the depth – how near the camera is: 0 on the lock screen (the whole body, small and calm), 1 on the home screen (close
+ * to the surface). The unlocking is the depth gliding from 0 to 1.
+ */
+class SuperMotion(var panX: Float = 0f, var tiltX: Float = 0f, var tiltY: Float = 0f, var zoom: Float = 1f, var depth: Float = 1f)
 
 private const val TW = 1024
 private const val TH = 512
-private const val SPHERE = 460
+private const val SPHERE = 560
 private const val STAR_COUNT = 160
+
+private fun lerp(a: Float, b: Float, t: Float): Float = a + (b - a) * t
 
 /** Turns [scene] into pictures: [prepare] once (it takes a moment – call it off the main thread), then [draw] every frame. */
 class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, private val assets: AssetManager? = null) {
@@ -327,6 +335,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         shade = IntArray(s * s)
         edge = IntArray(s * s)
         pixels = IntArray(s * s)
+        lastTurn = Int.MIN_VALUE
         planet = Bitmap.createBitmap(s, s, Bitmap.Config.ARGB_8888)
         // The light comes from the upper left, a little from the front.
         var lx = -0.52f
@@ -356,16 +365,28 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         }
     }
 
-    /** The disc at [seconds]: the texture turned, the clouds (if any) turning faster, the light on it. */
-    private fun fillSphere(seconds: Float, speed: Float) {
+    private var lastTurn = Int.MIN_VALUE
+
+    /**
+     * The disc at [seconds]: the texture turned (smoothly, between two texels), the clouds (if any) turning faster, the
+     * light on it. [pan] – the home page, -1 … 1 – turns the planet a little further. The picture is only made again
+     * when it would look different (a quarter of a texel), so a zoom on the lock screen costs nothing.
+     */
+    private fun fillSphere(seconds: Float, speed: Float, pan: Float) {
         val s = SPHERE
         val bitmap = planet ?: return
-        val rot = (seconds * 6f * speed).toInt()
+        val turn = seconds * 6f * speed + pan * 90f
+        val key = (turn * 4f).toInt()
+        if (key == lastTurn) return
+        lastTurn = key
+        val whole = floor(turn).toInt()
+        val frac = ((turn - whole) * 256f).toInt().coerceIn(0, 255)
         val cloudRot = (seconds * 8.7f * speed).toInt() + 211
         val mask = TW - 1
         val hasClouds = clouds.isNotEmpty()
         val surf = surface
         val cl = clouds
+        val keep = 256 - frac
         for (i in 0 until s * s) {
             val a = edge[i]
             if (a == 0) {
@@ -374,21 +395,21 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
             }
             val row = rowTex[i]
             val lon = lonTex[i]
-            var col = surf[row + ((lon - rot) and mask)]
+            val c0 = surf[row + ((lon - whole) and mask)]
+            val c1 = surf[row + ((lon - whole - 1) and mask)]
+            var r = ((((c0 shr 16) and 0xFF) * keep) + (((c1 shr 16) and 0xFF) * frac)) shr 8
+            var g = ((((c0 shr 8) and 0xFF) * keep) + (((c1 shr 8) and 0xFF) * frac)) shr 8
+            var b = (((c0 and 0xFF) * keep) + ((c1 and 0xFF) * frac)) shr 8
             if (hasClouds) {
                 val ca = cl[row + ((lon - cloudRot) and mask)].toInt() and 0xFF
                 if (ca > 0) {
-                    val r = ((col shr 16) and 0xFF)
-                    val g = ((col shr 8) and 0xFF)
-                    val b = (col and 0xFF)
-                    col = ((r + (255 - r) * ca / 255) shl 16) or ((g + (255 - g) * ca / 255) shl 8) or (b + (255 - b) * ca / 255)
+                    r += (255 - r) * ca / 255
+                    g += (255 - g) * ca / 255
+                    b += (255 - b) * ca / 255
                 }
             }
             val sh = shade[i]
-            val r = (((col shr 16) and 0xFF) * sh) shr 8
-            val g = (((col shr 8) and 0xFF) * sh) shr 8
-            val b = ((col and 0xFF) * sh) shr 8
-            pixels[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
+            pixels[i] = (a shl 24) or (((r * sh) shr 8) shl 16) or (((g * sh) shr 8) shl 8) or ((b * sh) shr 8)
         }
         bitmap.setPixels(pixels, 0, s, 0, 0, s, s)
     }
@@ -415,8 +436,9 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
             return
         }
         if (!ready) return
-        fillSphere(seconds, p.speed)
+        fillSphere(seconds, p.speed, m.panX)
         val bitmap = planet ?: return
+        val d = m.depth.coerceIn(0f, 1f)
         val base = when (scene) {
             SuperScene.Saturn -> 0.30f
             SuperScene.Jupiter -> 0.46f
@@ -424,9 +446,11 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
             SuperScene.Pluto -> 0.34f
             else -> 0.40f
         }
-        val radius = w * base * m.zoom
-        val cx = w * 0.5f - m.panX * w * 0.10f + m.tiltX * w * 0.03f
-        val cy = h * (if (scene == SuperScene.Saturn) 0.55f else 0.60f) + m.tiltY * h * 0.02f
+        // Lock screen: the whole planet, smaller and lower; home screen: the camera has come close.
+        val radius = w * lerp(base * 0.72f, base * 1.22f, d) * m.zoom
+        val cx = w * 0.5f - m.panX * w * lerp(0.03f, 0.08f, d) + m.tiltX * w * lerp(0.015f, 0.035f, d)
+        val cy = h * lerp(if (scene == SuperScene.Saturn) 0.60f else 0.64f, if (scene == SuperScene.Saturn) 0.55f else 0.58f, d) +
+            m.tiltY * h * 0.015f
         // The haze round the planet.
         val glow = when (scene) {
             SuperScene.Mars -> 0xFFE8905A.toInt() to 0.30f
@@ -448,25 +472,27 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         if (scene == SuperScene.Saturn) drawRings(canvas, cx, cy, radius, front = true)
     }
 
-    /** The Moon or the Earth as NASA photographed it, hanging in the dark: it sways with the tilt, rolls a hair and breathes. */
+    /**
+     * The Moon or the Earth as NASA photographed it, in the dark. On the lock screen the whole disc hangs low and calm; on
+     * the home screen the camera has come close – the body fills the screen and its edge curves across it.
+     */
     private fun drawDisc(canvas: Canvas, w: Int, h: Int, seconds: Float, p: SuperParams, m: SuperMotion) {
         drawSky(canvas, w, h)
         if (p.stars) drawStars(canvas, w, h, seconds, m)
         val bmp = disc ?: return
-        val breath = 1f + 0.008f * sin(seconds * 0.22f * p.speed)
-        val diameter = w * 0.92f * m.zoom * breath
-        val cx = w * 0.5f - m.panX * w * 0.08f + m.tiltX * w * 0.04f
-        val cy = h * 0.46f + m.tiltY * h * 0.02f
-        val tint = if (scene == SuperScene.Earth) 0x4AA3FF else 0xB8C4E0
-        val reach = diameter * 0.5f * 1.32f
-        val strong = ((if (scene == SuperScene.Earth) 0.50f else 0.16f) * 255f).toInt() shl 24 or tint
-        glowPaint.shader = RadialGradient(cx, cy, reach, intArrayOf(strong, strong, tint), floatArrayOf(0f, 0.76f, 1f), Shader.TileMode.CLAMP)
-        canvas.drawCircle(cx, cy, reach, glowPaint)
-        canvas.save()
-        canvas.rotate(sin(seconds * 0.05f * p.speed) * 2.5f, cx, cy)
+        val d = m.depth.coerceIn(0f, 1f)
+        val diameter = w * lerp(0.84f, 1.46f, d) * m.zoom
+        val cx = w * 0.5f - m.panX * w * lerp(0.03f, 0.10f, d) + m.tiltX * w * lerp(0.02f, 0.05f, d)
+        val cy = h * lerp(0.60f, 0.58f, d) + m.tiltY * h * 0.02f
+        if (scene == SuperScene.Earth) {
+            // The thin blue of the atmosphere at the rim – the Moon has none.
+            val reach = diameter * 0.5f * 1.22f
+            val strong = (0.34f * 255f).toInt() shl 24 or 0x4AA3FF
+            glowPaint.shader = RadialGradient(cx, cy, reach, intArrayOf(strong, strong, 0x4AA3FF), floatArrayOf(0f, 0.82f, 1f), Shader.TileMode.CLAMP)
+            canvas.drawCircle(cx, cy, reach, glowPaint)
+        }
         rect.set(cx - diameter / 2f, cy - diameter / 2f, cx + diameter / 2f, cy + diameter / 2f)
         canvas.drawBitmap(bmp, null, rect, paint)
-        canvas.restore()
     }
 
     private fun loadPhoto() {
@@ -481,7 +507,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         }.getOrNull()
     }
 
-    /** The photo a little bigger than the screen, so there is room to move: with the tilt, with the home page, a slow breath. */
+    /** The photo a little bigger than the screen, so there is room to move: with the tilt and the home page; it comes closer when unlocked. */
     private fun drawPhoto(canvas: Canvas, w: Int, h: Int, seconds: Float, p: SuperParams, m: SuperMotion) {
         val bmp = photo
         if (bmp == null) {
@@ -491,8 +517,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
             return
         }
         val cover = maxOf(w / bmp.width.toFloat(), h / bmp.height.toFloat())
-        val breath = 1f + 0.012f * sin(seconds * 0.25f * p.speed)
-        val scale = cover * 1.12f * m.zoom * breath
+        val scale = cover * lerp(1.04f, 1.18f, m.depth.coerceIn(0f, 1f)) * m.zoom
         val dw = bmp.width * scale
         val dh = bmp.height * scale
         val slackX = dw - w
@@ -520,15 +545,22 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), skyPaint)
     }
 
+    /** The stars: they twinkle, shift a little with tilt and page, and stream outward as the camera comes close (unlocking). */
     private fun drawStars(canvas: Canvas, w: Int, h: Int, seconds: Float, m: SuperMotion) {
         val unit = w / 1080f
+        val d = m.depth.coerceIn(0f, 1f)
+        val midX = w * 0.5f
+        val midY = h * 0.5f
         for (i in 0 until STAR_COUNT) {
-            val depth = 0.3f + 0.7f * (((i * 37) % 100) / 100f)
-            val x = stars[i * 4] * w + (m.panX * -0.03f * depth + m.tiltX * 0.02f * depth) * w
-            val y = stars[i * 4 + 1] * h + m.tiltY * 0.012f * depth * h
+            val near = 0.3f + 0.7f * (((i * 37) % 100) / 100f)
+            // Near stars fly out further than the far ones.
+            val spread = 1f + 0.5f * d * near
+            val x = midX + (stars[i * 4] * w - midX + (m.panX * -0.03f * near + m.tiltX * 0.02f * near) * w) * spread
+            val y = midY + (stars[i * 4 + 1] * h - midY + m.tiltY * 0.012f * near * h) * spread
+            if (x < -8f || x > w + 8f || y < -8f || y > h + 8f) continue
             val twinkle = 0.55f + 0.45f * sin(seconds * 0.9f + stars[i * 4 + 3])
             starPaint.color = ((twinkle * 0.9f * 255f).toInt() shl 24) or 0xFFFFFF
-            canvas.drawCircle(((x % w) + w) % w, y, stars[i * 4 + 2] * unit * 1.6f, starPaint)
+            canvas.drawCircle(x, y, stars[i * 4 + 2] * unit * 1.6f, starPaint)
         }
     }
 
@@ -595,9 +627,10 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
     }
 
     private fun drawGeometry(canvas: Canvas, w: Int, h: Int, seconds: Float, p: SuperParams, m: SuperMotion) {
-        val cx = w * 0.5f - m.panX * w * 0.06f + m.tiltX * w * 0.03f
-        val cy = h * 0.52f + m.tiltY * h * 0.02f
-        val r = w * 0.36f * m.zoom
+        val d = m.depth.coerceIn(0f, 1f)
+        val cx = w * 0.5f - m.panX * w * lerp(0.03f, 0.06f, d) + m.tiltX * w * lerp(0.015f, 0.03f, d)
+        val cy = h * lerp(0.58f, 0.52f, d) + m.tiltY * h * 0.02f
+        val r = w * lerp(0.27f, 0.40f, d) * m.zoom
         val a = seconds * 0.35f * p.speed
         val b = seconds * 0.23f * p.speed
         drawShape(canvas, w, icoVerts, icoEdges, cx, cy, r, a, b)

@@ -12,18 +12,20 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.graphics.Color
+import android.os.Bundle
 import android.service.wallpaper.WallpaperService
+import android.view.Choreographer
 import android.view.SurfaceHolder
 import dev.hearth.launcher.crash.CrashGuard
 import dev.hearth.launcher.data.SettingsRepository
-import kotlin.math.abs
 
 /**
  * ZENITH's Super-Wallpaper as a real live wallpaper: it can be chosen as the phone's background (and shows
  * behind any launcher and on the lock screen where Android lets a live wallpaper there). The scene and its
  * options are the ones set in ZENITH's settings ("Super-Wallpaper") – a change is taken up at once. It draws
- * only while it is seen (about 30 pictures a second), reads the tilt only then, and moves with the home
- * page when the launcher passes the page's position on.
+ * only while it is seen (in step with the screen while it moves, 30 pictures a second while it rests), reads the
+ * tilt only then, and moves with the home page when the launcher passes the page's position on. On the lock
+ * screen the planet hangs small and calm, unlocking flies the camera in and locking out again (see [SuperDirector]).
  */
 class SuperWallpaperService : WallpaperService() {
 
@@ -35,15 +37,17 @@ class SuperWallpaperService : WallpaperService() {
         private val prefs = getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE)
         private var params = SuperPrefs.read(this@SuperWallpaperService)
         private var renderer = SuperRenderer(params.scene, SuperPhoto.file(this@SuperWallpaperService), this@SuperWallpaperService.assets)
-        private val motion = SuperMotion()
+        private val director = SuperDirector(this@SuperWallpaperService)
+        private val choreographer = Choreographer.getInstance()
         private var visible = false
         private var width = 0
         private var height = 0
         private var xOffset = 0.5f
         private var rawX = 0f
         private var rawY = 0f
-        private var wakeAt = 0L
         private var sensing = false
+        private var moving = true
+        private var lastDrawNs = 0L
 
         /** Something went wrong (or ZENITH runs in the safe mode): the wallpaper stands still and black, the launcher lives on. */
         private var broken = CrashGuard.safe
@@ -56,6 +60,7 @@ class SuperWallpaperService : WallpaperService() {
                 broken = true
                 visible = false
                 runCatching { handler.removeCallbacksAndMessages(null) }
+                runCatching { choreographer.removeFrameCallback(frame) }
                 runCatching { stopSensing() }
                 CrashGuard.note(this@SuperWallpaperService, t)
             }
@@ -65,11 +70,18 @@ class SuperWallpaperService : WallpaperService() {
             if (key != null && key.startsWith("super")) handler.post { guarded { reload() } }
         }
 
-        private val frame = object : Runnable {
-            override fun run() {
+        /** Once per screen refresh: drawn at once while something moves, every other refresh when it rests. */
+        private val frame = object : Choreographer.FrameCallback {
+            override fun doFrame(frameTimeNanos: Long) {
                 guarded {
-                    drawFrame()
-                    if (visible) handler.postDelayed(this, 33L)
+                    if (visible) {
+                        val gap = frameTimeNanos - lastDrawNs
+                        if (gap >= (if (moving) 14_000_000L else 30_000_000L)) {
+                            lastDrawNs = frameTimeNanos
+                            moving = drawFrame(frameTimeNanos / 1_000_000L)
+                        }
+                        choreographer.postFrameCallback(this)
+                    }
                 }
             }
         }
@@ -83,6 +95,7 @@ class SuperWallpaperService : WallpaperService() {
         override fun onDestroy() {
             visible = false
             handler.removeCallbacksAndMessages(null)
+            choreographer.removeFrameCallback(frame)
             stopSensing()
             prefs.unregisterOnSharedPreferenceChangeListener(listener)
             super.onDestroy()
@@ -92,27 +105,47 @@ class SuperWallpaperService : WallpaperService() {
             super.onSurfaceChanged(holder, format, width, height)
             this.width = width
             this.height = height
-            guarded { drawFrame() }
+            guarded { drawFrame(SystemClock.uptimeMillis()) }
         }
 
         override fun onSurfaceDestroyed(holder: SurfaceHolder) {
             visible = false
-            handler.removeCallbacks(frame)
+            choreographer.removeFrameCallback(frame)
             super.onSurfaceDestroyed(holder)
         }
 
         override fun onVisibilityChanged(visible: Boolean) {
             this.visible = visible
-            handler.removeCallbacks(frame)
+            choreographer.removeFrameCallback(frame)
             guarded {
                 if (visible) {
-                    wakeAt = SystemClock.uptimeMillis()
+                    director.show(SystemClock.uptimeMillis())
                     if (!broken) startSensing()
-                    handler.post(frame)
+                    moving = true
+                    lastDrawNs = 0L
+                    choreographer.postFrameCallback(frame)
                 } else {
                     stopSensing()
                 }
             }
+        }
+
+        /** Android tells the lock screen's wallpaper that the phone is being unlocked: the camera dives in. */
+        override fun onCommand(action: String?, x: Int, y: Int, z: Int, extras: Bundle?, resultRequested: Boolean): Bundle? {
+            if (action == SuperDirector.COMMAND_KEYGUARD_GOING_AWAY) {
+                guarded {
+                    director.unlocking(SystemClock.uptimeMillis())
+                    moving = true
+                }
+            }
+            return super.onCommand(action, x, y, z, extras, resultRequested)
+        }
+
+        /** The launcher zooms the wallpaper out (the app drawer, folders): it shrinks with it. */
+        override fun onZoomChanged(zoom: Float) {
+            super.onZoomChanged(zoom)
+            director.zoomOut(zoom)
+            moving = true
         }
 
         /** The launcher says which page it is on (0 … 1). */
@@ -131,7 +164,7 @@ class SuperWallpaperService : WallpaperService() {
             if (visible) {
                 if (params.tilt) startSensing() else stopSensing()
             }
-            drawFrame()
+            drawFrame(SystemClock.uptimeMillis())
         }
 
         /** The planet's texture is made off the main thread; until it is there the stars show. */
@@ -139,7 +172,7 @@ class SuperWallpaperService : WallpaperService() {
             Thread {
                 try {
                     r.prepare()
-                    handler.post { guarded { drawFrame() } }
+                    handler.post { guarded { drawFrame(SystemClock.uptimeMillis()) } }
                 } catch (t: Throwable) {
                     broken = true
                     CrashGuard.note(this@SuperWallpaperService, t)
@@ -171,32 +204,31 @@ class SuperWallpaperService : WallpaperService() {
 
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 
-        private fun drawFrame() {
+        private fun lockCanvas(holder: SurfaceHolder): Canvas? = try {
+            // The graphics chip draws the scaled pictures: smooth at the screen's full speed.
+            holder.lockHardwareCanvas()
+        } catch (e: Exception) {
+            try {
+                holder.lockCanvas()
+            } catch (e2: Exception) {
+                null
+            }
+        }
+
+        /** One picture at [now] (ms); true while the scene is still moving. */
+        private fun drawFrame(now: Long): Boolean {
             val holder = surfaceHolder
-            if (width <= 0 || height <= 0) return
+            if (width <= 0 || height <= 0) return false
             var canvas: Canvas? = null
             try {
-                canvas = holder.lockCanvas() ?: return
+                canvas = lockCanvas(holder) ?: return false
                 if (broken) {
                     canvas.drawColor(Color.BLACK)
-                    return
+                    return false
                 }
-                val now = SystemClock.uptimeMillis()
-                // Smoothed: the picture follows the phone, it doesn't jitter with it.
-                motion.tiltX += (rawX - motion.tiltX) * 0.1f
-                motion.tiltY += (rawY - motion.tiltY) * 0.1f
-                val pan = (xOffset - 0.5f) * 2f
-                motion.panX = if (params.zoomOnWake) pan else 0f
-                // Waking the screen: the scene comes in from close, easing to rest.
-                val wake = if (params.zoomOnWake) {
-                    val k = ((now - wakeAt) / 1100f).coerceIn(0f, 1f)
-                    val ease = 1f - (1f - k) * (1f - k) * (1f - k)
-                    1f + 0.36f * (1f - ease)
-                } else {
-                    1f
-                }
-                motion.zoom = wake * (1f + 0.05f * abs(pan))
-                renderer.draw(canvas, width, height, now, params, motion)
+                val stillMoving = director.frame(now, params, xOffset, rawX, rawY)
+                renderer.draw(canvas, width, height, now, params, director.motion)
+                return stillMoving
             } finally {
                 canvas?.let { runCatching { holder.unlockCanvasAndPost(it) } }
             }
