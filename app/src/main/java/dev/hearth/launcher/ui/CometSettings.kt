@@ -147,7 +147,7 @@ private fun CmMainPage(go: (String) -> Unit, onZenith: (String?) -> Unit, back: 
         CmCard {
             CmLink("Hintergrund & Stil", "Akzentfarbe, Icons, Abdunkelung", SsGlyph.Look) { go("look") }
             CmDivider()
-            CmLink("Super-Wallpaper", "Saturn, Erde, Mars … – Hintergründe, die sich bewegen", SsGlyph.Look) { onZenith("superwall") }
+            CmLink("Super-Wallpaper", "NASA-Fotos als Live-Wallpaper – Neigung, Zoom, Seiten", SsGlyph.Look) { onZenith("superwall") }
             CmDivider()
             CmLink("Wallpaper-Galerie", "Mond, Planeten, Weltraum … – zum Auswählen und Herunterladen", SsGlyph.Look) { onZenith("wallpapers") }
             CmDivider()

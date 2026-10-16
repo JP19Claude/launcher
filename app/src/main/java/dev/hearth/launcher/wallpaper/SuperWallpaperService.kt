@@ -34,7 +34,7 @@ class SuperWallpaperService : WallpaperService() {
         private val handler = Handler(Looper.getMainLooper())
         private val prefs = getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE)
         private var params = SuperPrefs.read(this@SuperWallpaperService)
-        private var renderer = SuperRenderer(params.scene)
+        private var renderer = SuperRenderer(params.scene, SuperPhoto.file(this@SuperWallpaperService))
         private val motion = SuperMotion()
         private var visible = false
         private var width = 0
@@ -122,10 +122,10 @@ class SuperWallpaperService : WallpaperService() {
 
         /** The scene or an option was changed in ZENITH's settings. */
         private fun reload() {
-            val before = params.scene
+            val before = params
             params = SuperPrefs.read(this@SuperWallpaperService)
-            if (params.scene != before) {
-                renderer = SuperRenderer(params.scene)
+            if (params.scene != before.scene || params.photo != before.photo) {
+                renderer = SuperRenderer(params.scene, SuperPhoto.file(this@SuperWallpaperService))
                 prepare(renderer)
             }
             if (visible) {

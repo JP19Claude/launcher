@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.wallpaper.SuperMotion
 import dev.hearth.launcher.wallpaper.SuperParams
+import dev.hearth.launcher.wallpaper.SuperPhoto
 import dev.hearth.launcher.wallpaper.SuperRenderer
 import dev.hearth.launcher.wallpaper.SuperScene
 import dev.hearth.launcher.wallpaper.SuperWallpaperService
@@ -45,8 +46,9 @@ import kotlin.math.sin
 /** The scene as it runs, in a box: with a slow sway as if the phone were tilted. */
 @Composable
 internal fun SuperScenePreview(params: SuperParams, modifier: Modifier = Modifier) {
-    val renderer = remember(params.scene) { SuperRenderer(params.scene) }
-    LaunchedEffect(params.scene) { withContext(Dispatchers.Default) { renderer.prepare() } }
+    val context = LocalContext.current
+    val renderer = remember(params.scene, params.photo) { SuperRenderer(params.scene, SuperPhoto.file(context)) }
+    LaunchedEffect(params.scene, params.photo) { withContext(Dispatchers.Default) { renderer.prepare() } }
     var now by remember { mutableLongStateOf(0L) }
     LaunchedEffect(Unit) {
         var last = 0L
@@ -68,7 +70,7 @@ internal fun SuperScenePreview(params: SuperParams, modifier: Modifier = Modifie
 
 /** The settings page "Super-Wallpaper". */
 @Composable
-internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
+internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, onGallery: () -> Unit = {}) {
     val context = LocalContext.current
     var active by remember { mutableStateOf(SuperWallpaperService.isActiveNow(context)) }
     // Back from Android's preview: is it the wallpaper now?
@@ -80,12 +82,24 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
         }
         ChoiceRow(
             label = "Szene",
-            options = SuperScene.entries,
+            // The drawn planets looked cheap next to real pictures: they are no longer offered (one that is set stays until another is chosen).
+            options = listOf(SuperScene.Photo, SuperScene.Geometry) + listOfNotNull(s.superScene.takeIf { it != SuperScene.Photo && it != SuperScene.Geometry }),
             selected = s.superScene,
             optionLabel = { it.label },
             onSelect = { scene -> update { it.copy(superParams = it.superParams.copy(scene = scene)) } },
         )
         Note(s.superScene.note)
+        if (s.superScene == SuperScene.Photo) {
+            ActionRow(
+                label = if (SuperPhoto.file(context).exists()) "Anderes Foto wählen" else "Foto wählen",
+                description = if (SuperPhoto.file(context).exists()) {
+                    "In der Wallpaper-Galerie ein NASA-Foto öffnen und „Als Live-Wallpaper“ tippen."
+                } else {
+                    "Noch kein Foto: In der Wallpaper-Galerie ein NASA-Foto (Mond, Planeten, Erde …) öffnen und „Als Live-Wallpaper“ tippen."
+                },
+                onClick = onGallery,
+            )
+        }
         ActionRow(
             label = if (active) "Läuft als Hintergrund" else "Als Hintergrund setzen",
             description = if (active) {
@@ -123,12 +137,12 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             range = 0.2f..3f,
             valueText = "${"%.1f".format(s.superSpeed)}×",
         ) { v -> update { it.copy(superParams = it.superParams.copy(speed = v)) } }
-        Note("Alles ist in ZENITH selbst gezeichnet – Saturn, Erde, Mars und die anderen entstehen beim ersten Start aus Rauschen und Farbverläufen, es sind keine Bilddateien und nicht die Super-Wallpaper eines Telefonherstellers. Das Glas in ZENITH bricht ein Standbild der Szene; es bewegt sich nur der Hintergrund selbst.")
+        Note("Das Glas in ZENITH bricht ein Standbild der Szene; es bewegt sich nur der Hintergrund selbst. Das „Foto“ ist ein echtes Foto der NASA (gemeinfrei) – es dreht sich nicht, aber es wandert mit der Neigung und den Seiten. „Geometrie“ ist in ZENITH selbst gezeichnet.")
     }
 }
 
 /** Android's preview of the wallpaper (it asks "Hintergrund festlegen" there); the chooser if the phone has no direct way. */
-private fun openSuperWallpaper(context: Context) {
+internal fun openSuperWallpaper(context: Context) {
     val component = ComponentName(context, SuperWallpaperService::class.java)
     val direct = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
         .putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, component)

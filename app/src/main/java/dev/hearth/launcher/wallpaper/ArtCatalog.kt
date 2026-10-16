@@ -3,13 +3,13 @@ package dev.hearth.launcher.wallpaper
 import android.graphics.Bitmap
 
 /*
- * ZENITH 21.5 – the gallery's drawn pictures: planets, space, landscapes, abstract art and ZENITH's own, all drawn by
- * ZENITH itself (no picture files), in the size of the phone's screen. Each piece is a short recipe for the brush in
- * ArtCanvas. (The Moon is not among them: for that the gallery shows the real photos of NASA, see NasaLibrary.)
+ * ZENITH 21.5 – the gallery's drawn pictures: space, landscapes, abstract art and ZENITH's own, all drawn by ZENITH
+ * itself (no picture files), in the size of the phone's screen. Each piece is a short recipe for the brush in ArtCanvas.
+ * (The Moon and the planets are not among them: next to real photos the drawn ones looked cheap, so the gallery shows
+ * the real photos of NASA for them, see NasaLibrary.)
  */
 
 internal enum class ArtGroup(val label: String) {
-    Planets("Planeten"),
     Space("Weltraum"),
     Land("Landschaft"),
     Abstract("Abstrakt"),
@@ -41,29 +41,6 @@ internal object ArtCatalog {
     val all: List<ArtPiece> = buildList {
         fun piece(id: String, title: String, group: ArtGroup, note: String, draw: ArtCanvas.() -> Unit) {
             add(ArtPiece(id, title, group, note, draw))
-        }
-
-        // -------------------------------------------------------------------------------------------------------------
-        // Planets
-        // -------------------------------------------------------------------------------------------------------------
-        fun planetScene(id: String, title: String, note: String, kind: Planet, r: Float, phase: Float, tilt: Float, glowColor: Int, glowAlpha: Float, cy: Float = 0.42f) {
-            piece(id, title, ArtGroup.Planets, note) {
-                sky(0f to 0x010207, 1f to 0x050914)
-                stars(320, 0f, 1f)
-                planet(kind, fw * 0.5f, fh * cy, fw * r, phase, tilt, glowColor, glowAlpha)
-            }
-        }
-        planetScene("planet-saturn", "Saturn", "Der Ringplanet, groß im Bild – die Ringe fangen das Licht.", Planet.Saturn, 0.27f, 35f, 20f, 0xE8D2A0, 0.30f)
-        planetScene("planet-jupiter", "Jupiter", "Streifen, Wirbel und der große rote Fleck.", Planet.Jupiter, 0.38f, 40f, 15f, 0xE8C8A0, 0.30f)
-        planetScene("planet-erde", "Erde", "Der blaue Planet mit Kontinenten, Wolken und einem Rand aus Licht.", Planet.Earth, 0.36f, 30f, 15f, 0x4AA3FF, 0.40f)
-        planetScene("planet-mars", "Mars", "Rostrot, mit dunklen Meeren und einer weißen Polkappe.", Planet.Mars, 0.32f, 35f, 10f, 0xE8905A, 0.30f)
-        planetScene("planet-venus", "Venus", "Der Morgenstern unter seinen dichten, gelben Wolken.", Planet.Venus, 0.34f, 40f, 10f, 0xF5DDA0, 0.30f)
-        planetScene("planet-neptun", "Neptun", "Tiefblau, mit Bändern und einem dunklen Sturm.", Planet.Neptune, 0.34f, 40f, 10f, 0x5A8CFF, 0.30f)
-        piece("planet-erde-mond", "Erde und Mond", ArtGroup.Planets, "Die Erde groß im Vordergrund, der Mond klein in der Ferne.") {
-            sky(0f to 0x010207, 1f to 0x050914)
-            stars(320, 0f, 1f)
-            planet(Planet.Earth, fw * 0.38f, fh * 0.58f, fw * 0.42f, phase = 40f, tilt = 15f, glowColor = 0x4AA3FF, glowAlpha = 0.4f)
-            moon(fw * 0.82f, fh * 0.2f, fw * 0.085f, MoonLook(phase = 38f, tilt = 10f, seed = 42), glowColor = 0xBFD0FF, glowAlpha = 0.3f, glowReach = 2f)
         }
 
         // -------------------------------------------------------------------------------------------------------------

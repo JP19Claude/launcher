@@ -207,7 +207,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         AppLock.removeHandler = { pkg -> setLocked(pkg, false) }
         // ZENITH 21.5: another scene of the Super-Wallpaper is another picture for the glass to bend – the copy is made again.
         viewModelScope.launch {
-            settingsRepo.settings.map { it.superScene }.distinctUntilChanged().drop(1).collect { wallpaper.refresh() }
+            settingsRepo.settings.map { it.superParams.scene to it.superParams.photo }.distinctUntilChanged().drop(1).collect { wallpaper.refresh() }
         }
 
         // New default looks, each applied once to existing installs:

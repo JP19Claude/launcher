@@ -1701,6 +1701,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
                 zoomOnWake = prefs.getBoolean("superZoom", d.superZoom),
                 speed = prefs.getFloat("superSpeed", d.superSpeed),
                 stars = prefs.getBoolean("superStars", d.superStars),
+                photo = prefs.getLong("superPhoto", d.superParams.photo),
             ),
             sloganEverywhere = prefs.getBoolean("sloganEverywhere", d.sloganEverywhere),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
@@ -1963,6 +1964,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putBoolean("superZoom", s.superZoom)
             .putFloat("superSpeed", s.superSpeed)
             .putBoolean("superStars", s.superStars)
+            .putLong("superPhoto", s.superParams.photo)
             .putBoolean("sloganEverywhere", s.sloganEverywhere)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("zenithStrike", s.zenithStrike)

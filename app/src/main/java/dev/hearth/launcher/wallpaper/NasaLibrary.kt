@@ -4,7 +4,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapRegionDecoder
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.RectF
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -14,14 +18,15 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 /*
  * ZENITH 21.5 – the real pictures of the wallpaper gallery: the NASA Image and Video Library (images.nasa.gov), whose
  * pictures NASA made itself and, as a rule, doesn't hold a copyright on (public domain). The app asks the library's own
- * search (images-api.nasa.gov, no account, no key) for a topic – the Moon in all its phases, Apollo, craters, Earth,
- * the planets, Hubble and Webb – shows the small pictures, and fetches a large one only when it is wanted as a
- * wallpaper. Nothing but the search words leaves the phone.
+ * search (images-api.nasa.gov, no account, no key) for a topic – the Moon in all its phases, Apollo, the flag on the
+ * Moon, craters, Earth, the planets, Hubble and Webb – shows the small pictures, and fetches a large one only when it is
+ * wanted as a wallpaper. Nothing but the search words leaves the phone.
  */
 
 internal enum class NasaGroup(val label: String) {
@@ -42,19 +47,31 @@ internal class NasaPage(val images: List<NasaImage>, val hasMore: Boolean)
 /** The files of one picture, biggest first (any of them may be missing). */
 internal class NasaAssets(val orig: String?, val large: String?, val medium: String?, val small: String?)
 
+/** A piece of a picture, in its pixels. */
+internal class CropRect(val x: Int, val y: Int, val w: Int, val h: Int)
+
+/** How a photo is made into a wallpaper: filling the screen (a piece of it, moved and zoomed) or whole on a blurred ground. */
+internal class WallpaperCut(val fit: Boolean, val zoom: Float, val panX: Float, val panY: Float)
+
 internal object NasaLibrary {
 
     private const val SEARCH = "https://images-api.nasa.gov/search"
-    private const val PAGE_SIZE = 45
+    private const val PAGE_SIZE = 100
     private const val AGENT = "ZENITH-Launcher (Android)"
 
     val topics: List<NasaTopic> = listOf(
+        NasaTopic("m-alle", "Alle Mond-Fotos", "moon", NasaGroup.Moon),
+        NasaTopic("m-flagge", "Flagge auf dem Mond", "american flag on the moon apollo", NasaGroup.Moon),
         NasaTopic("m-voll", "Vollmond", "full moon", NasaGroup.Moon),
+        NasaTopic("m-astronaut", "Astronauten auf dem Mond", "astronaut on the moon", NasaGroup.Moon),
+        NasaTopic("m-landung", "Mondlandung", "moon landing", NasaGroup.Moon),
         NasaTopic("m-sichel", "Sichel", "crescent moon", NasaGroup.Moon),
         NasaTopic("m-phasen", "Mondphasen", "moon phases", NasaGroup.Moon),
         NasaTopic("m-finsternis", "Mondfinsternis", "lunar eclipse", NasaGroup.Moon),
         NasaTopic("m-blut", "Blutmond", "blood moon", NasaGroup.Moon),
         NasaTopic("m-super", "Supermond", "supermoon", NasaGroup.Moon),
+        NasaTopic("m-nacht", "Mond bei Nacht", "moon night sky photo", NasaGroup.Moon),
+        NasaTopic("m-wolken", "Mond und Wolken", "moon clouds", NasaGroup.Moon),
         NasaTopic("m-aufgang", "Mondaufgang", "moonrise", NasaGroup.Moon),
         NasaTopic("m-horizont", "Mond am Horizont", "moon horizon from space", NasaGroup.Moon),
         NasaTopic("m-erdaufgang", "Erdaufgang", "earthrise", NasaGroup.Moon),
@@ -63,6 +80,7 @@ internal object NasaLibrary {
         NasaTopic("m-apollo8", "Apollo 8", "apollo 8 moon", NasaGroup.Moon),
         NasaTopic("m-apollo11", "Apollo 11", "apollo 11 moon", NasaGroup.Moon),
         NasaTopic("m-apollo17", "Apollo 17", "apollo 17 moon", NasaGroup.Moon),
+        NasaTopic("m-rover", "Mondfahrzeug", "lunar roving vehicle", NasaGroup.Moon),
         NasaTopic("m-krater", "Krater", "moon crater", NasaGroup.Moon),
         NasaTopic("m-lro", "LRO-Aufnahmen", "lunar reconnaissance orbiter", NasaGroup.Moon),
         NasaTopic("m-pol", "Südpol", "moon south pole", NasaGroup.Moon),
@@ -73,6 +91,7 @@ internal object NasaLibrary {
         NasaTopic("m-erde-mond", "Erde und Mond", "earth and moon", NasaGroup.Moon),
 
         NasaTopic("e-erde", "Erde aus dem All", "earth from space", NasaGroup.Earth),
+        NasaTopic("e-flagge", "US-Flagge", "american flag", NasaGroup.Earth),
         NasaTopic("e-blue", "Blue Marble", "blue marble", NasaGroup.Earth),
         NasaTopic("e-nacht", "Erde bei Nacht", "earth at night city lights", NasaGroup.Earth),
         NasaTopic("e-aurora", "Polarlicht von oben", "aurora from space station", NasaGroup.Earth),
@@ -186,8 +205,11 @@ internal object NasaLibrary {
         return NasaAssets(pick("orig"), pick("large"), pick("medium"), pick("small"))
     }
 
-    /** A small picture for looking at (null if it can't be had). Blocking. */
-    fun fetchBitmap(url: String, maxSide: Int): Bitmap? {
+    /**
+     * A small picture for the grid: at most [maxSide] pixels, the middle of it cut to the proportions [aspect] (width ÷ height),
+     * in a light format (so a hundred of them fit in memory). Null if it can't be had. Blocking.
+     */
+    fun fetchThumb(url: String, maxSide: Int, aspect: Float): Bitmap? {
         return try {
             val connection = open(url)
             try {
@@ -210,7 +232,19 @@ internal object NasaLibrary {
                 if (bounds.outWidth <= 0) return null
                 var sample = 1
                 while (max(bounds.outWidth, bounds.outHeight) / sample > maxSide) sample *= 2
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
+                val options = BitmapFactory.Options().apply {
+                    inSampleSize = sample
+                    inPreferredConfig = Bitmap.Config.RGB_565
+                }
+                val full = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options) ?: return null
+                val c = cover(full.width, full.height, aspect, 1f, 0.5f, 0.5f)
+                if (c.w == full.width && c.h == full.height) {
+                    full
+                } else {
+                    val cut = Bitmap.createBitmap(full, c.x, c.y, c.w, c.h)
+                    if (cut !== full) full.recycle()
+                    cut
+                }
             } finally {
                 connection.disconnect()
             }
@@ -282,39 +316,80 @@ internal object NasaLibrary {
     }
 
     /**
-     * The wallpaper from a photo: the piece of it that fills a screen of [w] × [h] pixels, [panX]/[panY] (0 … 1) saying where
-     * in the photo that piece sits. Only that piece is decoded, so even a huge photo needs little memory.
+     * The piece of a [srcW] × [srcH] picture that fills a screen of the proportions [aspect] (width ÷ height): the biggest one
+     * at [zoom] 1, smaller (nearer) with more zoom; [panX]/[panY] (0 … 1) say where in the picture it sits. The screen,
+     * the preview and the finished wallpaper all use this, so what one sees is what one gets.
      */
+    fun cover(srcW: Int, srcH: Int, aspect: Float, zoom: Float, panX: Float, panY: Float): CropRect {
+        var cw: Float
+        var ch: Float
+        if (srcW.toFloat() / srcH > aspect) {
+            ch = srcH.toFloat()
+            cw = ch * aspect
+        } else {
+            cw = srcW.toFloat()
+            ch = cw / aspect
+        }
+        val z = max(zoom, 1f)
+        cw /= z
+        ch /= z
+        val w = cw.roundToInt().coerceIn(1, srcW)
+        val h = ch.roundToInt().coerceIn(1, srcH)
+        val x = ((srcW - cw) * panX.coerceIn(0f, 1f)).roundToInt().coerceIn(0, srcW - w)
+        val y = ((srcH - ch) * panY.coerceIn(0f, 1f)).roundToInt().coerceIn(0, srcH - h)
+        return CropRect(x, y, w, h)
+    }
+
+    /**
+     * The wallpaper from a photo, [w] × [h] pixels: [cut] says which piece fills the screen – or the whole photo on a blurred,
+     * darkened ground made from itself. Only the piece is decoded, so even a huge photo needs little memory.
+     */
+    fun compose(file: File, w: Int, h: Int, cut: WallpaperCut): Bitmap? = if (cut.fit) fitWhole(file, w, h) else fillScreen(file, w, h, cut)
+
     @Suppress("DEPRECATION")
-    fun wallpaper(file: File, w: Int, h: Int, panX: Float, panY: Float): Bitmap? {
+    private fun fillScreen(file: File, w: Int, h: Int, cut: WallpaperCut): Bitmap? {
         return try {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(file.path, bounds)
             val srcW = bounds.outWidth
             val srcH = bounds.outHeight
             if (srcW <= 0 || srcH <= 0) return null
-            val target = w.toFloat() / h
-            val cropW: Int
-            val cropH: Int
-            if (srcW.toFloat() / srcH > target) {
-                cropH = srcH
-                cropW = (srcH * target).roundToInt().coerceIn(1, srcW)
-            } else {
-                cropW = srcW
-                cropH = (srcW / target).roundToInt().coerceIn(1, srcH)
-            }
-            val x0 = ((srcW - cropW) * panX.coerceIn(0f, 1f)).roundToInt().coerceIn(0, srcW - cropW)
-            val y0 = ((srcH - cropH) * panY.coerceIn(0f, 1f)).roundToInt().coerceIn(0, srcH - cropH)
-            var sample = Integer.highestOneBit(max(1, cropH / h))
-            if (sample < 1) sample = 1
+            val c = cover(srcW, srcH, w.toFloat() / h, cut.zoom, cut.panX, cut.panY)
+            val sample = max(1, Integer.highestOneBit(max(1, c.h / h)))
             val decoder = BitmapRegionDecoder.newInstance(file.path, false) ?: return null
             val region: Bitmap? = try {
-                decoder.decodeRegion(Rect(x0, y0, x0 + cropW, y0 + cropH), BitmapFactory.Options().apply { inSampleSize = sample })
+                decoder.decodeRegion(Rect(c.x, c.y, c.x + c.w, c.y + c.h), BitmapFactory.Options().apply { inSampleSize = sample })
             } finally {
                 decoder.recycle()
             }
             if (region == null) return null
             if (region.width == w && region.height == h) region else Bitmap.createScaledBitmap(region, w, h, true)
+        } catch (e: Throwable) {
+            null
+        }
+    }
+
+    private fun fitWhole(file: File, w: Int, h: Int): Bitmap? {
+        return try {
+            val photo = decodeSampled(file, 2600) ?: return null
+            val result = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(result)
+            // The ground: the middle of the photo, made tiny and blown up again (that blurs it), darkened.
+            val c = cover(photo.width, photo.height, w.toFloat() / h, 1f, 0.5f, 0.5f)
+            val piece = Bitmap.createBitmap(photo, c.x, c.y, c.w, c.h)
+            val tiny = Bitmap.createScaledBitmap(piece, 36, max(1, 36 * h / w), true)
+            val ground = Bitmap.createScaledBitmap(tiny, w, h, true)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+            canvas.drawBitmap(ground, 0f, 0f, paint)
+            canvas.drawColor(Color.argb(95, 0, 0, 0))
+            // The photo itself, whole, as big as the screen lets it be.
+            val scale = min(w.toFloat() / photo.width, h.toFloat() / photo.height)
+            val dw = photo.width * scale
+            val dh = photo.height * scale
+            val left = (w - dw) / 2f
+            val top = (h - dh) / 2f
+            canvas.drawBitmap(photo, null, RectF(left, top, left + dw, top + dh), paint)
+            result
         } catch (e: Throwable) {
             null
         }

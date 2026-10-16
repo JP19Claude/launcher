@@ -2,6 +2,7 @@ package dev.hearth.launcher.wallpaper
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.LinearGradient
 import android.graphics.Paint
@@ -20,6 +21,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
+import java.io.File
 import kotlin.random.Random
 
 /*
@@ -38,6 +40,10 @@ enum class SuperScene(val label: String, val note: String) {
     Mars("Mars", "Rostroter Planet mit dunklen Meeren und weißen Polkappen."),
     Moon("Mond", "Grauer Mond voller Krater, ruhig und nah."),
     Geometry("Geometrie", "Ein Ikosaeder aus Licht mit einem zweiten Körper darin, die beide umeinander drehen."),
+    Photo(
+        "Foto",
+        "Ein echtes Foto der NASA als Hintergrund – der Mond, ein Planet, was du wählst. Es folgt der Neigung des Telefons, rückt mit den Seiten und kommt beim Einschalten von nahem heran. Das Foto suchst du in der Wallpaper-Galerie aus („Als Live-Wallpaper“).",
+    ),
 }
 
 /** What the wallpaper is set to (read from ZENITH's settings). */
@@ -50,7 +56,20 @@ data class SuperParams(
     /** How fast everything turns (0.2 … 3). */
     val speed: Float = 1f,
     val stars: Boolean = true,
+    /** Which photo the "Foto" scene shows: a stamp that changes whenever another one is chosen (the file itself is [SuperPhoto]). */
+    val photo: Long = 0L,
 )
+
+/** The photo of the "Foto" scene: one file in the app's own storage, made from a gallery photo at the screen's proportions. */
+object SuperPhoto {
+    fun file(context: Context): File = File(context.filesDir, "super_photo.jpg")
+
+    fun save(context: Context, bitmap: Bitmap): Boolean = try {
+        file(context).outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 93, it) }
+    } catch (e: Exception) {
+        false
+    }
+}
 
 /** What moves the scene right now: the home page (-1 … 1), the tilt (-1 … 1) and the zoom (1 = rest). */
 class SuperMotion(var panX: Float = 0f, var tiltX: Float = 0f, var tiltY: Float = 0f, var zoom: Float = 1f)
@@ -66,13 +85,14 @@ object SuperPrefs {
             zoomOnWake = p.getBoolean("superZoom", true),
             speed = p.getFloat("superSpeed", 1f).coerceIn(0.2f, 3f),
             stars = p.getBoolean("superStars", true),
+            photo = p.getLong("superPhoto", 0L),
         )
     }
 
     /** One still frame of the wallpaper as set, [w] × [h] – the glass of ZENITH bends and blurs this. Null if it couldn't be drawn. */
     fun snapshot(context: Context, w: Int, h: Int): Bitmap? = runCatching {
         val params = read(context)
-        val renderer = SuperRenderer(params.scene)
+        val renderer = SuperRenderer(params.scene, SuperPhoto.file(context))
         renderer.prepare()
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         renderer.draw(Canvas(bitmap), w, h, 5000L, params, SuperMotion())
@@ -86,7 +106,7 @@ private const val SPHERE = 380
 private const val STAR_COUNT = 160
 
 /** Turns [scene] into pictures: [prepare] once (it takes a moment – call it off the main thread), then [draw] every frame. */
-class SuperRenderer(val scene: SuperScene) {
+class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null) {
 
     @Volatile
     private var ready = scene == SuperScene.Geometry
@@ -99,6 +119,7 @@ class SuperRenderer(val scene: SuperScene) {
     private var edge = IntArray(0)
     private var pixels = IntArray(0)
     private var planet: Bitmap? = null
+    private var photo: Bitmap? = null
 
     private val stars = FloatArray(STAR_COUNT * 4)
     private val ringNoise = FloatArray(96)
@@ -142,6 +163,11 @@ class SuperRenderer(val scene: SuperScene) {
             SuperScene.Mars -> makeMars()
             SuperScene.Moon -> makeMoon()
             SuperScene.Geometry -> Unit
+            SuperScene.Photo -> {
+                loadPhoto()
+                ready = true
+                return
+            }
         }
         buildSphere()
         ready = true
@@ -405,6 +431,10 @@ class SuperRenderer(val scene: SuperScene) {
     /** One frame at [timeMs] onto [canvas] ([w] × [h] pixels). */
     fun draw(canvas: Canvas, w: Int, h: Int, timeMs: Long, p: SuperParams, m: SuperMotion) {
         val seconds = timeMs / 1000f
+        if (scene == SuperScene.Photo) {
+            drawPhoto(canvas, w, h, seconds, p, m)
+            return
+        }
         drawSky(canvas, w, h)
         if (p.stars) drawStars(canvas, w, h, seconds, m)
         if (scene == SuperScene.Geometry) {
@@ -442,6 +472,42 @@ class SuperRenderer(val scene: SuperScene) {
         rect.set(cx - radius, cy - radius, cx + radius, cy + radius)
         canvas.drawBitmap(bitmap, null, rect, paint)
         if (scene == SuperScene.Saturn) drawRings(canvas, cx, cy, radius, front = true)
+    }
+
+    private fun loadPhoto() {
+        val file = photoFile ?: return
+        if (!file.exists()) return
+        photo = runCatching {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.path, bounds)
+            var sample = 1
+            while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 2800) sample *= 2
+            BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample })
+        }.getOrNull()
+    }
+
+    /** The photo a little bigger than the screen, so there is room to move: with the tilt, with the home page, a slow breath. */
+    private fun drawPhoto(canvas: Canvas, w: Int, h: Int, seconds: Float, p: SuperParams, m: SuperMotion) {
+        val bmp = photo
+        if (bmp == null) {
+            // Nothing chosen yet: a calm dark sky.
+            drawSky(canvas, w, h)
+            if (p.stars) drawStars(canvas, w, h, seconds, m)
+            return
+        }
+        val cover = maxOf(w / bmp.width.toFloat(), h / bmp.height.toFloat())
+        val breath = 1f + 0.012f * sin(seconds * 0.25f * p.speed)
+        val scale = cover * 1.12f * m.zoom * breath
+        val dw = bmp.width * scale
+        val dh = bmp.height * scale
+        val slackX = dw - w
+        val slackY = dh - h
+        val shiftX = (m.tiltX * 0.45f + m.panX * 0.5f).coerceIn(-1f, 1f)
+        val shiftY = (m.tiltY * 0.45f).coerceIn(-1f, 1f)
+        val left = -slackX / 2f - shiftX * slackX / 2f
+        val top = -slackY / 2f - shiftY * slackY / 2f
+        rect.set(left, top, left + dw, top + dh)
+        canvas.drawBitmap(bmp, null, rect, paint)
     }
 
     private fun drawSky(canvas: Canvas, w: Int, h: Int) {

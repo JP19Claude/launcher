@@ -1,12 +1,14 @@
 package dev.hearth.launcher.ui
 
 import android.graphics.Bitmap
+import android.net.Uri
 import android.util.LruCache
 import android.widget.Toast
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,11 +42,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -54,11 +56,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.wallpaper.ArtCatalog
 import dev.hearth.launcher.wallpaper.ArtExport
 import dev.hearth.launcher.wallpaper.ArtGroup
@@ -67,6 +71,13 @@ import dev.hearth.launcher.wallpaper.NasaGroup
 import dev.hearth.launcher.wallpaper.NasaImage
 import dev.hearth.launcher.wallpaper.NasaLibrary
 import dev.hearth.launcher.wallpaper.NasaTopic
+import dev.hearth.launcher.wallpaper.SuperPhoto
+import dev.hearth.launcher.wallpaper.SuperScene
+import dev.hearth.launcher.wallpaper.SuperWallpaperService
+import dev.hearth.launcher.wallpaper.WallpaperCut
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
@@ -104,10 +115,13 @@ private object ArtThumbs {
 
 /** The small pictures of NASA's photos, fetched once and kept. */
 private object NasaThumbs {
-    private val cache = object : LruCache<String, Bitmap>(16 * 1024 * 1024) {
+    private val cache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
     private val gate = Semaphore(4)
+
+    /** The grid's tiles are a little narrower than high (width ÷ height). */
+    const val TILE_ASPECT = 0.8f
 
     fun peek(image: NasaImage): Bitmap? = cache.get(image.id)
 
@@ -116,7 +130,7 @@ private object NasaThumbs {
         return withContext(Dispatchers.IO) {
             gate.withPermit {
                 val small = image.thumb.replace("~thumb.jpg", "~small.jpg")
-                val bitmap = NasaLibrary.fetchBitmap(small, 360) ?: NasaLibrary.fetchBitmap(image.thumb, 360)
+                val bitmap = NasaLibrary.fetchThumb(small, 480, TILE_ASPECT) ?: NasaLibrary.fetchThumb(image.thumb, 480, TILE_ASPECT)
                 if (bitmap != null) cache.put(image.id, bitmap)
                 bitmap
             }
@@ -177,22 +191,24 @@ private fun GalleryChip(label: String, selected: Boolean, onClick: () -> Unit) {
 
 /** The settings page "Wallpaper-Galerie". */
 @Composable
-internal fun WallpaperGallerySection() {
+internal fun WallpaperGallerySection(update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var tabId by rememberSaveable { mutableStateOf("moon") }
     var topicId by rememberSaveable { mutableStateOf("") }
-    var drawnName by rememberSaveable { mutableStateOf(ArtGroup.Planets.name) }
+    var drawnName by rememberSaveable { mutableStateOf(ArtGroup.Space.name) }
     var openedArt by remember { mutableStateOf<ArtPiece?>(null) }
     var openedNasa by remember { mutableStateOf<NasaImage?>(null) }
     val feeds = remember { HashMap<String, NasaFeed>() }
     val (screenW, screenH) = remember { ArtExport.screenSize(context) }
     val thumbW = 180
     val thumbH = (thumbW * screenH.toFloat() / screenW).toInt()
+    val nasaThumbW = 180
+    val nasaThumbH = (nasaThumbW / NasaThumbs.TILE_ASPECT).toInt()
     val tab = GalleryTabs.firstOrNull { it.id == tabId } ?: GalleryTabs[0]
 
     Section("Wallpaper-Galerie") {
-        Note("Echte Fotos der NASA – sehr viele vom Mond, dazu Erde, Planeten und Weltraum (gemeinfrei, sie werden erst geladen, wenn du sie ansiehst) – und ${ArtCatalog.all.size} Bilder, die ZENITH selbst zeichnet. Antippen zeigt das Bild groß; dort lässt sich der Ausschnitt mit dem Finger verschieben. Von dort wird es dein Hintergrund, landet als Bild in „Bilder/ZENITH“ oder wird geteilt.")
+        Note("Echte Fotos der NASA – sehr viele vom Mond, dazu Erde, Planeten und Weltraum (gemeinfrei, sie werden erst geladen, wenn du sie ansiehst) – und ${ArtCatalog.all.size} Bilder, die ZENITH selbst zeichnet. Antippen zeigt das Bild groß: mit dem Finger verschieben, mit zwei Fingern zoomen oder „Ganzes Foto“ wählen. Von dort wird es dein Hintergrund oder dein Live-Wallpaper, landet als Bild in „Bilder/ZENITH“ oder wird geteilt.")
         Row(
             Modifier
                 .fillMaxWidth()
@@ -204,7 +220,7 @@ internal fun WallpaperGallerySection() {
         }
 
         if (tab.id == "drawn") {
-            val group = ArtGroup.entries.firstOrNull { it.name == drawnName } ?: ArtGroup.Planets
+            val group = ArtGroup.entries.firstOrNull { it.name == drawnName } ?: ArtGroup.Space
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -242,7 +258,10 @@ internal fun WallpaperGallerySection() {
                 for (t in topics) GalleryChip(t.label, t.id == topic.id) { topicId = t.id }
             }
             LaunchedEffect(topic.id) {
-                if (feed.items.isEmpty()) feed.loadMore()
+                if (feed.items.isEmpty()) {
+                    feed.loadMore()
+                    feed.loadMore()
+                }
             }
             Column(
                 Modifier
@@ -252,7 +271,7 @@ internal fun WallpaperGallerySection() {
             ) {
                 for (row in feed.items.chunked(3)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        for (image in row) NasaTile(image, thumbW, thumbH, Modifier.weight(1f)) { openedNasa = image }
+                        for (image in row) NasaTile(image, nasaThumbW, nasaThumbH, Modifier.weight(1f)) { openedNasa = image }
                         repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
@@ -294,7 +313,7 @@ internal fun WallpaperGallerySection() {
         }
     }
     openedArt?.let { piece -> ArtPreview(piece, screenW, screenH) { openedArt = null } }
-    openedNasa?.let { image -> NasaPreview(image, screenW, screenH) { openedNasa = null } }
+    openedNasa?.let { image -> NasaPreview(image, screenW, screenH, update) { openedNasa = null } }
 }
 
 @Composable
@@ -346,8 +365,9 @@ private fun NasaTile(item: NasaImage, thumbW: Int, thumbH: Int, modifier: Modifi
 }
 
 /**
- * The large view round a wallpaper: the picture ([content]), a close button and, below, its name, what it is and the three
- * things to do with it. [onWallpaper] gets "home" and "lock"; the others have no arguments. [busy] (if not null) is shown instead.
+ * The large view round a wallpaper: the picture ([content]), a close button and, below, its name, what it is ([extra] may add
+ * controls) and the things to do with it. [onWallpaper] gets "home" and "lock"; [onLive] (if there is one) makes it the
+ * moving Super-Wallpaper. [busy] (if not null) is shown instead of the buttons.
  */
 @Composable
 private fun WallpaperViewer(
@@ -358,6 +378,8 @@ private fun WallpaperViewer(
     onWallpaper: (Boolean, Boolean) -> Unit,
     onDownload: () -> Unit,
     onShare: () -> Unit,
+    onLive: (() -> Unit)? = null,
+    extra: (@Composable () -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     var choosing by remember { mutableStateOf(false) }
@@ -384,13 +406,13 @@ private fun WallpaperViewer(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.80f))))
-                    .padding(start = 18.dp, end = 18.dp, top = 54.dp, bottom = 30.dp),
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.82f))))
+                    .padding(start = 18.dp, end = 18.dp, top = 54.dp, bottom = 26.dp),
             ) {
                 Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(4.dp))
-                Text(note, color = Color.White.copy(alpha = 0.78f), fontSize = 13.sp, maxLines = 4, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(16.dp))
+                Text(note, color = Color.White.copy(alpha = 0.78f), fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(12.dp))
                 if (busy != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
@@ -405,10 +427,15 @@ private fun WallpaperViewer(
                         GalleryButton("Beide", Modifier.weight(1f), true) { choosing = false; onWallpaper(true, true) }
                     }
                 } else {
+                    extra?.invoke()
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GalleryButton("Als Hintergrund", Modifier.weight(1.3f), true) { choosing = true }
-                        GalleryButton("Herunterladen", Modifier.weight(1.2f), false) { onDownload() }
-                        GalleryButton("Teilen", Modifier.weight(0.8f), false) { onShare() }
+                        GalleryButton("Als Hintergrund", Modifier.weight(1f), true) { choosing = true }
+                        if (onLive != null) GalleryButton("Als Live-Wallpaper", Modifier.weight(1f), true) { onLive() }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GalleryButton("Herunterladen", Modifier.weight(1f), false) { onDownload() }
+                        GalleryButton("Teilen", Modifier.weight(1f), false) { onShare() }
                     }
                 }
             }
@@ -516,56 +543,76 @@ private fun ArtPreview(piece: ArtPiece, screenW: Int, screenH: Int, onClose: () 
     }
 }
 
-/** One of NASA's photos, large: drag to choose which piece of it fills the screen. */
+/** What a background job found out: the words to tell, and whether it worked. */
+private class WorkResult(val text: String, val ok: Boolean)
+
+/** The tiny, blurred copy of a photo that serves as the ground when the whole photo is shown. */
+private fun groundOf(photo: Bitmap, aspect: Float): ImageBitmap? = try {
+    val c = NasaLibrary.cover(photo.width, photo.height, aspect, 1f, 0.5f, 0.5f)
+    val piece = Bitmap.createBitmap(photo, c.x, c.y, c.w, c.h)
+    Bitmap.createScaledBitmap(piece, 36, max(1, (36 / aspect).toInt()), true).asImageBitmap()
+} catch (e: Throwable) {
+    null
+}
+
+/**
+ * One of NASA's photos, large – exactly as it will become the wallpaper: drag to move it, two fingers to zoom, or show the
+ * whole photo on a blurred ground. What is seen here is what is made.
+ */
 @Composable
-private fun NasaPreview(image: NasaImage, screenW: Int, screenH: Int, onClose: () -> Unit) {
+private fun NasaPreview(image: NasaImage, screenW: Int, screenH: Int, update: ((LauncherSettings) -> LauncherSettings) -> Unit, onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val aspect = screenW.toFloat() / screenH
     var busy by remember { mutableStateOf<String?>(null) }
+    var fit by remember { mutableStateOf(false) }
+    var zoom by remember { mutableFloatStateOf(1f) }
     var panX by remember { mutableFloatStateOf(0.5f) }
     var panY by remember { mutableFloatStateOf(0.5f) }
     var box by remember { mutableStateOf(IntSize.Zero) }
     val thumb = remember(image.id) { NasaThumbs.peek(image)?.asImageBitmap() }
     // The big picture for looking at: the "large" file, or – if there is none – a smaller one.
-    val photo by produceState<ImageBitmap?>(initialValue = null, image.id) {
+    val photo by produceState<Bitmap?>(initialValue = null, image.id) {
         value = withContext(Dispatchers.IO) {
             val assets = NasaLibrary.assets(image)
             val file = listOfNotNull(assets.large, assets.medium, assets.small)
                 .firstNotNullOfOrNull { NasaLibrary.fetchFile(context, it, 30L * 1024 * 1024) }
-            if (file == null) null else NasaLibrary.decodeSampled(file, 2000)?.asImageBitmap()
+            if (file == null) null else NasaLibrary.decodeSampled(file, 2000)
         }
     }
+    val photoImage = remember(photo) { photo?.asImageBitmap() }
+    val ground = remember(photo) { photo?.let { groundOf(it, aspect) } }
 
     fun say(text: String) {
         Toast.makeText(context, text, Toast.LENGTH_LONG).show()
     }
 
-    /** The photo in full size (the original, if it isn't gigantic), cut to the screen at the chosen place, then [work]. */
-    fun full(work: WallpaperWork) {
+    /** Fetches the photo in full size (the original, if it isn't gigantic), cuts it as chosen, [work]s with it, then [after] on success. */
+    fun act(factor: Float, work: (Bitmap) -> WorkResult, after: () -> Unit = {}) {
         if (busy != null) return
         busy = "Das Foto wird geladen …"
-        val x = panX
-        val y = panY
+        val cut = WallpaperCut(fit, zoom, panX, panY)
         scope.launch {
-            val text = withContext(Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) {
                 val assets = NasaLibrary.assets(image)
                 val file = listOfNotNull(assets.orig, assets.large, assets.medium, assets.small)
                     .firstNotNullOfOrNull { NasaLibrary.fetchFile(context, it, 60L * 1024 * 1024) }
                 if (file == null) {
-                    "Das Foto konnte nicht geladen werden – ist das Telefon online?"
+                    WorkResult("Das Foto konnte nicht geladen werden – ist das Telefon online?", false)
                 } else {
-                    val bitmap = NasaLibrary.wallpaper(file, screenW, screenH, x, y)
+                    val bitmap = NasaLibrary.compose(file, (screenW * factor).roundToInt(), (screenH * factor).roundToInt(), cut)
                     if (bitmap == null) {
-                        "Das Foto konnte nicht zugeschnitten werden."
+                        WorkResult("Das Foto konnte nicht zugeschnitten werden.", false)
                     } else {
-                        val result = work(bitmap)
+                        val done = work(bitmap)
                         bitmap.recycle()
-                        result
+                        done
                     }
                 }
             }
             busy = null
-            say(text)
+            if (result.text.isNotEmpty()) say(result.text)
+            if (result.ok) after()
         }
     }
 
@@ -578,67 +625,117 @@ private fun NasaPreview(image: NasaImage, screenW: Int, screenH: Int, onClose: (
         busy = busy,
         onClose = onClose,
         onWallpaper = { home, lock ->
-            full { bitmap ->
-                if (ArtExport.setAsWallpaper(context, bitmap, home, lock)) "Das Foto ist jetzt dein Hintergrund." else "Android hat den Hintergrund nicht angenommen."
-            }
+            act(1f, { bitmap ->
+                if (ArtExport.setAsWallpaper(context, bitmap, home, lock)) {
+                    WorkResult("Das Foto ist jetzt dein Hintergrund.", true)
+                } else {
+                    WorkResult("Android hat den Hintergrund nicht angenommen.", false)
+                }
+            })
         },
         onDownload = {
-            full { bitmap ->
-                if (ArtExport.saveToPictures(context, bitmap, fileName) != null) "Gespeichert unter Bilder/ZENITH." else "Speichern ging nicht – Android hat den Zugriff auf Bilder verweigert."
-            }
+            act(1f, { bitmap ->
+                if (ArtExport.saveToPictures(context, bitmap, fileName) != null) {
+                    WorkResult("Gespeichert unter Bilder/ZENITH.", true)
+                } else {
+                    WorkResult("Speichern ging nicht – Android hat den Zugriff auf Bilder verweigert.", false)
+                }
+            })
         },
         onShare = {
-            if (busy == null) {
-                busy = "Das Foto wird geladen …"
-                val x = panX
-                val y = panY
-                scope.launch {
-                    val uri = withContext(Dispatchers.IO) {
-                        val assets = NasaLibrary.assets(image)
-                        val file = listOfNotNull(assets.orig, assets.large, assets.medium, assets.small)
-                            .firstNotNullOfOrNull { NasaLibrary.fetchFile(context, it, 60L * 1024 * 1024) }
-                        val bitmap = if (file != null) NasaLibrary.wallpaper(file, screenW, screenH, x, y) else null
-                        val saved = if (bitmap != null) ArtExport.saveToPictures(context, bitmap, fileName) else null
-                        bitmap?.recycle()
-                        saved
-                    }
-                    busy = null
-                    if (uri != null) ArtExport.share(context, uri) else say("Teilen ging nicht – das Foto konnte nicht geladen oder gespeichert werden.")
+            var saved: Uri? = null
+            act(1f, { bitmap ->
+                saved = ArtExport.saveToPictures(context, bitmap, fileName)
+                if (saved != null) WorkResult("", true) else WorkResult("Teilen ging nicht – das Foto konnte nicht gespeichert werden.", false)
+            }, after = { saved?.let { ArtExport.share(context, it) } })
+        },
+        onLive = {
+            // A little larger than the screen, so the Super-Wallpaper has room to move.
+            act(1.15f, { bitmap ->
+                if (SuperPhoto.save(context, bitmap)) WorkResult("", true) else WorkResult("Das Foto konnte nicht gespeichert werden.", false)
+            }, after = {
+                update { it.copy(superParams = it.superParams.copy(scene = SuperScene.Photo, photo = System.currentTimeMillis())) }
+                if (SuperWallpaperService.isActiveNow(context)) {
+                    say("Das Foto ist jetzt dein Super-Wallpaper.")
+                } else {
+                    say("Das Foto ist als Super-Wallpaper gespeichert – in Androids Vorschau noch „Hintergrund festlegen“ wählen.")
+                    openSuperWallpaper(context)
                 }
+            })
+        },
+        extra = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                GalleryChip("Füllen", !fit) { fit = false }
+                GalleryChip("Ganzes Foto", fit) { fit = true }
+                Text(
+                    if (fit) "Das ganze Foto, mit unscharfem Rand" else "Ziehen verschiebt, zwei Finger zoomen",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(start = 4.dp),
+                )
             }
+            Spacer(Modifier.height(10.dp))
         },
     ) {
-        val shown = photo ?: thumb
         Box(
             Modifier
-                .fillMaxSize()
+                .align(Alignment.Center)
+                .aspectRatio(aspect)
                 .onSizeChanged { box = it }
-                .pointerInput(photo) {
-                    detectDragGestures { change, drag ->
-                        change.consume()
-                        val p = photo
-                        if (p != null && box.width > 0 && box.height > 0) {
-                            val imageAspect = p.width.toFloat() / p.height
-                            val boxAspect = box.width.toFloat() / box.height
-                            if (imageAspect > boxAspect) {
-                                val overflow = box.height * imageAspect - box.width
-                                if (overflow > 1f) panX = (panX - drag.x / overflow).coerceIn(0f, 1f)
-                            } else {
-                                val overflow = box.width / imageAspect - box.height
-                                if (overflow > 1f) panY = (panY - drag.y / overflow).coerceIn(0f, 1f)
+                .pointerInput(photo, fit) {
+                    if (!fit) {
+                        detectTransformGestures { _, pan, zoomChange, _ ->
+                            val img = photo
+                            if (img != null && box.width > 0 && box.height > 0) {
+                                val current = NasaLibrary.cover(img.width, img.height, aspect, zoom, panX, panY)
+                                val base = NasaLibrary.cover(img.width, img.height, aspect, 1f, 0.5f, 0.5f)
+                                val newZoom = (zoom * zoomChange).coerceIn(1f, 6f)
+                                val newW = base.w / newZoom
+                                val newH = base.h / newZoom
+                                val cx = current.x + current.w / 2f - pan.x * current.w / box.width
+                                val cy = current.y + current.h / 2f - pan.y * current.h / box.height
+                                val maxX = img.width - newW
+                                val maxY = img.height - newH
+                                val nx = (cx - newW / 2f).coerceIn(0f, max(maxX, 0f))
+                                val ny = (cy - newH / 2f).coerceIn(0f, max(maxY, 0f))
+                                panX = if (maxX > 0.5f) nx / maxX else 0.5f
+                                panY = if (maxY > 0.5f) ny / maxY else 0.5f
+                                zoom = newZoom
                             }
                         }
                     }
                 },
         ) {
-            if (shown != null) {
-                Image(
-                    bitmap = shown,
-                    contentDescription = image.title,
-                    contentScale = ContentScale.Crop,
-                    alignment = BiasAlignment(panX * 2f - 1f, panY * 2f - 1f),
-                    modifier = Modifier.fillMaxSize(),
-                )
+            Canvas(Modifier.fillMaxSize()) {
+                val img = photoImage ?: thumb
+                if (img != null) {
+                    val dst = IntSize(size.width.roundToInt(), size.height.roundToInt())
+                    if (!fit) {
+                        val c = NasaLibrary.cover(img.width, img.height, aspect, zoom, panX, panY)
+                        drawImage(
+                            img,
+                            srcOffset = IntOffset(c.x, c.y),
+                            srcSize = IntSize(c.w, c.h),
+                            dstSize = dst,
+                            filterQuality = FilterQuality.Medium,
+                        )
+                    } else {
+                        val g = ground
+                        if (g != null) {
+                            drawImage(g, dstSize = dst, filterQuality = FilterQuality.Low)
+                            drawRect(Color.Black.copy(alpha = 0.37f))
+                        }
+                        val scale = min(dst.width / img.width.toFloat(), dst.height / img.height.toFloat())
+                        val dw = (img.width * scale).roundToInt()
+                        val dh = (img.height * scale).roundToInt()
+                        drawImage(
+                            img,
+                            dstOffset = IntOffset((dst.width - dw) / 2, (dst.height - dh) / 2),
+                            dstSize = IntSize(dw, dh),
+                            filterQuality = FilterQuality.Medium,
+                        )
+                    }
+                }
             }
             if (photo == null) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
