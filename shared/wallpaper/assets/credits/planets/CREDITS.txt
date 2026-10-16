@@ -2,7 +2,8 @@ Planetenbilder und -karten: NASA (Apollo-Aufnahmen, NASA/JPL-Caltech u. a.), aus
 https://github.com/nasa/NASA-3D-Resources – "free and without copyright". Für ZENITH auf die
 Größe des Super-Wallpapers gebracht (zugeschnitten, verkleinert, Ränder freigestellt).
 
-Mond (Karte der ganzen Kugel, moon_map.jpg, 2048 x 1024) und Höhen (moon_height.jpg, 1440 x 720): NASA Scientific
-Visualization Studio, "CGI Moon Kit" (https://svs.gsfc.nasa.gov/4720; Farbe aus den Aufnahmen der Lunar Reconnaissance
-Orbiter Camera, Höhen aus dem Laser-Höhenmesser LOLA). Die Dateien stammen aus einer verkleinerten Kopie des Kits.
-NASA-Bilder sind in der Regel gemeinfrei.
+Mond (Karte der ganzen Kugel, 8192 x 4096, und Geländenormalen, 4096 x 2048): NASA-Daten – die schattenfreie Albedo aus dem
+Hapke-normierten Mosaik der Lunar Reconnaissance Orbiter Camera (LROC WAC; an den Polen aus LOLA), das Gelände aus dem
+Laser-Höhenmesser LOLA (LDEM_64), beide aus dem Planetary Data System der NASA. Die aufbereiteten Dateien stammen aus dem
+Projekt "solar-system" von Anirudh (https://github.com/asrijanga/solar-system, MIT-Lizenz), das sie aus diesen NASA-Daten
+erzeugt (docs/data/moon.md). NASA-Daten sind in der Regel gemeinfrei.

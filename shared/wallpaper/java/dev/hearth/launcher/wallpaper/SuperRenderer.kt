@@ -80,9 +80,9 @@ object SuperPhoto {
 }
 
 /**
- * What moves the scene right now: the home page (-1 … 1), the tilt (-1 … 1), the zoom the launcher asks for (1 = rest) and
- * the depth – how near the camera is: 0 on the lock screen (the whole body, small and calm), 1 on the home screen (close
- * to the surface). The unlocking is the depth gliding from 0 to 1.
+ * What moves the scene right now: the home page (-1 … 1), the tilt (-1 … 1), the zoom the launcher asks for (1 = rest), the
+ * lock flight (the body flying in on the lock screen) and the depth – how near the camera is: 0 while the lock screen is
+ * showing, 1 on the home screen (close to the surface). The unlocking is the depth gliding from 0 to 1.
  */
 class SuperMotion(
     var panX: Float = 0f,
@@ -92,6 +92,8 @@ class SuperMotion(
     var depth: Float = 1f,
     /** How far the body has turned because of the flight and the time on the home screen (radians). */
     var spin: Float = 0f,
+    /** The flight in from the upper left on the lock screen: 0 = just begun, 1 = in the middle of the screen. */
+    var lockFly: Float = 1f,
 )
 
 private const val TW = 1024
@@ -449,7 +451,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         val bitmap = planet ?: return
         val d = m.depth.coerceIn(0f, 1f)
         // Lock screen: small in the upper left; unlocked: it flies to the bottom centre, then comes closer (SuperCamera).
-        SuperCamera.pose(scene, d, pose)
+        SuperCamera.pose(scene, m.lockFly, d, pose)
         val radius = w * pose.r * m.zoom
         val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.08f, d) + m.tiltX * w * lerp(0.015f, 0.035f, d)
         val cy = h * pose.cy + m.tiltY * h * 0.015f
@@ -483,7 +485,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         if (p.stars) drawStars(canvas, w, h, seconds, m)
         val bmp = disc ?: return
         val d = m.depth.coerceIn(0f, 1f)
-        SuperCamera.pose(scene, d, pose)
+        SuperCamera.pose(scene, m.lockFly, d, pose)
         val diameter = w * pose.r * 2f * m.zoom
         val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.10f, d) + m.tiltX * w * lerp(0.02f, 0.05f, d)
         val cy = h * pose.cy + m.tiltY * h * 0.02f
@@ -634,7 +636,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
 
     private fun drawGeometry(canvas: Canvas, w: Int, h: Int, seconds: Float, p: SuperParams, m: SuperMotion) {
         val d = m.depth.coerceIn(0f, 1f)
-        SuperCamera.pose(SuperScene.Geometry, d, pose)
+        SuperCamera.pose(SuperScene.Geometry, m.lockFly, d, pose)
         val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.06f, d) + m.tiltX * w * lerp(0.015f, 0.03f, d)
         val cy = h * pose.cy + m.tiltY * h * 0.02f
         val r = w * pose.r * m.zoom

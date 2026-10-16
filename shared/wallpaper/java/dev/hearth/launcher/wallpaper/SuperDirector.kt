@@ -8,12 +8,13 @@ import kotlin.math.exp
 import kotlin.math.pow
 
 /*
- * What moves a Super-Wallpaper, the way the Moon of Xiaomi's HyperOS moves: on the lock screen the body hangs small in
- * the upper left; the moment the phone is unlocked it flies in to the bottom centre, turns there, and then the camera
- * zooms in until single craters can be seen (the path itself is SuperCamera's); on locking it glides back. On the home
- * screen it follows the page you are on (it turns a little with every swipe) and the tilt of the phone; when the launcher
- * zooms the wallpaper out (the app drawer, folders) it shrinks with it. Everything is eased by time, never by frame, so it
- * is as smooth on a 120 Hz screen as on a 60 Hz one. One director for ZENITH's wallpaper, the single apps and the previews.
+ * What moves a Super-Wallpaper, the way the Moon of Xiaomi's HyperOS moves: when the lock screen appears the body flies in
+ * from the upper left corner to the middle of the screen; the moment the phone is unlocked it moves a little up and the
+ * camera zooms in until single craters can be seen (the path itself is SuperCamera's); on locking it glides back. On the
+ * home screen it follows the page you are on (it turns a little with every swipe) and the tilt of the phone; when the
+ * launcher zooms the wallpaper out (the app drawer, folders) it shrinks with it. Everything is eased by time, never by
+ * frame, so it is as smooth on a 120 Hz screen as on a 60 Hz one. One director for ZENITH's wallpaper, the single apps and
+ * the previews.
  */
 class SuperDirector(context: Context, private val demo: Boolean = false) {
 
@@ -30,6 +31,8 @@ class SuperDirector(context: Context, private val demo: Boolean = false) {
     private var startAt = 0L
     private var duration = 1L
     private var smoothGlide = false
+    private var lockFlyStart = 0L
+    private var lockFlyOn = false
 
     private var lastAt = 0L
     private var pan = 0f
@@ -54,13 +57,23 @@ class SuperDirector(context: Context, private val demo: Boolean = false) {
         checkedAt = now
         holdOpenUntil = 0L
         lastAt = now
+        drift = 0f
         if (locked) {
+            // The lock screen: the body flies in from the upper left to the middle.
             setDepth(0f, now)
+            lockFlyStart = now
+            lockFlyOn = true
+            motion.lockFly = 0f
         } else if (flight) {
+            // Home screen right after the screen was off: no lock flight, the home flight from the middle on.
             setDepth(0f, now)
             glide(1f, now, UNLOCK_MS, smooth = false)
+            lockFlyOn = false
+            motion.lockFly = 1f
         } else {
             setDepth(1f, now)
+            lockFlyOn = false
+            motion.lockFly = 1f
         }
     }
 
@@ -104,11 +117,15 @@ class SuperDirector(context: Context, private val demo: Boolean = false) {
         var moving = false
 
         if (demo) {
-            motion.depth = demoDepth(now - demoStart)
+            val t = (now - demoStart) % DEMO_MS
+            motion.lockFly = (t / LOCK_FLY_MS.toFloat()).coerceIn(0f, 1f)
+            motion.depth = if (t < DEMO_UNLOCK_AT) 0f else ((t - DEMO_UNLOCK_AT) / UNLOCK_MS.toFloat()).coerceIn(0f, 1f)
             moving = true
         } else if (!p.zoomOnWake) {
             // No flight, no page movement: the close-up, still.
             setDepth(1f, now)
+            lockFlyOn = false
+            motion.lockFly = 1f
         } else {
             if (now - checkedAt >= 100L) {
                 checkedAt = now
@@ -122,6 +139,11 @@ class SuperDirector(context: Context, private val demo: Boolean = false) {
             val eased = if (smoothGlide) easeInOut(k) else k
             motion.depth = from + (to - from) * eased
             if (k < 1f) moving = true
+            if (lockFlyOn) {
+                val f = ((now - lockFlyStart).toFloat() / LOCK_FLY_MS).coerceIn(0f, 1f)
+                motion.lockFly = f
+                if (f >= 1f) lockFlyOn = false else moving = true
+            }
         }
 
         val targetPan = if (p.zoomOnWake) (xOffset - 0.5f) * 2f else 0f
@@ -136,15 +158,10 @@ class SuperDirector(context: Context, private val demo: Boolean = false) {
         if (abs(zoomOutTarget - zoomOut) > 0.003f) moving = true
         motion.zoom = 1f - 0.12f * zoomOut
 
-        // The turning: the flight gives the body a push, and on the home screen it keeps on turning slowly.
+        // The turning: the body turns slowly all the time, the home flight gives it a push, and the pages turn it further.
         val depth = motion.depth
-        val gate = ((depth - 0.2f) / 0.3f).coerceIn(0f, 1f)
-        if (depth <= 0.001f) {
-            drift = 0f
-        } else {
-            drift = (drift + dt / 1000f * 0.07f * p.speed * gate) % (2f * PI.toFloat())
-        }
-        motion.spin = SuperCamera.spinKick(depth) + drift * gate + pan * 0.9f
+        drift = (drift + dt / 1000f * (0.03f + 0.04f * depth) * p.speed) % (2f * PI.toFloat())
+        motion.spin = SuperCamera.spinKick(depth) + drift + pan * 0.9f
         return moving
     }
 
@@ -155,25 +172,20 @@ class SuperDirector(context: Context, private val demo: Boolean = false) {
         /** What Android's lock screen sends a wallpaper just before it is gone (the platform names it, but hides the constant). */
         const val COMMAND_KEYGUARD_GOING_AWAY = "android.wallpaper.keyguardgoingaway"
 
-        /** Unlocking: flying in, turning, zooming – the whole flight. */
-        const val UNLOCK_MS = 5200L
+        /** The lock flight: from the upper left corner to the middle. */
+        const val LOCK_FLY_MS = 2400L
+
+        /** Unlocking: moving up, turning, zooming – the whole home flight. */
+        const val UNLOCK_MS = 4800L
+
+        /** The preview's loop: the lock flight, a pause, the unlock at [DEMO_UNLOCK_AT], the zoom, a pause at the end. */
+        private const val DEMO_UNLOCK_AT = 3600L
+        private const val DEMO_MS = 3600L + 4800L + 3000L
 
         /** Locking: back out, quicker. */
         const val LOCK_MS = 900L
 
         /** Slow, fast, slow. */
         fun easeInOut(k: Float): Float = if (k < 0.5f) 4f * k * k * k else 1f - (-2f * k + 2f).pow(3) / 2f
-
-        /** The flight made visible, for the previews: lock screen, the flight, the close-up, back out – round and round (12 s). */
-        fun demoDepth(timeMs: Long): Float {
-            val t = (timeMs % 12000L).toInt()
-            return when {
-                t < 1800 -> 0f
-                t < 7000 -> (t - 1800) / 5200f
-                t < 9500 -> 1f
-                t < 10300 -> 1f - easeInOut((t - 9500) / 800f)
-                else -> 0f
-            }
-        }
     }
 }

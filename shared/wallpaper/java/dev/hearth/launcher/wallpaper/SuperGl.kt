@@ -11,6 +11,7 @@ import android.opengl.EGLDisplay
 import android.opengl.EGLExt
 import android.opengl.EGLSurface
 import android.opengl.GLES20
+import android.opengl.GLES30
 import android.opengl.GLUtils
 import android.view.Surface
 import java.io.File
@@ -45,9 +46,8 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
     private var kind = Kind.SPHERE
     private var scene = SuperScene.Moon
     private var albedoTex = 0
-    private var heightTex = 0
+    private var normalTex = 0
     private var spriteTex = 0
-    private var heightTexel = floatArrayOf(1f / 1440f, 1f / 720f)
     private var photoW = 1
     private var photoH = 1
     private var layer: Bitmap? = null
@@ -60,6 +60,7 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
     private var bodyShown = true
     private var lastCenterX = 0
     private var lastCenterY = 0
+    private var lastHeight = 1
 
     // ---------------------------------------------------------------------------------------------
     // The graphics context
@@ -179,12 +180,12 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
     }
 
     private fun freeTextures() {
-        val ids = intArrayOf(albedoTex, heightTex, spriteTex)
+        val ids = intArrayOf(albedoTex, normalTex, spriteTex)
         if (display != EGL14.EGL_NO_DISPLAY && context != EGL14.EGL_NO_CONTEXT) {
             for (id in ids) if (id != 0) GLES20.glDeleteTextures(1, intArrayOf(id), 0)
         }
         albedoTex = 0
-        heightTex = 0
+        normalTex = 0
         spriteTex = 0
         layer = null
         layerRenderer = null
@@ -215,14 +216,10 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
             when (forScene) {
                 SuperScene.Moon -> {
                     kind = Kind.SPHERE
-                    val map = decodeAsset("planets/moon_map.jpg") ?: return false
-                    albedoTex = upload(map, true, true)
-                    map.recycle()
-                    val height = decodeAsset("planets/moon_height.jpg") ?: return false
-                    heightTexel = floatArrayOf(1f / height.width, 1f / height.height)
-                    heightTex = upload(height, true, true)
-                    height.recycle()
-                    true
+                    albedoTex = loadMoonAlbedo()
+                    if (albedoTex == 0) return false
+                    normalTex = loadMoonNormals()
+                    normalTex != 0
                 }
                 SuperScene.Earth -> {
                     kind = Kind.DISC
@@ -263,6 +260,86 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
         }
     }
 
+    private fun newTexture(mips: Boolean): Int {
+        val ids = IntArray(1)
+        GLES20.glGenTextures(1, ids, 0)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, ids[0])
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, if (mips) GLES20.GL_LINEAR_MIPMAP_LINEAR else GLES20.GL_LINEAR)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_REPEAT)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+        GLES20.glPixelStorei(GLES20.GL_UNPACK_ALIGNMENT, 1)
+        return ids[0]
+    }
+
+    /**
+     * The Moon's albedo, 8192 × 4096 pixels of one byte each (about 33 MB on the graphics chip): made strip by strip from
+     * its 16 pictures, so that never more than a few megabytes are in memory at once. On a chip that can't take such a
+     * texture every second pixel is used (4096 × 2048). 0 if a picture can't be read.
+     */
+    private fun loadMoonAlbedo(): Int {
+        val limit = IntArray(1)
+        GLES20.glGetIntegerv(GLES20.GL_MAX_TEXTURE_SIZE, limit, 0)
+        val step = if (limit[0] >= 8192) 1 else 2
+        val w = 8192 / step
+        val h = 4096 / step
+        val id = newTexture(true)
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES30.GL_R8, w, h, 0, GLES30.GL_RED, GLES20.GL_UNSIGNED_BYTE, null)
+        var row = 0
+        for (i in 0 until 16) {
+            val strip = decodeAsset("planets/moon_albedo_%02d.webp".format(i)) ?: return 0
+            val sw = strip.width
+            val sh = strip.height
+            val px = IntArray(sw * sh)
+            strip.getPixels(px, 0, sw, 0, 0, sw, sh)
+            strip.recycle()
+            val outW = sw / step
+            val outH = sh / step
+            val bytes = ByteBuffer.allocateDirect(outW * outH)
+            for (y in 0 until outH) {
+                val base = y * step * sw
+                for (x in 0 until outW) bytes.put(((px[base + x * step] shr 16) and 0xFF).toByte())
+            }
+            bytes.position(0)
+            GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, 0, row, outW, outH, GLES30.GL_RED, GLES20.GL_UNSIGNED_BYTE, bytes)
+            row += outH
+        }
+        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D)
+        return id
+    }
+
+    /** The Moon's terrain, from LOLA: the east and north parts of the surface normal, 4096 × 2048, two bytes per pixel. 0 if it can't be read. */
+    private fun loadMoonNormals(): Int {
+        val east = decodeAsset("planets/moon_normal_east.webp") ?: return 0
+        val w = east.width
+        val h = east.height
+        val bytes = ByteBuffer.allocateDirect(w * h * 2)
+        val chunk = IntArray(w * 128)
+        var y = 0
+        while (y < h) {
+            val rows = minOf(128, h - y)
+            east.getPixels(chunk, 0, w, 0, y, w, rows)
+            for (i in 0 until w * rows) bytes.put((y * w + i) * 2, ((chunk[i] shr 16) and 0xFF).toByte())
+            y += rows
+        }
+        east.recycle()
+        val north = decodeAsset("planets/moon_normal_north.webp") ?: return 0
+        if (north.width != w || north.height != h) return 0
+        y = 0
+        while (y < h) {
+            val rows = minOf(128, h - y)
+            north.getPixels(chunk, 0, w, 0, y, w, rows)
+            for (i in 0 until w * rows) bytes.put((y * w + i) * 2 + 1, ((chunk[i] shr 16) and 0xFF).toByte())
+            y += rows
+        }
+        north.recycle()
+        bytes.position(0)
+        val id = newTexture(true)
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES30.GL_RG8, w, h, 0, GLES30.GL_RG, GLES20.GL_UNSIGNED_BYTE, bytes)
+        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D)
+        return id
+    }
+
     private fun planetFile(s: SuperScene): String? = when (s) {
         SuperScene.Mars -> "mars"
         SuperScene.Venus -> "venus"
@@ -285,6 +362,7 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
     /** One picture at [timeMs] on a surface of [w] × [h]. */
     fun draw(w: Int, h: Int, timeMs: Long, p: SuperParams, m: SuperMotion) {
         GLES20.glViewport(0, 0, w, h)
+        lastHeight = h
         GLES20.glDisable(GLES20.GL_BLEND)
         drawSky(w, h, timeMs, p, m)
         GLES20.glEnable(GLES20.GL_BLEND)
@@ -338,7 +416,7 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
     private fun drawSphere(w: Int, h: Int, m: SuperMotion) {
         val prog = sphere ?: return
         val d = m.depth.coerceIn(0f, 1f)
-        SuperCamera.pose(scene, d, pose)
+        SuperCamera.pose(scene, m.lockFly, d, pose)
         val radius = w * pose.r * m.zoom
         val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.08f, d) + m.tiltX * w * lerp(0.015f, 0.035f, d)
         val cyTop = h * pose.cy + m.tiltY * h * 0.015f
@@ -364,24 +442,31 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
             val sz = 0.66f
             val len = sqrt(sx * sx + sy * sy + sz * sz)
             GLES20.glUniform3f(prog.u("uSun"), sx / len, sy / len, sz / len)
-            GLES20.glUniform1f(prog.u("uBump"), 0.09f)
+            val near = ((d - 0.4f) / 0.4f).coerceIn(0f, 1f)
+            GLES20.glUniform1i(prog.u("uKind"), 1)
+            // The terrain's shadows are felt more the closer the camera is; a little sharpening where the picture is magnified.
+            GLES20.glUniform1f(prog.u("uRelief"), 1.5f + 0.8f * near)
+            GLES20.glUniform1f(prog.u("uSharp"), 0.25f + 0.45f * near)
+            GLES20.glUniform3f(prog.u("uTint"), 1.70f, 1.66f, 1.58f)
             GLES20.glUniform1f(prog.u("uAmbient"), 0.035f)
             GLES20.glUniform1f(prog.u("uGain"), 1.25f)
             GLES20.glUniform1f(prog.u("uLimb"), 0f)
-            GLES20.glUniform1f(prog.u("uDetail"), 0.20f * ((d - 0.4f) / 0.4f).coerceIn(0f, 1f))
+            GLES20.glUniform1f(prog.u("uDetail"), 0.12f * near)
         } else {
             val sx = -0.52f
             val sy = 0.40f
             val sz = 0.75f
             val len = sqrt(sx * sx + sy * sy + sz * sz)
             GLES20.glUniform3f(prog.u("uSun"), sx / len, sy / len, sz / len)
-            GLES20.glUniform1f(prog.u("uBump"), 0f)
+            GLES20.glUniform1i(prog.u("uKind"), 0)
+            GLES20.glUniform1f(prog.u("uRelief"), 0f)
+            GLES20.glUniform1f(prog.u("uSharp"), 0f)
+            GLES20.glUniform3f(prog.u("uTint"), 1f, 1f, 1f)
             GLES20.glUniform1f(prog.u("uAmbient"), 0.10f)
             GLES20.glUniform1f(prog.u("uGain"), 1.05f)
             GLES20.glUniform1f(prog.u("uLimb"), 1f)
             GLES20.glUniform1f(prog.u("uDetail"), 0f)
         }
-        GLES20.glUniform2f(prog.u("uHeightTexel"), heightTexel[0], heightTexel[1])
         // The haze round some planets.
         when (scene) {
             SuperScene.Mars -> GLES20.glUniform4f(prog.u("uGlow"), 0.910f, 0.565f, 0.353f, 0.30f)
@@ -398,8 +483,8 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, albedoTex)
         GLES20.glUniform1i(prog.u("uAlbedo"), 0)
         GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, if (heightTex != 0) heightTex else albedoTex)
-        GLES20.glUniform1i(prog.u("uHeight"), 1)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, if (normalTex != 0) normalTex else albedoTex)
+        GLES20.glUniform1i(prog.u("uNormal"), 1)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         lastCenterX = cx.toInt().coerceIn(0, w - 1)
@@ -410,7 +495,7 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
     private fun drawDisc(w: Int, h: Int, m: SuperMotion) {
         val prog = sprite ?: return
         val d = m.depth.coerceIn(0f, 1f)
-        SuperCamera.pose(scene, d, pose)
+        SuperCamera.pose(scene, m.lockFly, d, pose)
         val radius = w * pose.r * m.zoom
         val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.10f, d) + m.tiltX * w * lerp(0.02f, 0.05f, d)
         val cy = h - (h * pose.cy + m.tiltY * h * 0.02f)
@@ -486,9 +571,12 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
         if (kind == Kind.PHOTO || kind == Kind.GEOMETRY) return true
         return try {
             val body = pixelSum(lastCenterX, lastCenterY)
-            val sky = pixelSum(1, 1)
-            // The body at its centre is lit and clearly brighter than the dark sky at the corner.
-            body - sky > 25 || body > 120
+            // What the sky alone would show there (the gradient of the sky shader, in the sum of red, green and blue).
+            val t = lastCenterY / lastHeight.toFloat()
+            val smooth = t * t * (3f - 2f * t)
+            val sky = 67f + (13f - 67f) * smooth
+            // Black, or just the sky where the body should be: it wasn't drawn.
+            body >= 20 && kotlin.math.abs(body - sky) > 12f
         } catch (t: Throwable) {
             true
         }
@@ -592,9 +680,11 @@ uniform vec3 uPlanet;
 uniform mat3 uRot;
 uniform vec3 uSun;
 uniform sampler2D uAlbedo;
-uniform sampler2D uHeight;
-uniform vec2 uHeightTexel;
-uniform float uBump;
+uniform sampler2D uNormal;
+uniform int uKind;
+uniform float uRelief;
+uniform float uSharp;
+uniform vec3 uTint;
 uniform float uAmbient;
 uniform float uGain;
 uniform float uLimb;
@@ -659,25 +749,28 @@ void main() {
   vec2 gx = useA ? dxA : dxB;
   vec2 gy = useA ? dyA : dyB;
   vec2 uv = vec2(uf, v);
-  vec3 albedo = textureGrad(uAlbedo, uv, gx, gy).rgb;
+  vec3 albedo;
+  if (uKind == 1) {
+    float a = textureGrad(uAlbedo, uv, gx, gy).r;
+    float lo = textureGrad(uAlbedo, uv, gx * 3.0, gy * 3.0).r;
+    a = clamp(a + uSharp * (a - lo), 0.0, 1.0);
+    albedo = vec3(a) * uTint;
+  } else {
+    albedo = textureGrad(uAlbedo, uv, gx, gy).rgb;
+  }
   if (uDetail > 0.0) {
     vec3 q = b * 90.0;
     float nz = vn(q) * 0.5 + vn(q * 2.3) * 0.3 + vn(q * 5.1) * 0.2;
     albedo *= 1.0 + uDetail * (nz - 0.5);
   }
   vec3 nv = n;
-  if (uBump > 0.0) {
-    vec2 tx = uHeightTexel;
-    float hE = textureGrad(uHeight, uv + vec2(tx.x, 0.0), gx, gy).r;
-    float hW = textureGrad(uHeight, uv - vec2(tx.x, 0.0), gx, gy).r;
-    float hS = textureGrad(uHeight, uv + vec2(0.0, tx.y), gx, gy).r;
-    float hN = textureGrad(uHeight, uv - vec2(0.0, tx.y), gx, gy).r;
-    float cl = max(cos(lat), 0.2);
-    float gxh = (hE - hW) / (2.0 * tx.x * 2.0 * PI * cl);
-    float gyh = (hN - hS) / (2.0 * tx.y * PI);
+  if (uKind == 1) {
+    vec2 t = textureGrad(uNormal, uv, gx, gy).rg * 2.0 - 1.0;
+    vec2 ne = sign(t) * t * t * uRelief;
+    float up = sqrt(max(1.0 - dot(ne, ne), 0.05));
     vec3 east = normalize(vec3(b.z, 0.0, -b.x) + vec3(0.0001, 0.0, 0.0));
     vec3 north = cross(b, east);
-    vec3 bn = normalize(b - uBump * (gxh * east + gyh * north));
+    vec3 bn = normalize(ne.x * east + ne.y * north + up * b);
     nv = bn * uRot;
   }
   float lit = clamp(dot(nv, uSun), 0.0, 1.0);
