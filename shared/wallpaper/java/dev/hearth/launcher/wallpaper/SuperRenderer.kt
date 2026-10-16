@@ -7,6 +7,8 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
@@ -47,6 +49,10 @@ enum class SuperScene(val label: String, val note: String) {
     Io("Io", "Der vulkanische Jupitermond Io, gedreht aus einer Karte der NASA."),
     Europa("Europa", "Der Jupitermond Europa mit seinen Eisrissen – gedreht aus einer Karte der NASA."),
     Ganymede("Ganymed", "Ganymed, der größte Mond im Sonnensystem, gedreht aus einer Karte der NASA."),
+    Flag(
+        "Iwo Jima",
+        "Das Foto vom Iwo-Jima-Denkmal: der Vollmond hinter den Marines, die US-Flagge im Wind. Auf dem Sperrbildschirm fliegt die Kamera von der Flagge oben links über das ganze Bild, nach dem Entsperren fährt sie auf Flagge und Mond zu; ein sanftes Licht liegt auf der Flagge.",
+    ),
     Geometry("Geometrie", "Ein Ikosaeder aus Licht mit einem zweiten Körper darin, die beide umeinander drehen."),
     Photo(
         "Eigenes Foto",
@@ -133,6 +139,8 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
     }
     private val rect = RectF()
     private val pose = SuperPose()
+    private val box = FloatArray(4)
+    private val spotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.SCREEN) }
     private var skyShader: Shader? = null
     private var skyW = 0
     private var skyH = 0
@@ -158,7 +166,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         if (ready) return
         when (scene) {
             SuperScene.Geometry -> Unit
-            SuperScene.Photo -> {
+            SuperScene.Photo, SuperScene.Flag -> {
                 loadPhoto()
                 ready = true
                 return
@@ -432,7 +440,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
     /** One frame at [timeMs] onto [canvas] ([w] × [h] pixels). */
     fun draw(canvas: Canvas, w: Int, h: Int, timeMs: Long, p: SuperParams, m: SuperMotion) {
         val seconds = timeMs / 1000f
-        if (scene == SuperScene.Photo) {
+        if (scene == SuperScene.Photo || scene == SuperScene.Flag) {
             drawPhoto(canvas, w, h, seconds, p, m)
             return
         }
@@ -501,6 +509,12 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
     }
 
     private fun loadPhoto() {
+        if (scene == SuperScene.Flag) {
+            // The photo of this scene is part of the app.
+            val manager = assets ?: return
+            photo = runCatching { manager.open("planets/iwojima.jpg").use { BitmapFactory.decodeStream(it) } }.getOrNull()
+            return
+        }
         val file = photoFile ?: return
         if (!file.exists()) return
         photo = runCatching {
@@ -521,18 +535,23 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
             if (p.stars) drawStars(canvas, w, h, seconds, m)
             return
         }
-        val cover = maxOf(w / bmp.width.toFloat(), h / bmp.height.toFloat())
-        val scale = cover * lerp(1.04f, 1.18f, m.depth.coerceIn(0f, 1f)) * m.zoom
-        val dw = bmp.width * scale
-        val dh = bmp.height * scale
-        val slackX = dw - w
-        val slackY = dh - h
-        val shiftX = (m.tiltX * 0.45f + m.panX * 0.5f).coerceIn(-1f, 1f)
-        val shiftY = (m.tiltY * 0.45f).coerceIn(-1f, 1f)
-        val left = -slackX / 2f - shiftX * slackX / 2f
-        val top = -slackY / 2f - shiftY * slackY / 2f
-        rect.set(left, top, left + dw, top + dh)
+        SuperCamera.pose(scene, m.lockFly, m.depth.coerceIn(0f, 1f), pose)
+        SuperCamera.photoBox(w, h, bmp.width, bmp.height, pose, m.zoom, -(m.tiltX * 0.03f + m.panX * 0.05f) * w, m.tiltY * 0.02f * h, box)
+        rect.set(box[0], box[1], box[0] + box[2], box[1] + box[3])
         canvas.drawBitmap(bmp, null, rect, paint)
+        if (scene == SuperScene.Flag) {
+            // A soft light on the flag: an ellipse of white, added to the picture.
+            val cx = box[0] + SuperCamera.FLAG_U * box[2]
+            val cy = box[1] + SuperCamera.FLAG_V * box[3]
+            val rx = SuperCamera.FLAG_RU * box[2]
+            val ry = SuperCamera.FLAG_RV * box[3]
+            spotPaint.shader = RadialGradient(0f, 0f, 1f, intArrayOf(0x55FFFFFF, 0x00FFFFFF), floatArrayOf(0f, 1f), Shader.TileMode.CLAMP)
+            canvas.save()
+            canvas.translate(cx, cy)
+            canvas.scale(rx, ry)
+            canvas.drawCircle(0f, 0f, 1f, spotPaint)
+            canvas.restore()
+        }
     }
 
     private fun drawSky(canvas: Canvas, w: Int, h: Int) {

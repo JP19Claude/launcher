@@ -300,6 +300,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Neuer Hintergrund „Iwo Jima“ – mit der US-Flagge im Mittelpunkt", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Zu dem Foto mit dem Iwo-Jima-Denkmal und dem Vollmond soll es auch so einen Hintergrund geben, und man soll die US-Flagge mehr sehen. Neu: die Szene „Iwo Jima“ im Super-Wallpaper (Einstellungen → Super-Wallpaper → Szene) und als eigene App „ZENITH-Hintergrund-Iwo-Jima.apk“. Das Foto ist fest im Paket, es braucht kein Internet.",
+                        "Der Ablauf wie beim Mond: Auf dem Sperrbildschirm beginnt die Kamera dicht an der Flagge oben links und fliegt zurück auf einen Ausschnitt mit Flagge, Mast, Vollmond und den Marines. Beim Entsperren fährt sie etwas nach oben und dann nah an Flagge und Mond heran – die Flagge steht dabei groß am linken Rand. Dazu liegt ein sanftes Licht auf der Flagge, damit Rot, Weiß und Blau im dunklen Foto zu sehen sind.",
+                        "Auch „Eigenes Foto“ (ein Foto aus der Wallpaper-Galerie als Live-Wallpaper) fliegt jetzt so ein: von der Ecke oben links zum Bild, beim Entsperren etwas näher heran. Die Hintergrund-Apps sind Version 1.4.",
+                        "Ehrlich dazu: Das Foto habe ich nur so, wie du es mir gezeigt hast – der linke Teil der Flagge ist darin abgeschnitten. Mehr von der Flagge, als im Foto ist, kann ich nicht zeigen; ich zeige das Vorhandene größer. Wenn du das ganze Foto mit der ganzen Flagge hast, schick es mir, dann tausche ich es aus. Fotograf und Bildnummer kenne ich nicht; ich gehe davon aus, dass es aus der NASA-Bildbibliothek stammt (wie die Fotos der Wallpaper-Galerie) – sicher bin ich nicht. Auf einem Handy habe ich es nicht ausprobiert.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

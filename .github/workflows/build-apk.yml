@@ -38,7 +38,7 @@ jobs:
           cp app/build/outputs/apk/one/debug/app-one-debug.apk ZENITH.apk
           cp smart/build/outputs/apk/smart/debug/smart-smart-debug.apk ZENITH-Smart.apk
           # ZENITH Hintergründe: every scene of the Super-Wallpaper as an app (a live wallpaper) of its own.
-          for entry in moon:Mond earth:Erde mars:Mars venus:Venus jupiter:Jupiter saturn:Saturn neptune:Neptun pluto:Pluto io:Io europa:Europa ganymede:Ganymed geometry:Geometrie; do
+          for entry in moon:Mond earth:Erde mars:Mars venus:Venus jupiter:Jupiter saturn:Saturn neptune:Neptun pluto:Pluto io:Io europa:Europa ganymede:Ganymed flag:Iwo-Jima geometry:Geometrie; do
             id="${entry%%:*}"; name="${entry#*:}"
             cp "wallpapers/build/outputs/apk/$id/debug/wallpapers-$id-debug.apk" "ZENITH-Hintergrund-$name.apk"
           done
@@ -148,7 +148,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           wv=$(grep -o 'versionName = "[^"]*"' wallpapers/build.gradle.kts | cut -d'"' -f2)
-          notes="$(printf 'ZENITH Hintergründe %s – jede Szene des Super-Wallpapers als eigene App (ein Live-Wallpaper), einzeln zu installieren: ZENITH-Hintergrund-Mond.apk, -Erde, -Mars, -Venus, -Jupiter, -Saturn, -Neptun, -Pluto, -Io, -Europa, -Ganymed und -Geometrie. Die Bilder sind von der NASA (frei, ohne Copyright). Debug-APKs aus Build %s (Commit %s).' "$wv" "${{ github.run_number }}" "${{ github.sha }}")"
+          notes="$(printf 'ZENITH Hintergründe %s – jede Szene des Super-Wallpapers als eigene App (ein Live-Wallpaper), einzeln zu installieren: ZENITH-Hintergrund-Mond.apk, -Erde, -Mars, -Venus, -Jupiter, -Saturn, -Neptun, -Pluto, -Io, -Europa, -Ganymed, -Iwo-Jima und -Geometrie. Die Bilder sind von der NASA (frei, ohne Copyright). Debug-APKs aus Build %s (Commit %s).' "$wv" "${{ github.run_number }}" "${{ github.sha }}")"
           if gh release view hintergruende >/dev/null 2>&1; then
             gh release upload hintergruende ZENITH-Hintergrund-*.apk --clobber
             gh release edit hintergruende --notes "$notes" --latest=false

@@ -7,3 +7,7 @@ Hapke-normierten Mosaik der Lunar Reconnaissance Orbiter Camera (LROC WAC; an de
 Laser-Höhenmesser LOLA (LDEM_64), beide aus dem Planetary Data System der NASA. Die aufbereiteten Dateien stammen aus dem
 Projekt "solar-system" von Anirudh (https://github.com/asrijanga/solar-system, MIT-Lizenz), das sie aus diesen NASA-Daten
 erzeugt (docs/data/moon.md). NASA-Daten sind in der Regel gemeinfrei.
+
+Iwo Jima (iwojima.jpg): Foto des Iwo-Jima-Denkmals (U.S. Marine Corps War Memorial) mit dem Vollmond und der US-Flagge, nach einer
+Bildschirmaufnahme aus ZENITHs Wallpaper-Galerie, deren Fotos aus der NASA-Bildbibliothek (images.nasa.gov) kommen. Den Fotografen
+und die Bildnummer kenne ich nicht; NASA-Bilder sind in der Regel gemeinfrei, bei einzelnen können andere Rechte gelten.

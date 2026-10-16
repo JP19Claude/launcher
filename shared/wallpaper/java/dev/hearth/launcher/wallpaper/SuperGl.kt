@@ -54,6 +54,7 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
     private var layerRenderer: SuperRenderer? = null
 
     private val pose = SuperPose()
+    private val photoBox = FloatArray(4)
     private val rot = FloatArray(9)
     private val readBack: ByteBuffer = ByteBuffer.allocateDirect(8)
     private var verifyNext = false
@@ -228,9 +229,9 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
                     disc.recycle()
                     true
                 }
-                SuperScene.Photo -> {
+                SuperScene.Photo, SuperScene.Flag -> {
                     kind = Kind.PHOTO
-                    val photo = decodePhoto()
+                    val photo = if (forScene == SuperScene.Flag) decodeAsset("planets/iwojima.jpg") else decodePhoto()
                     if (photo != null) {
                         photoW = photo.width
                         photoH = photo.height
@@ -518,20 +519,17 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
     private fun drawPhoto(w: Int, h: Int, m: SuperMotion) {
         val prog = sprite ?: return
         if (spriteTex == 0) return
-        val cover = maxOf(w / photoW.toFloat(), h / photoH.toFloat())
-        val scale = cover * lerp(1.04f, 1.18f, m.depth.coerceIn(0f, 1f)) * m.zoom
-        val dw = photoW * scale
-        val dh = photoH * scale
-        val slackX = dw - w
-        val slackY = dh - h
-        val shiftX = (m.tiltX * 0.45f + m.panX * 0.5f).coerceIn(-1f, 1f)
-        val shiftY = (m.tiltY * 0.45f).coerceIn(-1f, 1f)
-        val left = -slackX / 2f - shiftX * slackX / 2f
-        val top = -slackY / 2f - shiftY * slackY / 2f
+        SuperCamera.pose(scene, m.lockFly, m.depth.coerceIn(0f, 1f), pose)
+        SuperCamera.photoBox(w, h, photoW, photoH, pose, m.zoom, -(m.tiltX * 0.03f + m.panX * 0.05f) * w, m.tiltY * 0.02f * h, photoBox)
+        val left = photoBox[0]
+        val top = photoBox[1]
         GLES20.glUseProgram(prog.id)
         GLES20.glUniform2f(prog.u("uRes"), w.toFloat(), h.toFloat())
-        GLES20.glUniform4f(prog.u("uBox"), left, h - (top + dh), left + dw, h - top)
+        GLES20.glUniform4f(prog.u("uBox"), left, h - (top + photoBox[3]), left + photoBox[2], h - top)
         GLES20.glUniform1i(prog.u("uMode"), 1)
+        // A soft light on the flag in the photo of the "Iwo Jima" scene.
+        GLES20.glUniform4f(prog.u("uSpot"), SuperCamera.FLAG_U, SuperCamera.FLAG_V, SuperCamera.FLAG_RU, SuperCamera.FLAG_RV)
+        GLES20.glUniform1f(prog.u("uSpotGain"), if (scene == SuperScene.Flag) 1.8f else 1f)
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, spriteTex)
         GLES20.glUniform1i(prog.u("uTex"), 0)
@@ -560,6 +558,7 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
         GLES20.glUniform2f(prog.u("uRes"), w.toFloat(), h.toFloat())
         GLES20.glUniform4f(prog.u("uBox"), 0f, 0f, w.toFloat(), h.toFloat())
         GLES20.glUniform1i(prog.u("uMode"), 1)
+        GLES20.glUniform1f(prog.u("uSpotGain"), 1f)
         GLES20.glUniform1i(prog.u("uTex"), 0)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
     }
@@ -655,11 +654,16 @@ uniform sampler2D uTex;
 uniform int uMode;
 uniform vec3 uPlanet;
 uniform vec4 uGlow;
+uniform vec4 uSpot;
+uniform float uSpotGain;
 out vec4 fragColor;
 
 void main() {
   if (uMode == 1) {
-    fragColor = texture(uTex, vUv);
+    vec4 c = texture(uTex, vUv);
+    // A soft light (uSpotGain > 1) on an ellipse of the picture.
+    float k = 1.0 + (uSpotGain - 1.0) * (1.0 - smoothstep(0.0, 1.0, length((vUv - uSpot.xy) / uSpot.zw)));
+    fragColor = vec4(c.rgb * k, c.a);
     return;
   }
   vec2 p = (gl_FragCoord.xy - uPlanet.xy) / uPlanet.z;

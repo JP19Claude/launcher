@@ -21,6 +21,7 @@ val scenes = listOf(
     Triple("io", "Io", "Io"),
     Triple("europa", "Europa", "Europa"),
     Triple("ganymede", "Ganymede", "Ganymed"),
+    Triple("flag", "Flag", "Iwo Jima"),
     Triple("geometry", "Geometry", "Geometrie"),
 )
 
@@ -31,8 +32,8 @@ android {
     defaultConfig {
         minSdk = 28
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
     }
 
     // The same fixed debug key as ZENITH's, so every CI build installs as an update over the last one.
