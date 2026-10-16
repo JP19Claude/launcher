@@ -550,7 +550,7 @@ void main() {
         float d = length((f - pos) * cs);
         float rad = (0.8 + 1.5 * hash(id + 3.7)) * unit;
         float tw = 0.6 + 0.4 * sin(uTime * 0.9 + 6.2831 * hash(id + 5.5));
-        float b = smoothstep(rad, rad * 0.35, d) * tw * (0.55 + 0.45 * hash(id + 9.9));
+        float b = (1.0 - smoothstep(rad * 0.35, rad, d)) * tw * (0.55 + 0.45 * hash(id + 9.9));
         c += vec3(0.92, 0.94, 1.0) * b;
       }
     }
@@ -626,7 +626,7 @@ float hr(float x) {
 }
 
 vec4 ringColor(float rho, float aa) {
-  float edge = smoothstep(1.27, 1.27 + aa, rho) * smoothstep(2.25, 2.25 - aa, rho);
+  float edge = smoothstep(1.27, 1.27 + aa, rho) * (1.0 - smoothstep(2.25 - aa, 2.25, rho));
   if (edge <= 0.0) return vec4(0.0);
   float idx = floor((rho - 1.27) / 0.022);
   float a = 0.30 + 0.5 * hr(idx);
