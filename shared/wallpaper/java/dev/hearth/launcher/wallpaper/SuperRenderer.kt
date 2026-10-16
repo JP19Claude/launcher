@@ -70,6 +70,8 @@ data class SuperParams(
     /** How fast everything turns (0.2 … 3). */
     val speed: Float = 1f,
     val stars: Boolean = true,
+    /** How big the planet or the Moon is, as a factor of its normal size (0.5 … 1.6; the photos ignore it). */
+    val size: Float = 1f,
     /** Which photo the "Foto" scene shows: a stamp that changes whenever another one is chosen (the file itself is [SuperPhoto]). */
     val photo: Long = 0L,
 )
@@ -460,7 +462,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         val d = m.depth.coerceIn(0f, 1f)
         // Lock screen: small in the upper left; unlocked: it flies to the bottom centre, then comes closer (SuperCamera).
         SuperCamera.pose(scene, m.lockFly, d, pose)
-        val radius = w * pose.r * m.zoom
+        val radius = w * pose.r * m.zoom * p.size
         val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.08f, d) + m.tiltX * w * lerp(0.015f, 0.035f, d)
         val cy = h * pose.cy + m.tiltY * h * 0.015f
         // The haze round the planet.
@@ -494,7 +496,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         val bmp = disc ?: return
         val d = m.depth.coerceIn(0f, 1f)
         SuperCamera.pose(scene, m.lockFly, d, pose)
-        val diameter = w * pose.r * 2f * m.zoom
+        val diameter = w * pose.r * 2f * m.zoom * p.size
         val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.10f, d) + m.tiltX * w * lerp(0.02f, 0.05f, d)
         val cy = h * pose.cy + m.tiltY * h * 0.02f
         if (scene == SuperScene.Earth) {
@@ -658,7 +660,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         SuperCamera.pose(SuperScene.Geometry, m.lockFly, d, pose)
         val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.06f, d) + m.tiltX * w * lerp(0.015f, 0.03f, d)
         val cy = h * pose.cy + m.tiltY * h * 0.02f
-        val r = w * pose.r * m.zoom
+        val r = w * pose.r * m.zoom * p.size
         val a = seconds * 0.35f * p.speed
         val b = seconds * 0.23f * p.speed
         drawShape(canvas, w, icoVerts, icoEdges, cx, cy, r, a, b)

@@ -124,6 +124,15 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             range = 0.2f..3f,
             valueText = "${"%.1f".format(s.superSpeed)}×",
         ) { v -> update { it.copy(superParams = it.superParams.copy(speed = v)) } }
+        // The photos (Iwo Jima, your own) have no body to resize.
+        if (s.superScene != SuperScene.Photo && s.superScene != SuperScene.Flag) {
+            SliderRow(
+                label = "Größe",
+                value = params.size,
+                range = 0.5f..1.6f,
+                valueText = "${(params.size * 100f).roundToInt()} %",
+            ) { v -> update { it.copy(superParams = it.superParams.copy(size = v)) } }
+        }
         ActionRow(
             label = "Als einzelne App herunterladen",
             description = "Jede Szene gibt es auch als eigene kleine App (ein Live-Wallpaper) – einzeln zu installieren und weiterzugeben. Öffnet die Download-Seite.",

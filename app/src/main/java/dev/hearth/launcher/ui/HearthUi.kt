@@ -310,6 +310,14 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Größe des Planeten einstellbar", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Man soll den gewählten Planeten oder Mond in der Größe verstellen können. Neu: der Regler „Größe“ unter Einstellungen → Super-Wallpaper (50 % bis 160 %, Voreinstellung 100 %) – die Vorschau oben folgt sofort. Er gilt für den Mond, die Erde, alle Planeten und Monde und die Geometrie, auf dem Sperrbildschirm wie auf dem Startbildschirm und auch beim Heranzoomen; bei „Iwo Jima“ und „Eigenes Foto“ gibt es ihn nicht, weil dort ein Foto das Bild ist.",
+                        "Auch jede einzelne Hintergrund-App (ZENITH-Hintergrund-Mond usw.) hat jetzt den Regler „Größe“ in ihrer Oberfläche; die Hintergrund-Apps sind Version 1.5.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

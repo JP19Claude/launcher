@@ -16,6 +16,7 @@ object SuperPrefs {
             zoomOnWake = p.getBoolean("superZoom", true),
             speed = p.getFloat("superSpeed", 1f).coerceIn(0.2f, 3f),
             stars = p.getBoolean("superStars", true),
+            size = p.getFloat("superSize", 1f).coerceIn(0.5f, 1.6f),
             photo = p.getLong("superPhoto", 0L),
         )
     }

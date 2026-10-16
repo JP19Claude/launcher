@@ -16,6 +16,8 @@ import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
+import dev.hearth.launcher.wallpaper.SuperScene
+import kotlin.math.roundToInt
 
 /**
  * This app: the scene big, what it is, a few options and the button that makes it the phone's wallpaper. Plain views, so
@@ -104,6 +106,40 @@ class MainActivity : Activity() {
                 )
             },
         )
+        // The size of the planet or the Moon (the photo of "Iwo Jima" has none to resize).
+        if (scene != SuperScene.Flag && scene != SuperScene.Photo) {
+            val sizeLabel = TextView(this).apply {
+                setTextColor(Color.WHITE)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                setPadding(0, dp(10), 0, 0)
+            }
+            fun showSize(percent: Int) {
+                sizeLabel.text = "Größe  $percent %"
+            }
+            val startSize = prefs.getFloat("size", 1f).coerceIn(0.5f, 1.6f)
+            showSize((startSize * 100f).roundToInt())
+            column.addView(sizeLabel)
+            column.addView(
+                SeekBar(this).apply {
+                    max = 22
+                    progress = ((startSize - 0.5f) / 0.05f).roundToInt().coerceIn(0, 22)
+                    setOnSeekBarChangeListener(
+                        object : SeekBar.OnSeekBarChangeListener {
+                            override fun onProgressChanged(bar: SeekBar?, value: Int, fromUser: Boolean) {
+                                val size = 0.5f + value * 0.05f
+                                showSize((size * 100f).roundToInt())
+                                if (!fromUser) return
+                                prefs.edit().putFloat("size", size).apply()
+                                preview.reload()
+                            }
+
+                            override fun onStartTrackingTouch(bar: SeekBar?) = Unit
+                            override fun onStopTrackingTouch(bar: SeekBar?) = Unit
+                        },
+                    )
+                },
+            )
+        }
         column.addView(
             Button(this).apply {
                 text = "Als Hintergrund festlegen"

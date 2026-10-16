@@ -369,8 +369,8 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA)
         when (kind) {
-            Kind.SPHERE -> drawSphere(w, h, m)
-            Kind.DISC -> drawDisc(w, h, m)
+            Kind.SPHERE -> drawSphere(w, h, p, m)
+            Kind.DISC -> drawDisc(w, h, p, m)
             Kind.PHOTO -> drawPhoto(w, h, m)
             Kind.GEOMETRY -> drawGeometry(w, h, timeMs, p, m)
         }
@@ -414,11 +414,11 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
         rot[8] = ct * c
     }
 
-    private fun drawSphere(w: Int, h: Int, m: SuperMotion) {
+    private fun drawSphere(w: Int, h: Int, p: SuperParams, m: SuperMotion) {
         val prog = sphere ?: return
         val d = m.depth.coerceIn(0f, 1f)
         SuperCamera.pose(scene, m.lockFly, d, pose)
-        val radius = w * pose.r * m.zoom
+        val radius = w * pose.r * m.zoom * p.size
         val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.08f, d) + m.tiltX * w * lerp(0.015f, 0.035f, d)
         val cyTop = h * pose.cy + m.tiltY * h * 0.015f
         val cy = h - cyTop
@@ -493,11 +493,11 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
     }
 
     /** The Earth, a photograph of NASA cut to its disc, with the blue of its atmosphere at the rim. */
-    private fun drawDisc(w: Int, h: Int, m: SuperMotion) {
+    private fun drawDisc(w: Int, h: Int, p: SuperParams, m: SuperMotion) {
         val prog = sprite ?: return
         val d = m.depth.coerceIn(0f, 1f)
         SuperCamera.pose(scene, m.lockFly, d, pose)
-        val radius = w * pose.r * m.zoom
+        val radius = w * pose.r * m.zoom * p.size
         val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.10f, d) + m.tiltX * w * lerp(0.02f, 0.05f, d)
         val cy = h - (h * pose.cy + m.tiltY * h * 0.02f)
         val reach = radius * 1.3f
