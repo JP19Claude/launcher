@@ -14,9 +14,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
@@ -37,7 +39,9 @@ import dev.hearth.launcher.wallpaper.SuperPlaces
 import dev.hearth.launcher.wallpaper.SuperRenderer
 import dev.hearth.launcher.wallpaper.SuperScene
 import dev.hearth.launcher.wallpaper.SuperWallpaperService
+import dev.hearth.launcher.wallpaper.WallpaperUpdater
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -157,8 +161,78 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
                 }
             },
         )
+        WallpaperAppsUpdate()
         Note("Mond und Erde sind Aufnahmen der NASA, Mars, Venus, Jupiter, Saturn, Neptun, Pluto und die Monde drehen sich auf echten Karten der NASA (gemeinfrei, im App-Paket enthalten, keine Verbindung nötig). Das Glas in ZENITH bricht ein Standbild der Szene; es bewegt sich nur der Hintergrund selbst. „Iwo Jima“ ist ein Foto im Paket (aus der NASA-Bildbibliothek), „Eigenes Foto“ zeigt ein Foto aus der Wallpaper-Galerie, „Geometrie“ ist in ZENITH selbst gezeichnet.")
     }
+}
+
+/**
+ * The wallpaper apps (ZENITH Hintergründe) that are installed next to ZENITH, and which of them has a newer build: ZENITH
+ * asks GitHub once (a plain file), and a tap downloads that app's file and hands it to Android's installer, which asks again.
+ * Nothing shows if no wallpaper app is installed.
+ */
+@Composable
+private fun WallpaperAppsUpdate() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var round by remember { mutableIntStateOf(0) }
+    var working by remember { mutableStateOf<String?>(null) }
+    // Back from Android's installer (or its permission page): look at what is installed now.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        round++
+        working = null
+    }
+    val apps = remember(round) {
+        WallpaperUpdater.NAMES.mapNotNull { (id, name) ->
+            WallpaperUpdater.installed(context, WallpaperUpdater.packageOf(id))?.let { Triple(id, name, it) }
+        }
+    }
+    if (apps.isEmpty()) return
+    var latest by remember { mutableStateOf<WallpaperUpdater.Latest?>(null) }
+    var looked by remember { mutableStateOf(false) }
+    var progress by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) {
+        latest = withContext(Dispatchers.IO) { WallpaperUpdater.latest() }
+        looked = true
+    }
+    val newest = latest
+    val outdated = if (newest == null) emptyList() else apps.filter { (_, _, app) -> newest.build > app.build }
+    outdated.forEach { (id, name, app) ->
+        ActionRow(
+            label = "Hintergrund-App „$name“ aktualisieren",
+            description = "Version ${app.version} → ${newest?.version.orEmpty()}" + (if (working == id) " – $progress" else ""),
+            onClick = {
+                val update = newest?.updateFor(id)
+                if (working != null || update == null) return@ActionRow
+                if (!WallpaperUpdater.canInstall(context)) {
+                    WallpaperUpdater.askInstallPermission(context)
+                    return@ActionRow
+                }
+                working = id
+                progress = "Lade … 0 %"
+                scope.launch {
+                    val pkg = WallpaperUpdater.packageOf(id)
+                    val file = withContext(Dispatchers.IO) {
+                        WallpaperUpdater.download(context, pkg, update) { p -> progress = "Lade … ${(p * 100).roundToInt()} %" }
+                    }
+                    progress = when {
+                        file == null -> "Der Download hat nicht geklappt"
+                        WallpaperUpdater.install(context, file) -> "Android fragt gleich nach"
+                        else -> "Die Installation ließ sich nicht starten"
+                    }
+                    if (file == null) working = null
+                }
+            },
+        )
+    }
+    Note(
+        when {
+            !looked -> "Hintergrund-Apps: ${apps.size} installiert – ich suche nach Updates …"
+            newest == null -> "Hintergrund-Apps: ${apps.size} installiert. Ob es Updates gibt, ließ sich nicht prüfen (keine Verbindung?)."
+            outdated.isEmpty() -> "Alle ${apps.size} installierten Hintergrund-Apps sind auf dem neuesten Stand (Version ${newest.version})."
+            else -> "${outdated.size} von ${apps.size} installierten Hintergrund-Apps haben ein Update (Version ${newest.version}). Jede fragt Android noch einmal, bevor sie sich ändert."
+        },
+    )
 }
 
 /** Android's preview of the wallpaper (it asks "Hintergrund festlegen" there); the chooser if the phone has no direct way. */

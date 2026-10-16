@@ -327,6 +327,15 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Hintergrund-Apps über die App aktualisieren", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Die Wallpaper-App soll sich auch über die App aktualisieren lassen. Neu: Jede Hintergrund-App (ZENITH-Hintergrund-Mond, -Mars …) hat in ihrer Oberfläche den Bereich „Version“ mit dem Knopf „Nach Update suchen“. Beim Öffnen sucht sie von selbst; gibt es einen neueren Stand, steht dort die Version, die Größe und „Jetzt aktualisieren“ – sie lädt die Datei, prüft, dass es eine ganze App derselben Art ist, und übergibt sie Android, das noch einmal fragt.",
+                        "Auch in ZENITH: Unter Einstellungen → Super-Wallpaper steht, wie viele Hintergrund-Apps installiert sind und ob eine ein Update hat; jede mit Update bekommt eine Zeile „… aktualisieren“. Die Hintergrund-Apps sind Version 1.7.",
+                        "Ehrlich dazu: Die schon installierten Hintergrund-Apps (bis 1.6) können das noch nicht – diese eine Version 1.7 muss einmal von Hand installiert werden (Download-Seite „ZENITH Hintergründe“), danach geht es in der App. Die Apps brauchen dafür jetzt die Berechtigungen „Internet“ und „Unbekannte Apps installieren“ (Android fragt beim ersten Mal); sie senden nur die Abfrage der Versionsliste von GitHub. Auf einem Handy habe ich es nicht ausprobiert.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

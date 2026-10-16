@@ -48,6 +48,20 @@
         <package android:name="dev.hearth.glimmer" />
         <package android:name="dev.hearth.controls" />
         <package android:name="dev.hearth.clawd" />
+        <!-- The wallpaper apps (ZENITH Hintergründe), whose updates ZENITH offers -->
+        <package android:name="dev.hearth.wallpaper.moon" />
+        <package android:name="dev.hearth.wallpaper.earth" />
+        <package android:name="dev.hearth.wallpaper.mars" />
+        <package android:name="dev.hearth.wallpaper.venus" />
+        <package android:name="dev.hearth.wallpaper.jupiter" />
+        <package android:name="dev.hearth.wallpaper.saturn" />
+        <package android:name="dev.hearth.wallpaper.neptune" />
+        <package android:name="dev.hearth.wallpaper.pluto" />
+        <package android:name="dev.hearth.wallpaper.io" />
+        <package android:name="dev.hearth.wallpaper.europa" />
+        <package android:name="dev.hearth.wallpaper.ganymede" />
+        <package android:name="dev.hearth.wallpaper.flag" />
+        <package android:name="dev.hearth.wallpaper.geometry" />
         <!-- Claude app, for "Frag Claude" -->
         <package android:name="com.anthropic.claude" />
         <!-- Earbud companion apps, opened for noise cancelling -->
@@ -211,6 +225,10 @@
         <!-- Android's installer reports here how an update went (and asks to confirm it). -->
         <receiver
             android:name=".data.UpdateReceiver"
+            android:exported="false" />
+        <!-- The same for the wallpaper apps ZENITH updates (Super-Wallpaper → Hintergrund-Apps). -->
+        <receiver
+            android:name=".wallpaper.WallpaperUpdateReceiver"
             android:exported="false" />
 
         <!-- Clawd Jump: Clawd's little game, in every app of the family that has him. -->

@@ -19,6 +19,7 @@ import android.widget.Switch
 import android.widget.TextView
 import dev.hearth.launcher.wallpaper.SuperPlaces
 import dev.hearth.launcher.wallpaper.SuperScene
+import dev.hearth.launcher.wallpaper.WallpaperUpdater
 import kotlin.math.roundToInt
 
 /**
@@ -183,6 +184,7 @@ class MainActivity : Activity() {
             },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(18) },
         )
+        addUpdate(column) { dp(it) }
         column.addView(
             TextView(this).apply {
                 text = "Die Bilder sind von der NASA (frei, ohne Copyright), aus „NASA 3D Resources“ – ein Hintergrund aus ZENITH, als eigene App."
@@ -199,6 +201,103 @@ class MainActivity : Activity() {
                 addView(column)
             },
         )
+    }
+
+    /**
+     * The update of this app, from the app itself: it looks (when the app is opened and on a tap) for a newer build on GitHub,
+     * downloads it and hands it to Android's installer, which asks once more. The only thing this app ever sends is that request.
+     */
+    private fun addUpdate(column: LinearLayout, dp: (Int) -> Int) {
+        val installed = WallpaperUpdater.installed(this, packageName)
+        val build = installed?.build ?: 0L
+        val status = TextView(this).apply {
+            setTextColor(0xFFB9C1CC.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            setPadding(0, dp(4), 0, dp(6))
+        }
+        val button = Button(this).apply {
+            isAllCaps = false
+            text = "Nach Update suchen"
+        }
+        column.addView(
+            TextView(this).apply {
+                text = "Version ${installed?.version.orEmpty()} (Build $build)"
+                setTextColor(Color.WHITE)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                setPadding(0, dp(22), 0, 0)
+            },
+        )
+        column.addView(status)
+        column.addView(button, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        var found: WallpaperUpdater.Update? = null
+        var busy = false
+
+        fun showResult(result: WallpaperUpdater.Check) {
+            busy = false
+            button.isEnabled = true
+            when (result) {
+                is WallpaperUpdater.Check.Newer -> {
+                    found = result.update
+                    val mb = result.update.size / 1_048_576.0
+                    status.text = "Neu: Version ${result.update.version} (Build ${result.update.build}), ${"%.1f".format(mb)} MB.\n${result.update.notes.lines().firstOrNull { it.isNotBlank() }.orEmpty()}"
+                    button.text = "Jetzt aktualisieren"
+                }
+                WallpaperUpdater.Check.UpToDate -> {
+                    found = null
+                    status.text = "Das ist die neueste Version."
+                    button.text = "Nach Update suchen"
+                }
+                is WallpaperUpdater.Check.Failed -> {
+                    found = null
+                    status.text = result.reason
+                    button.text = "Nach Update suchen"
+                }
+            }
+        }
+
+        fun look() {
+            if (busy) return
+            busy = true
+            button.isEnabled = false
+            status.text = "Suche nach Updates …"
+            Thread {
+                val result = WallpaperUpdater.check(packageName, build)
+                runOnUiThread { showResult(result) }
+            }.start()
+        }
+
+        fun install(update: WallpaperUpdater.Update) {
+            if (busy) return
+            if (!WallpaperUpdater.canInstall(this)) {
+                status.text = "Erlaube dieser App erst „Unbekannte Apps installieren“ – die Einstellung öffnet sich. Danach noch einmal tippen."
+                WallpaperUpdater.askInstallPermission(this)
+                return
+            }
+            busy = true
+            button.isEnabled = false
+            status.text = "Lade … 0 %"
+            Thread {
+                val file = WallpaperUpdater.download(this, packageName, update) { p ->
+                    runOnUiThread { status.text = "Lade … ${(p * 100).roundToInt()} %" }
+                }
+                runOnUiThread {
+                    busy = false
+                    button.isEnabled = true
+                    status.text = when {
+                        file == null -> "Der Download hat nicht geklappt – tipp noch einmal."
+                        WallpaperUpdater.install(this, file) -> "Android fragt gleich, ob du installieren willst."
+                        else -> "Die Installation ließ sich nicht starten."
+                    }
+                }
+            }.start()
+        }
+
+        button.setOnClickListener {
+            val update = found
+            if (update == null) look() else install(update)
+        }
+        look()
     }
 
     /** Android's preview of the wallpaper (it asks "Hintergrund festlegen" there); the chooser if the phone has no direct way. */
