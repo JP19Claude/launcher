@@ -34,7 +34,7 @@ class SuperWallpaperService : WallpaperService() {
         private val handler = Handler(Looper.getMainLooper())
         private val prefs = getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE)
         private var params = SuperPrefs.read(this@SuperWallpaperService)
-        private var renderer = SuperRenderer(params.scene, SuperPhoto.file(this@SuperWallpaperService))
+        private var renderer = SuperRenderer(params.scene, SuperPhoto.file(this@SuperWallpaperService), this@SuperWallpaperService.assets)
         private val motion = SuperMotion()
         private var visible = false
         private var width = 0
@@ -125,7 +125,7 @@ class SuperWallpaperService : WallpaperService() {
             val before = params
             params = SuperPrefs.read(this@SuperWallpaperService)
             if (params.scene != before.scene || params.photo != before.photo) {
-                renderer = SuperRenderer(params.scene, SuperPhoto.file(this@SuperWallpaperService))
+                renderer = SuperRenderer(params.scene, SuperPhoto.file(this@SuperWallpaperService), this@SuperWallpaperService.assets)
                 prepare(renderer)
             }
             if (visible) {

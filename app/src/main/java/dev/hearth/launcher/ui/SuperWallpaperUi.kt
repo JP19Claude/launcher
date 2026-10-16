@@ -47,7 +47,7 @@ import kotlin.math.sin
 @Composable
 internal fun SuperScenePreview(params: SuperParams, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val renderer = remember(params.scene, params.photo) { SuperRenderer(params.scene, SuperPhoto.file(context)) }
+    val renderer = remember(params.scene, params.photo) { SuperRenderer(params.scene, SuperPhoto.file(context), context.assets) }
     LaunchedEffect(params.scene, params.photo) { withContext(Dispatchers.Default) { renderer.prepare() } }
     var now by remember { mutableLongStateOf(0L) }
     LaunchedEffect(Unit) {
@@ -82,8 +82,7 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
         }
         ChoiceRow(
             label = "Szene",
-            // The drawn planets looked cheap next to real pictures: they are no longer offered (one that is set stays until another is chosen).
-            options = listOf(SuperScene.Photo, SuperScene.Geometry) + listOfNotNull(s.superScene.takeIf { it != SuperScene.Photo && it != SuperScene.Geometry }),
+            options = SuperScene.entries,
             selected = s.superScene,
             optionLabel = { it.label },
             onSelect = { scene -> update { it.copy(superParams = it.superParams.copy(scene = scene)) } },
@@ -137,7 +136,7 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             range = 0.2f..3f,
             valueText = "${"%.1f".format(s.superSpeed)}×",
         ) { v -> update { it.copy(superParams = it.superParams.copy(speed = v)) } }
-        Note("Das Glas in ZENITH bricht ein Standbild der Szene; es bewegt sich nur der Hintergrund selbst. Das „Foto“ ist ein echtes Foto der NASA (gemeinfrei) – es dreht sich nicht, aber es wandert mit der Neigung und den Seiten. „Geometrie“ ist in ZENITH selbst gezeichnet.")
+        Note("Mond und Erde sind Aufnahmen der NASA, Mars, Venus, Jupiter, Saturn, Neptun, Pluto und die Monde drehen sich auf echten Karten der NASA (gemeinfrei, im App-Paket enthalten, keine Verbindung nötig). Das Glas in ZENITH bricht ein Standbild der Szene; es bewegt sich nur der Hintergrund selbst. „Eigenes Foto“ zeigt ein Foto aus der Wallpaper-Galerie, „Geometrie“ ist in ZENITH selbst gezeichnet.")
     }
 }
 

@@ -1856,7 +1856,7 @@ internal val SettingsCategories = listOf(
     SettingsCategory("home", "Startbildschirm", "Raster, Uhr, Dock, Gesten, App-Übersicht", Icons.Rounded.Home, Color(0xFF3E91FF),
         "home raster spalten reihen uhr widgets dock wischen gesten doppeltippen sperren seiten"),
     // ZENITH 21.5: the Super-Wallpaper.
-    SettingsCategory("superwall", "Super-Wallpaper", "NASA-Fotos als Live-Wallpaper – Neigung, Zoom, Seiten", Icons.Rounded.Star, Color(0xFF5B8CFF),
+    SettingsCategory("superwall", "Super-Wallpaper", "Mond, Erde und Planeten als echte NASA-Bilder – Neigung, Zoom, Seiten", Icons.Rounded.Star, Color(0xFF5B8CFF),
         "super wallpaper hintergrund live saturn jupiter erde mars mond geometrie planet bewegen animiert xiaomi neigung zoom sterne"),
     // ZENITH 21.5: the wallpaper gallery.
     SettingsCategory("wallpapers", "Wallpaper-Galerie", "Mond, Planeten, Weltraum, Landschaft – zum Auswählen und Herunterladen", Icons.Rounded.Star, Color(0xFF7A5BFF),

@@ -257,11 +257,12 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
-                    "Hotfix: Super-Wallpaper mit echten Fotos", Icons.Rounded.Star, Blue,
+                    "Hotfix: Super-Wallpaper mit dem echten Mond und echten Planeten", Icons.Rounded.Star, Blue,
                     listOf(
-                        "Die gezeichneten Planeten und der Mond im Super-Wallpaper wirkten billig. Sie werden nicht mehr angeboten (ein schon gesetzter bleibt, bis du einen anderen wählst).",
-                        "Neu: die Szene „Foto“ – ein echtes NASA-Foto als Live-Wallpaper: der Mond, ein Planet, die Erde, was du magst. Es folgt der Neigung des Telefons, rückt mit den Seiten des Startbildschirms, kommt beim Einschalten von nahem heran und atmet ganz leicht. Auswählen: Wallpaper-Galerie → Foto öffnen → „Als Live-Wallpaper“ (auch dein Zuschnitt und Zoom gelten dafür).",
-                        "Ehrlich dazu: Das Foto dreht sich nicht – ein drehender, echter Planet bräuchte Karten seiner ganzen Oberfläche, und die konnte ich von meiner Arbeitsumgebung aus nicht holen. „Geometrie“ bleibt, wie sie war.",
+                        "Die gezeichneten Planeten und der gezeichnete Mond sind weg – sie sahen künstlich aus. Statt ihrer: der echte Mond und die Erde als Aufnahmen der NASA (Apollo), und Mars, Venus, Jupiter, Saturn, Neptun, Pluto sowie die Monde Io, Europa, Ganymed und Triton, gedreht auf den echten Karten der NASA. Alle zwölf stehen in der Szenenwahl des Super-Wallpapers.",
+                        "Die Bilder sind im App-Paket (frei, ohne Copyright, aus „NASA 3D Resources“; Quelle in der Datei CREDITS.txt), also ohne Internet und ohne Wartezeit da. Der Mond ist jetzt die Voreinstellung.",
+                        "Dazu „Eigenes Foto“: jedes Foto aus der Wallpaper-Galerie als Live-Wallpaper („Als Live-Wallpaper“, auch mit deinem Zuschnitt und Zoom). Alle bewegen sich mit der Neigung des Telefons, rücken mit den Seiten, kommen beim Einschalten von nahem heran.",
+                        "Ehrlich dazu: Mond und Erde sind Fotos – sie drehen sich nicht, sie schweben (leichtes Atmen und Rollen); die Karten der anderen Himmelskörper sind teils niedrig aufgelöst (Jupiter, Saturn, Neptun, Pluto), also etwas weich. Uranus, Merkur und die Sonne fehlen, weil die NASA-Sammlung dafür keine Karte hat. Auf einem Handy habe ich es nicht ausprobiert.",
                     ),
                     hearth,
                 ),

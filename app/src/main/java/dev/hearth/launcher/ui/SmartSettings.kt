@@ -211,7 +211,7 @@ internal fun SsMainPage(go: (String) -> Unit, onZenith: (String?) -> Unit, onWel
         SsLink("Wechsel-Assistent", "Thema, Icons, Uhr und der Standard-Launcher – Schritt für Schritt", { SsIcon(SsGlyph.Swipe) }) { onWelcome() }
         SsHeader("Launcher")
         SsLink("Allgemeine Darstellung", null, { SsIcon(SsGlyph.Look) }) { go("look") }
-        SsLink("Super-Wallpaper", "NASA-Fotos als Live-Wallpaper – Neigung, Zoom, Seiten", { SsIcon(SsGlyph.Look) }) { onZenith("superwall") }
+        SsLink("Super-Wallpaper", "Mond, Erde und Planeten als echte NASA-Bilder – Neigung, Zoom, Seiten", { SsIcon(SsGlyph.Look) }) { onZenith("superwall") }
         SsLink("Wallpaper-Galerie", "Mond, Planeten, Weltraum … – zum Auswählen und Herunterladen", { SsIcon(SsGlyph.Look) }) { onZenith("wallpapers") }
         SsLink("Startbildschirm", null, { SsIcon(SsGlyph.Home) }) { go("home") }
         SsLink("App-Raster", null, { SsIcon(SsGlyph.Grid) }) { go("drawer") }

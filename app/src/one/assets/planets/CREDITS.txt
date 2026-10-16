@@ -1,0 +1,3 @@
+Planetenbilder und -karten: NASA (Apollo-Aufnahmen, NASA/JPL-Caltech u. a.), aus NASA 3D Resources
+https://github.com/nasa/NASA-3D-Resources – "free and without copyright". Für ZENITH auf die
+Größe des Super-Wallpapers gebracht (zugeschnitten, verkleinert, Ränder freigestellt).

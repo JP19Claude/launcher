@@ -1,6 +1,7 @@
 package dev.hearth.launcher.wallpaper
 
 import android.content.Context
+import android.content.res.AssetManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -25,30 +26,37 @@ import java.io.File
 import kotlin.random.Random
 
 /*
- * ZENITH's Super-Wallpaper: wallpapers that move – a planet turning in the dark, a wireframe that spins –
- * in the manner of the "super wallpapers" some phones have (Saturn, Earth, Mars …). All of it is drawn here,
- * from noise and a few gradients, no picture files: the planets are textures made at the first start, laid
- * round a sphere pixel by pixel. They turn slowly, drift with the phone's tilt and with the home page, and
- * zoom in when the screen wakes. One renderer for the live wallpaper, the settings' preview and the glass.
+ * ZENITH's Super-Wallpaper: wallpapers that move, in the manner of the "super wallpapers" some phones have. The Moon and
+ * the Earth are real photographs of NASA, the other planets and moons are turned from real maps of NASA (they ship inside
+ * the app, see app/src/one/assets/planets/CREDITS.txt) laid round a sphere pixel by pixel. They turn or hang in the dark,
+ * drift with the phone's tilt and with the home page, and zoom in when the screen wakes. "Foto" shows any photo of the
+ * gallery in the same way. One renderer for the live wallpaper, the settings' preview and the glass.
  */
 
 /** The scenes ("mods") one can choose. */
 enum class SuperScene(val label: String, val note: String) {
-    Saturn("Saturn", "Der Ringplanet, groß im Bild – die Ringe fangen das Licht, die Bänder ziehen langsam vorbei."),
-    Jupiter("Jupiter", "Streifen, Wirbel und der große rote Fleck, der Riese dreht sich in sechs Minuten."),
-    Earth("Erde", "Blauer Planet, Kontinente und Wolken, die schneller ziehen, als er sich dreht – mit Dunst am Rand."),
-    Mars("Mars", "Rostroter Planet mit dunklen Meeren und weißen Polkappen."),
-    Moon("Mond", "Grauer Mond voller Krater, ruhig und nah."),
+    Moon("Mond", "Der echte Mond: eine Aufnahme der NASA (Apollo), groß im Dunkeln – er wandert mit der Neigung und kommt beim Einschalten von nahem heran."),
+    Earth("Erde", "Die Erde aus dem All, eine Aufnahme der NASA – Wolken, Ozeane, Kontinente, mit dem Glanz der Atmosphäre am Rand."),
+    Mars("Mars", "Der rote Planet, gedreht aus der echten Karte der NASA: dunkle Ebenen, Schluchten, die Polkappe."),
+    Venus("Venus", "Die Venus, wie das Radar der Raumsonde Magellan sie sah (NASA): Hochländer, Lavaebenen, Krater unter den Wolken."),
+    Jupiter("Jupiter", "Jupiter mit seinen Wolkenbändern, Wirbeln und dem großen roten Fleck – gedreht aus einer Karte der NASA."),
+    Saturn("Saturn", "Der Ringplanet, gedreht aus einer Karte der NASA; die Ringe liegen davor."),
+    Neptune("Neptun", "Neptun in tiefem Blau mit seinen Wolkenbändern – gedreht aus einer Karte der NASA."),
+    Pluto("Pluto", "Pluto, wie die Sonde New Horizons ihn sah: helle Ebenen, dunkle Gebiete, rötliche Hänge (NASA)."),
+    Io("Io", "Der vulkanische Jupitermond Io, gedreht aus einer Karte der NASA."),
+    Europa("Europa", "Der Jupitermond Europa mit seinen Eisrissen – gedreht aus einer Karte der NASA."),
+    Ganymede("Ganymed", "Ganymed, der größte Mond im Sonnensystem, gedreht aus einer Karte der NASA."),
+    Triton("Triton", "Neptuns Mond Triton, gedreht aus einer Karte der NASA."),
     Geometry("Geometrie", "Ein Ikosaeder aus Licht mit einem zweiten Körper darin, die beide umeinander drehen."),
     Photo(
-        "Foto",
-        "Ein echtes Foto der NASA als Hintergrund – der Mond, ein Planet, was du wählst. Es folgt der Neigung des Telefons, rückt mit den Seiten und kommt beim Einschalten von nahem heran. Das Foto suchst du in der Wallpaper-Galerie aus („Als Live-Wallpaper“).",
+        "Eigenes Foto",
+        "Ein Foto der NASA aus der Galerie als Hintergrund – was du wählst. Es folgt der Neigung des Telefons, rückt mit den Seiten und kommt beim Einschalten von nahem heran. Das Foto suchst du in der Wallpaper-Galerie aus („Als Live-Wallpaper“).",
     ),
 }
 
 /** What the wallpaper is set to (read from ZENITH's settings). */
 data class SuperParams(
-    val scene: SuperScene = SuperScene.Saturn,
+    val scene: SuperScene = SuperScene.Moon,
     /** The scene shifts with the phone's tilt. */
     val tilt: Boolean = true,
     /** It zooms in when the screen wakes, and moves with the home page. */
@@ -78,7 +86,7 @@ class SuperMotion(var panX: Float = 0f, var tiltX: Float = 0f, var tiltY: Float 
 object SuperPrefs {
     fun read(context: Context): SuperParams {
         val p = context.getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE)
-        val scene = runCatching { SuperScene.valueOf(p.getString("superScene", "").orEmpty()) }.getOrDefault(SuperScene.Saturn)
+        val scene = runCatching { SuperScene.valueOf(p.getString("superScene", "").orEmpty()) }.getOrDefault(SuperScene.Moon)
         return SuperParams(
             scene = scene,
             tilt = p.getBoolean("superTilt", true),
@@ -92,7 +100,7 @@ object SuperPrefs {
     /** One still frame of the wallpaper as set, [w] × [h] – the glass of ZENITH bends and blurs this. Null if it couldn't be drawn. */
     fun snapshot(context: Context, w: Int, h: Int): Bitmap? = runCatching {
         val params = read(context)
-        val renderer = SuperRenderer(params.scene, SuperPhoto.file(context))
+        val renderer = SuperRenderer(params.scene, SuperPhoto.file(context), context.assets)
         renderer.prepare()
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         renderer.draw(Canvas(bitmap), w, h, 5000L, params, SuperMotion())
@@ -102,11 +110,11 @@ object SuperPrefs {
 
 private const val TW = 1024
 private const val TH = 512
-private const val SPHERE = 380
+private const val SPHERE = 460
 private const val STAR_COUNT = 160
 
 /** Turns [scene] into pictures: [prepare] once (it takes a moment – call it off the main thread), then [draw] every frame. */
-class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null) {
+class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, private val assets: AssetManager? = null) {
 
     @Volatile
     private var ready = scene == SuperScene.Geometry
@@ -120,6 +128,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null) 
     private var pixels = IntArray(0)
     private var planet: Bitmap? = null
     private var photo: Bitmap? = null
+    private var disc: Bitmap? = null
 
     private val stars = FloatArray(STAR_COUNT * 4)
     private val ringNoise = FloatArray(96)
@@ -157,20 +166,74 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null) 
     fun prepare() {
         if (ready) return
         when (scene) {
-            SuperScene.Saturn -> makeSaturn()
-            SuperScene.Jupiter -> makeJupiter()
-            SuperScene.Earth -> makeEarth()
-            SuperScene.Mars -> makeMars()
-            SuperScene.Moon -> makeMoon()
             SuperScene.Geometry -> Unit
             SuperScene.Photo -> {
                 loadPhoto()
                 ready = true
                 return
             }
+            SuperScene.Moon -> {
+                loadDisc("moon")
+                ready = true
+                return
+            }
+            SuperScene.Earth -> {
+                loadDisc("earth")
+                ready = true
+                return
+            }
+            else -> {
+                val name = textureName()
+                if (name == null || !loadSphereTexture(name)) {
+                    when (scene) {
+                        SuperScene.Saturn -> makeSaturn()
+                        SuperScene.Jupiter -> makeJupiter()
+                        SuperScene.Mars -> makeMars()
+                        else -> surface = IntArray(TW * TH) { 0xFF808080.toInt() }
+                    }
+                }
+            }
         }
         buildSphere()
         ready = true
+    }
+
+    /** The name of the map (in the app's assets) a planet is turned from. */
+    private fun textureName(): String? = when (scene) {
+        SuperScene.Mars -> "mars"
+        SuperScene.Venus -> "venus"
+        SuperScene.Jupiter -> "jupiter"
+        SuperScene.Saturn -> "saturn"
+        SuperScene.Neptune -> "neptune"
+        SuperScene.Pluto -> "pluto"
+        SuperScene.Io -> "io"
+        SuperScene.Europa -> "europa"
+        SuperScene.Ganymede -> "ganymede"
+        SuperScene.Triton -> "triton"
+        else -> null
+    }
+
+    /** A real map of NASA, 1024 × 512 (longitude × latitude), becomes the surface. False if it can't be read. */
+    private fun loadSphereTexture(name: String): Boolean {
+        val manager = assets ?: return false
+        return try {
+            manager.open("planets/$name.jpg").use { stream ->
+                val bitmap = BitmapFactory.decodeStream(stream) ?: return false
+                val fitted = if (bitmap.width == TW && bitmap.height == TH) bitmap else Bitmap.createScaledBitmap(bitmap, TW, TH, true)
+                val px = IntArray(TW * TH)
+                fitted.getPixels(px, 0, TW, 0, 0, TW, TH)
+                surface = px
+                true
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** A real photograph of a round body on a clear ground (the Moon, the Earth), cut to its disc. */
+    private fun loadDisc(name: String) {
+        val manager = assets ?: return
+        disc = runCatching { manager.open("planets/$name.webp").use { BitmapFactory.decodeStream(it) } }.getOrNull()
     }
 
     private fun hash(x: Int, y: Int, seed: Int): Float {
@@ -237,37 +300,6 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null) 
         surface = out
     }
 
-    private fun makeEarth() {
-        paintTexture { u, v ->
-            val lat = abs(v - 0.5f) * 2f
-            val e = fbm(u, v, 4, 2, 5, 11)
-            val sea = 0.50f
-            var c: Int
-            if (e < sea) {
-                val d = e / sea
-                c = mix(rgb(8, 30, 84), rgb(30, 110, 190), d * d)
-                if (d > 0.93f) c = mix(c, rgb(70, 170, 200), (d - 0.93f) / 0.07f)
-            } else {
-                val h = (e - sea) / (1f - sea)
-                val dry = fbm(u, v, 6, 3, 3, 29)
-                c = mix(rgb(54, 120, 52), rgb(126, 104, 62), (h * 1.6f).coerceIn(0f, 1f))
-                if (dry > 0.56f && lat < 0.62f) c = mix(c, rgb(205, 170, 100), ((dry - 0.56f) * 4f).coerceIn(0f, 0.9f))
-                if (h > 0.62f) c = mix(c, rgb(240, 244, 248), ((h - 0.62f) * 4f).coerceIn(0f, 1f))
-            }
-            if (lat > 0.84f) c = mix(c, rgb(246, 250, 255), ((lat - 0.84f) * 8f).coerceIn(0f, 1f))
-            c
-        }
-        val cl = ByteArray(TW * TH)
-        for (y in 0 until TH) {
-            val v = (y + 0.5f) / TH
-            for (x in 0 until TW) {
-                val c = fbm((x + 0.5f) / TW, v, 5, 3, 5, 77)
-                cl[y * TW + x] = (smooth(0.50f, 0.74f, c) * 235f).toInt().toByte()
-            }
-        }
-        clouds = cl
-    }
-
     private fun makeMars() {
         paintTexture { u, v ->
             val lat = abs(v - 0.5f) * 2f
@@ -279,40 +311,6 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null) 
             c = mix(c, rgb(255, 200, 160), (streak - 0.6f).coerceIn(0f, 0.4f) * 0.8f)
             if (lat > 0.9f) c = mix(c, rgb(244, 236, 230), ((lat - 0.9f) * 10f).coerceIn(0f, 1f))
             c
-        }
-    }
-
-    private fun makeMoon() {
-        paintTexture { u, v ->
-            val n = fbm(u, v, 8, 4, 5, 3)
-            var gray = 118f + n * 74f
-            val maria = fbm(u, v, 3, 2, 3, 8)
-            if (maria > 0.55f) gray *= 1f - ((maria - 0.55f) * 2.2f).coerceIn(0f, 0.38f)
-            rgb(gray.toInt(), gray.toInt(), (gray * 1.02f).toInt())
-        }
-        // Craters, stamped: a dark floor, a bright rim, a little halo.
-        val rnd = Random(33)
-        repeat(240) {
-            val cx = rnd.nextInt(TW)
-            val cy = (TH * (0.12f + 0.76f * rnd.nextFloat())).toInt()
-            val rad = 3 + (rnd.nextFloat().pow(2.2f) * 34f).toInt()
-            for (dy in -rad..rad) {
-                for (dx in -rad..rad) {
-                    val d = hypot(dx.toFloat(), dy.toFloat()) / rad
-                    if (d > 1.2f) continue
-                    val delta = when {
-                        d < 0.82f -> -20f * (1f - d * 0.6f)
-                        d < 1.0f -> 36f * sin((d - 0.82f) / 0.18f * PI.toFloat())
-                        else -> 9f * (1.2f - d) / 0.2f
-                    }
-                    val x = Math.floorMod(cx + dx, TW)
-                    val y = (cy + dy).coerceIn(0, TH - 1)
-                    val i = y * TW + x
-                    val c = surface[i]
-                    val g = (((c shr 16) and 0xFF) + delta.toInt()).coerceIn(0, 255)
-                    surface[i] = rgb(g, g, (g * 1.02f).toInt())
-                }
-            }
         }
     }
 
@@ -435,6 +433,10 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null) 
             drawPhoto(canvas, w, h, seconds, p, m)
             return
         }
+        if (scene == SuperScene.Moon || scene == SuperScene.Earth) {
+            drawDisc(canvas, w, h, seconds, p, m)
+            return
+        }
         drawSky(canvas, w, h)
         if (p.stars) drawStars(canvas, w, h, seconds, m)
         if (scene == SuperScene.Geometry) {
@@ -447,8 +449,9 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null) 
         val base = when (scene) {
             SuperScene.Saturn -> 0.30f
             SuperScene.Jupiter -> 0.46f
-            SuperScene.Earth -> 0.44f
             SuperScene.Mars -> 0.37f
+            SuperScene.Pluto -> 0.34f
+            SuperScene.Triton -> 0.36f
             else -> 0.40f
         }
         val radius = w * base * m.zoom
@@ -456,10 +459,11 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null) 
         val cy = h * (if (scene == SuperScene.Saturn) 0.55f else 0.60f) + m.tiltY * h * 0.02f
         // The haze round the planet.
         val glow = when (scene) {
-            SuperScene.Earth -> 0xFF4AA3FF.toInt() to 0.55f
             SuperScene.Mars -> 0xFFE8905A.toInt() to 0.30f
+            SuperScene.Venus -> 0xFFF5DDA0.toInt() to 0.30f
             SuperScene.Saturn -> 0xFFE8D2A0.toInt() to 0.20f
             SuperScene.Jupiter -> 0xFFE8C8A0.toInt() to 0.20f
+            SuperScene.Neptune -> 0xFF5A8CFF.toInt() to 0.30f
             else -> 0 to 0f
         }
         if (glow.second > 0f) {
@@ -472,6 +476,27 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null) 
         rect.set(cx - radius, cy - radius, cx + radius, cy + radius)
         canvas.drawBitmap(bitmap, null, rect, paint)
         if (scene == SuperScene.Saturn) drawRings(canvas, cx, cy, radius, front = true)
+    }
+
+    /** The Moon or the Earth as NASA photographed it, hanging in the dark: it sways with the tilt, rolls a hair and breathes. */
+    private fun drawDisc(canvas: Canvas, w: Int, h: Int, seconds: Float, p: SuperParams, m: SuperMotion) {
+        drawSky(canvas, w, h)
+        if (p.stars) drawStars(canvas, w, h, seconds, m)
+        val bmp = disc ?: return
+        val breath = 1f + 0.008f * sin(seconds * 0.22f * p.speed)
+        val diameter = w * 0.92f * m.zoom * breath
+        val cx = w * 0.5f - m.panX * w * 0.08f + m.tiltX * w * 0.04f
+        val cy = h * 0.46f + m.tiltY * h * 0.02f
+        val tint = if (scene == SuperScene.Earth) 0x4AA3FF else 0xB8C4E0
+        val reach = diameter * 0.5f * 1.32f
+        val strong = ((if (scene == SuperScene.Earth) 0.50f else 0.16f) * 255f).toInt() shl 24 or tint
+        glowPaint.shader = RadialGradient(cx, cy, reach, intArrayOf(strong, strong, tint), floatArrayOf(0f, 0.76f, 1f), Shader.TileMode.CLAMP)
+        canvas.drawCircle(cx, cy, reach, glowPaint)
+        canvas.save()
+        canvas.rotate(sin(seconds * 0.05f * p.speed) * 2.5f, cx, cy)
+        rect.set(cx - diameter / 2f, cy - diameter / 2f, cx + diameter / 2f, cy + diameter / 2f)
+        canvas.drawBitmap(bmp, null, rect, paint)
+        canvas.restore()
     }
 
     private fun loadPhoto() {
