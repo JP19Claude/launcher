@@ -45,9 +45,10 @@ object SuperCamera {
         SuperScene.Earth -> floatArrayOf(0.08f, 0.07f, 0.09f, 0.50f, 0.48f, 0.28f, 0.50f, 0.40f, 0.31f, 0.50f, 0.62f, 1.55f)
         SuperScene.Geometry -> floatArrayOf(0.08f, 0.07f, 0.09f, 0.50f, 0.50f, 0.27f, 0.50f, 0.45f, 0.30f, 0.50f, 0.46f, 0.40f)
         // The photos: the camera looks at a point of the picture (cx, cy as fractions of it) with a magnification r (1 = the
-        // picture just fills the screen). The "Iwo Jima" photo starts on the flag in the upper left, pulls back to a view of the
-        // flag, the Moon and the pole (the flag stays big), moves a little up and then comes close on the flag and the Moon.
-        SuperScene.Flag -> floatArrayOf(0.10f, 0.22f, 2.6f, 0.24f, 0.40f, 1.50f, 0.24f, 0.35f, 1.60f, 0.17f, 0.33f, 2.0f)
+        // picture just fills the screen). The "Iwo Jima" photo starts close on the flag in the upper left, pulls back to the whole
+        // picture – the flag, the Moon and the statue of the soldiers – and then, when unlocked, pushes in only so far that all
+        // of it stays in view.
+        SuperScene.Flag -> floatArrayOf(0.10f, 0.20f, 2.4f, 0.50f, 0.50f, 1.04f, 0.50f, 0.50f, 1.05f, 0.46f, 0.51f, 1.14f)
         SuperScene.Photo -> floatArrayOf(0.15f, 0.15f, 1.9f, 0.50f, 0.50f, 1.06f, 0.50f, 0.47f, 1.10f, 0.50f, 0.50f, 1.35f)
         else -> {
             // The planets: as close as the Moon. The solid ones have maps of 8192 × 4096 or 16384 × 8192 (Io's, the softest, not quite as close); the gas planets' maps are smaller and a fine

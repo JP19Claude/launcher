@@ -386,6 +386,15 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Iwo Jima – das ganze Bild mit Flagge, Soldaten und Mond", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Bei Iwo Jima soll man das ganze Bild sehen, mit den Soldaten und der Flagge, nicht nur den Mond. Stimmte: Auf dem Startbildschirm zoomte die Kamera auf Mond und Flagge und schnitt die Statue weg. Jetzt startet die Kamera auf dem Sperrbildschirm dicht an der Flagge, zieht auf das ganze Bild zurück – Flagge, Mond und die Statue der Soldaten – und schiebt sich beim Entsperren nur noch sanft heran (höchstens 14 Prozent), sodass alles im Bild bleibt.",
+                        "Mehr Leben im Bild: Die Flagge weht (der Stoff bewegt sich, die Falten fangen das Licht), der Mond hat einen Schein, der leise atmet, dünne Wolken ziehen im Mondlicht über den Himmel, Sterne funkeln zwischen ihnen, und die Scheinwerfer an der Statue flackern ganz leicht. Das Bild ist etwas schärfer (nicht im dunklen Himmel, dort würde es nur das Rauschen schärfen).",
+                        "Ehrlich dazu: Das Foto selbst hat 933 × 2000 Pixel und die Flagge ist schon am linken Bildrand abgeschnitten – das kann ich nicht ergänzen. Wolken, Sterne und das Wehen sind errechnete Effekte auf dem Foto. Auf einem Handy habe ich es nicht ausprobiert, nur am Rechner gerendert.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

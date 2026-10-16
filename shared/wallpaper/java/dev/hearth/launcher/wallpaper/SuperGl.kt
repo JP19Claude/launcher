@@ -779,7 +779,7 @@ internal class SuperGl(
         when (kind) {
             Kind.SPHERE -> drawSphere(w, h, timeMs, p, m)
             Kind.DISC -> drawDisc(w, h, p, m)
-            Kind.PHOTO -> drawPhoto(w, h, m)
+            Kind.PHOTO -> drawPhoto(w, h, timeMs, m)
             Kind.GEOMETRY -> drawGeometry(w, h, timeMs, p, m)
         }
         GLES20.glDisable(GLES20.GL_BLEND)
@@ -1109,7 +1109,7 @@ internal class SuperGl(
     }
 
     /** A chosen photo, a little bigger than the screen so it has room to move with the tilt and the pages. */
-    private fun drawPhoto(w: Int, h: Int, m: SuperMotion) {
+    private fun drawPhoto(w: Int, h: Int, timeMs: Long, m: SuperMotion) {
         val prog = sprite ?: return
         if (spriteTex == 0) return
         SuperCamera.pose(scene, m.lockFly, m.depth.coerceIn(0f, 1f), pose)
@@ -1123,6 +1123,9 @@ internal class SuperGl(
         // A soft light on the flag in the photo of the "Iwo Jima" scene.
         GLES20.glUniform4f(prog.u("uSpot"), SuperCamera.FLAG_U, SuperCamera.FLAG_V, SuperCamera.FLAG_RU, SuperCamera.FLAG_RV)
         GLES20.glUniform1f(prog.u("uSpotGain"), if (scene == SuperScene.Flag) 1.8f else 1f)
+        // The effects of the "Iwo Jima" picture (the waving flag, the Moon's halo, clouds, stars); the other photos are left as they are.
+        GLES20.glUniform1f(prog.u("uFx"), if (scene == SuperScene.Flag) 1f else 0f)
+        GLES20.glUniform1f(prog.u("uTimeP"), (timeMs % 600000L) / 1000f)
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, spriteTex)
         GLES20.glUniform1i(prog.u("uTex"), 0)
@@ -1426,14 +1429,77 @@ uniform vec3 uPlanet;
 uniform vec4 uGlow;
 uniform vec4 uSpot;
 uniform float uSpotGain;
+uniform float uFx;
+uniform float uTimeP;
 out vec4 fragColor;
+
+float hsh(vec2 p) {
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+
+float vn2(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hsh(i), hsh(i + vec2(1.0, 0.0)), f.x), mix(hsh(i + vec2(0.0, 1.0)), hsh(i + vec2(1.0, 1.0)), f.x), f.y);
+}
 
 void main() {
   if (uMode == 1) {
-    vec4 c = texture(uTex, vUv);
+    vec2 uv = vUv;
+    float cyc = 6.2831853 / 600.0;
+    float fold = 0.0;
+    if (uFx > 0.5) {
+      // The flag waves: the cloth is moved a little sideways and up and down, more the further from where it hangs, and the folds
+      // catch the light. (Whole numbers of waves in the 600 seconds uTimeP counts: the loop never jumps.)
+      float fm = 1.0 - smoothstep(0.55, 1.0, length((uv - vec2(0.065, 0.235)) / vec2(0.125, 0.195)));
+      float loose = fm * (0.35 + 0.65 * smoothstep(0.08, 0.38, uv.y));
+      float w1 = sin(24.0 * uv.y + 9.0 * uv.x - uTimeP * cyc * 290.0);
+      float w2 = sin(37.0 * uv.y - 14.0 * uv.x + uTimeP * cyc * 170.0 + 1.3);
+      uv.x += loose * (0.0042 * w1 + 0.0021 * w2);
+      uv.y += loose * 0.0026 * sin(31.0 * uv.x + 11.0 * uv.y - uTimeP * cyc * 230.0);
+      fold = loose * (0.55 * w1 + 0.45 * w2);
+    }
+    vec4 c = texture(uTex, uv);
+    if (uFx > 0.5) {
+      // A little sharpening (the picture is magnified), the folds' light and shade.
+      vec3 soft = textureLod(uTex, uv, 1.5).rgb;
+      // (not in the dark sky: it would only sharpen the picture's noise)
+      float amount = 0.34 * smoothstep(0.06, 0.28, dot(c.rgb, vec3(0.299, 0.587, 0.114)));
+      c.rgb = clamp(c.rgb + amount * (c.rgb - soft), 0.0, 1.0);
+      c.rgb *= 1.0 + 0.16 * fold;
+    }
     // A soft light (uSpotGain > 1) on an ellipse of the picture.
     float k = 1.0 + (uSpotGain - 1.0) * (1.0 - smoothstep(0.0, 1.0, length((vUv - uSpot.xy) / uSpot.zw)));
-    fragColor = vec4(c.rgb * k, c.a);
+    vec3 rgb = c.rgb * k;
+    if (uFx > 0.5) {
+      float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+      // The sky is the dark part of the picture above the statue.
+      float sky = (1.0 - smoothstep(0.05, 0.17, lum)) * (1.0 - smoothstep(0.52, 0.66, vUv.y));
+      // The Moon breathes: a halo round it, a little stronger and weaker.
+      vec2 dm = vec2((vUv.x - 0.343) * 0.4665, vUv.y - 0.495);
+      float halo = exp(-dot(dm, dm) / (2.0 * 0.040 * 0.040));
+      float breath = 0.88 + 0.12 * sin(uTimeP * cyc * 12.0);
+      rgb += vec3(1.0, 0.92, 0.76) * halo * 0.30 * breath * (0.55 + 0.45 * sky);
+      // Thin clouds drift over the sky, lit by the Moon (they sway to and fro, so that the loop never jumps).
+      float drift = 0.16 * sin(uTimeP * cyc * 3.0);
+      vec2 q = vec2(vUv.x * 0.4665 * 5.0 + drift, vUv.y * 5.0);
+      float cl = vn2(q) * 0.55 + vn2(q * 2.3 + 7.0) * 0.30 + vn2(q * 5.1 + 3.0) * 0.15;
+      float cloud = smoothstep(0.50, 0.85, cl) * sky;
+      rgb += vec3(0.52, 0.56, 0.68) * cloud * (0.05 + 0.55 * halo + 0.5 * exp(-dot(dm, dm) / (2.0 * 0.12 * 0.12)));
+      // Stars between the clouds.
+      vec2 g = vec2(vUv.x * 0.4665, vUv.y) * 90.0;
+      vec2 gi = floor(g);
+      vec2 gf = fract(g) - 0.5 - 0.25 * (vec2(hsh(gi + 3.1), hsh(gi + 8.7)) - 0.5);
+      float star = step(0.965, hsh(gi)) * (1.0 - smoothstep(0.0, 0.16, length(gf)));
+      float tw = 0.55 + 0.45 * sin(uTimeP * cyc * (60.0 + floor(hsh(gi + 5.0) * 60.0)) + 6.2831 * hsh(gi + 1.7));
+      rgb += vec3(0.85, 0.9, 1.0) * star * tw * sky * 0.8;
+      // The statue is lit from below by floodlights, which flicker ever so slightly.
+      rgb *= 1.0 + 0.025 * smoothstep(0.55, 0.9, vUv.y) * sin(uTimeP * cyc * 40.0 + 2.0);
+    }
+    fragColor = vec4(rgb, c.a);
     return;
   }
   vec2 p = (gl_FragCoord.xy - uPlanet.xy) / uPlanet.z;
