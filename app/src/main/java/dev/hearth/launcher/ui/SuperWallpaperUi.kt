@@ -25,10 +25,11 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.hearth.launcher.data.LauncherSettings
-import dev.hearth.launcher.wallpaper.SuperDirector
+import dev.hearth.launcher.wallpaper.SuperLiveView
 import dev.hearth.launcher.wallpaper.SuperMotion
 import dev.hearth.launcher.wallpaper.SuperParams
 import dev.hearth.launcher.wallpaper.SuperPhoto
@@ -45,30 +46,14 @@ import kotlin.math.sin
  * runs), the scenes to choose from, how it moves, and the button that makes it the phone's wallpaper.
  */
 
-/** The scene as it runs, in a box: with a slow sway as if the phone were tilted, and the flight from the lock screen to the home screen and back, round and round. */
+/** The scene as it runs, in a box: the very thing the live wallpaper runs, with the flight from the lock screen to the home screen playing in a loop. */
 @Composable
 internal fun SuperScenePreview(params: SuperParams, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val renderer = remember(params.scene, params.photo) { SuperRenderer(params.scene, SuperPhoto.file(context), context.assets) }
-    LaunchedEffect(params.scene, params.photo) { withContext(Dispatchers.Default) { renderer.prepare() } }
-    var now by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(Unit) {
-        var last = 0L
-        while (true) {
-            withFrameMillis { t ->
-                if (t - last >= 16L) {
-                    last = t
-                    now = t
-                }
-            }
-        }
-    }
-    Canvas(modifier) {
-        val t = now
-        val depth = if (params.zoomOnWake) SuperDirector.demoDepth(t) else 1f
-        val motion = SuperMotion(panX = 0f, tiltX = sin(t / 2600f) * 0.4f, tiltY = 0f, zoom = 1f, depth = depth)
-        drawIntoCanvas { c -> renderer.draw(c.nativeCanvas, size.width.roundToInt(), size.height.roundToInt(), t, params, motion) }
-    }
+    AndroidView(
+        factory = { c -> SuperLiveView(c, SuperPhoto.file(c)).also { it.setParams(params) } },
+        modifier = modifier,
+        update = { it.setParams(params) },
+    )
 }
 
 /** The settings page "Super-Wallpaper". */

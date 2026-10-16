@@ -84,7 +84,15 @@ object SuperPhoto {
  * the depth – how near the camera is: 0 on the lock screen (the whole body, small and calm), 1 on the home screen (close
  * to the surface). The unlocking is the depth gliding from 0 to 1.
  */
-class SuperMotion(var panX: Float = 0f, var tiltX: Float = 0f, var tiltY: Float = 0f, var zoom: Float = 1f, var depth: Float = 1f)
+class SuperMotion(
+    var panX: Float = 0f,
+    var tiltX: Float = 0f,
+    var tiltY: Float = 0f,
+    var zoom: Float = 1f,
+    var depth: Float = 1f,
+    /** How far the body has turned because of the flight and the time on the home screen (radians). */
+    var spin: Float = 0f,
+)
 
 private const val TW = 1024
 private const val TH = 512
@@ -122,6 +130,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         strokeCap = Paint.Cap.ROUND
     }
     private val rect = RectF()
+    private val pose = SuperPose()
     private var skyShader: Shader? = null
     private var skyW = 0
     private var skyH = 0
@@ -372,10 +381,10 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
      * light on it. [pan] – the home page, -1 … 1 – turns the planet a little further. The picture is only made again
      * when it would look different (a quarter of a texel), so a zoom on the lock screen costs nothing.
      */
-    private fun fillSphere(seconds: Float, speed: Float, pan: Float) {
+    private fun fillSphere(seconds: Float, speed: Float, pan: Float, spin: Float) {
         val s = SPHERE
         val bitmap = planet ?: return
-        val turn = seconds * 6f * speed + pan * 90f
+        val turn = seconds * 6f * speed + pan * 90f + spin * (TW / (2f * PI.toFloat()))
         val key = (turn * 4f).toInt()
         if (key == lastTurn) return
         lastTurn = key
@@ -436,21 +445,14 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
             return
         }
         if (!ready) return
-        fillSphere(seconds, p.speed, m.panX)
+        fillSphere(seconds, p.speed, m.panX, m.spin)
         val bitmap = planet ?: return
         val d = m.depth.coerceIn(0f, 1f)
-        val base = when (scene) {
-            SuperScene.Saturn -> 0.30f
-            SuperScene.Jupiter -> 0.46f
-            SuperScene.Mars -> 0.37f
-            SuperScene.Pluto -> 0.34f
-            else -> 0.40f
-        }
-        // Lock screen: the whole planet, smaller and lower; home screen: the camera has come close.
-        val radius = w * lerp(base * 0.72f, base * 1.22f, d) * m.zoom
-        val cx = w * 0.5f - m.panX * w * lerp(0.03f, 0.08f, d) + m.tiltX * w * lerp(0.015f, 0.035f, d)
-        val cy = h * lerp(if (scene == SuperScene.Saturn) 0.60f else 0.64f, if (scene == SuperScene.Saturn) 0.55f else 0.58f, d) +
-            m.tiltY * h * 0.015f
+        // Lock screen: small in the upper left; unlocked: it flies to the bottom centre, then comes closer (SuperCamera).
+        SuperCamera.pose(scene, d, pose)
+        val radius = w * pose.r * m.zoom
+        val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.08f, d) + m.tiltX * w * lerp(0.015f, 0.035f, d)
+        val cy = h * pose.cy + m.tiltY * h * 0.015f
         // The haze round the planet.
         val glow = when (scene) {
             SuperScene.Mars -> 0xFFE8905A.toInt() to 0.30f
@@ -481,9 +483,10 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         if (p.stars) drawStars(canvas, w, h, seconds, m)
         val bmp = disc ?: return
         val d = m.depth.coerceIn(0f, 1f)
-        val diameter = w * lerp(0.84f, 1.46f, d) * m.zoom
-        val cx = w * 0.5f - m.panX * w * lerp(0.03f, 0.10f, d) + m.tiltX * w * lerp(0.02f, 0.05f, d)
-        val cy = h * lerp(0.60f, 0.58f, d) + m.tiltY * h * 0.02f
+        SuperCamera.pose(scene, d, pose)
+        val diameter = w * pose.r * 2f * m.zoom
+        val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.10f, d) + m.tiltX * w * lerp(0.02f, 0.05f, d)
+        val cy = h * pose.cy + m.tiltY * h * 0.02f
         if (scene == SuperScene.Earth) {
             // The thin blue of the atmosphere at the rim – the Moon has none.
             val reach = diameter * 0.5f * 1.22f
@@ -626,11 +629,15 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         return x * x + y * y + z * z
     }
 
+    /** Only the lines and points of the geometry, without sky or stars (the graphics chip lays them over its own sky). */
+    fun drawGeometryLayer(canvas: Canvas, w: Int, h: Int, seconds: Float, p: SuperParams, m: SuperMotion) = drawGeometry(canvas, w, h, seconds, p, m)
+
     private fun drawGeometry(canvas: Canvas, w: Int, h: Int, seconds: Float, p: SuperParams, m: SuperMotion) {
         val d = m.depth.coerceIn(0f, 1f)
-        val cx = w * 0.5f - m.panX * w * lerp(0.03f, 0.06f, d) + m.tiltX * w * lerp(0.015f, 0.03f, d)
-        val cy = h * lerp(0.58f, 0.52f, d) + m.tiltY * h * 0.02f
-        val r = w * lerp(0.27f, 0.40f, d) * m.zoom
+        SuperCamera.pose(SuperScene.Geometry, d, pose)
+        val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.06f, d) + m.tiltX * w * lerp(0.015f, 0.03f, d)
+        val cy = h * pose.cy + m.tiltY * h * 0.02f
+        val r = w * pose.r * m.zoom
         val a = seconds * 0.35f * p.speed
         val b = seconds * 0.23f * p.speed
         drawShape(canvas, w, icoVerts, icoEdges, cx, cy, r, a, b)
