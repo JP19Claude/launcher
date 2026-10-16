@@ -10,7 +10,6 @@ import android.graphics.Paint
 import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
-import dev.hearth.launcher.data.SettingsRepository
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.asin
@@ -46,7 +45,6 @@ enum class SuperScene(val label: String, val note: String) {
     Io("Io", "Der vulkanische Jupitermond Io, gedreht aus einer Karte der NASA."),
     Europa("Europa", "Der Jupitermond Europa mit seinen Eisrissen – gedreht aus einer Karte der NASA."),
     Ganymede("Ganymed", "Ganymed, der größte Mond im Sonnensystem, gedreht aus einer Karte der NASA."),
-    Triton("Triton", "Neptuns Mond Triton, gedreht aus einer Karte der NASA."),
     Geometry("Geometrie", "Ein Ikosaeder aus Licht mit einem zweiten Körper darin, die beide umeinander drehen."),
     Photo(
         "Eigenes Foto",
@@ -81,32 +79,6 @@ object SuperPhoto {
 
 /** What moves the scene right now: the home page (-1 … 1), the tilt (-1 … 1) and the zoom (1 = rest). */
 class SuperMotion(var panX: Float = 0f, var tiltX: Float = 0f, var tiltY: Float = 0f, var zoom: Float = 1f)
-
-/** The settings of the Super-Wallpaper, as ZENITH's settings keep them. */
-object SuperPrefs {
-    fun read(context: Context): SuperParams {
-        val p = context.getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE)
-        val scene = runCatching { SuperScene.valueOf(p.getString("superScene", "").orEmpty()) }.getOrDefault(SuperScene.Moon)
-        return SuperParams(
-            scene = scene,
-            tilt = p.getBoolean("superTilt", true),
-            zoomOnWake = p.getBoolean("superZoom", true),
-            speed = p.getFloat("superSpeed", 1f).coerceIn(0.2f, 3f),
-            stars = p.getBoolean("superStars", true),
-            photo = p.getLong("superPhoto", 0L),
-        )
-    }
-
-    /** One still frame of the wallpaper as set, [w] × [h] – the glass of ZENITH bends and blurs this. Null if it couldn't be drawn. */
-    fun snapshot(context: Context, w: Int, h: Int): Bitmap? = runCatching {
-        val params = read(context)
-        val renderer = SuperRenderer(params.scene, SuperPhoto.file(context), context.assets)
-        renderer.prepare()
-        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        renderer.draw(Canvas(bitmap), w, h, 5000L, params, SuperMotion())
-        bitmap
-    }.getOrNull()
-}
 
 private const val TW = 1024
 private const val TH = 512
@@ -209,7 +181,6 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         SuperScene.Io -> "io"
         SuperScene.Europa -> "europa"
         SuperScene.Ganymede -> "ganymede"
-        SuperScene.Triton -> "triton"
         else -> null
     }
 
@@ -451,7 +422,6 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
             SuperScene.Jupiter -> 0.46f
             SuperScene.Mars -> 0.37f
             SuperScene.Pluto -> 0.34f
-            SuperScene.Triton -> 0.36f
             else -> 0.40f
         }
         val radius = w * base * m.zoom

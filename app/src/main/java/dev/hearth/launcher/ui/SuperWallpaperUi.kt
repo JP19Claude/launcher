@@ -4,6 +4,7 @@ import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -136,6 +137,17 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             range = 0.2f..3f,
             valueText = "${"%.1f".format(s.superSpeed)}×",
         ) { v -> update { it.copy(superParams = it.superParams.copy(speed = v)) } }
+        ActionRow(
+            label = "Als einzelne App herunterladen",
+            description = "Jede Szene gibt es auch als eigene kleine App (ein Live-Wallpaper) – einzeln zu installieren und weiterzugeben. Öffnet die Download-Seite.",
+            onClick = {
+                runCatching {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/JP19Claude/launcher/releases/tag/hintergruende")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
+                }
+            },
+        )
         Note("Mond und Erde sind Aufnahmen der NASA, Mars, Venus, Jupiter, Saturn, Neptun, Pluto und die Monde drehen sich auf echten Karten der NASA (gemeinfrei, im App-Paket enthalten, keine Verbindung nötig). Das Glas in ZENITH bricht ein Standbild der Szene; es bewegt sich nur der Hintergrund selbst. „Eigenes Foto“ zeigt ein Foto aus der Wallpaper-Galerie, „Geometrie“ ist in ZENITH selbst gezeichnet.")
     }
 }

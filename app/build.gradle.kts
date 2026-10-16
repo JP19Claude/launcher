@@ -12,7 +12,7 @@ android {
         applicationId = "dev.hearth.launcher"
         minSdk = 28
         targetSdk = 35
-        versionCode = 197
+        versionCode = 198
         // Small updates (fixes, little things) +0.1, big ones (many features, redesign) +0.5.
         versionName = "21.5"
         // Hearth One (everything in one app) says so; the separate apps don't.
@@ -65,8 +65,16 @@ android {
         }
     }
 
+    // The pictures of the Super-Wallpaper's planets and moons: one folder per scene in shared/, so that each wallpaper
+    // app (wallpapers/) takes just its own – ZENITH (the "one" flavor) takes them all.
+    val sharedPlanetAssets = file("../shared/wallpaper/assets").listFiles { f -> f.isDirectory }.orEmpty()
+
     // Clawd's widgets and his app's screen: in the Clawd app and built into Hearth One.
     sourceSets {
+        // The Super-Wallpaper's renderer is shared with the wallpaper apps (wallpapers/): its code lives in shared/.
+        getByName("main") {
+            java.srcDirs("../shared/wallpaper/java")
+        }
         getByName("clawd") {
             java.srcDirs("src/clawdShared/java")
             res.srcDirs("src/clawdShared/res")
@@ -74,6 +82,7 @@ android {
         getByName("one") {
             java.srcDirs("src/clawdShared/java")
             res.srcDirs("src/clawdShared/res")
+            assets.srcDirs(*sharedPlanetAssets)
         }
     }
 
