@@ -232,10 +232,18 @@ class SuperLive(
         }
     }
 
+    /** Is there room for the Moon's finest pictures (about 270 MB on the graphics chip)? Not on phones with little memory, not in a preview (that runs next to the wallpaper itself). */
+    private fun roomForDetail(): Boolean = runCatching {
+        val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val info = android.app.ActivityManager.MemoryInfo()
+        manager.getMemoryInfo(info)
+        !manager.isLowRamDevice && info.totalMem >= 5_000_000_000L
+    }.getOrDefault(false)
+
     private fun ensureRenderer(s: Surface) {
         if (gl != null || canvasRenderer != null) return
         if (!glFailed) {
-            val g = SuperGl(assets, photoFile)
+            val g = SuperGl(assets, photoFile, fullDetail = !demo && roomForDetail())
             if (g.start(s) && g.load(params.scene)) {
                 gl = g
                 return

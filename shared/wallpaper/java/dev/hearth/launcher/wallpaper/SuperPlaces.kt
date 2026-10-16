@@ -78,10 +78,10 @@ object SuperPlaces {
     )
 
     private val pluto = listOf(
-        SuperPlace("Heller Fleck", 30f, -25f),
-        SuperPlace("Dunkler Streifen", 38f, 18f),
-        SuperPlace("Ringkrater", 163f, 15f),
-        SuperPlace("Dunkles Land", 100f, 5f),
+        SuperPlace("Sputnik Planitia", 178f, 20f),
+        SuperPlace("Cthulhu Macula", 130f, -8f),
+        SuperPlace("Norgay Montes", 162f, 14f),
+        SuperPlace("Doppelkrater", 100f, 6f),
     )
 
     private val io = listOf(
@@ -92,17 +92,17 @@ object SuperPlaces {
     )
 
     private val europa = listOf(
-        SuperPlace("Rissland", 180f, -8f),
-        SuperPlace("Fleckenland", 50f, 5f),
-        SuperPlace("Liniengeflecht", -5f, 15f),
-        SuperPlace("Heller Süden", -70f, -45f),
+        SuperPlace("Pwyll", 89f, -25f),
+        SuperPlace("Conamara Chaos", 86.5f, 9.4f),
+        SuperPlace("Linien-Netz", 150f, 35f),
+        SuperPlace("Helle Ebene", -100f, 10f),
     )
 
     private val ganymede = listOf(
-        SuperPlace("Tros", -34f, 14f),
-        SuperPlace("Galileo Regio", -144f, 30f),
-        SuperPlace("Osiris", -165f, -35f),
-        SuperPlace("Furchenland", 155f, 25f),
+        SuperPlace("Tros", -27f, 13f),
+        SuperPlace("Galileo Regio", -135f, 25f),
+        SuperPlace("Osiris", -166f, -38f),
+        SuperPlace("Dunkle Felder", -60f, 35f),
     )
 
     /** The places of [scene]; none if it has no surface to choose from. */

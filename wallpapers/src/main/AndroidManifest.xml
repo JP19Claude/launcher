@@ -24,6 +24,12 @@
             </intent-filter>
         </activity>
 
+        <!-- Ten more pictures of the planet, to download in several sizes. -->
+        <activity
+            android:name=".PicturesActivity"
+            android:exported="false"
+            android:label="${label}" />
+
         <!-- Android's installer reports here how an update went (and asks to confirm it). -->
         <receiver
             android:name="dev.hearth.launcher.wallpaper.WallpaperUpdateReceiver"

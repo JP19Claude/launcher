@@ -17,6 +17,7 @@ import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
+import dev.hearth.launcher.wallpaper.PlanetPictures
 import dev.hearth.launcher.wallpaper.SuperPlaces
 import dev.hearth.launcher.wallpaper.SuperScene
 import dev.hearth.launcher.wallpaper.WallpaperUpdater
@@ -208,6 +209,15 @@ class MainActivity : Activity() {
                 setOnClickListener { openWallpaper() }
             },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(18) },
+        )
+        // Ten more pictures of this planet, to keep (from the NASA library), in several sizes.
+        column.addView(
+            Button(this).apply {
+                isAllCaps = false
+                text = "${PlanetPictures.COUNT} Bilder zu ${scene.label} herunterladen"
+                setOnClickListener { startActivity(Intent(this@MainActivity, PicturesActivity::class.java)) }
+            },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) },
         )
         addUpdate(column) { dp(it) }
         column.addView(

@@ -344,6 +344,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Viel schärfer beim Heranzoomen – und zehn NASA-Bilder zum Mitnehmen", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Wenn man auf dem Startbildschirm herangezoomt ist, soll das Bild hochauflösender sein – die Qualität war nicht gut. Neu beim Mond: die Karte hat jetzt 16384 × 8192 Pixel (vorher 8192 × 4096) und ist das echte Weitwinkel-Mosaik der Raumsonde LRO (100 Meter je Pixel, aus dem Archiv des USGS). Man sieht Kraterwände mit Terrassen, Strahlen, Zentralberge, Gräben und Geröll – statt der verwaschenen Fläche vorher. Weil das Mosaik das tiefe Sonnenlicht der Aufnahmen schon mitbringt (von Westen), passt es zum Licht in ZENITH.",
+                        "Mars, Venus, Io, Europa, Ganymed und Pluto haben neue Karten mit 4096 × 2048 Pixeln (vorher 1024 × 512), aus echten Mosaiken des USGS (Viking, Magellan, Galileo, Voyager, New Horizons). Pluto zeigt jetzt sein Herz (Sputnik Planitia), seine Berge und Krater – die Farben sind nach seinen Tönen ergänzt, die nicht aufgenommene Südhalbkugel ist aus der Umgebung aufgefüllt. Die Landeplätze von Pluto, Europa und Ganymed sind neu (Sputnik Planitia, Cthulhu Macula, Norgay Montes; Pwyll, Conamara Chaos; Tros, Galileo Regio, Osiris).",
+                        "Neu in jeder Hintergrund-App: „10 Bilder zu … herunterladen“ (Version 1.8). Zehn Aufnahmen des passenden Planeten oder Mondes aus der NASA-Bildbibliothek, Tipp auf ein Bild, dann wählst du die Größe – klein, mittel, groß oder das Original – und es landet in deiner Galerie (Bilder/ZENITH). In der App mit allen Szenen gehören die Bilder zur gewählten Szene.",
+                        "Ehrlich dazu: Jupiter, Saturn und Neptun haben weiter die kleinen Karten – für sie gibt es keine besseren Mosaike. Die feine Mondkarte braucht Speicher (etwa 270 MB auf der Grafikkarte): Handys mit weniger als 5 GB Arbeitsspeicher und die Vorschau in den Einstellungen nehmen die halbe Auflösung. Das erste Laden des Mondes dauert ein paar Sekunden länger. Die Pakete sind größer (Mond etwa 14 MB mehr). Welche Bilder die NASA-Bibliothek für die Suche liefert, kann ich von hier aus nicht sehen (ihr Server ist für mich gesperrt) – die Suche läuft wie die der Wallpaper-Galerie. Auf einem Handy habe ich nichts davon ausprobiert, die Bilder habe ich mit denselben Shadern am Rechner gerendert.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

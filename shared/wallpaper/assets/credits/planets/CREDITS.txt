@@ -2,11 +2,21 @@ Planetenbilder und -karten: NASA (Apollo-Aufnahmen, NASA/JPL-Caltech u. a.), aus
 https://github.com/nasa/NASA-3D-Resources – "free and without copyright". Für ZENITH auf die
 Größe des Super-Wallpapers gebracht (zugeschnitten, verkleinert, Ränder freigestellt).
 
-Mond (Karte der ganzen Kugel, 8192 x 4096, und Geländenormalen, 4096 x 2048): NASA-Daten – die schattenfreie Albedo aus dem
-Hapke-normierten Mosaik der Lunar Reconnaissance Orbiter Camera (LROC WAC; an den Polen aus LOLA), das Gelände aus dem
-Laser-Höhenmesser LOLA (LDEM_64), beide aus dem Planetary Data System der NASA. Die aufbereiteten Dateien stammen aus dem
-Projekt "solar-system" von Anirudh (https://github.com/asrijanga/solar-system, MIT-Lizenz), das sie aus diesen NASA-Daten
-erzeugt (docs/data/moon.md). NASA-Daten sind in der Regel gemeinfrei.
+Mond: Die Karte der ganzen Kugel (16384 x 4096 → 16384 x 8192 Pixel, etwa 45 Pixel je Grad) ist das globale Weitwinkel-Mosaik der
+Lunar Reconnaissance Orbiter Camera (LROC WAC, 100 m je Pixel; NASA/GSFC/Arizona State University), aus dem Archiv des USGS
+Astrogeology Science Center (asc-pds-services.s3.us-west-2.amazonaws.com/mosaic, Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013.tif);
+sie trägt das niedrige Sonnenlicht der Aufnahmen (von Westen) schon in sich. Die Töne wurden für ZENITH angepasst, zu den Polen
+geht sie in die schattenfreie Albedo über (Hapke-normiertes LROC-Mosaik, an den Polen aus LOLA). Die Geländenormalen (4096 x 2048)
+kommen aus dem Laser-Höhenmesser LOLA (LDEM_64). Die schattenfreie Albedo und die Normalen stammen aus dem Projekt "solar-system"
+von Anirudh (https://github.com/asrijanga/solar-system, MIT-Lizenz), das sie aus diesen NASA-Daten erzeugt (docs/data/moon.md).
+NASA- und USGS-Daten sind in der Regel gemeinfrei.
+
+Mars, Venus, Io, Europa, Ganymed, Pluto (je 4096 x 2048): Globale Mosaike aus dem Archiv des USGS Astrogeology Science Center –
+Mars: Viking-Farbmosaik 925 m; Venus: Magellan C3-MDIR, koloriert, 4641 m; Io: Galileo-SSI-Farbmosaik 1 km; Europa: Voyager/Galileo
+500 m (schwarzweiß); Ganymed: Voyager/Galileo-Farbmosaik 1435 m; Pluto: New-Horizons-Mosaik 300 m (schwarzweiß; die Farben sind nach
+Plutos Tönen ergänzt, die nicht aufgenommene Südhalbkugel ist aus ihrer Umgebung aufgefüllt). Auf 4096 x 2048 gebracht, die Längen
+von Europa, Ganymed und Pluto in die Mitte bei 0° gerollt; leere Stellen an den Polen aufgefüllt. NASA/USGS-Daten sind in der Regel
+gemeinfrei. Jupiter, Saturn und Neptun nutzen weiter die kleineren Karten aus NASA 3D Resources.
 
 Iwo Jima (iwojima.jpg): Foto des Iwo-Jima-Denkmals (U.S. Marine Corps War Memorial) mit dem Vollmond und der US-Flagge, nach einer
 Bildschirmaufnahme aus ZENITHs Wallpaper-Galerie, deren Fotos aus der NASA-Bildbibliothek (images.nasa.gov) kommen. Den Fotografen

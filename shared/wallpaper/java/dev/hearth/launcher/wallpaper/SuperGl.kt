@@ -27,7 +27,12 @@ import kotlin.math.sqrt
  * its relief lit by the sun – the sky and the stars are drawn by a shader as well. If anything of this fails the caller
  * falls back to SuperRenderer (the pictures drawn by the processor). All calls on one thread, the one that created it.
  */
-internal class SuperGl(private val assets: AssetManager, private val photoFile: File?) {
+internal class SuperGl(
+    private val assets: AssetManager,
+    private val photoFile: File?,
+    /** The Moon's finest pictures (about 270 MB on the graphics chip): only for phones with the memory for it. */
+    private val fullDetail: Boolean = true,
+) {
 
     private enum class Kind { SPHERE, DISC, PHOTO, GEOMETRY }
 
@@ -274,40 +279,89 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
         return ids[0]
     }
 
-    /**
-     * The Moon's albedo, 8192 × 4096 pixels of one byte each (about 33 MB on the graphics chip): made strip by strip from
-     * its 16 pictures, so that never more than a few megabytes are in memory at once. On a chip that can't take such a
-     * texture every second pixel is used (4096 × 2048). 0 if a picture can't be read.
-     */
-    private fun loadMoonAlbedo(): Int {
+    /** The size of a texture of [base] pixels width: [wanted] times halved, and more if the chip can't take that. */
+    private fun textureStep(base: Int, wanted: Int): Int {
         val limit = IntArray(1)
         GLES20.glGetIntegerv(GLES20.GL_MAX_TEXTURE_SIZE, limit, 0)
-        val step = if (limit[0] >= 8192) 1 else 2
-        val w = 8192 / step
-        val h = 4096 / step
+        var step = wanted
+        while (base / step > limit[0] && step < 8) step *= 2
+        return step
+    }
+
+    /**
+     * The Moon's albedo, 16384 × 8192 pixels of one byte each (about 134 MB on the graphics chip, 45 pixels to a degree – about one to a
+     * pixel of the screen when the camera is close): the LROC wide-angle mosaic (with the low sun of its pictures in it, from the
+     * west), made tile by tile from its 64 × 2 pictures (8192 × 128 each), so that never more than a few megabytes are in memory at
+     * once. Where the phone is short of memory, or the chip can't take such a texture, every 2 × 2 (or 4 × 4) pixels are
+     * averaged: 8192 × 4096. 0 if a picture can't be read.
+     */
+    private fun loadMoonAlbedo(): Int {
+        var step = textureStep(MOON_W, if (fullDetail) 1 else 2)
+        while (true) {
+            val id = tryLoadMoonAlbedo(step)
+            if (id != 0 || step >= 4) return id
+            // The graphics memory is full: with less.
+            step *= 2
+        }
+    }
+
+    private fun tryLoadMoonAlbedo(step: Int): Int {
+        val w = MOON_W / step
+        val h = MOON_H / step
         val id = newTexture(true)
+        GLES20.glGetError()
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES30.GL_R8, w, h, 0, GLES30.GL_RED, GLES20.GL_UNSIGNED_BYTE, null)
+        if (GLES20.glGetError() != GLES20.GL_NO_ERROR) {
+            GLES20.glDeleteTextures(1, intArrayOf(id), 0)
+            return 0
+        }
         var row = 0
-        for (i in 0 until 16) {
-            val strip = decodeAsset("planets/moon_albedo_%02d.webp".format(i)) ?: return 0
-            val sw = strip.width
-            val sh = strip.height
-            val px = IntArray(sw * sh)
-            strip.getPixels(px, 0, sw, 0, 0, sw, sh)
-            strip.recycle()
-            val outW = sw / step
-            val outH = sh / step
-            val bytes = ByteBuffer.allocateDirect(outW * outH)
-            for (y in 0 until outH) {
-                val base = y * step * sw
-                for (x in 0 until outW) bytes.put(((px[base + x * step] shr 16) and 0xFF).toByte())
+        // One buffer for all the tiles (they are all the same size).
+        var px = IntArray(0)
+        var bytes: ByteBuffer? = null
+        for (i in 0 until MOON_ROWS) {
+            var column = 0
+            var outH = 0
+            for (half in 0 until 2) {
+                val tile = decodeAsset("planets/moon_albedo_%02d_%d.webp".format(i, half)) ?: return fail(id)
+                val sw = tile.width
+                val sh = tile.height
+                if (sw != MOON_W / 2) {
+                    tile.recycle()
+                    return fail(id)
+                }
+                if (px.size != sw * sh) px = IntArray(sw * sh)
+                tile.getPixels(px, 0, sw, 0, 0, sw, sh)
+                tile.recycle()
+                val outW = sw / step
+                outH = sh / step
+                val out = bytes?.takeIf { it.capacity() == outW * outH } ?: ByteBuffer.allocateDirect(outW * outH).also { bytes = it }
+                out.clear()
+                val area = step * step
+                for (y in 0 until outH) {
+                    for (x in 0 until outW) {
+                        var sum = 0
+                        for (dy in 0 until step) {
+                            val base = (y * step + dy) * sw + x * step
+                            for (dx in 0 until step) sum += (px[base + dx] shr 16) and 0xFF
+                        }
+                        out.put((sum / area).toByte())
+                    }
+                }
+                out.position(0)
+                GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, column, row, outW, outH, GLES30.GL_RED, GLES20.GL_UNSIGNED_BYTE, out)
+                column += outW
             }
-            bytes.position(0)
-            GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, 0, row, outW, outH, GLES30.GL_RED, GLES20.GL_UNSIGNED_BYTE, bytes)
             row += outH
         }
         GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D)
         return id
+    }
+
+    /** Drops a texture that couldn't be made whole; 0. */
+    private fun fail(id: Int): Int {
+        GLES20.glDeleteTextures(1, intArrayOf(id), 0)
+        return 0
     }
 
     /** The Moon's terrain, from LOLA: the east and north parts of the surface normal, 4096 × 2048, two bytes per pixel. 0 if it can't be read. */
@@ -447,13 +501,13 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
             val near = ((d - 0.4f) / 0.4f).coerceIn(0f, 1f)
             GLES20.glUniform1i(prog.u("uKind"), 1)
             // The terrain's shadows are felt more the closer the camera is; a little sharpening where the picture is magnified.
-            GLES20.glUniform1f(prog.u("uRelief"), 1.5f + 0.8f * near)
-            GLES20.glUniform1f(prog.u("uSharp"), 0.25f + 0.45f * near)
+            GLES20.glUniform1f(prog.u("uRelief"), 1.3f + 0.4f * near)
+            GLES20.glUniform1f(prog.u("uSharp"), 0.15f + 0.25f * near)
             GLES20.glUniform3f(prog.u("uTint"), 1.70f, 1.66f, 1.58f)
             GLES20.glUniform1f(prog.u("uAmbient"), 0.035f)
             GLES20.glUniform1f(prog.u("uGain"), 1.25f)
             GLES20.glUniform1f(prog.u("uLimb"), 0f)
-            GLES20.glUniform1f(prog.u("uDetail"), 0.12f * near)
+            GLES20.glUniform1f(prog.u("uDetail"), 0.08f * near)
         } else {
             val sx = -0.52f
             val sy = 0.40f
@@ -590,6 +644,11 @@ internal class SuperGl(private val assets: AssetManager, private val photoFile: 
     }
 
     private companion object {
+        /** The Moon's albedo: 16384 × 8192 pixels in 64 rows of two tiles (8192 × 128 each). */
+        const val MOON_W = 16384
+        const val MOON_H = 8192
+        const val MOON_ROWS = 64
+
         const val BOX_VERTEX = """#version 300 es
 uniform vec2 uRes;
 uniform vec4 uBox;
