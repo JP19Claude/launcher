@@ -19,6 +19,9 @@ object SuperPrefs {
             size = p.getFloat("superSize", 1f).coerceIn(0.5f, 1.6f),
             place = p.getInt("superPlace", 0).coerceAtLeast(0),
             photo = p.getLong("superPhoto", 0L),
+            aod = p.getBoolean("superAod", false),
+            aodDim = p.getFloat("superAodDim", 0.45f).coerceIn(0.1f, 0.8f),
+            aodClock = p.getBoolean("superAodClock", true),
         )
     }
 

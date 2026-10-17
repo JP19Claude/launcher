@@ -9,7 +9,9 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
+import android.provider.Settings
 import android.util.TypedValue
+import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
@@ -17,6 +19,7 @@ import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
+import android.widget.Toast
 import dev.hearth.launcher.wallpaper.PlanetPictures
 import dev.hearth.launcher.wallpaper.SuperPlaces
 import dev.hearth.launcher.wallpaper.SuperScene
@@ -134,6 +137,106 @@ class MainActivity : Activity() {
                 )
             },
         )
+        // The always-on screen: Android keeps the phone's own always-on display for the maker's apps, so this is a screen of its own –
+        // the body dimmed on black with the time – and a screen saver.
+        val aodBox = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = if (prefs.getBoolean("aod", false)) View.VISIBLE else View.GONE
+        }
+        column.addView(
+            Switch(this).apply {
+                text = "Always-on-Bildschirm (AOD)"
+                setTextColor(Color.WHITE)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                isChecked = prefs.getBoolean("aod", false)
+                setPadding(0, dp(14), 0, dp(4))
+                setOnCheckedChangeListener { _, on ->
+                    prefs.edit().putBoolean("aod", on).apply()
+                    aodBox.visibility = if (on) View.VISIBLE else View.GONE
+                }
+            },
+        )
+        column.addView(
+            TextView(this).apply {
+                text = "Der Körper gedimmt auf Schwarz, mit der Uhrzeit; er wandert ab und zu ein paar Pixel (gegen Einbrennen). Den echten AOD des Telefons darf Android nur dem Hersteller überlassen – darum läuft das als eigener Bildschirm und als Bildschirmschoner."
+                setTextColor(0xFFB9C1CC.toInt())
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            },
+        )
+        aodBox.addView(
+            Button(this).apply {
+                isAllCaps = false
+                text = "AOD-Bildschirm jetzt starten"
+                setOnClickListener { startActivity(Intent(this@MainActivity, SceneAodActivity::class.java)) }
+            },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) },
+        )
+        aodBox.addView(
+            TextView(this).apply {
+                text = "Tippen beendet ihn; nach sechs Stunden endet er von selbst."
+                setTextColor(0xFFB9C1CC.toInt())
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                setPadding(0, dp(2), 0, 0)
+            },
+        )
+        aodBox.addView(
+            Button(this).apply {
+                isAllCaps = false
+                text = "Als Bildschirmschoner einrichten"
+                setOnClickListener {
+                    val opened = listOf(Settings.ACTION_DREAM_SETTINGS, Settings.ACTION_DISPLAY_SETTINGS).any { action ->
+                        runCatching { startActivity(Intent(action)) }.isSuccess
+                    }
+                    if (!opened) Toast.makeText(this@MainActivity, "Dieses Telefon bietet keine Bildschirmschoner-Einstellung.", Toast.LENGTH_LONG).show()
+                }
+            },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) },
+        )
+        aodBox.addView(
+            TextView(this).apply {
+                text = "Dort „${scene.label}“ wählen (Beim Laden): dann startet der AOD-Bildschirm am Ladegerät von selbst."
+                setTextColor(0xFFB9C1CC.toInt())
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                setPadding(0, dp(2), 0, 0)
+            },
+        )
+        val dimLabel = TextView(this).apply {
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            setPadding(0, dp(10), 0, 0)
+        }
+        val startDim = prefs.getFloat("aodDim", 0.45f).coerceIn(0.1f, 0.8f)
+        dimLabel.text = "AOD-Helligkeit  ${(startDim * 100f).roundToInt()} %"
+        aodBox.addView(dimLabel)
+        aodBox.addView(
+            SeekBar(this).apply {
+                max = 14
+                progress = ((startDim - 0.1f) / 0.05f).roundToInt().coerceIn(0, 14)
+                setOnSeekBarChangeListener(
+                    object : SeekBar.OnSeekBarChangeListener {
+                        override fun onProgressChanged(bar: SeekBar?, value: Int, fromUser: Boolean) {
+                            val dim = 0.1f + value * 0.05f
+                            dimLabel.text = "AOD-Helligkeit  ${(dim * 100f).roundToInt()} %"
+                            if (fromUser) prefs.edit().putFloat("aodDim", dim).apply()
+                        }
+
+                        override fun onStartTrackingTouch(bar: SeekBar?) = Unit
+                        override fun onStopTrackingTouch(bar: SeekBar?) = Unit
+                    },
+                )
+            },
+        )
+        aodBox.addView(
+            Switch(this).apply {
+                text = "Uhrzeit im AOD"
+                setTextColor(Color.WHITE)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                isChecked = prefs.getBoolean("aodClock", true)
+                setPadding(0, dp(8), 0, dp(8))
+                setOnCheckedChangeListener { _, on -> prefs.edit().putBoolean("aodClock", on).apply() }
+            },
+        )
+        column.addView(aodBox)
         // Where the body lands when it has finished turning (the Earth is a photograph and "Iwo Jima" a photo: no places).
         val placeCount = SuperPlaces.count(scene)
         if (placeCount > 0) {

@@ -1704,6 +1704,9 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
                 size = prefs.getFloat("superSize", d.superParams.size).coerceIn(0.5f, 1.6f),
                 place = prefs.getInt("superPlace", d.superParams.place).coerceAtLeast(0),
                 photo = prefs.getLong("superPhoto", d.superParams.photo),
+                aod = prefs.getBoolean("superAod", d.superParams.aod),
+                aodDim = prefs.getFloat("superAodDim", d.superParams.aodDim).coerceIn(0.1f, 0.8f),
+                aodClock = prefs.getBoolean("superAodClock", d.superParams.aodClock),
             ),
             sloganEverywhere = prefs.getBoolean("sloganEverywhere", d.sloganEverywhere),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
@@ -1969,6 +1972,9 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putFloat("superSize", s.superParams.size)
             .putInt("superPlace", s.superParams.place)
             .putLong("superPhoto", s.superParams.photo)
+            .putBoolean("superAod", s.superParams.aod)
+            .putFloat("superAodDim", s.superParams.aodDim)
+            .putBoolean("superAodClock", s.superParams.aodClock)
             .putBoolean("sloganEverywhere", s.sloganEverywhere)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("zenithStrike", s.zenithStrike)

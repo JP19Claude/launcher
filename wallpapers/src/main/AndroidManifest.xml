@@ -47,5 +47,25 @@
                 android:name="android.service.wallpaper"
                 android:resource="@xml/wallpaper" />
         </service>
+
+        <!-- The always-on screen: the body dimmed on black with the time; an activity (started in the app, a tap leaves it) and a screen saver. -->
+        <activity
+            android:name=".SceneAodActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:label="${label} AOD"
+            android:launchMode="singleTask" />
+        <service
+            android:name=".SceneDreamService"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="${label}"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

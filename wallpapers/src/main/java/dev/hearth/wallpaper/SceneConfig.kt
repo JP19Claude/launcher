@@ -45,6 +45,9 @@ internal object SceneConfig {
             stars = p.getBoolean("stars", true),
             size = p.getFloat("size", 1f).coerceIn(0.5f, 1.6f),
             place = p.getInt(placeKey(scene), 0).coerceAtLeast(0),
+            aod = p.getBoolean("aod", false),
+            aodDim = p.getFloat("aodDim", 0.45f).coerceIn(0.1f, 0.8f),
+            aodClock = p.getBoolean("aodClock", true),
         )
     }
 }

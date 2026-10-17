@@ -24,8 +24,11 @@ object SuperCamera {
     const val FLAG_RV = 0.17f
 
     /** The home flight in the time of the depth: moving up until [UP_END], turning in place until [ZOOM_START], then the zoom. */
-    private const val UP_END = 0.25f
-    const val ZOOM_START = 0.45f
+    private const val UP_END = 0.22f
+    const val ZOOM_START = 0.44f
+
+    /** The lock flight reaches the middle the first time at this share of its time (then it swings a little past and back). */
+    const val LOCK_ARRIVES = 0.40f
 
     private fun lerp(a: Float, b: Float, t: Float): Float = a + (b - a) * t
 
@@ -34,6 +37,24 @@ object SuperCamera {
     fun easeInOutCubic(t: Float): Float {
         val k = t.coerceIn(0f, 1f)
         return if (k < 0.5f) 4f * k * k * k else 1f - (-2f * k + 2f).pow(3) / 2f
+    }
+
+    /** Out like [easeOutCubic], but with a swing a little past the goal and back ([overshoot] 1.5 goes about 7 % too far). */
+    fun easeOutBack(t: Float, overshoot: Float = 1.5f): Float {
+        val k = t.coerceIn(0f, 1f) - 1f
+        return 1f + (overshoot + 1f) * k * k * k + overshoot * k * k
+    }
+
+    /**
+     * The zoom of the home flight: it starts with a punch, runs out softly, and just before the end swings about 4 % past the closest
+     * point and settles back – energetic, but never a jolt. 0 → 1 (and a little over 1 on the way).
+     */
+    fun easeZoom(t: Float): Float {
+        val k = t.coerceIn(0f, 1f)
+        val body = 0.5f * easeInOutCubic(k) + 0.5f * easeOutCubic(k)
+        val swing = kotlin.math.sin(Math.PI.toFloat() * ((k - 0.55f) / 0.45f).coerceIn(0f, 1f))
+        // (squared: the swing starts and ends without a kink)
+        return body + 0.07f * swing * swing
     }
 
     /**
@@ -80,7 +101,8 @@ object SuperCamera {
      */
     fun pose(scene: SuperScene, lockFly: Float, depth: Float, out: SuperPose) {
         val s = shape(scene)
-        val f = easeOutCubic(lockFly)
+        // The body shoots in from the corner, swings a little past the middle (and grows a little past its size) and settles back.
+        val f = easeOutBack(lockFly)
         val cx0 = lerp(s[0], s[3], f)
         val cy0 = lerp(s[1], s[4], f)
         val r0 = lerp(s[2], s[5], f)
@@ -102,7 +124,7 @@ object SuperCamera {
                 scale = s[8] / s[5]
             }
             else -> {
-                val e = easeInOutCubic((d - ZOOM_START) / (1f - ZOOM_START))
+                val e = easeZoom((d - ZOOM_START) / (1f - ZOOM_START))
                 dx = lerp(s[6] - s[3], s[9] - s[3], e)
                 dy = lerp(s[7] - s[4], s[10] - s[4], e)
                 // A zoom is felt in factors, not in steps: the size grows exponentially.

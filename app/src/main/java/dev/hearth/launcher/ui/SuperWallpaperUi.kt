@@ -5,6 +5,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -40,6 +42,7 @@ import dev.hearth.launcher.wallpaper.SuperRenderer
 import dev.hearth.launcher.wallpaper.SuperScene
 import dev.hearth.launcher.wallpaper.SuperWallpaperService
 import dev.hearth.launcher.wallpaper.WallpaperUpdater
+import dev.hearth.launcher.wallpaper.ZenithAodActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -135,6 +138,34 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             description = "Der Sternenhimmel hinter der Szene",
             checked = s.superStars,
         ) { v -> update { it.copy(superParams = it.superParams.copy(stars = v)) } }
+        SwitchRow(
+            label = "Always-on-Bildschirm (AOD)",
+            description = "Der Körper gedimmt auf Schwarz, mit der Uhrzeit; er wandert ab und zu ein paar Pixel (gegen Einbrennen). Den echten AOD des Telefons darf Android nur dem Hersteller überlassen – darum läuft das als eigener Bildschirm und als Bildschirmschoner",
+            checked = params.aod,
+        ) { v -> update { it.copy(superParams = it.superParams.copy(aod = v)) } }
+        if (params.aod) {
+            ActionRow(
+                label = "AOD-Bildschirm jetzt starten",
+                description = "Der Bildschirm bleibt an, sehr dunkel – Tippen beendet ihn, nach sechs Stunden endet er von selbst",
+                onClick = { openAodScreen(context) },
+            )
+            ActionRow(
+                label = "Als Bildschirmschoner einrichten",
+                description = "Öffnet Androids Einstellung: dort „ZENITH Planet“ wählen, Start „Beim Laden“ – dann geht der AOD-Bildschirm am Ladegerät von selbst an",
+                onClick = { openDreamSettings(context) },
+            )
+            SliderRow(
+                label = "AOD-Helligkeit",
+                value = params.aodDim,
+                range = 0.1f..0.8f,
+                valueText = "${(params.aodDim * 100f).roundToInt()} %",
+            ) { v -> update { it.copy(superParams = it.superParams.copy(aodDim = v)) } }
+            SwitchRow(
+                label = "Uhrzeit im AOD",
+                description = "Die Uhrzeit unter dem Körper, dünn und gedimmt",
+                checked = params.aodClock,
+            ) { v -> update { it.copy(superParams = it.superParams.copy(aodClock = v)) } }
+        }
         SliderRow(
             label = "Geschwindigkeit",
             value = s.superSpeed,
@@ -233,6 +264,19 @@ private fun WallpaperAppsUpdate() {
             else -> "${outdated.size} von ${apps.size} installierten Hintergrund-Apps haben ein Update (Version ${newest.version}). Jede fragt Android noch einmal, bevor sie sich ändert."
         },
     )
+}
+
+/** The always-on screen (the body dimmed on black with the time) – a tap leaves it. */
+internal fun openAodScreen(context: Context) {
+    runCatching { context.startActivity(Intent(context, ZenithAodActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
+/** Android's screen-saver settings (where "ZENITH Planet" is chosen); the display settings if the phone has none. */
+internal fun openDreamSettings(context: Context) {
+    val opened = listOf(Settings.ACTION_DREAM_SETTINGS, Settings.ACTION_DISPLAY_SETTINGS).any { action ->
+        runCatching { context.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+    }
+    if (!opened) Toast.makeText(context, "Dieses Telefon bietet keine Bildschirmschoner-Einstellung.", Toast.LENGTH_LONG).show()
 }
 
 /** Android's preview of the wallpaper (it asks "Hintergrund festlegen" there); the chooser if the phone has no direct way. */

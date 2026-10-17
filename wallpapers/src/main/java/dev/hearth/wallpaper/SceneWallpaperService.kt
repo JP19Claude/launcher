@@ -63,9 +63,11 @@ class SceneWallpaperService : WallpaperService() {
             live?.setOffset(xOffset)
         }
 
-        /** Android tells the lock screen's wallpaper that the phone is being unlocked: the flight begins. */
+        /** Android tells the lock screen's wallpaper that the phone is being unlocked (the flight begins), or the launcher that someone tapped (a flash). */
         override fun onCommand(action: String?, x: Int, y: Int, z: Int, extras: Bundle?, resultRequested: Boolean): Bundle? {
             if (action == SuperDirector.COMMAND_KEYGUARD_GOING_AWAY) live?.unlocking()
+            // A tap on an empty place of the home screen (the launcher passes it on): a flash and a ring of light.
+            if (action == SuperDirector.COMMAND_TAP) live?.tap()
             return super.onCommand(action, x, y, z, extras, resultRequested)
         }
 

@@ -76,6 +76,12 @@ data class SuperParams(
     val place: Int = 0,
     /** Which photo the "Foto" scene shows: a stamp that changes whenever another one is chosen (the file itself is [SuperPhoto]). */
     val photo: Long = 0L,
+    /** The always-on screen (the nightstand "AOD" and the screen saver) shows the body, dimmed on black; off, they show only the clock. */
+    val aod: Boolean = false,
+    /** How bright the always-on screen is (0.1 … 0.8 of the normal picture). */
+    val aodDim: Float = 0.45f,
+    /** The time under the body on the always-on screen. */
+    val aodClock: Boolean = true,
 )
 
 /** The photo of the "Foto" scene: one file in the app's own storage, made from a gallery photo at the screen's proportions. */
@@ -106,6 +112,23 @@ class SuperMotion(
     var lat: Float = -0.2f,
     /** The flight in from the upper left on the lock screen: 0 = just begun, 1 = in the middle of the screen. */
     var lockFly: Float = 1f,
+    /**
+     * The scene's own clock in seconds: it runs at the speed that was asked for (the slider), faster for a moment after something
+     * happened (the "Schwung" of an unlocking, a tap, a swipe), and never jumps – everything that moves on its own is drawn from it.
+     */
+    var clock: Double = 0.0,
+    /** A ring of light that runs out from the body after something happened: 0 = just begun … 1 = gone. */
+    var ping: Float = 1f,
+    /** A flash of light on the body and in the sky (0 … 1), which fades by itself. */
+    var flash: Float = 0f,
+    /** How fast the camera is flying in or out (0 … 1): the stars stretch to streaks. */
+    var warp: Float = 0f,
+    /** How far the sun has swept (radians about the vertical axis): the light comes round while the body lands. */
+    var sunSweep: Float = 0f,
+    /** The brightness of the whole picture (1 = as it is; the always-on screen dims it). */
+    var dim: Float = 1f,
+    /** The always-on screen: black sky, no stars. */
+    var ambient: Boolean = false,
 )
 
 private const val TW = 1024
@@ -444,8 +467,13 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
     // Drawing a frame
     // -----------------------------------------------------------------------------------------
 
-    /** One frame at [timeMs] onto [canvas] ([w] × [h] pixels). */
+    /** One frame at [timeMs] onto [canvas] ([w] × [h] pixels); dimmed when the always-on screen asks for it ([SuperMotion.dim]). */
     fun draw(canvas: Canvas, w: Int, h: Int, timeMs: Long, p: SuperParams, m: SuperMotion) {
+        drawScene(canvas, w, h, timeMs, p, m)
+        if (m.dim < 0.999f) canvas.drawColor(android.graphics.Color.argb(((1f - m.dim).coerceIn(0f, 1f) * 255f).toInt(), 0, 0, 0))
+    }
+
+    private fun drawScene(canvas: Canvas, w: Int, h: Int, timeMs: Long, p: SuperParams, m: SuperMotion) {
         val seconds = timeMs / 1000f
         if (scene == SuperScene.Photo || scene == SuperScene.Flag) {
             drawPhoto(canvas, w, h, seconds, p, m)

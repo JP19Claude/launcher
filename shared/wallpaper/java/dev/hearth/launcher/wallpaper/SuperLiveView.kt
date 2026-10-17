@@ -10,7 +10,12 @@ import java.io.File
  * The Super-Wallpaper as a picture in an app (the settings' preview, the preview of a single wallpaper app): the very
  * thing the live wallpaper runs, with the flight from the lock screen to the home screen playing in a loop.
  */
-open class SuperLiveView(context: Context, private val photoFile: File? = null) : TextureView(context), TextureView.SurfaceTextureListener {
+open class SuperLiveView(
+    context: Context,
+    private val photoFile: File? = null,
+    /** The always-on screen's picture: dimmed on black, turning slowly (see [SuperLive]) instead of the flight in a loop. */
+    private val ambient: Boolean = false,
+) : TextureView(context), TextureView.SurfaceTextureListener {
 
     private var live: SuperLive? = null
     private var surface: Surface? = null
@@ -29,7 +34,7 @@ open class SuperLiveView(context: Context, private val photoFile: File? = null) 
     override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
         val s = Surface(texture)
         surface = s
-        val l = SuperLive(context, photoFile, demo = true)
+        val l = SuperLive(context, photoFile, demo = !ambient, ambient = ambient)
         live = l
         l.setParams(params)
         l.attach(s, width, height)

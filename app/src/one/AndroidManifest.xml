@@ -645,5 +645,26 @@
                 android:name="android.service.wallpaper"
                 android:resource="@xml/super_wallpaper" />
         </service>
+
+        <!-- ZENITH 21.5 (213): the always-on screen of the Super-Wallpaper – the body dimmed on black with the time; an activity (started from the settings, a tap leaves it) and a screen saver -->
+        <activity
+            android:name="dev.hearth.launcher.wallpaper.ZenithAodActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:label="ZENITH AOD"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+        <service
+            android:name="dev.hearth.launcher.wallpaper.ZenithDreamService"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="ZENITH Planet"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

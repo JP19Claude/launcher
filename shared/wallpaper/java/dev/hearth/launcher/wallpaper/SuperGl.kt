@@ -50,6 +50,7 @@ internal class SuperGl(
     private var sphere: Prog? = null
     private var sprite: Prog? = null
     private var moonProg: Prog? = null
+    private var dimProg: Prog? = null
 
     private var kind = Kind.SPHERE
     private var scene = SuperScene.Moon
@@ -111,6 +112,7 @@ internal class SuperGl(
             sphere = link(BOX_VERTEX, SPHERE_FRAGMENT)
             sprite = link(BOX_VERTEX, SPRITE_FRAGMENT)
             moonProg = link(BOX_VERTEX, MOON_FRAGMENT)
+            dimProg = link(BOX_VERTEX, DIM_FRAGMENT)
             return true
         } catch (t: Throwable) {
             stop()
@@ -768,38 +770,56 @@ internal class SuperGl(
 
     private fun lerp(a: Float, b: Float, t: Float): Float = a + (b - a) * t
 
-    /** One picture at [timeMs] on a surface of [w] × [h]. */
+    /** One picture at [timeMs] on a surface of [w] × [h]. Everything that moves on its own runs on the clock of [m], not on [timeMs]. */
     fun draw(w: Int, h: Int, timeMs: Long, p: SuperParams, m: SuperMotion) {
         GLES20.glViewport(0, 0, w, h)
         lastHeight = h
         GLES20.glDisable(GLES20.GL_BLEND)
-        drawSky(w, h, timeMs, p, m)
+        drawSky(w, h, p, m)
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA)
         when (kind) {
-            Kind.SPHERE -> drawSphere(w, h, timeMs, p, m)
+            Kind.SPHERE -> drawSphere(w, h, p, m)
             Kind.DISC -> drawDisc(w, h, p, m)
-            Kind.PHOTO -> drawPhoto(w, h, timeMs, m)
+            Kind.PHOTO -> drawPhoto(w, h, m)
             Kind.GEOMETRY -> drawGeometry(w, h, timeMs, p, m)
         }
-        GLES20.glDisable(GLES20.GL_BLEND)
         if (verifyNext) {
-            // Before the swap: after it the picture in the buffer is no longer ours to read.
+            // Before the swap: after it the picture in the buffer is no longer ours to read (and before the dimming: the always-on
+            // screen starts black).
             verifyNext = false
             bodyShown = readBodyShown()
         }
+        if (m.dim < 0.999f) drawDim(w, h, m.dim)
+        GLES20.glDisable(GLES20.GL_BLEND)
         if (!EGL14.eglSwapBuffers(display, eglSurface)) throw IllegalStateException("swap")
     }
 
-    private fun drawSky(w: Int, h: Int, timeMs: Long, p: SuperParams, m: SuperMotion) {
+    /** The whole picture darker (the always-on screen): a black layer over it. */
+    private fun drawDim(w: Int, h: Int, dim: Float) {
+        val prog = dimProg ?: return
+        GLES20.glUseProgram(prog.id)
+        GLES20.glUniform2f(prog.u("uRes"), w.toFloat(), h.toFloat())
+        GLES20.glUniform4f(prog.u("uBox"), 0f, 0f, w.toFloat(), h.toFloat())
+        GLES20.glUniform1f(prog.u("uA"), (1f - dim).coerceIn(0f, 1f))
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+    }
+
+    /** The seconds the shaders count: the 600 of the scene's clock – whatever moves on its own makes whole turns in them, so the loop never jumps. */
+    private fun shaderClock(m: SuperMotion): Float = (m.clock % 600.0).toFloat()
+
+    private fun drawSky(w: Int, h: Int, p: SuperParams, m: SuperMotion) {
         val s = sky ?: return
         GLES20.glUseProgram(s.id)
         val d = m.depth.coerceIn(0f, 1f)
         GLES20.glUniform2f(s.u("uRes"), w.toFloat(), h.toFloat())
-        GLES20.glUniform1f(s.u("uTime"), (timeMs % 600000L) / 1000f)
+        GLES20.glUniform1f(s.u("uTime"), shaderClock(m))
         GLES20.glUniform2f(s.u("uShift"), m.panX * -0.03f * w + m.tiltX * 0.02f * w, -(m.tiltY * 0.012f * h))
         GLES20.glUniform1f(s.u("uSpread"), 1f + 0.45f * d)
-        GLES20.glUniform1f(s.u("uStars"), if (p.stars) 1f else 0f)
+        GLES20.glUniform1f(s.u("uStars"), if (p.stars && !m.ambient) 1f else 0f)
+        GLES20.glUniform1f(s.u("uSkyOn"), if (m.ambient) 0f else 1f)
+        GLES20.glUniform1f(s.u("uWarp"), m.warp)
+        GLES20.glUniform1f(s.u("uFlash"), m.flash)
         GLES20.glUniform4f(s.u("uBox"), 0f, 0f, w.toFloat(), h.toFloat())
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
     }
@@ -822,6 +842,36 @@ internal class SuperGl(
         rot[8] = ct * c
     }
 
+    /** The little effects of a body: lightning in its clouds, rocks hitting it, volcanoes glowing, the sun's glint on its ice. */
+    private class Fx(val storm: Float, val impact: Float, val volcano: Float, val spec: Float)
+
+    private fun fxOf(s: SuperScene): Fx = when (s) {
+        SuperScene.Moon -> Fx(0f, 1.0f, 0f, 0f)
+        SuperScene.Earth -> Fx(0.75f, 0f, 0f, 0f)
+        SuperScene.Venus -> Fx(1.0f, 0f, 0f, 0f)
+        SuperScene.Jupiter -> Fx(0.85f, 0f, 0f, 0f)
+        SuperScene.Saturn -> Fx(0.40f, 0f, 0f, 0f)
+        SuperScene.Pluto -> Fx(0f, 0.6f, 0f, 0.12f)
+        SuperScene.Io -> Fx(0f, 0.4f, 1.0f, 0f)
+        SuperScene.Europa -> Fx(0f, 0.6f, 0f, 0.28f)
+        SuperScene.Ganymede -> Fx(0f, 0.6f, 0f, 0.12f)
+        else -> Fx(0f, 0f, 0f, 0f)
+    }
+
+    /** The sun's direction: [sx], [sy], [sz] turned about the vertical axis by [sweep] (radians) and made one long; sent to [prog], and remembered for the moons. */
+    private fun sunTo(prog: Prog, sx: Float, sy: Float, sz: Float, sweep: Float) {
+        val c = cos(sweep)
+        val sn = sin(sweep)
+        val len = sqrt(sx * sx + sy * sy + sz * sz)
+        val ux = (sx * c + sz * sn) / len
+        val uz = (-sx * sn + sz * c) / len
+        val uy = sy / len
+        GLES20.glUniform3f(prog.u("uSun"), ux, uy, uz)
+        lastSunX = ux
+        lastSunY = uy
+        lastSunZ = uz
+    }
+
     private var lastSunX = -0.52f
     private var lastSunY = 0.40f
     private var lastSunZ = 0.75f
@@ -833,11 +883,10 @@ internal class SuperGl(
     private val oZ = FloatArray(MAX_ORBITERS)
 
     /**
-     * Puts every orbiter on its orbit at [timeMs]: a circle seen from [elev] above its plane, the plane turned by [roll] about the view
+     * Puts every orbiter on its orbit at [seconds] of the scene's clock: a circle seen from [elev] above its plane, the plane turned by [roll] about the view
      * axis. The angle comes from the time itself (a whole number of periods is exactly one turn), so that nothing ever jumps.
      */
-    private fun placeOrbiters(timeMs: Long, cx: Float, cy: Float, radius: Float, roll: Float, elev: Float) {
-        val seconds = timeMs / 1000.0
+    private fun placeOrbiters(seconds: Double, cx: Float, cy: Float, radius: Float, roll: Float, elev: Float) {
         val se = sin(elev)
         val ce = cos(elev)
         val cr = cos(roll)
@@ -939,24 +988,25 @@ internal class SuperGl(
         }
     }
 
-    private fun drawSphere(w: Int, h: Int, timeMs: Long, p: SuperParams, m: SuperMotion) {
+    private fun drawSphere(w: Int, h: Int, p: SuperParams, m: SuperMotion) {
         val prog = sphere ?: return
         val d = m.depth.coerceIn(0f, 1f)
         SuperCamera.pose(scene, m.lockFly, d, pose)
         // The 600 seconds the shaders' clock counts: everything that moves on its own makes whole turns in them, so that nothing jumps.
-        val tsec = (timeMs % 600000L) / 1000f
+        val tsec = shaderClock(m)
         val tw = 6.2831855f / 600f
-        // The camera breathes a little (never still, never quick).
-        val breathe = 1f + 0.005f * sin(tw * 3f * tsec)
+        // The camera breathes and sways (never still, never quick).
+        val breathe = 1f + 0.010f * sin(tw * 6f * tsec)
         val radius = w * pose.r * m.zoom * p.size * breathe
-        val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.08f, d) + m.tiltX * w * lerp(0.015f, 0.035f, d) + w * 0.004f * sin(tw * 5f * tsec)
-        val cyTop = h * pose.cy + m.tiltY * h * 0.015f + h * 0.003f * sin(tw * 7f * tsec + 1.3f)
+        val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.08f, d) + m.tiltX * w * lerp(0.015f, 0.035f, d) + w * 0.006f * sin(tw * 9f * tsec)
+        val cyTop = h * pose.cy + m.tiltY * h * 0.015f + h * 0.004f * sin(tw * 11f * tsec + 1.3f)
         val cy = h - cyTop
         val moon = scene == SuperScene.Moon
         val rings = scene == SuperScene.Saturn && ringTex != 0
         // How close the camera is (0 on the lock screen and at the home position, 1 at the closest zoom).
         val near = ((d - 0.4f) / 0.4f).coerceIn(0f, 1f)
-        val reach = radius * (if (rings) 2.45f else 1.32f)
+        // (while a ring of light runs out from the body the box is wider)
+        val reach = radius * maxOf(if (rings) 2.45f else 1.32f, if (m.ping < 1f) 1.95f else 0f)
         val x0 = maxOf(0f, cx - reach)
         val x1 = minOf(w.toFloat(), cx + reach)
         val y0 = maxOf(0f, cy - reach)
@@ -970,14 +1020,7 @@ internal class SuperGl(
         GLES20.glUniform3f(prog.u("uPlanet"), cx, cy, radius)
         GLES20.glUniformMatrix3fv(prog.u("uRot"), 1, false, rot, 0)
         if (moon) {
-            val sx = -0.60f
-            val sy = 0.45f
-            val sz = 0.66f
-            val len = sqrt(sx * sx + sy * sy + sz * sz)
-            GLES20.glUniform3f(prog.u("uSun"), sx / len, sy / len, sz / len)
-            lastSunX = sx / len
-            lastSunY = sy / len
-            lastSunZ = sz / len
+            sunTo(prog, -0.60f, 0.45f, 0.66f, m.sunSweep)
             GLES20.glUniform1i(prog.u("uKind"), 1)
             // The terrain's shadows are felt more the closer the camera is; a little sharpening where the picture is magnified.
             GLES20.glUniform1f(prog.u("uRelief"), 1.3f + 0.4f * near)
@@ -993,14 +1036,7 @@ internal class SuperGl(
             val terrain = normalTex != 0 && look.relief > 0f
             // The sun lies low, as on the Moon, where the terrain is to show.
             val low = terrain || look.pseudo > 0f
-            val sx = if (low) -0.60f else -0.52f
-            val sy = if (low) 0.45f else 0.40f
-            val sz = if (low) 0.66f else 0.75f
-            val len = sqrt(sx * sx + sy * sy + sz * sz)
-            GLES20.glUniform3f(prog.u("uSun"), sx / len, sy / len, sz / len)
-            lastSunX = sx / len
-            lastSunY = sy / len
-            lastSunZ = sz / len
+            sunTo(prog, if (low) -0.60f else -0.52f, if (low) 0.45f else 0.40f, if (low) 0.66f else 0.75f, m.sunSweep)
             GLES20.glUniform1i(prog.u("uKind"), albedoKind)
             // The terrain of the bodies whose heights are known; where they are not, relief is read from the picture's brightness.
             GLES20.glUniform1f(prog.u("uRelief"), if (terrain) look.relief * (0.8f + 0.5f * near) else 0f)
@@ -1015,8 +1051,8 @@ internal class SuperGl(
             GLES20.glUniform1f(prog.u("uGain"), if (earth) 1.15f else 1.05f)
             GLES20.glUniform1f(prog.u("uLimb"), if (earth) 0.5f else 1f)
             GLES20.glUniform1f(prog.u("uDetail"), 0f)
-            // The clouds of the Earth drift against the ground: once round in forty minutes.
-            GLES20.glUniform1f(prog.u("uCloud"), (timeMs % 2_400_000L) / 2_400_000f)
+            // The clouds of the Earth drift against the ground: once round in 900 seconds of the scene's clock.
+            GLES20.glUniform1f(prog.u("uCloud"), (m.clock % 900.0).toFloat() / 900f)
         }
         // The haze round some planets.
         when (scene) {
@@ -1026,6 +1062,8 @@ internal class SuperGl(
             SuperScene.Jupiter -> GLES20.glUniform4f(prog.u("uGlow"), 0.910f, 0.784f, 0.627f, 0.20f)
             SuperScene.Neptune -> GLES20.glUniform4f(prog.u("uGlow"), 0.353f, 0.549f, 1.000f, 0.30f)
             SuperScene.Earth -> GLES20.glUniform4f(prog.u("uGlow"), 0.290f, 0.639f, 1.000f, 0.34f)
+            // Pluto's thin blue haze.
+            SuperScene.Pluto -> GLES20.glUniform4f(prog.u("uGlow"), 0.449f, 0.620f, 1.000f, 0.22f)
             else -> GLES20.glUniform4f(prog.u("uGlow"), 0f, 0f, 0f, 0f)
         }
         GLES20.glUniform1f(prog.u("uTime"), tsec)
@@ -1039,7 +1077,7 @@ internal class SuperGl(
                 SuperScene.Mars -> GLES20.glUniform4f(prog.u("uHaze"), 0.93f, 0.74f, 0.55f, 0.14f)
                 else -> GLES20.glUniform4f(prog.u("uHaze"), 0f, 0f, 0f, 0f)
             }
-            GLES20.glUniform1f(prog.u("uHazeSpin"), if (scene == SuperScene.Venus) 3f else 1f)
+            GLES20.glUniform1f(prog.u("uHazeSpin"), if (scene == SuperScene.Venus) 4f else 2f)
             GLES20.glUniform1f(
                 prog.u("uRim"),
                 when (scene) {
@@ -1047,6 +1085,7 @@ internal class SuperGl(
                     SuperScene.Mars -> 0.30f
                     SuperScene.Neptune -> 0.45f
                     SuperScene.Jupiter, SuperScene.Saturn -> 0.22f
+                    SuperScene.Pluto -> 0.35f
                     else -> 0f
                 },
             )
@@ -1056,6 +1095,11 @@ internal class SuperGl(
         val ringAngle = 0.297f + 0.16f * m.tiltX + 0.05f * m.panX + 0.022f * sin(tw * 5f * tsec)
         val open = (0.30f + (abs(sin(m.lat)) - 0.199f) * 0.8f + 0.05f * m.tiltY + 0.016f * sin(tw * 4f * tsec + 0.9f)).coerceIn(0.12f, 0.62f)
         GLES20.glUniform4f(prog.u("uRing"), if (rings) 1f else 0f, ringAngle, open, 0f)
+        // What happened a moment ago: a ring of light running out from the body, a flash; and the little effects of this body.
+        GLES20.glUniform1f(prog.u("uPing"), m.ping)
+        GLES20.glUniform1f(prog.u("uFlash"), m.flash)
+        val fx = fxOf(scene)
+        GLES20.glUniform4f(prog.u("uFx"), fx.storm, fx.impact, fx.volcano, fx.spec)
         sun[0] = lastSunX
         sun[1] = lastSunY
         sun[2] = lastSunZ
@@ -1074,7 +1118,7 @@ internal class SuperGl(
         GLES20.glUniform1i(prog.u("uRingTex"), 3)
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         // What hangs behind the planet (a far-off Earth or Jupiter, the moons on the far side of their orbits), the planet, then what is in front.
-        placeOrbiters(timeMs, cx, cy, radius, if (rings) ringAngle else ORBIT_ROLL, if (rings) asin(open.coerceIn(0f, 1f)) else ORBIT_ELEV)
+        placeOrbiters(m.clock, cx, cy, radius, if (rings) ringAngle else ORBIT_ROLL, if (rings) asin(open.coerceIn(0f, 1f)) else ORBIT_ELEV)
         drawDistant(w, h, tsec, d, m)
         drawOrbiters(w, h, tsec, radius, cx, cy, behind = true)
         GLES20.glUseProgram(prog.id)
@@ -1109,7 +1153,7 @@ internal class SuperGl(
     }
 
     /** A chosen photo, a little bigger than the screen so it has room to move with the tilt and the pages. */
-    private fun drawPhoto(w: Int, h: Int, timeMs: Long, m: SuperMotion) {
+    private fun drawPhoto(w: Int, h: Int, m: SuperMotion) {
         val prog = sprite ?: return
         if (spriteTex == 0) return
         SuperCamera.pose(scene, m.lockFly, m.depth.coerceIn(0f, 1f), pose)
@@ -1125,7 +1169,8 @@ internal class SuperGl(
         GLES20.glUniform1f(prog.u("uSpotGain"), if (scene == SuperScene.Flag) 1.8f else 1f)
         // The effects of the "Iwo Jima" picture (the waving flag, the Moon's halo, clouds, stars); the other photos are left as they are.
         GLES20.glUniform1f(prog.u("uFx"), if (scene == SuperScene.Flag) 1f else 0f)
-        GLES20.glUniform1f(prog.u("uTimeP"), (timeMs % 600000L) / 1000f)
+        GLES20.glUniform1f(prog.u("uTimeP"), shaderClock(m))
+        GLES20.glUniform1f(prog.u("uFlash"), m.flash)
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, spriteTex)
         GLES20.glUniform1i(prog.u("uTex"), 0)
@@ -1155,6 +1200,8 @@ internal class SuperGl(
         GLES20.glUniform4f(prog.u("uBox"), 0f, 0f, w.toFloat(), h.toFloat())
         GLES20.glUniform1i(prog.u("uMode"), 1)
         GLES20.glUniform1f(prog.u("uSpotGain"), 1f)
+        GLES20.glUniform1f(prog.u("uFx"), 0f)
+        GLES20.glUniform1f(prog.u("uFlash"), 0f)
         GLES20.glUniform1i(prog.u("uTex"), 0)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
     }
@@ -1227,6 +1274,16 @@ void main() {
 
         const val SKY_VERTEX = BOX_VERTEX
 
+        /** A black layer of the opacity [uA] over the picture (the always-on screen dims everything with it). */
+        const val DIM_FRAGMENT = """#version 300 es
+precision mediump float;
+uniform float uA;
+out vec4 fragColor;
+void main() {
+  fragColor = vec4(0.0, 0.0, 0.0, uA);
+}
+"""
+
         const val SKY_FRAGMENT = """#version 300 es
 precision highp float;
 uniform vec2 uRes;
@@ -1234,6 +1291,9 @@ uniform float uTime;
 uniform vec2 uShift;
 uniform float uSpread;
 uniform float uStars;
+uniform float uSkyOn;
+uniform float uWarp;
+uniform float uFlash;
 out vec4 fragColor;
 
 float hash(vec2 p) {
@@ -1250,6 +1310,11 @@ float vn2(vec2 p) {
 }
 
 void main() {
+  if (uSkyOn < 0.5) {
+    // The always-on screen: black, nothing lit but the body.
+    fragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+  }
   vec2 frag = gl_FragCoord.xy;
   float unit = uRes.x / 1080.0;
   vec2 uvn = frag / uRes;
@@ -1257,14 +1322,15 @@ void main() {
   vec3 c = mix(vec3(0.039, 0.067, 0.157), vec3(0.004, 0.008, 0.039), smoothstep(0.0, 1.0, t));
   // The sun is beyond the upper left corner: a warm glow there.
   float sunG = pow(clamp(1.0 - length((uvn - vec2(0.0, 1.0)) * vec2(1.0, 0.55)) * 0.95, 0.0, 1.0), 3.0);
-  c += vec3(1.0, 0.86, 0.66) * sunG * 0.085;
+  c += vec3(1.0, 0.86, 0.66) * sunG * (0.085 + 0.30 * uFlash);
   if (uStars > 0.5) {
-    // A faint band of the Milky Way: stars too far off to tell apart, a little dust in it.
+    // A faint band of the Milky Way: stars too far off to tell apart, a little dust in it that drifts round slowly (twice in the 600 seconds).
+    float nd = uTime * (6.2831853 * 2.0 / 600.0);
     vec2 qb = (frag - uRes * 0.5 - uShift * 0.15) / uRes.y;
     float across = dot(qb, vec2(-0.5, 0.866)) + 0.08;
     float band = exp(-across * across / 0.03);
-    float mw = band * (0.30 + 0.70 * vn2(qb * 5.0 + 7.0)) * (0.55 + 0.45 * vn2(qb * 17.0 + 2.0));
-    c += vec3(0.085, 0.100, 0.165) * mw;
+    float mw = band * (0.30 + 0.70 * vn2(qb * 5.0 + 7.0 + 0.35 * vec2(sin(nd), cos(nd)))) * (0.55 + 0.45 * vn2(qb * 17.0 + 2.0 - 0.2 * vec2(cos(nd), sin(nd))));
+    c += vec3(0.085, 0.100, 0.165) * mw * (1.0 + 0.8 * uFlash);
     vec2 mid = uRes * 0.5;
     for (int i = 0; i < 3; i++) {
       float fi = float(i);
@@ -1276,22 +1342,28 @@ void main() {
       float h = hash(id + fi * 31.7);
       if (h > 0.45) {
         vec2 pos = 0.2 + 0.6 * vec2(hash(id + 11.3), hash(id + 57.1));
-        float d = length((f - pos) * cs);
+        vec2 dv = (f - pos) * cs;
         float rad = (0.8 + 1.5 * hash(id + 3.7)) * unit;
-        // 86 cycles in the 600 seconds uTime counts: the twinkle never jumps when the count starts again.
-        float tw = 0.6 + 0.4 * sin(uTime * 0.90058 + 6.2831 * hash(id + 5.5));
-        float b = (1.0 - smoothstep(rad * 0.35, rad, d)) * tw * (0.55 + 0.45 * hash(id + 9.9));
+        // While the camera flies the stars stretch to streaks that run outwards from the middle of the picture.
+        float stretch = 1.0 + uWarp * (4.0 + 8.0 * depthF);
+        vec2 rv = (id + pos) * cs - mid + uShift * depthF;
+        vec2 rd = rv / max(length(rv), 1.0);
+        float along = dot(dv, rd);
+        float d = length(vec2(along < 0.0 ? along / stretch : along, length(dv - rd * along)));
+        // 258 cycles in the 600 seconds uTime counts: the twinkle never jumps when the count starts again.
+        float tw = 0.6 + 0.4 * sin(uTime * 2.70177 + 6.2831 * hash(id + 5.5));
+        float b = (1.0 - smoothstep(rad * 0.35, rad, d)) * tw * (0.55 + 0.45 * hash(id + 9.9)) * (1.0 + 1.2 * uWarp) / sqrt(stretch);
         // Some stars are blue, some orange.
         float kind = hash(id + 21.7);
         vec3 starCol = kind > 0.80 ? vec3(0.70, 0.82, 1.0) : (kind > 0.62 ? vec3(1.0, 0.82, 0.62) : vec3(0.92, 0.94, 1.0));
         c += starCol * b;
       }
     }
-    // Now and then a shooting star crosses the sky.
-    for (int k = 0; k < 2; k++) {
-      float tt = uTime + float(k) * 8.5;
-      float slot = floor(tt / 17.0);
-      float lt = tt - slot * 17.0;
+    // Now and then a shooting star crosses the sky (one in ten seconds at the most, three at a time).
+    for (int k = 0; k < 3; k++) {
+      float tt = uTime + float(k) * 3.7;
+      float slot = floor(tt / 10.0);
+      float lt = tt - slot * 10.0;
       if (lt < 1.1) {
         float h1 = hash(vec2(slot, float(k) + 3.1));
         float h2 = hash(vec2(slot + 7.7, float(k)));
@@ -1431,6 +1503,7 @@ uniform vec4 uSpot;
 uniform float uSpotGain;
 uniform float uFx;
 uniform float uTimeP;
+uniform float uFlash;
 out vec4 fragColor;
 
 float hsh(vec2 p) {
@@ -1481,10 +1554,10 @@ void main() {
       // The Moon breathes: a halo round it, a little stronger and weaker.
       vec2 dm = vec2((vUv.x - 0.343) * 0.4665, vUv.y - 0.495);
       float halo = exp(-dot(dm, dm) / (2.0 * 0.040 * 0.040));
-      float breath = 0.88 + 0.12 * sin(uTimeP * cyc * 12.0);
-      rgb += vec3(1.0, 0.92, 0.76) * halo * 0.30 * breath * (0.55 + 0.45 * sky);
+      float breath = 0.86 + 0.14 * sin(uTimeP * cyc * 40.0);
+      rgb += vec3(1.0, 0.92, 0.76) * halo * 0.30 * breath * (0.55 + 0.45 * sky) * (1.0 + 2.5 * uFlash);
       // Thin clouds drift over the sky, lit by the Moon (they sway to and fro, so that the loop never jumps).
-      float drift = 0.16 * sin(uTimeP * cyc * 3.0);
+      float drift = 0.16 * sin(uTimeP * cyc * 6.0);
       vec2 q = vec2(vUv.x * 0.4665 * 5.0 + drift, vUv.y * 5.0);
       float cl = vn2(q) * 0.55 + vn2(q * 2.3 + 7.0) * 0.30 + vn2(q * 5.1 + 3.0) * 0.15;
       float cloud = smoothstep(0.50, 0.85, cl) * sky;
@@ -1499,6 +1572,8 @@ void main() {
       // The statue is lit from below by floodlights, which flicker ever so slightly.
       rgb *= 1.0 + 0.025 * smoothstep(0.55, 0.9, vUv.y) * sin(uTimeP * cyc * 40.0 + 2.0);
     }
+    // A flash lights the whole picture for a moment.
+    rgb *= 1.0 + 0.22 * uFlash;
     fragColor = vec4(rgb, c.a);
     return;
   }
@@ -1540,6 +1615,9 @@ uniform float uTime;
 uniform vec4 uHaze;
 uniform float uHazeSpin;
 uniform float uRim;
+uniform float uPing;
+uniform float uFlash;
+uniform vec4 uFx;
 out vec4 fragColor;
 
 const float PI = 3.14159265;
@@ -1562,6 +1640,11 @@ float vn(vec3 x) {
 
 float hr(float x) {
   return fract(sin(x * 12.9898) * 43758.5453);
+}
+
+// (pow with a negative base is undefined on some graphics chips: squares are written out)
+float sq(float x) {
+  return x * x;
 }
 
 // Fine cloud structure for the gas planets (the maps end where the spacecraft's pictures end): noise with its cells pressed
@@ -1623,6 +1706,9 @@ vec4 ringColor(vec3 r, float rho, vec3 rn) {
   float spokes = smoothstep(0.60, 0.90, sp) * smoothstep(1.50, 1.58, rho) * (1.0 - smoothstep(1.90, 1.98, rho));
   float come = 0.5 + 0.5 * sin(turn * 4.0 + 1.7);
   float bright = pr.y * lanes * (0.9 + 0.2 * g) * (1.0 - 0.5 * spokes * come);
+  // Ice crystals in the ring catch the sun and glint, here and there, as they travel round with their lane.
+  float spk = angNoise(ang, 160.0, lane * 2.9 + 31.0);
+  bright *= 1.0 + 0.8 * smoothstep(0.86, 0.99, spk) * (0.5 + 0.5 * sin(uTime * (6.2831853 * 90.0 / 600.0) + lane * 1.9));
   vec3 col = vec3(0.90, 0.81, 0.65) * (0.22 + 0.78 * bright);
   float lit = mix(0.70, 1.0, smoothstep(0.0, 0.30, abs(dot(rn, uSun))));
   float sb = dot(r, uSun);
@@ -1695,16 +1781,16 @@ void main() {
     vec3 qa = vec3(b.x, b.y * 5.0, b.z);
     if (uGas > 0.0) {
       // The belts' edges meander and curl: the map is read a little to the side, by a noise that is drawn out along the bands.
-      // The noise slides in a circle (twice in the 600 seconds) so that the edges of the belts keep curling, and the bands sway
+      // The noise slides in a circle (six times in the 600 seconds) so that the edges of the belts keep curling, and the bands sway
       // against each other, as the winds of the planet pull them.
-      float w1 = uTime * (6.2831853 * 2.0 / 600.0);
+      float w1 = uTime * (6.2831853 * 6.0 / 600.0);
       vec3 qt = qa + vec3(0.012 * sin(w1), 0.0, 0.012 * cos(w1));
       float wu = fbm(qt * 40.0 + 17.0) - 0.47;
       float wv = fbm(qt * 40.0) - 0.47;
       float bu = fbm(qt * 9.0 + 5.0) - 0.47;
       float bv = fbm(qt * 9.0 + 29.0) - 0.47;
       uvl += uGas * vec2(wu * 0.0012 + bu * 0.0050, wv * 0.0016 + bv * 0.0056);
-      uvl.x += uGas * 0.0035 * sin(lat * 7.0 + 1.3) * sin(uTime * (6.2831853 * 3.0 / 600.0));
+      uvl.x += uGas * 0.0035 * sin(lat * 7.0 + 1.3) * sin(uTime * (6.2831853 * 9.0 / 600.0));
     }
     albedo = textureGrad(uAlbedo, uvl, gx, gy).rgb;
     if (uSharp > 0.0) {
@@ -1760,7 +1846,7 @@ void main() {
   if (uRim > 0.0 && uKind != 3) {
     // The air at the rim of the day side.
     float dayR = clamp(dot(n, uSun) * 2.0 + 0.3, 0.0, 1.0);
-    col = clamp(col + uGlow.rgb * (uRim * pow(1.0 - n.z, 3.0) * dayR), 0.0, 1.0);
+    col = clamp(col + uGlow.rgb * (uRim * (1.0 + 0.2 * sin(uTime * (6.2831853 * 100.0 / 600.0))) * pow(1.0 - n.z, 3.0) * dayR), 0.0, 1.0);
   }
   if (uKind == 3) {
     float day = clamp(dot(n, uSun) * 3.0 + 0.4, 0.0, 1.0);
@@ -1771,22 +1857,89 @@ void main() {
     col += vec3(1.0, 0.95, 0.85) * glint * 0.6;
     float cshade = clamp(uAmbient + 1.1 * pow(clamp(dot(n, uSun), 0.0, 1.0), 0.8), 0.0, 1.0);
     col = mix(col, vec3(cshade), cl * 0.92);
-    col += vec3(1.0, 0.76, 0.42) * (ex.r * 1.4) * (1.0 - day) * (1.0 - cl * 0.8);
+    float flick = 0.80 + 0.40 * sin(uTime * (6.2831853 * 150.0 / 600.0) + 40.0 * vn(b * 200.0));
+    col += vec3(1.0, 0.76, 0.42) * (ex.r * 1.4 * flick) * (1.0 - day) * (1.0 - cl * 0.8);
+    // The line where day turns to night glows red-orange in the air and the clouds.
+    float dk = dot(n, uSun) / 0.16;
+    float dusk = exp(-dk * dk);
+    col += vec3(1.0, 0.45, 0.16) * dusk * (0.55 + 0.45 * cl) * 0.20;
     float rim = pow(1.0 - n.z, 2.6);
     col += vec3(0.30, 0.58, 1.0) * rim * (0.12 + 0.88 * day) * 0.9;
     // The aurora: curtains round the poles that come and go on the night side.
     float alat = abs(lat);
     float zone = smoothstep(1.10, 1.20, alat) * (1.0 - smoothstep(1.28, 1.38, alat));
-    float fl = uTime * (6.2831853 * 6.0 / 600.0);
+    float fl = uTime * (6.2831853 * 30.0 / 600.0);
     float rays = fbm(vec3(b.x * 7.0, b.y * 1.2, b.z * 7.0) + vec3(0.0, 0.5 * sin(fl), 0.5 * cos(fl)));
     float au = zone * smoothstep(0.30, 0.78, rays) * (1.0 - smoothstep(0.0, 0.7, day)) * (1.0 - cl * 0.7);
     col += mix(vec3(0.15, 1.0, 0.45), vec3(0.55, 0.30, 1.0), smoothstep(0.55, 0.95, rays)) * au * 0.75;
     col = clamp(col, 0.0, 1.0);
   }
+  // What happens on this body: the sun's glint on ice, lightning in the clouds, rocks hitting, volcanoes glowing.
+  float nightW = 1.0 - smoothstep(0.0, 0.35, dot(n, uSun));
+  if (uFx.w > 0.0) {
+    vec3 hv2 = normalize(uSun + vec3(0.0, 0.0, 1.0));
+    float spec = pow(max(dot(nv, hv2), 0.0), 26.0);
+    float lm = dot(albedo, vec3(0.299, 0.587, 0.114));
+    col += vec3(1.0, 0.97, 0.92) * spec * uFx.w * (0.3 + lm) * (0.9 + 0.1 * sin(uTime * (6.2831853 * 40.0 / 600.0)));
+  }
+  if (uFx.x > 0.0) {
+    // Lightning: now and then a flash lights a patch of the clouds, most of all on the night side.
+    float sl = uTime * 0.8;
+    float slot = floor(sl);
+    float ft = fract(sl);
+    if (hr(slot * 1.37 + 7.1) > 0.50) {
+      vec2 fc = (vec2(hr(slot * 2.11 + 3.3), hr(slot * 0.73 + 9.7)) * 2.0 - 1.0) * 0.72;
+      vec2 dq = p - fc;
+      float dd = dot(dq, dq);
+      // A main stroke and two weaker ones after it.
+      float fl2 = exp(-ft * 9.0) * (0.45 + 0.55 * step(0.0, sin(ft * 55.0))) + 0.5 * exp(-sq((ft - 0.22) / 0.04));
+      float blob = 0.50 * exp(-dd / 0.012) + 0.50 * exp(-dd / 0.07);
+      float inCloud = (uKind == 3) ? 0.25 + 0.75 * cl : 1.0;
+      col += vec3(0.78, 0.84, 1.0) * blob * fl2 * 1.05 * uFx.x * (0.4 + 0.6 * nightW) * inCloud * step(length(fc), 0.85);
+    }
+  }
+  if (uFx.y > 0.0) {
+    // A rock hits the surface: a flash that dies in a moment, and a ring of dust that spreads from it.
+    float sl2 = uTime * 0.5;
+    float slot2 = floor(sl2);
+    float ft2 = fract(sl2);
+    if (hr(slot2 * 3.17 + 1.9) > 0.50) {
+      vec2 ic = (vec2(hr(slot2 * 5.31 + 2.2), hr(slot2 * 1.91 + 6.6)) * 2.0 - 1.0) * 0.8;
+      float di = length(p - ic);
+      float core = exp(-di * di / 0.00025) * exp(-ft2 * 12.0);
+      float shock = exp(-sq((di - ft2 * 0.22) / 0.014)) * (1.0 - ft2) * smoothstep(0.02, 0.10, ft2);
+      col += (vec3(1.0, 0.93, 0.80) * core * 1.6 + vec3(0.90, 0.85, 0.80) * shock * 0.30) * uFx.y * (1.0 - 0.5 * clamp(dot(n, uSun), 0.0, 1.0)) * step(length(ic), 0.9);
+    }
+  }
+  if (uFx.z > 0.0) {
+    // Volcanoes: six hot spots, each with a rhythm of its own, glow red-orange, most strongly on the night side.
+    float vs = 0.0;
+    for (int i = 0; i < 6; i++) {
+      float fi = float(i);
+      float vlo = hr(fi * 4.13 + 1.0) * 6.2831853;
+      float vla = (hr(fi * 7.77 + 2.0) - 0.5) * 2.2;
+      vec3 hs = vec3(sin(vlo) * cos(vla), sin(vla), cos(vlo) * cos(vla));
+      float cs = dot(b, hs);
+      float pulse = 0.55 + 0.45 * sin(uTime * (6.2831853 / 600.0) * (60.0 + 17.0 * fi) + fi * 2.3);
+      vs += (exp((cs - 1.0) / 0.0016) + 0.30 * exp((cs - 1.0) / 0.014)) * pulse;
+    }
+    col += vec3(1.0, 0.45, 0.12) * vs * uFx.z * 1.5 * (0.5 + 0.9 * nightW);
+  }
+  col = clamp(col, 0.0, 1.0);
+  if (uFlash > 0.0) col = clamp(col * (1.0 + 0.45 * uFlash) + vec3(0.08) * uFlash * (0.4 + 0.6 * pow(1.0 - n.z, 1.5)), 0.0, 1.0);
   float edge = clamp((1.0 - rr) * uPlanet.z, 0.0, 1.0);
   vec4 res = vec4(col * edge, edge);
   float g = uGlow.a * pow(clamp(1.0 - (rr - 1.0) / 0.28, 0.0, 1.0), 2.0);
   res = res + vec4(uGlow.rgb * g, g) * (1.0 - res.a);
+  if (uPing < 1.0) {
+    // A ring of light runs out from the body and fades.
+    float pe = 1.0 - (1.0 - uPing) * (1.0 - uPing);
+    float pw = 0.012 + 0.07 * pe;
+    float pring = exp(-sq((rr - (1.0 + 0.75 * pe)) / pw)) * pow(1.0 - uPing, 1.6);
+    vec3 pc = (uGlow.a > 0.0) ? mix(uGlow.rgb, vec3(1.0), 0.45) : vec3(0.82, 0.90, 1.0);
+    res += vec4(pc * pring * 0.55, pring * 0.35);
+  }
+  res.a = min(res.a, 1.0);
   if (uRing.x > 0.5) {
     float zr = -(rn.x * p.x + rn.y * p.y) / rn.z;
     vec3 rp = vec3(p, zr);

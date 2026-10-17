@@ -23,12 +23,14 @@ import kotlin.math.sin
  * A Super-Wallpaper that runs: its own thread draws in step with the screen (the launcher is never held up), the graphics
  * chip does the drawing (SuperGl) and, where a phone can't, the processor does (SuperRenderer). The live wallpaper
  * services and the previews are only shells round this. [demo] makes the flight lock screen → home screen run in a loop
- * (for the previews) instead of waiting for the phone to be locked and unlocked. Every call may come from any thread.
+ * (for the previews) instead of waiting for the phone to be locked and unlocked. [ambient] is the always-on screen: the body
+ * dimmed on black, turning slowly, drawn a few times a second. Every call may come from any thread.
  */
 class SuperLive(
     private val context: Context,
     private val photoFile: File? = null,
     private val demo: Boolean = false,
+    private val ambient: Boolean = false,
     /** Something went wrong: [fatal] if the wallpaper had to stop drawing, else it only changed how it draws (to the processor's pictures). */
     private val onProblem: (Throwable, Boolean) -> Unit = { _, _ -> },
 ) : SensorEventListener {
@@ -36,7 +38,7 @@ class SuperLive(
     private val thread = HandlerThread("zenith-wallpaper", Process.THREAD_PRIORITY_DISPLAY).apply { start() }
     private val handler = Handler(thread.looper)
     private val assets = context.applicationContext.assets
-    private val director = SuperDirector(context, demo)
+    private val director = SuperDirector(context, demo, ambient)
 
     @Volatile
     private var xOffset = 0.5f
@@ -157,6 +159,12 @@ class SuperLive(
         moving = true
     }
 
+    /** Someone tapped the wallpaper (the launcher passes the tap on): a flash, a ring of light, the clouds race. */
+    fun tap() = post {
+        director.tap(SystemClock.uptimeMillis())
+        moving = true
+    }
+
     /** The launcher zooms the wallpaper out (0 … 1): the app drawer, folders. */
     fun zoomOut(amount: Float) = post {
         director.zoomOut(amount)
@@ -190,8 +198,8 @@ class SuperLive(
             if (!visible) return
             try {
                 val gap = frameTimeNanos - lastDrawNs
-                // In step with the screen while something moves, every other refresh when it rests.
-                if (gap >= (if (moving) 14_000_000L else 30_000_000L)) {
+                // In step with the screen while something moves, every other refresh when it rests, a few times a second on the always-on screen.
+                if (gap >= (if (ambient) 90_000_000L else if (moving) 14_000_000L else 30_000_000L)) {
                     lastDrawNs = frameTimeNanos
                     moving = drawFrame(frameTimeNanos / 1_000_000L)
                 }
@@ -219,6 +227,8 @@ class SuperLive(
         } else if (canvasRenderer != null) {
             canvasRenderer = SuperRenderer(params.scene, photoFile, assets).also { it.prepare() }
         }
+        // The new scene comes in the way it does when the screen lights up: it flies in, with a flash and a ring of light.
+        if (visible) director.introduce(SystemClock.uptimeMillis())
     }
 
     /** The graphics chip can't do it (on this phone): from now on the processor draws. */
@@ -243,7 +253,7 @@ class SuperLive(
     private fun ensureRenderer(s: Surface) {
         if (gl != null || canvasRenderer != null) return
         if (!glFailed) {
-            val g = SuperGl(assets, photoFile, fullDetail = !demo && roomForDetail())
+            val g = SuperGl(assets, photoFile, fullDetail = !demo && !ambient && roomForDetail())
             if (g.start(s) && g.load(params.scene)) {
                 gl = g
                 return
@@ -309,7 +319,7 @@ class SuperLive(
     // ---------------------------------------------------------------------------------------------
 
     private fun startSensing() {
-        if (sensing || demo) return
+        if (sensing || demo || ambient) return
         val manager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return
         val sensor = manager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) ?: return
         sensing = manager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_UI, handler)
