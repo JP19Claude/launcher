@@ -34,7 +34,7 @@ import kotlin.math.sin
 object SuperAod {
 
     /** The brightness of the display while it runs – low; the picture is dimmed further by the setting. */
-    const val SCREEN_BRIGHTNESS = 0.10f
+    const val SCREEN_BRIGHTNESS = 0.20f
 
     /** The activity ends by itself after this long (the battery's and the screen's sake). */
     const val MAX_MS = 6L * 60L * 60L * 1000L

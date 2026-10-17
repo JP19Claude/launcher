@@ -33,6 +33,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.hearth.launcher.data.LauncherSettings
+import dev.hearth.launcher.system.GlimmerService
 import dev.hearth.launcher.wallpaper.SuperLiveView
 import dev.hearth.launcher.wallpaper.SuperMotion
 import dev.hearth.launcher.wallpaper.SuperParams
@@ -72,6 +73,9 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
     // Back from Android's preview: is it the wallpaper now?
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { active = SuperWallpaperService.isActiveNow(context) }
     val params = s.superParams
+    // Glimmer (the accessibility service) draws the AOD: is it on?
+    var glimmerOn by remember { mutableStateOf(GlimmerService.isEnabled) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { glimmerOn = GlimmerService.isEnabled }
     Section("Super-Wallpaper") {
         Box(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)) {
             SuperScenePreview(params, Modifier.fillMaxWidth().aspectRatio(0.72f).clip(RoundedCornerShape(24.dp)))
@@ -139,30 +143,39 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             checked = s.superStars,
         ) { v -> update { it.copy(superParams = it.superParams.copy(stars = v)) } }
         SwitchRow(
-            label = "Always-on-Bildschirm (AOD)",
-            description = "Der Körper gedimmt auf Schwarz, mit der Uhrzeit; er wandert ab und zu ein paar Pixel (gegen Einbrennen). Den echten AOD des Telefons darf Android nur dem Hersteller überlassen – darum läuft das als eigener Bildschirm und als Bildschirmschoner",
+            label = "Planet auf dem AOD",
+            description = "Der Körper gedimmt auf dem Always-on-Display des Telefons – als Standbild auf Schwarz, mit Uhr, Datum und Akku (Glimmers „Voller AOD“). Das geht nur über Glimmer: Die Bedienungshilfe „Glimmer“ muss an sein, sonst bleibt der AOD, wie ihn dein Telefon zeigt",
             checked = params.aod,
         ) { v -> update { it.copy(superParams = it.superParams.copy(aod = v)) } }
         if (params.aod) {
-            ActionRow(
-                label = "AOD-Bildschirm jetzt starten",
-                description = "Der Bildschirm bleibt an, sehr dunkel – Tippen beendet ihn, nach sechs Stunden endet er von selbst",
-                onClick = { openAodScreen(context) },
-            )
-            ActionRow(
-                label = "Als Bildschirmschoner einrichten",
-                description = "Öffnet Androids Einstellung: dort „ZENITH Planet“ wählen, Start „Beim Laden“ – dann geht der AOD-Bildschirm am Ladegerät von selbst an",
-                onClick = { openDreamSettings(context) },
-            )
+            if (!glimmerOn) {
+                ActionRow(
+                    label = "Glimmer einschalten",
+                    description = "Die Bedienungshilfe „Glimmer“ ist aus – ohne sie bleibt der AOD ohne Planet. Öffnet Androids Bedienungshilfen: dort „Glimmer“ wählen und einschalten",
+                    onClick = {
+                        runCatching { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    },
+                )
+            }
             SliderRow(
                 label = "AOD-Helligkeit",
                 value = params.aodDim,
                 range = 0.1f..0.8f,
                 valueText = "${(params.aodDim * 100f).roundToInt()} %",
             ) { v -> update { it.copy(superParams = it.superParams.copy(aodDim = v)) } }
+            ActionRow(
+                label = "AOD-Bildschirm jetzt starten",
+                description = "Zusätzlich ein Dauerbildschirm: das Display bleibt an, sehr dunkel, mit dem sich drehenden Körper und der Uhrzeit – Tippen beendet ihn, nach sechs Stunden endet er von selbst",
+                onClick = { openAodScreen(context) },
+            )
+            ActionRow(
+                label = "Als Bildschirmschoner einrichten",
+                description = "Öffnet Androids Einstellung: dort „ZENITH Planet“ wählen, Start „Beim Laden“ – dann geht der Dauerbildschirm am Ladegerät von selbst an",
+                onClick = { openDreamSettings(context) },
+            )
             SwitchRow(
-                label = "Uhrzeit im AOD",
-                description = "Die Uhrzeit unter dem Körper, dünn und gedimmt",
+                label = "Uhrzeit im Dauerbildschirm",
+                description = "Die Uhrzeit unter dem Körper im Dauerbildschirm und im Bildschirmschoner, dünn und gedimmt",
                 checked = params.aodClock,
             ) { v -> update { it.copy(superParams = it.superParams.copy(aodClock = v)) } }
         }

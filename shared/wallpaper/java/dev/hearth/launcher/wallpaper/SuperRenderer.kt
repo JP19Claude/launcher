@@ -117,8 +117,6 @@ class SuperMotion(
      * happened (the "Schwung" of an unlocking, a tap, a swipe), and never jumps – everything that moves on its own is drawn from it.
      */
     var clock: Double = 0.0,
-    /** A ring of light that runs out from the body after something happened: 0 = just begun … 1 = gone. */
-    var ping: Float = 1f,
     /** A flash of light on the body and in the sky (0 … 1), which fades by itself. */
     var flash: Float = 0f,
     /** How fast the camera is flying in or out (0 … 1): the stars stretch to streaks. */

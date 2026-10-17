@@ -57,11 +57,18 @@ class LockStage(private val service: GlimmerService, private val onShown: () -> 
                 .collect { show -> if (show) add(settings, locked, dozing) else remove() }
         }
         // The full AOD shows the chosen picture, or else the wallpaper: read (smaller) when it is
-        // switched on or another picture is chosen.
+        // switched on or another picture is chosen. With "Planet auf dem AOD" it shows a still of the
+        // Super-Wallpaper's body instead (drawn again whenever the scene or its options change).
         s.launch {
-            settings.map { it.fullAod to it.aodImage }.distinctUntilChanged().collect { (on, image) ->
-                if (on) wallpaper.value = withContext(Dispatchers.IO) { readPicture(image) ?: readWallpaper() }
-            }
+            settings.map { Triple(it.fullAod, it.aodImage, if (it.superParams.aod) it.superParams else null) }
+                .distinctUntilChanged()
+                .collect { (on, image, planet) ->
+                    when {
+                        planet != null -> wallpaper.value = withContext(Dispatchers.IO) { planetStill() ?: readPicture(image) ?: readWallpaper() }
+                        on -> wallpaper.value = withContext(Dispatchers.IO) { readPicture(image) ?: readWallpaper() }
+                        else -> Unit
+                    }
+                }
         }
     }
 
@@ -70,6 +77,14 @@ class LockStage(private val service: GlimmerService, private val onShown: () -> 
         scope?.cancel()
         scope = null
     }
+
+    /** The still of the Super-Wallpaper's body for the AOD (720 wide, the screen's proportions). */
+    private fun planetStill(): ImageBitmap? = runCatching {
+        val metrics = service.resources.displayMetrics
+        val w = 720
+        val h = (w * metrics.heightPixels.toFloat() / metrics.widthPixels.coerceAtLeast(1)).toInt().coerceIn(w, w * 3)
+        dev.hearth.launcher.wallpaper.SuperPrefs.aodStill(service, w, h)?.asImageBitmap()
+    }.getOrNull()
 
     private fun readPicture(name: String): ImageBitmap? = if (name.isBlank()) null else runCatching {
         android.graphics.BitmapFactory.decodeFile(java.io.File(service.filesDir, name).path)?.asImageBitmap()

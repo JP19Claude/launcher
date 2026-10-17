@@ -58,7 +58,7 @@ import kotlin.math.sin
 @Composable
 fun LockStageContent(s: LauncherSettings, locked: Boolean, dozing: Boolean, wallpaper: ImageBitmap?) {
     when {
-        dozing && s.fullAod -> FullAod(s, wallpaper)
+        dozing && (s.fullAod || s.superParams.aod) -> FullAod(s, wallpaper)
         dozing -> Unit
         locked -> LockExtras(s)
     }
@@ -108,6 +108,8 @@ private fun FullAod(s: LauncherSettings, wallpaper: ImageBitmap?) {
     val badges by NotificationHub.badges.collectAsStateWithLifecycle()
     val locale = Locale.getDefault()
     val palette = omegaPalette(s)
+    // How bright the picture is: the Super-Wallpaper's own setting when its body is on the AOD.
+    val light = if (s.superParams.aod) s.superParams.aodDim else s.aodBrightness.light
     // Burn-in: a small step every minute, round a little square.
     val dx = ((now.minute * 37) % 17 - 8).dp
     val dy = ((now.minute * 53) % 17 - 8).dp
@@ -117,7 +119,7 @@ private fun FullAod(s: LauncherSettings, wallpaper: ImageBitmap?) {
                 wallpaper,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                alpha = s.aodBrightness.light,
+                alpha = light,
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
@@ -126,7 +128,7 @@ private fun FullAod(s: LauncherSettings, wallpaper: ImageBitmap?) {
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            listOf(palette[0].copy(alpha = s.aodBrightness.light * 0.6f), Color.Black, palette[1].copy(alpha = s.aodBrightness.light * 0.5f)),
+                            listOf(palette[0].copy(alpha = light * 0.6f), Color.Black, palette[1].copy(alpha = light * 0.5f)),
                         ),
                     ),
             )

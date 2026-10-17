@@ -158,7 +158,7 @@ class MainActivity : Activity() {
         )
         column.addView(
             TextView(this).apply {
-                text = "Der Körper gedimmt auf Schwarz, mit der Uhrzeit; er wandert ab und zu ein paar Pixel (gegen Einbrennen). Den echten AOD des Telefons darf Android nur dem Hersteller überlassen – darum läuft das als eigener Bildschirm und als Bildschirmschoner."
+                text = "Der Körper gedimmt auf Schwarz, mit der Uhrzeit; er wandert ab und zu ein paar Pixel (gegen Einbrennen). Auf dem echten AOD des Telefons kann ein Live-Wallpaper nicht zeichnen (das darf Android nur dem Hersteller überlassen; ZENITH schafft es über seine Bedienungshilfe Glimmer) – darum läuft das hier als eigener Bildschirm und als Bildschirmschoner."
                 setTextColor(0xFFB9C1CC.toInt())
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
             },

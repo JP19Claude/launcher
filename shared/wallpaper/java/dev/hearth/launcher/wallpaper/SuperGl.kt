@@ -1005,8 +1005,7 @@ internal class SuperGl(
         val rings = scene == SuperScene.Saturn && ringTex != 0
         // How close the camera is (0 on the lock screen and at the home position, 1 at the closest zoom).
         val near = ((d - 0.4f) / 0.4f).coerceIn(0f, 1f)
-        // (while a ring of light runs out from the body the box is wider)
-        val reach = radius * maxOf(if (rings) 2.45f else 1.32f, if (m.ping < 1f) 1.95f else 0f)
+        val reach = radius * (if (rings) 2.45f else 1.32f)
         val x0 = maxOf(0f, cx - reach)
         val x1 = minOf(w.toFloat(), cx + reach)
         val y0 = maxOf(0f, cy - reach)
@@ -1095,8 +1094,7 @@ internal class SuperGl(
         val ringAngle = 0.297f + 0.16f * m.tiltX + 0.05f * m.panX + 0.022f * sin(tw * 5f * tsec)
         val open = (0.30f + (abs(sin(m.lat)) - 0.199f) * 0.8f + 0.05f * m.tiltY + 0.016f * sin(tw * 4f * tsec + 0.9f)).coerceIn(0.12f, 0.62f)
         GLES20.glUniform4f(prog.u("uRing"), if (rings) 1f else 0f, ringAngle, open, 0f)
-        // What happened a moment ago: a ring of light running out from the body, a flash; and the little effects of this body.
-        GLES20.glUniform1f(prog.u("uPing"), m.ping)
+        // What happened a moment ago: a flash; and the little effects of this body.
         GLES20.glUniform1f(prog.u("uFlash"), m.flash)
         val fx = fxOf(scene)
         GLES20.glUniform4f(prog.u("uFx"), fx.storm, fx.impact, fx.volcano, fx.spec)
@@ -1615,7 +1613,6 @@ uniform float uTime;
 uniform vec4 uHaze;
 uniform float uHazeSpin;
 uniform float uRim;
-uniform float uPing;
 uniform float uFlash;
 uniform vec4 uFx;
 out vec4 fragColor;
@@ -1899,7 +1896,7 @@ void main() {
     }
   }
   if (uFx.y > 0.0) {
-    // A rock hits the surface: a flash that dies in a moment, and a ring of dust that spreads from it.
+    // A rock hits the surface: a small flash that dies in a moment.
     float sl2 = uTime * 0.5;
     float slot2 = floor(sl2);
     float ft2 = fract(sl2);
@@ -1907,8 +1904,7 @@ void main() {
       vec2 ic = (vec2(hr(slot2 * 5.31 + 2.2), hr(slot2 * 1.91 + 6.6)) * 2.0 - 1.0) * 0.8;
       float di = length(p - ic);
       float core = exp(-di * di / 0.00025) * exp(-ft2 * 12.0);
-      float shock = exp(-sq((di - ft2 * 0.22) / 0.014)) * (1.0 - ft2) * smoothstep(0.02, 0.10, ft2);
-      col += (vec3(1.0, 0.93, 0.80) * core * 1.6 + vec3(0.90, 0.85, 0.80) * shock * 0.30) * uFx.y * (1.0 - 0.5 * clamp(dot(n, uSun), 0.0, 1.0)) * step(length(ic), 0.9);
+      col += vec3(1.0, 0.93, 0.80) * core * 1.6 * uFx.y * (1.0 - 0.5 * clamp(dot(n, uSun), 0.0, 1.0)) * step(length(ic), 0.9);
     }
   }
   if (uFx.z > 0.0) {
@@ -1931,14 +1927,6 @@ void main() {
   vec4 res = vec4(col * edge, edge);
   float g = uGlow.a * pow(clamp(1.0 - (rr - 1.0) / 0.28, 0.0, 1.0), 2.0);
   res = res + vec4(uGlow.rgb * g, g) * (1.0 - res.a);
-  if (uPing < 1.0) {
-    // A ring of light runs out from the body and fades.
-    float pe = 1.0 - (1.0 - uPing) * (1.0 - uPing);
-    float pw = 0.012 + 0.07 * pe;
-    float pring = exp(-sq((rr - (1.0 + 0.75 * pe)) / pw)) * pow(1.0 - uPing, 1.6);
-    vec3 pc = (uGlow.a > 0.0) ? mix(uGlow.rgb, vec3(1.0), 0.45) : vec3(0.82, 0.90, 1.0);
-    res += vec4(pc * pring * 0.55, pring * 0.35);
-  }
   res.a = min(res.a, 1.0);
   if (uRing.x > 0.5) {
     float zr = -(rn.x * p.x + rn.y * p.y) / rn.z;

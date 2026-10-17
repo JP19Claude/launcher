@@ -560,7 +560,7 @@ enum class GlassLook(val label: String) {
 
 /** OMEGA UI 18.1: does anything of the lock screen or the full AOD need Glimmer's stage? */
 fun LauncherSettings.wantsLockStage(): Boolean =
-    fullAod || lockClawd || lockEdge || lockCharge || lockGreeting || lockAtmosphere || lockBattery || lockOmega || lockMessage.isNotBlank()
+    fullAod || superParams.aod || lockClawd || lockEdge || lockCharge || lockGreeting || lockAtmosphere || lockBattery || lockOmega || lockMessage.isNotBlank()
 
 /** The color OMEGA Glass and OMEGA Fluid run in. */
 enum class OmegaColor(val label: String) {
@@ -2186,6 +2186,8 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
             "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerPrivacy", "accent", "animations",
+            // The Super-Wallpaper's body on the AOD (the still is drawn again when one of these changes).
+            "superAod", "superAodDim", "superScene", "superPlace", "superSize", "superPhoto",
         )
         const val KEY_CC_ENABLED = "ccEnabled"
     }

@@ -113,8 +113,6 @@ class SuperDirector(context: Context, private val demo: Boolean = false, private
     // flick makes it turn once.
     private var boost = 0f
     private var flash = 0f
-    private var pingAt = 0L
-    private var pingMs = 0L
     private var kickAt = -1L
     private var warp = 0f
     private var lastLogR = Float.NaN
@@ -167,7 +165,7 @@ class SuperDirector(context: Context, private val demo: Boolean = false, private
             landed = true
             motion.lockFly = 1f
             pending = LAND
-            burst(now, 0.22f, WELCOME_BOOST, 1000L)
+            burst(0.22f, WELCOME_BOOST)
         }
     }
 
@@ -187,7 +185,7 @@ class SuperDirector(context: Context, private val demo: Boolean = false, private
         holdOpenUntil = now + 1500L
         glide(1f, now, UNLOCK_MS, smooth = false)
         pending = FLIGHT
-        burst(now, 0.55f, UNLOCK_BOOST, 1700L)
+        burst(0.55f, UNLOCK_BOOST)
     }
 
     /** The launcher zooms the wallpaper out (0 = rest … 1 = fully out), for instance while the app drawer opens. */
@@ -199,22 +197,20 @@ class SuperDirector(context: Context, private val demo: Boolean = false, private
     fun introduce(now: Long) {
         if (ambient || demo) return
         show(now, true)
-        burst(now, 0.80f, INTRO_BOOST, 1800L)
+        burst(0.80f, INTRO_BOOST)
     }
 
     /** Someone tapped the wallpaper (the launcher says so): a flash, a ring of light, the clouds race, and – on the far view – the body turns once. */
     fun tap(now: Long) {
         if (ambient) return
-        burst(now, 0.45f, TAP_BOOST, 1400L)
+        burst(0.45f, TAP_BOOST)
         if (motion.depth < 0.5f && kickAt < 0L) kickAt = now
     }
 
-    /** A flash of [level], time running [boostLevel] times faster for a moment, and a ring of light that runs out in [ringMs]. */
-    private fun burst(now: Long, level: Float, boostLevel: Float, ringMs: Long) {
+    /** A flash of [level] and time running [boostLevel] times faster for a moment. */
+    private fun burst(level: Float, boostLevel: Float) {
         flash = max(flash, level)
         boost = max(boost, boostLevel)
-        pingAt = now
-        pingMs = ringMs
     }
 
     private fun glide(target: Float, now: Long, ms: Long, smooth: Boolean) {
@@ -247,12 +243,12 @@ class SuperDirector(context: Context, private val demo: Boolean = false, private
             if (!demoFlown && t >= DEMO_UNLOCK_AT) {
                 demoFlown = true
                 pending = FLIGHT
-                burst(now, 0.55f, UNLOCK_BOOST, 1700L)
+                burst(0.55f, UNLOCK_BOOST)
             }
             motion.lockFly = (t / LOCK_FLY_MS.toFloat()).coerceIn(0f, 1f)
             if (!landed && motion.lockFly >= SuperCamera.LOCK_ARRIVES) {
                 landed = true
-                burst(now, 0.30f, LAND_BOOST, 1200L)
+                burst(0.30f, LAND_BOOST)
             }
             motion.depth = if (t < DEMO_UNLOCK_AT) 0f else ((t - DEMO_UNLOCK_AT) / UNLOCK_MS.toFloat()).coerceIn(0f, 1f)
             moving = true
@@ -273,11 +269,11 @@ class SuperDirector(context: Context, private val demo: Boolean = false, private
                     if (locked) {
                         glide(0f, now, LOCK_MS, smooth = true)
                         pending = RELOCK
-                        burst(now, 0.25f, LOCK_BOOST, 900L)
+                        burst(0.25f, LOCK_BOOST)
                     } else {
                         glide(1f, now, UNLOCK_MS, smooth = false)
                         pending = FLIGHT
-                        burst(now, 0.55f, UNLOCK_BOOST, 1700L)
+                        burst(0.55f, UNLOCK_BOOST)
                     }
                 }
             }
@@ -291,7 +287,7 @@ class SuperDirector(context: Context, private val demo: Boolean = false, private
                 // The moment the body first reaches the middle it lands with a thump: a flash and a ring of light.
                 if (!landed && f >= SuperCamera.LOCK_ARRIVES) {
                     landed = true
-                    burst(now, 0.30f, LAND_BOOST, 1200L)
+                    burst(0.30f, LAND_BOOST)
                 }
                 if (f >= 1f) lockFlyOn = false else moving = true
             }
@@ -331,7 +327,7 @@ class SuperDirector(context: Context, private val demo: Boolean = false, private
                 // The scene or the place was changed in the settings: a close-up turns to the new place, a lock screen just changes.
                 if (motion.depth > 0.5f) {
                     turnToPlace(p, now, CHANGE_TURN_MS)
-                    burst(now, 0.35f, TAP_BOOST, 1200L)
+                    burst(0.35f, TAP_BOOST)
                 } else {
                     restLook(p, now)
                 }
@@ -367,7 +363,6 @@ class SuperDirector(context: Context, private val demo: Boolean = false, private
         flash *= exp(-FLASH_DECAY * s)
         if (flash < 0.004f) flash = 0f
         motion.flash = flash
-        motion.ping = if (pingMs > 0L) ((now - pingAt).toFloat() / pingMs).coerceIn(0f, 1f) else 1f
         // A small thump: the body swells a little with the flash, and shrinks with the launcher's zoom.
         motion.zoom = (1f - 0.14f * zoomOut) * (1f + 0.04f * flash)
 
@@ -383,7 +378,7 @@ class SuperDirector(context: Context, private val demo: Boolean = false, private
         warp += (min(rate * 0.30f, 1f) - warp) * (1f - exp(-10f * s))
         if (warp < 0.004f) warp = 0f
         motion.warp = warp
-        return boost > 0f || flash > 0f || warp > 0f || motion.ping < 1f
+        return boost > 0f || flash > 0f || warp > 0f
     }
 
     /** The always-on screen: the body hangs in the far view, turns slowly, and wanders a few pixels in a slow circle against burn-in. */
@@ -409,7 +404,6 @@ class SuperDirector(context: Context, private val demo: Boolean = false, private
         drift += s * AMBIENT_TURN * p.speed
         motion.spin = baseSpin(now)
         motion.lat = baseLat(now)
-        motion.ping = 1f
         motion.flash = 0f
         motion.warp = 0f
         motion.sunSweep = 0f
