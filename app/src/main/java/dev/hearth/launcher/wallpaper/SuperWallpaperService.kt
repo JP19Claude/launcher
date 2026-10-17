@@ -37,6 +37,7 @@ class SuperWallpaperService : WallpaperService() {
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
             val l = SuperLive(this@SuperWallpaperService, SuperPhoto.file(this@SuperWallpaperService), onProblem = problem)
+            lives.add(l)
             l.setParams(SuperPrefs.read(this@SuperWallpaperService))
             // In ZENITH's safe mode the wallpaper stands still and black, the launcher lives on.
             if (CrashGuard.safe) l.setBlank(true)
@@ -46,6 +47,7 @@ class SuperWallpaperService : WallpaperService() {
 
         override fun onDestroy() {
             prefs.unregisterOnSharedPreferenceChangeListener(listener)
+            live?.let { lives.remove(it) }
             live?.detach()
             live?.destroy()
             live = null
@@ -87,6 +89,19 @@ class SuperWallpaperService : WallpaperService() {
     }
 
     companion object {
+        /** The wallpapers of ZENITH that run now: the launcher is in the same process, so it can talk to them directly (Android's own way for a launcher to zoom a wallpaper is closed to apps). */
+        private val lives = java.util.concurrent.CopyOnWriteArrayList<SuperLive>()
+
+        /** ZENITH zooms the wallpaper out (0 = rest … 1 = fully out) while the app drawer, the search, a folder … is open; the wallpaper smooths it itself. */
+        fun zoomOut(amount: Float) {
+            lives.forEach { it.zoomOut(amount) }
+        }
+
+        /** Someone tapped an empty place of ZENITH's home screen: the wallpaper flashes. */
+        fun tap() {
+            lives.forEach { it.tap() }
+        }
+
         private var activeAt = 0L
         private var active = false
 

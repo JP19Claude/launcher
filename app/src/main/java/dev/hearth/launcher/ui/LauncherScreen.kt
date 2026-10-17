@@ -354,7 +354,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
         }
     }
     // ZENITH 21.5 (213), Super-Wallpaper: it goes with whatever opens over it – the app drawer, search, a folder, the widget picker, the edit
-    // mode: it is zoomed out (and turns a little) and comes back when they close (the wallpaper smooths the movement itself; Android 12 and up).
+    // mode: it is zoomed out (and turns a little) and comes back when they close (the wallpaper smooths the movement itself). The wallpaper runs in
+    // this very process, so it is told directly.
     val wallpaperZoomOut = when {
         drawerOpen -> 1f
         searchOpen -> 0.8f
@@ -364,18 +365,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
         else -> 0f
     }
     LaunchedEffect(wallpaperZoomOut) {
-        if (CrashGuard.safe || android.os.Build.VERSION.SDK_INT < 31) return@LaunchedEffect
-        if (!dev.hearth.launcher.wallpaper.SuperWallpaperService.isActive(context)) return@LaunchedEffect
-        runCatching { android.app.WallpaperManager.getInstance(context).setWallpaperZoomOut(wallpaperView.windowToken, wallpaperZoomOut) }
+        if (CrashGuard.safe) return@LaunchedEffect
+        dev.hearth.launcher.wallpaper.SuperWallpaperService.zoomOut(wallpaperZoomOut)
     }
     // A tap on an empty place of the home screen is passed on to the wallpaper: a flash and a ring of light (Super-Wallpaper).
-    val sendWallpaperTap: (Offset) -> Unit = { position ->
-        if (!CrashGuard.safe && dev.hearth.launcher.wallpaper.SuperWallpaperService.isActive(context)) {
-            runCatching {
-                android.app.WallpaperManager.getInstance(context)
-                    .sendWallpaperCommand(wallpaperView.windowToken, android.app.WallpaperManager.COMMAND_TAP, position.x.toInt(), position.y.toInt(), 0, null)
-            }
-        }
+    val sendWallpaperTap: (Offset) -> Unit = { _ ->
+        if (!CrashGuard.safe) dev.hearth.launcher.wallpaper.SuperWallpaperService.tap()
     }
     val editScale by animateFloatAsState(if (editMode) 0.84f else 1f, spring(dampingRatio = 0.85f, stiffness = 380f), label = "editScale")
 
