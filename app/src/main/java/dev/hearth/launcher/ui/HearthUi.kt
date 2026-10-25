@@ -426,6 +426,14 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Das OnePlus-Abteil auch in den Hintergrund-Apps", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Das Abteil mit den Live-Wallpapern des Telefons soll es auch in der App „ZENITH Hintergründe“ geben. Jetzt hat jede Hintergrund-App (Version 2.5; die mit allen Szenen und die einzelnen) unten den Knopf „OnePlus Live-Wallpaper des Telefons“: eine eigene Seite, die die Live-Wallpaper zeigt, die auf dem Telefon installiert sind – die von OnePlus zuerst, darunter alle anderen –, mit ihrem Bild, Namen und Urheber; ein Tippen öffnet Androids Vorschau zum Festlegen, dazu ein Weg in Androids eigene Auswahl.",
+                        "Ehrlich dazu: Wie in ZENITH ist nichts von OnePlus eingebaut oder kopiert – die Wallpaper gehören OnePlus; die App zeigt nur, was auf dem Telefon schon ist. Auf einem Telefon ohne die OnePlus-Wallpaper bleibt das OnePlus-Abteil leer (mit Erklärung). Nicht auf einem Handy ausprobiert.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

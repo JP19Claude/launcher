@@ -9,6 +9,13 @@
         android:name="android.software.live_wallpaper"
         android:required="true" />
 
+    <!-- The live wallpapers installed on the phone (OnePlus' and others), for the list "OnePlus Live-Wallpaper" -->
+    <queries>
+        <intent>
+            <action android:name="android.service.wallpaper.WallpaperService" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -23,6 +30,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- The live wallpapers of the phone, OnePlus' own first. -->
+        <activity
+            android:name=".PhoneWallpapersActivity"
+            android:exported="false"
+            android:label="OnePlus Live-Wallpaper" />
 
         <!-- Ten more pictures of the planet, to download in several sizes. -->
         <activity

@@ -322,6 +322,15 @@ class MainActivity : Activity() {
             },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) },
         )
+        // The live wallpapers of the phone (OnePlus' own first), in a compartment of their own.
+        column.addView(
+            Button(this).apply {
+                isAllCaps = false
+                text = "OnePlus Live-Wallpaper des Telefons"
+                setOnClickListener { startActivity(Intent(this@MainActivity, PhoneWallpapersActivity::class.java)) }
+            },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) },
+        )
         addUpdate(column) { dp(it) }
         column.addView(
             TextView(this).apply {
