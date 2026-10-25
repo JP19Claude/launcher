@@ -418,6 +418,14 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: OnePlus Live-Wallpaper in einem eigenen Abteil", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Alle OnePlus-Live-Wallpaper sollen in die App, in einem eigenen Abteil. Es gibt jetzt eine eigene Seite „OnePlus Live-Wallpaper“ (Einstellungen, bei den Wallpaper-Seiten; auch in den Comet- und Smart-Einstellungen verlinkt). Sie zeigt die Live-Wallpaper, die auf deinem Telefon installiert sind – die von OnePlus zuerst (erkannt an den Paketnamen oneplus, oplus, coloros, heytap und oppo), darunter in einem zweiten Abteil alle anderen –, jeweils mit dem Bild, das sie in Androids Auswahl haben, ihrem Namen und dem Urheber. Ein Tippen öffnet Androids Vorschau, dort „Hintergrund festlegen“; „Alle Live-Wallpaper in Androids Auswahl“ öffnet die Liste des Telefons.",
+                        "Ehrlich dazu: Die Wallpaper von OnePlus gehören OnePlus – ich kann sie nicht in ZENITH einbauen oder weitergeben (und habe sie auch nicht), also ist nichts davon kopiert; ZENITH zeigt nur, was auf dem Telefon schon ist, und reicht es an Androids Vorschau weiter. Auf einem OnePlus-Telefon bringt das System sie selbst mit; auf einem anderen Telefon bleibt das OnePlus-Abteil leer, bis sie dort installiert sind. Ich konnte es auf keinem Handy ausprobieren.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

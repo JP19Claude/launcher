@@ -332,6 +332,9 @@ fun SettingsScreen(
             // ZENITH 21.5: the wallpaper gallery – many pictures, very many of the Moon, to choose and to download.
             if (shows("wallpapers")) item { WallpaperGallerySection(update) }
 
+            // ZENITH 21.5 (215): the live wallpapers of the phone – OnePlus' own in a compartment of their own.
+            if (shows("phonewall")) item { PhoneWallpapersSection() }
+
             // OMEGA UI 17.1: OMEGA Glass all through the system, and the smooth mode – ZENITH 19's
             // own section now.
             if (shows("design")) item {
@@ -1861,6 +1864,9 @@ internal val SettingsCategories = listOf(
     // ZENITH 21.5: the wallpaper gallery.
     SettingsCategory("wallpapers", "Wallpaper-Galerie", "Mond, Planeten, Weltraum, Landschaft – zum Auswählen und Herunterladen", Icons.Rounded.Star, Color(0xFF7A5BFF),
         "wallpaper hintergrund galerie bild bilder mond vollmond halbmond sichel blutmond supermond planet saturn jupiter erde mars venus neptun weltraum nebel galaxie milchstraße komet landschaft berge meer dünen wald polarlicht abstrakt herunterladen download speichern teilen sperrbildschirm"),
+    // ZENITH 21.5 (215): the live wallpapers of the phone, OnePlus' own first.
+    SettingsCategory("phonewall", "OnePlus Live-Wallpaper", "Die Live-Wallpaper deines Telefons – OnePlus' eigene und alle anderen, zum Ansehen und Setzen", Icons.Rounded.Star, Color(0xFFEB0028),
+        "oneplus oxygenos oplus live wallpaper hintergrund telefon bewegt animiert vorschau setzen"),
     SettingsCategory("claude", "Claude & KI", "Assistent, Anbieter, Schlüssel, Sparmodus", Icons.Rounded.Face, Color(0xFFD97757),
         "claude ki assistent api schlüssel nvidia groq gemini modell sprache vorlesen sparmodus"),
     SettingsCategory("clawd", "Clawd", "Farbe, Hüte, Begleiter, Widgets, Clawd-App", Icons.Rounded.Favorite, Color(0xFFE5845F),
@@ -1887,7 +1893,7 @@ internal val SettingsCategories = listOf(
 
 /** The start page's cards, grouped like Samsung's. */
 private val SettingsGroups: List<List<SettingsCategory>> = listOf(
-    SettingsCategories.filter { it.id == "design" || it.id == "home" || it.id == "superwall" || it.id == "wallpapers" },
+    SettingsCategories.filter { it.id == "design" || it.id == "home" || it.id == "superwall" || it.id == "wallpapers" || it.id == "phonewall" },
     SettingsCategories.filter { it.id == "claude" || it.id == "clawd" || it.id == "glimmer" },
     SettingsCategories.filter { it.id == "cloud" || it.id == "privacy" || it.id == "general" },
     SettingsCategories.filter { it.id == "system" || it.id == "vorteile" },

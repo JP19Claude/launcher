@@ -213,6 +213,7 @@ internal fun SsMainPage(go: (String) -> Unit, onZenith: (String?) -> Unit, onWel
         SsLink("Allgemeine Darstellung", null, { SsIcon(SsGlyph.Look) }) { go("look") }
         SsLink("Super-Wallpaper", "Mond, Erde und Planeten als echte NASA-Bilder – Neigung, Zoom, Seiten", { SsIcon(SsGlyph.Look) }) { onZenith("superwall") }
         SsLink("Wallpaper-Galerie", "Mond, Planeten, Weltraum … – zum Auswählen und Herunterladen", { SsIcon(SsGlyph.Look) }) { onZenith("wallpapers") }
+        SsLink("OnePlus Live-Wallpaper", "Die Live-Wallpaper deines Telefons – ansehen und setzen", { SsIcon(SsGlyph.Look) }) { onZenith("phonewall") }
         SsLink("Startbildschirm", null, { SsIcon(SsGlyph.Home) }) { go("home") }
         SsLink("App-Raster", null, { SsIcon(SsGlyph.Grid) }) { go("drawer") }
         SsLink("Suchseite", null, { SsIcon(SsGlyph.Search) }) { go("search") }

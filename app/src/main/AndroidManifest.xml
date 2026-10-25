@@ -96,6 +96,10 @@
         <intent>
             <action android:name="android.intent.action.DIAL" />
         </intent>
+        <!-- The live wallpapers installed on the phone (OnePlus' own and others), for the list in the settings -->
+        <intent>
+            <action android:name="android.service.wallpaper.WallpaperService" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.SENDTO" />
             <data android:scheme="smsto" />

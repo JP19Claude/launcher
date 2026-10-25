@@ -151,6 +151,8 @@ private fun CmMainPage(go: (String) -> Unit, onZenith: (String?) -> Unit, back: 
             CmDivider()
             CmLink("Wallpaper-Galerie", "Mond, Planeten, Weltraum … – zum Auswählen und Herunterladen", SsGlyph.Look) { onZenith("wallpapers") }
             CmDivider()
+            CmLink("OnePlus Live-Wallpaper", "Die Live-Wallpaper deines Telefons – ansehen und setzen", SsGlyph.Look) { onZenith("phonewall") }
+            CmDivider()
             CmLink("Liquid Glass", "Klar oder solide, Stärke, Deckkraft", SsGlyph.Widget) { go("glass") }
             CmDivider()
             CmLink("Startbildschirm", "Uhr, Raster, Suchleiste", SsGlyph.Home) { go("home") }
