@@ -434,6 +434,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Zwei neue Szenen im Stil der OnePlus-Landschaften – „Berge“ und „Smaragd“", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Die echten Live-Wallpaper von OnePlus sollen verfügbar sein, zum Beispiel das mit den Bergen oder das vom OnePlus 12. Das geht so nicht: Diese Wallpaper gehören OnePlus, ich darf sie nicht in ZENITH einbauen oder weitergeben (und habe sie nicht). Wer sie auf dem Telefon hat – auf einem OnePlus bringt das System sie mit –, findet sie weiter in „OnePlus Live-Wallpaper“ und kann sie dort mit einem Tippen setzen.",
+                        "Stattdessen hat ZENITH jetzt zwei eigene Szenen im selben Geist, komplett selbst gezeichnet (ein Shader auf der Grafikeinheit, kein einziges Bild, keine Datei von OnePlus): „Berge“ – fünf Gebirgsschichten mit Dunst, Schneekappen, Kiefern vorn und Wolken, Sonne oder Mond und Sterne mit Sternschnuppe; der Himmel folgt der Uhrzeit (Morgenrot, Mittag, Abendrot, Nacht), die Schichten verschieben sich gegeneinander mit der Neigung und den Seiten. Und „Smaragd“ – fließende smaragdgrüne Seide mit glänzenden Falten, die sich ruhig von allein bewegt.",
+                        "Beide fliegen wie die anderen Szenen ein (auf dem Sperrbildschirm erst ein Blick in den Himmel, dann zurück auf das ganze Gebirge, beim Entsperren in das Tal), blitzen beim Tippen auf, und sind unter Einstellungen → Super-Wallpaper → Szene zu wählen sowie auf der Seite „OnePlus Live-Wallpaper“ im neuen Abschnitt „Im OnePlus-Stil – von ZENITH selbst gemacht“. Auch in der App „ZENITH Hintergründe“ (Version 2.6). Auf Handys ohne die nötige Grafik gibt es eine einfachere Fassung vom Prozessor.",
+                        "Ehrlich dazu: Das sind nicht die Wallpaper von OnePlus, nur Szenen in ähnlichem Geist – nach Beschreibung gebaut, ohne das Original gesehen zu haben. Ich habe sie nur am Rechner (Software-Grafik) gerendert und konnte sie auf keinem Handy ausprobieren; wie flüssig sie auf deinem Telefon laufen, weiß ich nicht. Die Größen-Regler gibt es bei ihnen nicht, und einen Landeplatz auch nicht.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

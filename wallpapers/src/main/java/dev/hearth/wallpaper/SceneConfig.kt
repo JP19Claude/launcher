@@ -17,7 +17,7 @@ internal object SceneConfig {
     /** The scenes the app with every scene offers (the photo of the gallery needs ZENITH). */
     val choices: List<SuperScene> = listOf(
         SuperScene.Moon, SuperScene.Earth, SuperScene.Mars, SuperScene.Venus, SuperScene.Jupiter, SuperScene.Saturn, SuperScene.Neptune,
-        SuperScene.Pluto, SuperScene.Io, SuperScene.Europa, SuperScene.Ganymede, SuperScene.Flag, SuperScene.Geometry,
+        SuperScene.Pluto, SuperScene.Io, SuperScene.Europa, SuperScene.Ganymede, SuperScene.Flag, SuperScene.Geometry, SuperScene.Mountains, SuperScene.Silk,
     )
 
     /** The scene now: the build's own, or the one chosen in the app with every scene. */

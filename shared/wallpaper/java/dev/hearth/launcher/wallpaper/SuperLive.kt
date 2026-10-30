@@ -253,7 +253,7 @@ class SuperLive(
     private fun ensureRenderer(s: Surface) {
         if (gl != null || canvasRenderer != null) return
         if (!glFailed) {
-            val g = SuperGl(assets, photoFile, fullDetail = !demo && !ambient && roomForDetail())
+            val g = SuperGl(assets, photoFile, fullDetail = !demo && !ambient && roomForDetail(), fixedHour = if (demo) SuperScape.SHOWN_HOUR else -1f)
             if (g.start(s) && g.load(params.scene)) {
                 gl = g
                 return

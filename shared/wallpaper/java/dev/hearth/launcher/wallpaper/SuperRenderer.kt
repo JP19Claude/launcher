@@ -58,6 +58,37 @@ enum class SuperScene(val label: String, val note: String) {
         "Eigenes Foto",
         "Ein Foto der NASA aus der Galerie als Hintergrund – was du wählst. Es folgt der Neigung des Telefons, rückt mit den Seiten und kommt beim Entsperren näher. Das Foto suchst du in der Wallpaper-Galerie aus („Als Live-Wallpaper“).",
     ),
+    Mountains(
+        "Berge",
+        "Gebirge in fünf Schichten mit Dunst, Wolken und Schnee – von ZENITH selbst gezeichnet, im Stil der Landschafts-Hintergründe von Telefonen. Der Himmel folgt der Uhrzeit: Morgenrot, Mittag, Abendrot, Mond und Sterne mit einer Sternschnuppe. Beim Entsperren fliegt die Kamera ins Tal.",
+    ),
+    Silk(
+        "Smaragd",
+        "Fließende smaragdgrüne Seide mit glänzenden Falten – von ZENITH selbst gezeichnet, im Stil der Wellen-Hintergründe von Telefonen. Sie bewegt sich ruhig von allein, folgt der Neigung und kommt beim Entsperren näher.",
+    );
+
+    /** A landscape ZENITH draws itself (no body in the dark): it has no size to set and no sphere, and shows the whole picture on the always-on screen. */
+    val isScape: Boolean get() = this == Mountains || this == Silk
+}
+
+/** What the landscapes need besides their pictures: the hour of the day (the sky of "Berge" follows it). */
+internal object SuperScape {
+    /** The local time as hours 0 … 24 (7.5 = half past seven), read at most once a second. */
+    fun hourNow(): Float {
+        val now = System.currentTimeMillis()
+        if (now - stamp > 1000L) {
+            stamp = now
+            val c = java.util.Calendar.getInstance()
+            hour = c.get(java.util.Calendar.HOUR_OF_DAY) + c.get(java.util.Calendar.MINUTE) / 60f + c.get(java.util.Calendar.SECOND) / 3600f
+        }
+        return hour
+    }
+
+    /** The hour the previews show: the golden hour, when the mountains look their best. */
+    const val SHOWN_HOUR = 18.3f
+
+    private var stamp = 0L
+    private var hour = 12f
 }
 
 /** What the wallpaper is set to (read from ZENITH's settings). */
@@ -140,7 +171,7 @@ private fun lerp(a: Float, b: Float, t: Float): Float = a + (b - a) * t
 class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, private val assets: AssetManager? = null) {
 
     @Volatile
-    private var ready = scene == SuperScene.Geometry
+    private var ready = scene == SuperScene.Geometry || scene.isScape
 
     private var surface = IntArray(0)
     private var clouds = ByteArray(0)
@@ -192,7 +223,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
     fun prepare() {
         if (ready) return
         when (scene) {
-            SuperScene.Geometry -> Unit
+            SuperScene.Geometry, SuperScene.Mountains, SuperScene.Silk -> Unit
             SuperScene.Photo, SuperScene.Flag -> {
                 loadPhoto()
                 ready = true
@@ -481,6 +512,10 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
             drawDisc(canvas, w, h, seconds, p, m)
             return
         }
+        if (scene.isScape) {
+            drawScape(canvas, w, h, seconds, m)
+            return
+        }
         drawSky(canvas, w, h)
         if (p.stars) drawStars(canvas, w, h, seconds, m)
         if (scene == SuperScene.Geometry) {
@@ -585,6 +620,94 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
             canvas.drawCircle(0f, 0f, 1f, spotPaint)
             canvas.restore()
         }
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // The landscapes (the processor's simple version of what the graphics chip's shader draws)
+    // -----------------------------------------------------------------------------------------
+
+    private val scapePath = android.graphics.Path()
+    private val scapePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    private fun mixColor(a: Int, b: Int, t: Float): Int {
+        val k = t.coerceIn(0f, 1f)
+        fun ch(shift: Int) = ((((a shr shift) and 255) * (1f - k) + ((b shr shift) and 255) * k)).toInt() and 255
+        return (0xFF shl 24) or (ch(16) shl 16) or (ch(8) shl 8) or ch(0)
+    }
+
+    private fun ridgeAt(x: Float, seed: Float): Float {
+        var sum = 0f
+        var amp = 0.55f
+        var freq = 1f
+        for (i in 0 until 4) {
+            sum += amp * (1f - abs(sin(x * freq * 2.3f + seed + i * 1.7f)))
+            freq *= 2.1f
+            amp *= 0.48f
+        }
+        return sum
+    }
+
+    private fun drawScape(canvas: Canvas, w: Int, h: Int, seconds: Float, m: SuperMotion) {
+        val d = m.depth.coerceIn(0f, 1f)
+        SuperCamera.pose(scene, m.lockFly, d, pose)
+        val mag = maxOf(1f, pose.r * m.zoom)
+        val wf = w.toFloat()
+        val hf = h.toFloat()
+        canvas.save()
+        canvas.translate(wf / 2f - m.panX * wf * 0.04f, hf / 2f)
+        canvas.scale(mag, mag)
+        canvas.translate(-wf * pose.cx, -hf * pose.cy)
+        if (scene == SuperScene.Silk) {
+            // Bands of silk sliding over each other.
+            scapePaint.shader = LinearGradient(0f, 0f, wf, hf, intArrayOf(0xFF012A1E.toInt(), 0xFF05905A.toInt(), 0xFF0A3F2E.toInt(), 0xFF1BD68A.toInt(), 0xFF023B28.toInt()), null, Shader.TileMode.CLAMP)
+            canvas.drawRect(-wf, -hf, 2f * wf, 2f * hf, scapePaint)
+            scapePaint.shader = null
+            for (i in 0 until 5) {
+                val y = hf * (0.1f + 0.2f * i) + sin(seconds * 0.35f + i) * hf * 0.04f
+                scapePaint.shader = LinearGradient(0f, y - hf * 0.12f, 0f, y + hf * 0.12f, intArrayOf(0x0027FFB0, 0x6627FFB0, 0x0027FFB0), null, Shader.TileMode.CLAMP)
+                canvas.drawRect(-wf, y - hf * 0.12f, 2f * wf, y + hf * 0.12f, scapePaint)
+            }
+            scapePaint.shader = null
+            canvas.restore()
+            return
+        }
+        val hour = SuperScape.hourNow()
+        val day = (((hour - 5.5f) / 1.5f).coerceIn(0f, 1f) * (1f - ((hour - 19f) / 1.5f).coerceIn(0f, 1f)))
+        val warm = maxOf((1f - abs(hour - 6.5f) / 1.6f).coerceIn(0f, 1f), (1f - abs(hour - 18.6f) / 1.8f).coerceIn(0f, 1f))
+        val top = mixColor(0xFF050A22.toInt(), 0xFF2D6FD8.toInt(), day)
+        val low = mixColor(mixColor(0xFF0B1636.toInt(), 0xFFA9D2F6.toInt(), day), 0xFFFF8248.toInt(), warm)
+        val horizonY = hf * 0.62f
+        scapePaint.shader = LinearGradient(0f, -hf * 0.5f, 0f, horizonY, top, low, Shader.TileMode.CLAMP)
+        canvas.drawRect(-wf, -hf, 2f * wf, hf * 2f, scapePaint)
+        scapePaint.shader = null
+        // The sun by day, the moon by night.
+        val up = if (day > 0.5f) ((hour - 6f) / 13f).coerceIn(0f, 1f) else (((hour - 19.6f + 24f) % 24f) / 10.4f).coerceIn(0f, 1f)
+        val bx = wf * (0.5f - cos(up * PI.toFloat()) * 0.46f)
+        val by = horizonY - sin(up * PI.toFloat()) * hf * 0.42f
+        scapePaint.color = if (day > 0.5f) 0xFFFFF4D0.toInt() else 0xFFDDE6FF.toInt()
+        canvas.drawCircle(bx, by, wf * 0.045f, scapePaint)
+        // Five ranges, the far ones pale and lost in haze.
+        val seeds = floatArrayOf(3.1f, 9.4f, 14.8f, 21.5f, 33.2f)
+        val bases = floatArrayOf(0.60f, 0.67f, 0.75f, 0.84f, 0.93f)
+        val amps = floatArrayOf(0.20f, 0.17f, 0.15f, 0.13f, 0.10f)
+        val near = mixColor(0xFF04070A.toInt(), 0xFF2A3A3C.toInt(), day)
+        val far = mixColor(0xFF1B2440.toInt(), 0xFFA9B6D2.toInt(), day)
+        for (i in 0 until 5) {
+            val shift = m.panX * wf * 0.05f * (0.4f + 0.3f * i)
+            scapePath.reset()
+            scapePath.moveTo(-wf, hf * 2f)
+            var x = -wf
+            while (x <= 2f * wf) {
+                scapePath.lineTo(x, hf * (bases[i] - amps[i] * ridgeAt((x + shift) / wf * (1.2f + 0.8f * i), seeds[i])))
+                x += wf / 36f
+            }
+            scapePath.lineTo(2f * wf, hf * 2f)
+            scapePath.close()
+            val tint = mixColor(far, near, i / 4f)
+            scapePaint.color = mixColor(mixColor(tint, low, 0.30f * (1f - i / 4f)), 0xFFFF9A6A.toInt(), warm * 0.25f * (1f - i / 5f))
+            canvas.drawPath(scapePath, scapePaint)
+        }
+        canvas.restore()
     }
 
     private fun drawSky(canvas: Canvas, w: Int, h: Int) {

@@ -185,8 +185,8 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             range = 0.2f..3f,
             valueText = "${"%.1f".format(s.superSpeed)}×",
         ) { v -> update { it.copy(superParams = it.superParams.copy(speed = v)) } }
-        // The photos (Iwo Jima, your own) have no body to resize.
-        if (s.superScene != SuperScene.Photo && s.superScene != SuperScene.Flag) {
+        // The photos (Iwo Jima, your own) and the landscapes have no body to resize.
+        if (s.superScene != SuperScene.Photo && s.superScene != SuperScene.Flag && !s.superScene.isScape) {
             SliderRow(
                 label = "Größe",
                 value = params.size,

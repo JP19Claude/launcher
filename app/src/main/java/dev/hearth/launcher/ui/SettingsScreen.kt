@@ -333,7 +333,7 @@ fun SettingsScreen(
             if (shows("wallpapers")) item { WallpaperGallerySection(update) }
 
             // ZENITH 21.5 (215): the live wallpapers of the phone – OnePlus' own in a compartment of their own.
-            if (shows("phonewall")) item { PhoneWallpapersSection() }
+            if (shows("phonewall")) item { PhoneWallpapersSection(update, onSuper = { page = "superwall" }) }
 
             // OMEGA UI 17.1: OMEGA Glass all through the system, and the smooth mode – ZENITH 19's
             // own section now.

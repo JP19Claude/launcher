@@ -271,8 +271,8 @@ class MainActivity : Activity() {
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
             )
         }
-        // The size of the planet or the Moon (the photo of "Iwo Jima" has none to resize).
-        if (scene != SuperScene.Flag && scene != SuperScene.Photo) {
+        // The size of the planet or the Moon (the photo of "Iwo Jima" and the landscapes have none to resize).
+        if (scene != SuperScene.Flag && scene != SuperScene.Photo && !scene.isScape) {
             val sizeLabel = TextView(this).apply {
                 setTextColor(Color.WHITE)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)

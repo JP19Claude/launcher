@@ -1,6 +1,7 @@
 package dev.hearth.wallpaper
 
 import android.app.Activity
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -14,6 +15,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import dev.hearth.launcher.wallpaper.PhoneWallpaper
 import dev.hearth.launcher.wallpaper.PhoneWallpapers
+import dev.hearth.launcher.wallpaper.SuperScene
 
 /**
  * A compartment of its own for the live wallpapers of the phone – OnePlus' own first, then everybody else's. They are the ones that are
@@ -94,6 +96,17 @@ class PhoneWallpapersActivity : Activity() {
                 }
             }
         }
+        if (SceneConfig.all) {
+            // What cannot be shipped (the wallpapers are OnePlus') this app draws itself, in the same spirit.
+            column.addView(text("Im OnePlus-Stil – von ZENITH selbst gemacht", 13f, 0xFF7F8896.toInt(), bold = true, top = dp(22)))
+            SceneConfig.choices.filter { it.isScape }.forEach { column.addView(ownRow(it)) }
+            column.addView(
+                text(
+                    "Das sind eigene Szenen, nicht die von OnePlus – ohne ein einziges Bild von OnePlus. Tippen wählt die Szene und öffnet die App; dort „Als Live-Wallpaper festlegen“.",
+                    13f, 0xFF7F8896.toInt(), top = dp(6),
+                ),
+            )
+        }
         column.addView(
             Button(this).apply {
                 isAllCaps = false
@@ -102,6 +115,20 @@ class PhoneWallpapersActivity : Activity() {
             },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(22) },
         )
+    }
+
+    /** One of the scenes this app draws itself: tapping chooses it and goes back to the app (which starts over with it). */
+    private fun ownRow(scene: SuperScene): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(0, dp(10), 0, dp(10))
+        isClickable = true
+        setOnClickListener {
+            SceneConfig.choose(this@PhoneWallpapersActivity, scene)
+            startActivity(Intent(this@PhoneWallpapersActivity, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP))
+            finish()
+        }
+        addView(text(scene.label, 15f, Color.WHITE))
+        addView(text(scene.note, 13f, 0xFFB9C1CC.toInt()))
     }
 
     /** One live wallpaper: its picture, its name and who made it. */

@@ -33,9 +33,11 @@ internal class SuperGl(
     private val photoFile: File?,
     /** The Moon's finest pictures (about 270 MB on the graphics chip): only for phones with the memory for it. */
     private val fullDetail: Boolean = true,
+    /** The hour of the day the landscapes show; below 0 the phone's clock is read (a preview shows a fixed, beautiful hour). */
+    private val fixedHour: Float = -1f,
 ) {
 
-    private enum class Kind { SPHERE, DISC, PHOTO, GEOMETRY }
+    private enum class Kind { SPHERE, DISC, PHOTO, GEOMETRY, SCAPE }
 
     private class Prog(val id: Int) {
         private val cache = HashMap<String, Int>()
@@ -51,6 +53,7 @@ internal class SuperGl(
     private var sprite: Prog? = null
     private var moonProg: Prog? = null
     private var dimProg: Prog? = null
+    private var scape: Prog? = null
 
     private var kind = Kind.SPHERE
     private var scene = SuperScene.Moon
@@ -113,6 +116,7 @@ internal class SuperGl(
             sprite = link(BOX_VERTEX, SPRITE_FRAGMENT)
             moonProg = link(BOX_VERTEX, MOON_FRAGMENT)
             dimProg = link(BOX_VERTEX, DIM_FRAGMENT)
+            scape = link(BOX_VERTEX, SCAPE_FRAGMENT)
             return true
         } catch (t: Throwable) {
             stop()
@@ -145,6 +149,8 @@ internal class SuperGl(
         sphere = null
         sprite = null
         moonProg = null
+        dimProg = null
+        scape = null
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -272,6 +278,10 @@ internal class SuperGl(
                     } else {
                         spriteTex = 0
                     }
+                    true
+                }
+                SuperScene.Mountains, SuperScene.Silk -> {
+                    kind = Kind.SCAPE
                     true
                 }
                 SuperScene.Geometry -> {
@@ -775,7 +785,7 @@ internal class SuperGl(
         GLES20.glViewport(0, 0, w, h)
         lastHeight = h
         GLES20.glDisable(GLES20.GL_BLEND)
-        drawSky(w, h, p, m)
+        if (kind != Kind.SCAPE) drawSky(w, h, p, m)
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA)
         when (kind) {
@@ -783,6 +793,7 @@ internal class SuperGl(
             Kind.DISC -> drawDisc(w, h, p, m)
             Kind.PHOTO -> drawPhoto(w, h, m)
             Kind.GEOMETRY -> drawGeometry(w, h, timeMs, p, m)
+            Kind.SCAPE -> drawScape(w, h, p, m)
         }
         if (verifyNext) {
             // Before the swap: after it the picture in the buffer is no longer ours to read (and before the dimming: the always-on
@@ -1175,6 +1186,24 @@ internal class SuperGl(
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
     }
 
+    /** "Berge" and "Smaragd": the whole picture comes from one shader; the camera is the photo camera's (a point and a magnification). */
+    private fun drawScape(w: Int, h: Int, p: SuperParams, m: SuperMotion) {
+        val prog = scape ?: return
+        SuperCamera.pose(scene, m.lockFly, m.depth.coerceIn(0f, 1f), pose)
+        GLES20.glUseProgram(prog.id)
+        GLES20.glUniform2f(prog.u("uRes"), w.toFloat(), h.toFloat())
+        GLES20.glUniform4f(prog.u("uBox"), 0f, 0f, w.toFloat(), h.toFloat())
+        GLES20.glUniform1f(prog.u("uTime"), shaderClock(m))
+        GLES20.glUniform1i(prog.u("uScene"), if (scene == SuperScene.Silk) 1 else 0)
+        GLES20.glUniform1f(prog.u("uHour"), if (fixedHour >= 0f) fixedHour else SuperScape.hourNow())
+        GLES20.glUniform3f(prog.u("uView"), pose.cx, pose.cy, maxOf(0.5f, pose.r * m.zoom))
+        // The pages and the tilt slide the layers against each other (the near ones further): the mountains have depth.
+        GLES20.glUniform2f(prog.u("uShift"), -(m.panX * 0.07f + m.tiltX * 0.03f), m.tiltY * 0.02f)
+        GLES20.glUniform1f(prog.u("uStars"), if (p.stars && !m.ambient) 1f else 0f)
+        GLES20.glUniform1f(prog.u("uFlash"), m.flash)
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+    }
+
     /** The geometry: drawn by SuperRenderer into a picture of half the size, laid over the sky. */
     private fun drawGeometry(w: Int, h: Int, timeMs: Long, p: SuperParams, m: SuperMotion) {
         val prog = sprite ?: return
@@ -1208,7 +1237,7 @@ internal class SuperGl(
     fun looksRight(): Boolean = bodyShown
 
     private fun readBodyShown(): Boolean {
-        if (kind == Kind.PHOTO || kind == Kind.GEOMETRY) return true
+        if (kind == Kind.PHOTO || kind == Kind.GEOMETRY || kind == Kind.SCAPE) return true
         return try {
             val body = pixelSum(lastCenterX, lastCenterY)
             // What the sky alone would show there (the gradient of the sky shader, in the sum of red, green and blue).
@@ -1486,6 +1515,339 @@ void main() {
   if (uStyle == 3) col += vec3(0.30, 0.58, 1.0) * pow(1.0 - n.z, 2.6) * (0.15 + 0.85 * lit) * 0.8;
   float a = edge * uAlpha;
   fragColor = vec4(col * a, a);
+}
+"""
+
+        /**
+         * The landscapes ZENITH draws itself (no pictures): "Berge" – layers of mountains with mist, clouds, sun or moon and stars, the sky
+         * following the hour of the day – and "Smaragd" – flowing emerald silk. Everything is made from noise, so the scenes take no room.
+         */
+        const val SCAPE_FRAGMENT = """#version 300 es
+precision highp float;
+uniform vec2 uRes;
+uniform float uTime;
+uniform int uScene;
+uniform float uHour;
+uniform vec3 uView;
+uniform vec2 uShift;
+uniform float uStars;
+uniform float uFlash;
+out vec4 fragColor;
+
+const float PI = 3.14159265;
+const float TAU = 6.2831853;
+
+float h11(float x) {
+  return fract(sin(x * 127.1 + 311.7) * 43758.5453);
+}
+
+float h21(vec2 p) {
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+
+float n1(float x) {
+  float i = floor(x);
+  float f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(h11(i), h11(i + 1.0), f);
+}
+
+float n2(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
+float fbm4(vec2 p) {
+  float s = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 4; i++) {
+    s += a * n2(p);
+    p = p * 2.03 + vec2(17.1, 9.2);
+    a *= 0.5;
+  }
+  return s;
+}
+
+float fbm3(vec2 p) {
+  float s = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 3; i++) {
+    s += a * n2(p);
+    p = p * 2.03 + vec2(17.1, 9.2);
+    a *= 0.5;
+  }
+  return s;
+}
+
+float sq(float x) {
+  return x * x;
+}
+
+// ---------------------------------------------------------------- the hour of the day
+const float KH[9] = float[9](0.0, 5.0, 6.3, 8.5, 13.0, 17.3, 19.0, 20.4, 22.5);
+const vec3 KZ[9] = vec3[9](
+  vec3(0.010, 0.020, 0.075), vec3(0.012, 0.025, 0.085), vec3(0.16, 0.22, 0.50), vec3(0.22, 0.46, 0.85), vec3(0.16, 0.42, 0.86),
+  vec3(0.22, 0.40, 0.78), vec3(0.18, 0.18, 0.46), vec3(0.05, 0.07, 0.22), vec3(0.010, 0.020, 0.075));
+const vec3 KG[9] = vec3[9](
+  vec3(0.045, 0.075, 0.170), vec3(0.050, 0.080, 0.180), vec3(1.00, 0.55, 0.36), vec3(0.78, 0.86, 0.96), vec3(0.66, 0.82, 0.97),
+  vec3(1.00, 0.80, 0.52), vec3(1.00, 0.42, 0.24), vec3(0.42, 0.22, 0.38), vec3(0.045, 0.075, 0.170));
+
+vec3 gZen;
+vec3 gHor;
+vec3 gLight;
+vec2 gSun;
+vec2 gLdir;
+float gDay;
+float gNight;
+
+void setSky() {
+  gZen = KZ[8];
+  gHor = KG[8];
+  for (int i = 0; i < 8; i++) {
+    if (uHour >= KH[i] && uHour < KH[i + 1]) {
+      float t = smoothstep(KH[i], KH[i + 1], uHour);
+      gZen = mix(KZ[i], KZ[i + 1], t);
+      gHor = mix(KG[i], KG[i + 1], t);
+    }
+  }
+  gDay = smoothstep(5.0, 6.8, uHour) * (1.0 - smoothstep(19.0, 20.6, uHour));
+  gNight = 1.0 - smoothstep(4.6, 6.4, uHour) * (1.0 - smoothstep(19.4, 21.2, uHour));
+  // The sun by day, the moon by night: up out of the left, over the sky, down in the right.
+  float st = (uHour - 6.0) / 13.6;
+  float nt = mod(uHour - 19.6 + 24.0, 24.0) / 10.4;
+  float t = (st > 0.0 && st < 1.0) ? st : nt;
+  float ang = clamp(t, 0.0, 1.0) * PI;
+  gSun = vec2(-cos(ang) * 0.46, -0.12 + sin(ang) * 0.95);
+  vec3 low = vec3(1.0, 0.52, 0.28);
+  vec3 high = vec3(1.0, 0.96, 0.86);
+  vec3 sunLight = mix(low, high, smoothstep(0.0, 0.55, gSun.y + 0.12));
+  vec3 moonLight = vec3(0.45, 0.55, 0.85) * 0.40;
+  gLight = mix(moonLight, sunLight, step(0.5, step(0.0, st) * step(st, 1.0)));
+  gLdir = normalize(vec2(gSun.x * 1.1 + 0.001, max(gSun.y + 0.30, 0.22)));
+}
+
+// ---------------------------------------------------------------- the sky
+float clouds(vec2 p, float period, float speed, float scale, float thr) {
+  // Drifting sideways; two copies half a period apart that fade into each other, so that the drift can start over without a jump.
+  float ph = fract(uTime / period);
+  float ph2 = fract(ph + 0.5);
+  float w = 1.0 - abs(2.0 * ph - 1.0);
+  vec2 d = vec2(speed * period, 0.0);
+  float c1 = fbm4(p * scale - d * ph);
+  float c2 = fbm4(p * scale - d * ph2 + vec2(5.7, 2.3));
+  return smoothstep(thr, thr + 0.28, mix(c2, c1, w));
+}
+
+float starField(vec2 p) {
+  vec2 g = p * 62.0;
+  vec2 id = floor(g);
+  vec2 f = fract(g) - 0.5;
+  float h = h21(id);
+  float on = step(0.935, h);
+  vec2 off = (vec2(h21(id + 3.1), h21(id + 8.7)) - 0.5) * 0.5;
+  float d = length(f - off);
+  float tw = 0.6 + 0.4 * sin(uTime * 2.70177 + TAU * h21(id + 5.5));
+  return on * (1.0 - smoothstep(0.0, 0.10 + 0.12 * h21(id + 1.7), d)) * tw * (0.5 + 0.5 * h21(id + 9.9));
+}
+
+vec3 skyAt(vec2 p) {
+  float t = clamp((p.y + 0.30) / 1.55, 0.0, 1.0);
+  vec3 c = mix(gHor, gZen, pow(t, 0.58));
+  // The glow round the sun or the moon, and the disc.
+  vec2 d = p - gSun;
+  float dist = length(d);
+  float vis = smoothstep(-0.38, -0.02, gSun.y);
+  float isSun = step(0.5, gDay + 0.0001);
+  vec3 glowCol = mix(vec3(0.55, 0.65, 1.0), gLight / max(max(gLight.r, gLight.g), 0.001), isSun);
+  float strength = mix(0.10, 0.60, isSun);
+  c += glowCol * (strength * exp(-dist * 3.0) + 0.5 * strength * exp(-dist * 10.0)) * vis;
+  float rad = mix(0.030, 0.042, isSun);
+  float disc = 1.0 - smoothstep(rad * 0.94, rad, dist);
+  vec3 discCol = mix(vec3(0.86, 0.90, 1.0) * (0.80 + 0.20 * fbm3(d * 22.0)), vec3(1.0, 0.97, 0.88) * 1.25, isSun);
+  c = mix(c, discCol, disc * vis);
+  // Stars, a milky band and a shooting star – only in the dark.
+  if (uStars > 0.5 && gNight > 0.02) {
+    vec2 sp = p + uShift * 0.03;
+    float band = exp(-sq(dot(sp - vec2(0.0, 0.15), vec2(-0.5, 0.866)) + 0.05) / 0.05);
+    float mw = band * (0.35 + 0.65 * fbm3(sp * 5.0 + 3.0));
+    c += vec3(0.08, 0.10, 0.17) * mw * gNight * smoothstep(-0.2, 0.5, p.y);
+    c += vec3(0.85, 0.9, 1.0) * starField(sp) * gNight * smoothstep(-0.15, 0.4, p.y);
+    float slot = floor(uTime / 11.0);
+    float lt = uTime - slot * 11.0;
+    if (lt < 1.2) {
+      vec2 start = vec2(-0.45 + 0.5 * h11(slot * 1.3), 0.45 + 0.45 * h11(slot * 2.7)) ;
+      vec2 dir = normalize(vec2(0.8, -0.5));
+      vec2 head = start + dir * 0.55 * lt;
+      vec2 dd = p - head;
+      float along = dot(dd, dir);
+      float perp = length(dd - dir * along);
+      float tail = 0.14 * smoothstep(0.0, 0.2, lt);
+      float core = (1.0 - smoothstep(0.0, 0.0022, perp)) * pow(clamp(1.0 + along / max(tail, 0.001), 0.0, 1.0), 2.0) * step(along, 0.0);
+      c += vec3(0.95, 0.97, 1.0) * core * smoothstep(0.0, 0.1, lt) * (1.0 - smoothstep(0.8, 1.2, lt)) * gNight;
+    }
+  }
+  // Clouds, lit by the sun from the side it stands on.
+  vec2 cp = p + uShift * 0.05;
+  float cloud0 = clouds(cp * vec2(1.0, 2.2), 100.0, 0.010, 1.7, 0.50);
+  float cloud1 = clouds(cp * vec2(1.0, 2.2) + gLdir * 0.06, 100.0, 0.010, 1.7, 0.50);
+  float high = cloud0 * smoothstep(-0.05, 0.5, p.y);
+  float low = clouds(cp * vec2(1.0, 2.6) + vec2(3.0, 1.0), 100.0, 0.018, 2.4, 0.55) * smoothstep(-0.18, 0.25, p.y);
+  float lit = clamp(0.55 - 2.7 * (cloud1 - cloud0), 0.0, 1.0);
+  vec3 shade = mix(gZen * 0.9, gHor, 0.5) * (0.55 + 0.4 * gDay) + 0.04;
+  vec3 bright = mix(shade, min(gLight * 1.05 + 0.15, 1.2), 0.65 * (0.35 + 0.65 * lit)) * (0.30 + 0.70 * (gDay + 0.35 * (1.0 - gDay)));
+  c = mix(c, mix(shade, bright, lit), high * 0.80);
+  c = mix(c, mix(shade, bright, lit * 0.8 + 0.1), low * 0.65);
+  return c;
+}
+
+// ---------------------------------------------------------------- the mountains
+float ridge(float x, float seed) {
+  float s = 0.0;
+  float a = 0.55;
+  float f = 1.0;
+  for (int i = 0; i < 5; i++) {
+    float n = n1(x * f + seed + float(i) * 7.3);
+    s += a * (1.0 - abs(2.0 * n - 1.0));
+    f *= 2.1;
+    a *= 0.48;
+  }
+  return s;
+}
+
+const float LB[5] = float[5](-0.16, -0.33, -0.52, -0.73, -0.96);
+const float LA[5] = float[5](0.52, 0.42, 0.33, 0.26, 0.20);
+const float LF[5] = float[5](1.25, 1.75, 2.35, 3.20, 4.40);
+const float LS[5] = float[5](3.1, 9.4, 14.8, 21.5, 33.2);
+const float LP[5] = float[5](0.10, 0.18, 0.30, 0.46, 0.70);
+const float LH[5] = float[5](0.64, 0.50, 0.34, 0.18, 0.04);
+const vec3 LR[5] = vec3[5](vec3(0.44, 0.48, 0.60), vec3(0.34, 0.37, 0.47), vec3(0.24, 0.27, 0.33), vec3(0.14, 0.17, 0.18), vec3(0.045, 0.060, 0.055));
+
+float layerH(int i, float x) {
+  float xs = x + uShift.x * LP[i];
+  float hh = LB[i] + LA[i] * ridge(xs * LF[i], LS[i]) + uShift.y * LP[i];
+  if (i == 4) {
+    // The nearest layer is a forest: its edge is jagged with pines.
+    hh += 0.016 * abs(fract(xs * 34.0) * 2.0 - 1.0) * (0.35 + 0.65 * n1(xs * 8.0 + 4.0));
+  }
+  return hh;
+}
+
+vec3 shadeLayer(int i, vec2 p, float top) {
+  float rel = (p.y - LB[i]) / LA[i];
+  float depth = max(top - p.y, 0.0);
+  // The faces: the slope is read a little further along the way down, so the ridges run down the mountain instead of straight down.
+  float xd = p.x + depth * 0.45;
+  float e = 0.02;
+  float slope = (layerH(i, xd + e) - layerH(i, xd - e)) / (2.0 * e);
+  vec2 nrm = normalize(vec2(-slope, 1.0));
+  float facing = dot(nrm, gLdir);
+  float lam = clamp(facing * 0.85 + 0.15, 0.0, 1.0);
+  float rk = fbm3(vec2(xd * 7.0, p.y * 6.0 + float(i) * 3.7));
+  float night = 1.0 - gDay;
+  vec3 amb = mix(gZen, gHor, 0.45) * 0.55 + vec3(0.030, 0.040, 0.075) * (0.4 + night);
+  vec3 col = LR[i] * (0.60 + 0.80 * rk) * (amb + gLight * lam * 1.10);
+  // The foot of a range is darker, the top catches the light.
+  col *= 0.55 + 0.45 * smoothstep(-0.1, 0.8, rel);
+  // Snow high up on the far ranges.
+  if (i < 3) {
+    float snow = smoothstep(0.64, 0.80, rel + (rk - 0.5) * 0.45);
+    vec3 snowCol = vec3(0.86, 0.91, 1.0) * (amb * 0.80 + gLight * (0.16 + 0.80 * lam));
+    col = mix(col, snowCol, snow * (0.55 + 0.45 * lam));
+  }
+  // A thin line of light along the edge on the side the light comes from.
+  float rim = exp(-depth * 80.0) * clamp(facing * 1.6, 0.0, 1.0);
+  col += gLight * rim * 0.40 * (1.0 - LH[i] * 0.6);
+  // Mist: thick at the foot of every range, thinner higher up, and the far ranges lost in haze.
+  float x = p.x + uShift.x * LP[i];
+  float sway = 0.5 + 0.5 * sin(TAU * uTime / 100.0 + x * 1.7 + float(i));
+  float mist = exp(-max(rel, 0.0) * 2.6) * (0.45 + 0.55 * fbm3(vec2(x * 2.2 + float(i) * 5.0, p.y * 4.0 + 0.4 * sway))) * 0.80;
+  vec3 fog = mix(gHor, gLight * 0.35 + gHor * 0.85, 0.25) * (0.55 + 0.45 * (gDay + 0.3));
+  col = mix(col, fog, clamp(LH[i] + (1.0 - LH[i]) * mist * 0.85, 0.0, 0.95));
+  return col;
+}
+
+vec3 mountains(vec2 p) {
+  float px = 1.0 / (uRes.x * uView.z);
+  float hs0 = layerH(0, p.x);
+  float hs1 = layerH(1, p.x);
+  float hs2 = layerH(2, p.x);
+  float hs3 = layerH(3, p.x);
+  float hs4 = layerH(4, p.x);
+  float hs[5] = float[5](hs0, hs1, hs2, hs3, hs4);
+  int f = -1;
+  int g = -1;
+  for (int i = 4; i >= 0; i--) {
+    if (p.y < hs[i] + px) {
+      if (f < 0) {
+        f = i;
+      } else if (g < 0) {
+        g = i;
+      }
+    }
+  }
+  if (f < 0) return skyAt(p);
+  float c = smoothstep(-px, px, hs[f] - p.y);
+  vec3 front = shadeLayer(f, p, hs[f]);
+  if (c > 0.999) return front;
+  vec3 behind = (g < 0) ? skyAt(p) : shadeLayer(g, p, hs[g]);
+  return mix(behind, front, c);
+}
+
+// ---------------------------------------------------------------- the silk
+float silkHeight(vec2 p) {
+  // Folds of cloth: a few sine waves, each bent by the one before it. Every phase turns a whole number of times in 600 s, so the loop is seamless.
+  float w = TAU * uTime / 600.0;
+  vec2 q = p * 2.3;
+  for (int i = 0; i < 4; i++) {
+    float fi = float(i) + 1.0;
+    q += (0.50 / fi) * vec2(sin(fi * 1.35 * q.y + w * (14.0 + 6.0 * fi) + fi * 1.7), sin(fi * 1.15 * q.x + w * (18.0 + 4.0 * fi) + fi * 2.9));
+  }
+  return 0.5 + 0.5 * sin(q.x * 2.1 + q.y * 1.3 + 1.2 * sin(q.y * 0.8 + w * 12.0));
+}
+
+vec3 silk(vec2 p) {
+  float e = 0.006;
+  float h0 = silkHeight(p);
+  float hx = silkHeight(p + vec2(e, 0.0));
+  float hy = silkHeight(p + vec2(0.0, e));
+  vec3 n = normalize(vec3(-(hx - h0) / e * 0.42, -(hy - h0) / e * 0.42, 1.0));
+  vec3 L = normalize(vec3(-0.5 + 0.2 * uShift.x, 0.6, 0.65));
+  vec3 V = vec3(0.0, 0.0, 1.0);
+  float diff = clamp(dot(n, L) * 0.5 + 0.5, 0.0, 1.0);
+  vec3 H = normalize(L + V);
+  float spec = pow(max(dot(n, H), 0.0), 60.0);
+  float sheen = pow(1.0 - max(dot(n, V), 0.0), 2.2);
+  vec3 deep = vec3(0.000, 0.060, 0.045);
+  vec3 mid = vec3(0.000, 0.420, 0.250);
+  vec3 bright = vec3(0.100, 0.900, 0.520);
+  vec3 col = mix(deep, mid, smoothstep(0.30, 0.72, diff));
+  col = mix(col, bright, smoothstep(0.70, 0.98, diff) * 0.85);
+  col += vec3(0.70, 1.0, 0.88) * spec * 0.90 + vec3(0.03, 0.40, 0.22) * sheen * 0.45;
+  col *= 0.70 + 0.50 * h0;
+  return col;
+}
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / uRes;
+  float A = uRes.y / uRes.x;
+  vec2 centre = vec2(uView.x - 0.5, (0.5 - uView.y) * A);
+  vec2 p = (uv - 0.5) * vec2(1.0, A) / uView.z + centre;
+  vec3 col;
+  if (uScene == 0) {
+    setSky();
+    col = mountains(p);
+  } else {
+    col = silk(p + uShift * 0.4);
+  }
+  // A flash lifts everything a little; the corners are a little darker.
+  col += uFlash * 0.12 * (0.4 + 0.6 * col);
+  col *= 1.0 - 0.28 * dot(uv - 0.5, uv - 0.5);
+  col += (h21(gl_FragCoord.xy) - 0.5) / 255.0;
+  fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
 """
 

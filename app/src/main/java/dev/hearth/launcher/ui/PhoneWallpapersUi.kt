@@ -34,8 +34,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.wallpaper.PhoneWallpaper
 import dev.hearth.launcher.wallpaper.PhoneWallpapers
+import dev.hearth.launcher.wallpaper.SuperScene
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -47,7 +49,7 @@ import kotlinx.coroutines.withContext
 
 /** The settings page "OnePlus Live-Wallpaper". */
 @Composable
-internal fun PhoneWallpapersSection() {
+internal fun PhoneWallpapersSection(update: ((LauncherSettings) -> LauncherSettings) -> Unit, onSuper: () -> Unit) {
     val context = LocalContext.current
     // Back from Android's preview (or from installing a wallpaper app): look again.
     var round by remember { mutableIntStateOf(0) }
@@ -78,6 +80,21 @@ internal fun PhoneWallpapersSection() {
                 PhoneWallpaperRow(wallpaper) { PhoneWallpapers.openPreview(context, wallpaper) }
             }
         }
+    }
+    // What cannot be shipped (the wallpapers are OnePlus') ZENITH draws itself, in the same spirit: the mountains and the flowing silk.
+    Section("Im OnePlus-Stil – von ZENITH selbst gemacht") {
+        SuperScene.entries.filter { it.isScape }.forEachIndexed { index, scene ->
+            if (index > 0) RowDivider()
+            ActionRow(
+                label = scene.label,
+                description = scene.note,
+                onClick = {
+                    update { it.copy(superParams = it.superParams.copy(scene = scene)) }
+                    onSuper()
+                },
+            )
+        }
+        Note("Das sind eigene Szenen von ZENITH, nicht die von OnePlus – gezeichnet von der Grafik des Telefons, ohne ein einziges Bild von OnePlus. Tippen wählt die Szene und öffnet das Super-Wallpaper, dort „Als Live-Wallpaper festlegen“.")
     }
     Section("Auswahl des Telefons") {
         ActionRow(
