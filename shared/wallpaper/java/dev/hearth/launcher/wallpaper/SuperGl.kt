@@ -55,7 +55,15 @@ internal class SuperGl(
     private var sprite: Prog? = null
     private var moonProg: Prog? = null
     private var dimProg: Prog? = null
-    private var scape: Prog? = null
+    /** The landscape programs, one for each scene (made when the scene is loaded: a scene that won't compile on this chip doesn't take the others with it). */
+    private val scapeProgs = HashMap<Int, Prog>()
+
+    /** What went wrong the last time (shortened), for the settings' note and for reports; null if nothing did. */
+    var lastError: String? = null
+        private set
+
+    /** Hands over what went wrong (once). */
+    fun takeError(): String? = lastError.also { lastError = null }
 
     private var kind = Kind.SPHERE
     private var scene = SuperScene.Moon
@@ -118,9 +126,9 @@ internal class SuperGl(
             sprite = link(BOX_VERTEX, SPRITE_FRAGMENT)
             moonProg = link(BOX_VERTEX, MOON_FRAGMENT)
             dimProg = link(BOX_VERTEX, DIM_FRAGMENT)
-            scape = link(BOX_VERTEX, SCAPE_FRAGMENT)
             return true
         } catch (t: Throwable) {
+            lastError = "Start: " + (t.message ?: t.toString()).take(700)
             stop()
             return false
         }
@@ -152,7 +160,7 @@ internal class SuperGl(
         sprite = null
         moonProg = null
         dimProg = null
-        scape = null
+        scapeProgs.clear()
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -287,6 +295,17 @@ internal class SuperGl(
                 }
                 SuperScene.Mountains, SuperScene.Silk, SuperScene.Spheres, SuperScene.Spray -> {
                     kind = Kind.SCAPE
+                    val index = scapeIndex(forScene)
+                    try {
+                        if (!scapeProgs.containsKey(index)) {
+                            scapeProgs[index] = link(BOX_VERTEX, SCAPE_FRAGMENT.replaceFirst("#version 300 es\n", "#version 300 es\n#define SCENE $index\n"))
+                        }
+                    } catch (t: Throwable) {
+                        // This chip won't take the scene's shader: the sky stands in (not a black screen), and the reason is kept for the settings' note.
+                        lastError = "Szene ${forScene.name}: " + (t.message ?: t.toString()).take(700)
+                        kind = Kind.PHOTO
+                        spriteTex = 0
+                    }
                     true
                 }
                 SuperScene.Geometry -> {
@@ -320,6 +339,7 @@ internal class SuperGl(
                 }
             }
         } catch (t: Throwable) {
+            lastError = "Szene ${forScene.name}: " + (t.message ?: t.toString()).take(700)
             false
         }
     }
@@ -1191,23 +1211,21 @@ internal class SuperGl(
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
     }
 
+    private fun scapeIndex(scene: SuperScene): Int = when (scene) {
+        SuperScene.Silk -> 1
+        SuperScene.Spheres -> 2
+        SuperScene.Spray -> 3
+        else -> 0
+    }
+
     /** "Berge" and "Smaragd": the whole picture comes from one shader; the camera is the photo camera's (a point and a magnification). */
     private fun drawScape(w: Int, h: Int, p: SuperParams, m: SuperMotion) {
-        val prog = scape ?: return
+        val prog = scapeProgs[scapeIndex(scene)] ?: return
         SuperCamera.pose(scene, m.lockFly, m.depth.coerceIn(0f, 1f), pose)
         GLES20.glUseProgram(prog.id)
         GLES20.glUniform2f(prog.u("uRes"), w.toFloat(), h.toFloat())
         GLES20.glUniform4f(prog.u("uBox"), 0f, 0f, w.toFloat(), h.toFloat())
         GLES20.glUniform1f(prog.u("uTime"), shaderClock(m))
-        GLES20.glUniform1i(
-            prog.u("uScene"),
-            when (scene) {
-                SuperScene.Silk -> 1
-                SuperScene.Spheres -> 2
-                SuperScene.Spray -> 3
-                else -> 0
-            },
-        )
         GLES20.glUniform1f(prog.u("uHour"), if (fixedHour >= 0f) fixedHour else SuperScape.hourNow())
         GLES20.glUniform3f(prog.u("uView"), pose.cx, pose.cy, maxOf(0.5f, pose.r * m.zoom))
         // The pages and the tilt slide the layers against each other (the near ones further): the mountains have depth.
@@ -1539,7 +1557,6 @@ void main() {
 precision highp float;
 uniform vec2 uRes;
 uniform float uTime;
-uniform int uScene;
 uniform float uHour;
 uniform vec3 uView;
 uniform vec2 uShift;
@@ -1961,16 +1978,16 @@ void main() {
   vec2 centre = vec2(uView.x - 0.5, (0.5 - uView.y) * A);
   vec2 p = (uv - 0.5) * vec2(1.0, A) / uView.z + centre;
   vec3 col;
-  if (uScene == 0) {
-    setSky();
-    col = mountains(p);
-  } else if (uScene == 1) {
-    col = silk(p + uShift * 0.4);
-  } else if (uScene == 2) {
-    col = spheres(p);
-  } else {
-    col = spray(p + uShift * 0.3);
-  }
+#if SCENE == 0
+  setSky();
+  col = mountains(p);
+#elif SCENE == 1
+  col = silk(p + uShift * 0.4);
+#elif SCENE == 2
+  col = spheres(p);
+#else
+  col = spray(p + uShift * 0.3);
+#endif
   // A flash lifts everything a little; the corners are a little darker.
   col += uFlash * 0.12 * (0.4 + 0.6 * col);
   col *= 1.0 - 0.28 * dot(uv - 0.5, uv - 0.5);

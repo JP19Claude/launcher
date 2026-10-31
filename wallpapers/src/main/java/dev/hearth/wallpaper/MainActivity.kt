@@ -21,6 +21,7 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import dev.hearth.launcher.wallpaper.PlanetPictures
+import dev.hearth.launcher.wallpaper.SuperDiag
 import dev.hearth.launcher.wallpaper.SuperPlaces
 import dev.hearth.launcher.wallpaper.SuperScene
 import dev.hearth.launcher.wallpaper.SuperVideo
@@ -405,6 +406,29 @@ class MainActivity : Activity() {
                 setPadding(0, dp(14), 0, 0)
             },
         )
+        // What went wrong the last time with the graphics or a video (a wallpaper that stays black says nothing else).
+        SuperDiag.last(this)?.let { text ->
+            column.addView(
+                TextView(this).apply {
+                    this.text = "Letzte Meldung der Grafik oder des Videos (steht der Hintergrund still und schwarz, hilft sie bei der Suche):\n$text"
+                    setTextColor(0xFFE0A458.toInt())
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                    setTextIsSelectable(true)
+                    setPadding(0, dp(14), 0, 0)
+                },
+            )
+            column.addView(
+                Button(this).apply {
+                    isAllCaps = false
+                    this.text = "Meldung löschen"
+                    setOnClickListener {
+                        SuperDiag.clear(this@MainActivity)
+                        recreate()
+                    }
+                },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) },
+            )
+        }
         setContentView(
             ScrollView(this).apply {
                 setBackgroundColor(0xFF0B0F1A.toInt())
@@ -539,6 +563,11 @@ class MainActivity : Activity() {
 
     /** Android's preview of the wallpaper (it asks "Hintergrund festlegen" there); the chooser if the phone has no direct way. */
     private fun openWallpaper() {
+        val chosen = SceneConfig.scene(this)
+        if (chosen.isVideo && !SuperVideo.exists(this, chosen)) {
+            Toast.makeText(this, "Wähle zuerst ein Video – ohne Video bleibt der Hintergrund schwarz.", Toast.LENGTH_LONG).show()
+            return
+        }
         val component = ComponentName(this, SceneWallpaperService::class.java)
         val direct = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
             .putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, component)

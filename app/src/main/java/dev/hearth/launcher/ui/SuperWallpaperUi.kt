@@ -36,6 +36,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.system.GlimmerService
+import dev.hearth.launcher.wallpaper.SuperDiag
 import dev.hearth.launcher.wallpaper.SuperLiveView
 import dev.hearth.launcher.wallpaper.SuperMotion
 import dev.hearth.launcher.wallpaper.SuperParams
@@ -79,6 +80,9 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
     // Glimmer (the accessibility service) draws the AOD: is it on?
     var glimmerOn by remember { mutableStateOf(GlimmerService.isEnabled) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { glimmerOn = GlimmerService.isEnabled }
+    // What went wrong the last time with the graphics or a video (a wallpaper that stays black says nothing else).
+    var diag by remember { mutableStateOf(SuperDiag.last(context)) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { diag = SuperDiag.last(context) }
     Section("Super-Wallpaper") {
         Box(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)) {
             SuperScenePreview(params, Modifier.fillMaxWidth().aspectRatio(0.72f).clip(RoundedCornerShape(24.dp)))
@@ -151,8 +155,25 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             } else {
                 "Öffnet Androids Vorschau: dort „Hintergrund festlegen“ wählen – für den Startbildschirm und, wo Android es zulässt, den Sperrbildschirm."
             },
-            onClick = { openSuperWallpaper(context) },
+            onClick = {
+                if (s.superScene.isVideo && !SuperVideo.exists(context, s.superScene)) {
+                    Toast.makeText(context, "Wähle zuerst ein Video – ohne Video bleibt der Hintergrund schwarz.", Toast.LENGTH_LONG).show()
+                } else {
+                    openSuperWallpaper(context)
+                }
+            },
         )
+        diag?.let { text ->
+            Note("Letzte Meldung der Grafik oder des Videos (steht der Hintergrund still und schwarz, hilft sie bei der Suche): $text")
+            ActionRow(
+                label = "Meldung löschen",
+                description = "Wenn alles läuft, damit sie nicht stehen bleibt",
+                onClick = {
+                    SuperDiag.clear(context)
+                    diag = null
+                },
+            )
+        }
         if (s.zenithWallpaper) {
             ActionRow(
                 label = "ZENITH-Hintergrund ausschalten",

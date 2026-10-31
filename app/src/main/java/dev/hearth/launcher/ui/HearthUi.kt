@@ -472,6 +472,17 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Schwarzer Hintergrund – Ursachen eingegrenzt und eine Meldung", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Die Hintergründe werden schwarz, wenn man sie anwendet. Ich konnte es nicht nachstellen (kein Handy hier), also habe ich die wahrscheinlichen Ursachen angefasst und dafür gesorgt, dass man den Grund sieht.",
+                        "Erstens: Die Landschaften („Berge“, „Smaragd“, „Sphären“, „Gischt“) hatten alle zusammen ein einziges Grafikprogramm; wenn ein Telefon das nicht annahm, fiel die ganze Grafik aus – auch für den Mond. Jetzt hat jede Szene ihr eigenes, kleineres Programm, das erst geladen wird, wenn sie gewählt ist; nimmt ein Telefon eines nicht an, bleibt der Sternenhimmel stehen statt Schwarz, und die anderen Szenen laufen weiter.",
+                        "Zweitens: „Video 1“ und „Video 2“ sind schwarz (mit Sternen), solange noch kein Video gewählt ist. Jetzt sagt „Als Hintergrund setzen“ dann „Wähle zuerst ein Video“, statt einen schwarzen Hintergrund zu setzen.",
+                        "Drittens: Wenn die Grafik oder ein Video nicht läuft, merkt sich ZENITH den Grund und zeigt ihn unter Einstellungen → Super-Wallpaper (ganz unten, „Letzte Meldung …“, mit „Meldung löschen“), in den Hintergrund-Apps unten auf der Seite. Wenn der Hintergrund weiter schwarz bleibt, ist dort der Text, den ich zum Suchen brauche – bitte ein Bildschirmfoto davon.",
+                        "Ehrlich dazu: Ich weiß nicht sicher, welche der drei Ursachen bei dir die richtige ist; es kann auch am Telefon liegen (Energiesparen, Live-Wallpaper auf dem Sperrbildschirm). Die Grafikprogramme habe ich als echtes OpenGL ES 3.00 geprüft (Mesa), aber nicht auf deiner Grafik.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

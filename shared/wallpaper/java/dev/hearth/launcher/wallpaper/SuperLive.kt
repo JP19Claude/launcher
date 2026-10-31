@@ -248,6 +248,7 @@ class SuperLive(
             post {
                 videoBroken = true
                 stopVideo()
+                SuperDiag.note(context, "Video ${params.scene.label}: " + (t.message ?: t.toString()))
                 problem(t, false)
                 drawFrame(SystemClock.uptimeMillis())
             }
@@ -269,6 +270,7 @@ class SuperLive(
         val g = gl
         if (g != null) {
             if (!g.load(params.scene)) fallBack(IllegalStateException("scene ${params.scene} won't load on the graphics chip"))
+            g.takeError()?.let { SuperDiag.note(context, it) }
         } else if (canvasRenderer != null) {
             canvasRenderer = SuperRenderer(params.scene, pictureOf(params.scene), assets).also { it.prepare() }
         }
@@ -278,6 +280,7 @@ class SuperLive(
 
     /** The graphics chip can't do it (on this phone): from now on the processor draws. */
     private fun fallBack(why: Throwable) {
+        SuperDiag.note(context, gl?.lastError ?: (why.message ?: why.toString()))
         gl?.stop()
         gl = null
         glFailed = true
@@ -307,8 +310,10 @@ class SuperLive(
             )
             if (g.start(s) && g.load(params.scene)) {
                 gl = g
+                g.takeError()?.let { SuperDiag.note(context, it) }
                 return
             }
+            SuperDiag.note(context, g.lastError ?: "OpenGL ES 3 ist auf diesem Telefon nicht verfügbar")
             g.stop()
             glFailed = true
             problem(IllegalStateException("OpenGL ES 3 is not available"), false)
