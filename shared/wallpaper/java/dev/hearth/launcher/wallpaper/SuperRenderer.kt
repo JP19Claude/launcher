@@ -73,7 +73,18 @@ enum class SuperScene(val label: String, val note: String) {
     Spray(
         "Gischt",
         "Ein Schwarm feiner Teilchen, der als breite Welle durchs Bild zieht – Türkis und Weiß, unten ein korallroter Schwall – vor Schwarz. Von ZENITH selbst gezeichnet, im Stil moderner Handy-Hintergründe; die Teilchen strömen von allein, die Welle wogt langsam, und beim Entsperren kommt die Kamera näher.",
+    ),
+    Video1(
+        "Video 1",
+        "Ein eigenes Video als Live-Wallpaper: Du wählst die Datei selbst aus der Galerie, sie läuft stumm in einer Endlosschleife und füllt den Bildschirm. ZENITH bringt kein Video mit – es zeigt nur, was du hier hineinlegst. Neigung und Zoom gibt es bei einem Video nicht.",
+    ),
+    Video2(
+        "Video 2",
+        "Ein zweites eigenes Video, genauso: Datei wählen, stumm in Endlosschleife, bildfüllend.",
     );
+
+    /** One of the two scenes that play a video of the user's own ([SuperVideo]). */
+    val isVideo: Boolean get() = this == Video1 || this == Video2
 
     /** A landscape ZENITH draws itself (no body in the dark): it has no size to set and no sphere, and shows the whole picture on the always-on screen. */
     val isScape: Boolean get() = this == Mountains || this == Silk || this == Spheres || this == Spray
@@ -235,7 +246,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         if (ready) return
         when (scene) {
             SuperScene.Geometry, SuperScene.Mountains, SuperScene.Silk -> Unit
-            SuperScene.Photo, SuperScene.Flag -> {
+            SuperScene.Photo, SuperScene.Flag, SuperScene.Video1, SuperScene.Video2 -> {
                 loadPhoto()
                 ready = true
                 return
@@ -515,7 +526,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
 
     private fun drawScene(canvas: Canvas, w: Int, h: Int, timeMs: Long, p: SuperParams, m: SuperMotion) {
         val seconds = timeMs / 1000f
-        if (scene == SuperScene.Photo || scene == SuperScene.Flag) {
+        if (scene == SuperScene.Photo || scene == SuperScene.Flag || scene.isVideo) {
             drawPhoto(canvas, w, h, seconds, p, m)
             return
         }

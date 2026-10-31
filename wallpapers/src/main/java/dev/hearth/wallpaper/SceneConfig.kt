@@ -18,7 +18,7 @@ internal object SceneConfig {
     val choices: List<SuperScene> = listOf(
         SuperScene.Moon, SuperScene.Earth, SuperScene.Mars, SuperScene.Venus, SuperScene.Jupiter, SuperScene.Saturn, SuperScene.Neptune,
         SuperScene.Pluto, SuperScene.Io, SuperScene.Europa, SuperScene.Ganymede, SuperScene.Flag, SuperScene.Geometry, SuperScene.Mountains, SuperScene.Silk,
-        SuperScene.Spheres, SuperScene.Spray,
+        SuperScene.Spheres, SuperScene.Spray, SuperScene.Video1, SuperScene.Video2,
     )
 
     /** The scene now: the build's own, or the one chosen in the app with every scene. */
@@ -49,6 +49,7 @@ internal object SceneConfig {
             aod = p.getBoolean("aod", false),
             aodDim = p.getFloat("aodDim", 0.45f).coerceIn(0.1f, 0.8f),
             aodClock = p.getBoolean("aodClock", true),
+            photo = p.getLong("photo", 0L),
             offsetX = p.getFloat("offsetX", 0f).coerceIn(-0.45f, 0.45f),
             offsetY = p.getFloat("offsetY", 0f).coerceIn(-0.45f, 0.45f),
         )

@@ -41,7 +41,7 @@ object SuperPrefs {
      */
     fun aodStill(context: Context, w: Int, h: Int): Bitmap? = runCatching {
         val params = read(context).copy(stars = false)
-        val renderer = SuperRenderer(params.scene, SuperPhoto.file(context), context.assets)
+        val renderer = SuperRenderer(params.scene, if (params.scene.isVideo) SuperVideo.frame(context, params.scene) else SuperPhoto.file(context), context.assets)
         renderer.prepare()
         val scene = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val place = SuperPlaces.of(params.scene).let { it.getOrNull(params.place) ?: it.firstOrNull() }
@@ -51,7 +51,7 @@ object SuperPrefs {
             place?.let { m.spin = it.spin; m.lat = it.tilt }
         }
         renderer.draw(Canvas(scene), w, h, 5000L, params, motion)
-        if (params.scene == SuperScene.Photo || params.scene == SuperScene.Flag || params.scene == SuperScene.Geometry || params.scene.isScape) return@runCatching scene
+        if (params.scene == SuperScene.Photo || params.scene == SuperScene.Flag || params.scene == SuperScene.Geometry || params.scene.isScape || params.scene.isVideo) return@runCatching scene
         val pose = SuperPose()
         SuperCamera.pose(params.scene, 1f, 0f, pose, params.offsetX, params.offsetY)
         val cx = w * pose.cx
@@ -74,7 +74,7 @@ object SuperPrefs {
     /** One still frame of the wallpaper as set, [w] × [h] – the glass of ZENITH bends and blurs this. Null if it couldn't be drawn. */
     fun snapshot(context: Context, w: Int, h: Int): Bitmap? = runCatching {
         val params = read(context)
-        val renderer = SuperRenderer(params.scene, SuperPhoto.file(context), context.assets)
+        val renderer = SuperRenderer(params.scene, if (params.scene.isVideo) SuperVideo.frame(context, params.scene) else SuperPhoto.file(context), context.assets)
         renderer.prepare()
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         // The body on the place that was chosen (the surprise shows the first).

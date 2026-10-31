@@ -7,6 +7,8 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -41,6 +43,7 @@ import dev.hearth.launcher.wallpaper.SuperPhoto
 import dev.hearth.launcher.wallpaper.SuperPlaces
 import dev.hearth.launcher.wallpaper.SuperRenderer
 import dev.hearth.launcher.wallpaper.SuperScene
+import dev.hearth.launcher.wallpaper.SuperVideo
 import dev.hearth.launcher.wallpaper.SuperWallpaperService
 import dev.hearth.launcher.wallpaper.WallpaperUpdater
 import dev.hearth.launcher.wallpaper.ZenithAodActivity
@@ -109,6 +112,36 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
                     "Noch kein Foto: In der Wallpaper-Galerie ein NASA-Foto (Mond, Planeten, Erde …) öffnen und „Als Live-Wallpaper“ tippen."
                 },
                 onClick = onGallery,
+            )
+        }
+        if (s.superScene.isVideo) {
+            // A video of your own: a file of the gallery, copied into ZENITH and played muted in a loop.
+            val videoScene = s.superScene
+            val videoScope = rememberCoroutineScope()
+            val chosen = remember(videoScene, params.photo) { SuperVideo.exists(context, videoScene) }
+            var saving by remember { mutableStateOf(false) }
+            val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+                if (uri != null) {
+                    videoScope.launch {
+                        saving = true
+                        val ok = withContext(Dispatchers.IO) { SuperVideo.save(context, videoScene, uri) }
+                        saving = false
+                        if (ok) {
+                            update { it.copy(superParams = it.superParams.copy(photo = System.currentTimeMillis())) }
+                        } else {
+                            Toast.makeText(context, "Dieses Video ließ sich nicht übernehmen (kein Video, zu groß oder nicht lesbar).", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+            ActionRow(
+                label = if (saving) "Video wird übernommen …" else if (chosen) "Anderes Video wählen" else "Video wählen",
+                description = if (chosen) {
+                    "Ein Video aus der Galerie nehmen; es ersetzt das jetzige."
+                } else {
+                    "Noch kein Video: eine Datei aus der Galerie wählen – sie läuft stumm in einer Endlosschleife und füllt den Bildschirm."
+                },
+                onClick = { pick.launch("video/*") },
             )
         }
         ActionRow(
@@ -186,7 +219,7 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             valueText = "${"%.1f".format(s.superSpeed)}×",
         ) { v -> update { it.copy(superParams = it.superParams.copy(speed = v)) } }
         // The photos (Iwo Jima, your own) and the landscapes have no body to resize.
-        if (s.superScene != SuperScene.Photo && s.superScene != SuperScene.Flag && !s.superScene.isScape) {
+        if (s.superScene != SuperScene.Photo && s.superScene != SuperScene.Flag && !s.superScene.isScape && !s.superScene.isVideo) {
             SliderRow(
                 label = "Größe",
                 value = params.size,
@@ -195,7 +228,7 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             ) { v -> update { it.copy(superParams = it.superParams.copy(size = v)) } }
         }
         // Where the body hangs on the lock screen: moved, e.g. up behind the clock (the photos, the geometry and the landscapes fill the screen).
-        if (s.superScene != SuperScene.Photo && s.superScene != SuperScene.Flag && s.superScene != SuperScene.Geometry && !s.superScene.isScape) {
+        if (s.superScene != SuperScene.Photo && s.superScene != SuperScene.Flag && s.superScene != SuperScene.Geometry && !s.superScene.isScape && !s.superScene.isVideo) {
             SliderRow(
                 label = "Position waagerecht",
                 value = params.offsetX,

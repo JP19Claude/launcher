@@ -23,6 +23,7 @@ import android.widget.Toast
 import dev.hearth.launcher.wallpaper.PlanetPictures
 import dev.hearth.launcher.wallpaper.SuperPlaces
 import dev.hearth.launcher.wallpaper.SuperScene
+import dev.hearth.launcher.wallpaper.SuperVideo
 import dev.hearth.launcher.wallpaper.WallpaperUpdater
 import kotlin.math.roundToInt
 
@@ -30,6 +31,9 @@ import kotlin.math.roundToInt
  * This app: the scene big, what it is, a few options and the button that makes it the phone's wallpaper. Plain views, so
  * the app stays small.
  */
+/** The request code of the video chooser. */
+private const val PICK_VIDEO = 7301
+
 class MainActivity : Activity() {
 
     private lateinit var preview: ScenePreview
@@ -272,7 +276,7 @@ class MainActivity : Activity() {
             )
         }
         // The size of the planet or the Moon (the photo of "Iwo Jima" and the landscapes have none to resize).
-        if (scene != SuperScene.Flag && scene != SuperScene.Photo && !scene.isScape) {
+        if (scene != SuperScene.Flag && scene != SuperScene.Photo && !scene.isScape && !scene.isVideo) {
             val sizeLabel = TextView(this).apply {
                 setTextColor(Color.WHITE)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
@@ -306,7 +310,7 @@ class MainActivity : Activity() {
             )
         }
         // Where the body hangs on the lock screen: moved right/left and down/up, e.g. up behind the clock.
-        if (scene != SuperScene.Flag && scene != SuperScene.Photo && scene != SuperScene.Geometry && !scene.isScape) {
+        if (scene != SuperScene.Flag && scene != SuperScene.Photo && scene != SuperScene.Geometry && !scene.isScape && !scene.isVideo) {
             fun positionSlider(title: String, key: String) {
                 val label = TextView(this).apply {
                     setTextColor(Color.WHITE)
@@ -342,6 +346,29 @@ class MainActivity : Activity() {
             }
             positionSlider("Position waagerecht (← links, rechts →)", "offsetX")
             positionSlider("Position senkrecht (↑ oben, unten ↓)", "offsetY")
+        }
+        if (scene.isVideo) {
+            // A video of your own: a file of the gallery, copied into the app and played muted in a loop.
+            column.addView(
+                Button(this).apply {
+                    isAllCaps = false
+                    text = if (SuperVideo.exists(this@MainActivity, scene)) "Anderes Video wählen" else "Video wählen"
+                    setOnClickListener {
+                        val pick = Intent(Intent.ACTION_GET_CONTENT).setType("video/*").addCategory(Intent.CATEGORY_OPENABLE)
+                        @Suppress("DEPRECATION")
+                        startActivityForResult(Intent.createChooser(pick, "Video wählen"), PICK_VIDEO)
+                    }
+                },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(14) },
+            )
+            column.addView(
+                TextView(this).apply {
+                    text = "Die Datei kommt aus deiner Galerie und läuft stumm in einer Endlosschleife, bildfüllend. Die App bringt kein Video mit."
+                    setTextColor(0xFFB9C1CC.toInt())
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                    setPadding(0, dp(2), 0, 0)
+                },
+            )
         }
         column.addView(
             Button(this).apply {
@@ -483,6 +510,31 @@ class MainActivity : Activity() {
             if (update == null) look() else install(update)
         }
         look()
+    }
+
+    /** The video the person picked: copied into the app (off the main thread), then the page starts over with it. */
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != PICK_VIDEO || resultCode != RESULT_OK) return
+        val uri = data?.data ?: return
+        val chosen = SceneConfig.scene(this)
+        if (!chosen.isVideo) return
+        Toast.makeText(this, "Das Video wird übernommen …", Toast.LENGTH_SHORT).show()
+        Thread {
+            val ok = SuperVideo.save(this, chosen, uri)
+            runOnUiThread {
+                if (isFinishing) return@runOnUiThread
+                if (ok) {
+                    // (a new stamp: the wallpaper and the preview load the new video)
+                    getSharedPreferences(SceneConfig.PREFS, Context.MODE_PRIVATE).edit().putLong("photo", System.currentTimeMillis()).apply()
+                    recreate()
+                } else {
+                    Toast.makeText(this, "Dieses Video ließ sich nicht übernehmen (kein Video, zu groß oder nicht lesbar).", Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
     }
 
     /** Android's preview of the wallpaper (it asks "Hintergrund festlegen" there); the chooser if the phone has no direct way. */

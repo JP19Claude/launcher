@@ -35,6 +35,8 @@ internal class SuperGl(
     private val fullDetail: Boolean = true,
     /** The hour of the day the landscapes show; below 0 the phone's clock is read (a preview shows a fixed, beautiful hour). */
     private val fixedHour: Float = -1f,
+    /** Where the picture of a video scene's first moments is (the video itself is played by [SuperLive], not drawn here). */
+    private val frameOf: (SuperScene) -> File? = { null },
 ) {
 
     private enum class Kind { SPHERE, DISC, PHOTO, GEOMETRY, SCAPE }
@@ -221,9 +223,8 @@ internal class SuperGl(
     private fun decodeAsset(path: String): Bitmap? =
         runCatching { assets.open(path).use { BitmapFactory.decodeStream(it) } }.getOrNull()
 
-    private fun decodePhoto(): Bitmap? {
-        val file = photoFile ?: return null
-        if (!file.exists()) return null
+    private fun decodePhoto(file: File? = photoFile): Bitmap? {
+        if (file == null || !file.exists()) return null
         return runCatching {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(file.path, bounds)
@@ -267,9 +268,13 @@ internal class SuperGl(
                         true
                     }
                 }
-                SuperScene.Photo, SuperScene.Flag -> {
+                SuperScene.Photo, SuperScene.Flag, SuperScene.Video1, SuperScene.Video2 -> {
                     kind = Kind.PHOTO
-                    val photo = if (forScene == SuperScene.Flag) decodeAsset("planets/iwojima.jpg") else decodePhoto()
+                    val photo = when {
+                        forScene == SuperScene.Flag -> decodeAsset("planets/iwojima.jpg")
+                        forScene.isVideo -> decodePhoto(frameOf(forScene))
+                        else -> decodePhoto()
+                    }
                     if (photo != null) {
                         photoW = photo.width
                         photoH = photo.height

@@ -61,6 +61,9 @@ class SuperLive(
     private var canvasRenderer: SuperRenderer? = null
     private var blank = false
     private var receiver: BroadcastReceiver? = null
+    /** The player of a video scene: while it runs it owns the surface and nothing is drawn here. */
+    private var video: SuperVideoPlayer? = null
+    private var videoBroken = false
 
     init {
         handler.post {
@@ -95,6 +98,7 @@ class SuperLive(
     /** The surface is there (or has a new size). */
     fun attach(surface: Surface, w: Int, h: Int) = post {
         if (this.surface !== surface) {
+            stopVideo()
             releaseRenderers()
             this.surface = surface
         }
@@ -109,6 +113,7 @@ class SuperLive(
         val queued = handler.post {
             try {
                 choreographer?.removeFrameCallback(frameCallback)
+                stopVideo()
                 releaseRenderers()
                 surface = null
             } catch (t: Throwable) {
@@ -130,12 +135,18 @@ class SuperLive(
         }
         moving = true
         drawFrame(SystemClock.uptimeMillis())
+        // (the frames stop while a video plays; when the scene is another one again they go on)
+        if (visible && video == null) {
+            choreographer?.removeFrameCallback(frameCallback)
+            choreographer?.postFrameCallback(frameCallback)
+        }
     }
 
     /** The wallpaper is seen (or no longer). */
     fun setVisible(v: Boolean) = post {
         visible = v
         choreographer?.removeFrameCallback(frameCallback)
+        video?.play(v)
         if (v) {
             director.show(SystemClock.uptimeMillis(), flightPending)
             flightPending = false
@@ -184,6 +195,7 @@ class SuperLive(
             stopSensing()
             receiver?.let { r -> runCatching { context.unregisterReceiver(r) } }
             receiver = null
+            stopVideo()
             releaseRenderers()
         }
         thread.quitSafely()
@@ -206,7 +218,7 @@ class SuperLive(
             } catch (t: Throwable) {
                 problem(t, false)
             }
-            if (visible) choreographer?.postFrameCallback(this)
+            if (visible && video == null) choreographer?.postFrameCallback(this)
         }
     }
 
@@ -220,12 +232,45 @@ class SuperLive(
         canvasRenderer = null
     }
 
+    /** The picture a scene hangs on: the chosen photo, or the first moments of a video scene's video. */
+    private fun pictureOf(scene: SuperScene): File? = if (scene.isVideo) SuperVideo.frame(context, scene) else photoFile
+
+    /** Does the wallpaper play a video now (not on the always-on screen, which shows its picture dimmed)? */
+    private fun videoWanted(): Boolean = params.scene.isVideo && !ambient && !blank && !videoBroken && SuperVideo.exists(context, params.scene)
+
+    private fun startVideo() {
+        val s = surface ?: return
+        if (!s.isValid) return
+        releaseRenderers()
+        stopVideo()
+        video = SuperVideoPlayer(SuperVideo.file(context, params.scene)) { t ->
+            // A video the phone can't play: the picture of its first moments stands in.
+            post {
+                videoBroken = true
+                stopVideo()
+                problem(t, false)
+                drawFrame(SystemClock.uptimeMillis())
+            }
+        }.also {
+            it.start(s)
+            it.play(visible)
+        }
+    }
+
+    private fun stopVideo() {
+        video?.release()
+        video = null
+    }
+
     private fun changeScene() {
+        // Another scene or another video: the player starts over (in drawFrame) if one is wanted.
+        stopVideo()
+        videoBroken = false
         val g = gl
         if (g != null) {
             if (!g.load(params.scene)) fallBack(IllegalStateException("scene ${params.scene} won't load on the graphics chip"))
         } else if (canvasRenderer != null) {
-            canvasRenderer = SuperRenderer(params.scene, photoFile, assets).also { it.prepare() }
+            canvasRenderer = SuperRenderer(params.scene, pictureOf(params.scene), assets).also { it.prepare() }
         }
         // The new scene comes in the way it does when the screen lights up: it flies in, with a flash and a ring of light.
         if (visible) director.introduce(SystemClock.uptimeMillis())
@@ -238,7 +283,7 @@ class SuperLive(
         glFailed = true
         problem(why, false)
         if (canvasRenderer == null && surface != null) {
-            canvasRenderer = SuperRenderer(params.scene, photoFile, assets).also { it.prepare() }
+            canvasRenderer = SuperRenderer(params.scene, pictureOf(params.scene), assets).also { it.prepare() }
         }
     }
 
@@ -253,7 +298,13 @@ class SuperLive(
     private fun ensureRenderer(s: Surface) {
         if (gl != null || canvasRenderer != null) return
         if (!glFailed) {
-            val g = SuperGl(assets, photoFile, fullDetail = !demo && !ambient && roomForDetail(), fixedHour = if (demo) SuperScape.SHOWN_HOUR else -1f)
+            val g = SuperGl(
+                assets,
+                photoFile,
+                fullDetail = !demo && !ambient && roomForDetail(),
+                fixedHour = if (demo) SuperScape.SHOWN_HOUR else -1f,
+                frameOf = { SuperVideo.frame(context, it) },
+            )
             if (g.start(s) && g.load(params.scene)) {
                 gl = g
                 return
@@ -262,7 +313,7 @@ class SuperLive(
             glFailed = true
             problem(IllegalStateException("OpenGL ES 3 is not available"), false)
         }
-        canvasRenderer = SuperRenderer(params.scene, photoFile, assets).also { it.prepare() }
+        canvasRenderer = SuperRenderer(params.scene, pictureOf(params.scene), assets).also { it.prepare() }
     }
 
     /** One picture at [now] (ms); true while the scene is still moving. */
@@ -270,10 +321,17 @@ class SuperLive(
         val s = surface ?: return false
         if (!s.isValid || width <= 0 || height <= 0) return false
         if (blank) {
+            stopVideo()
             releaseRenderers()
             drawBlack(s)
             return false
         }
+        if (videoWanted()) {
+            // The video is the picture: its player draws on the surface, nothing else may.
+            if (video == null) startVideo()
+            return false
+        }
+        if (video != null) stopVideo()
         ensureRenderer(s)
         if (demo) rawX = sin(now / 2600f) * 0.4f
         val stillMoving = director.frame(now, params, xOffset, rawX, rawY)

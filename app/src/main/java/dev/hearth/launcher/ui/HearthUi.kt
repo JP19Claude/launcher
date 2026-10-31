@@ -463,6 +463,15 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Eigenes Video als Live-Wallpaper – „Video 1“ und „Video 2“", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Gemeint waren die beiden Wallpaper aus den Videos – mit den Telefonen darauf (das blaue mit dem Chip und das mit der Gischt), nicht meine nachgezeichneten Szenen. Dafür gibt es jetzt zwei Szenen, „Video 1“ und „Video 2“: Du wählst unter Einstellungen → Super-Wallpaper → Szene → „Video 1“ eine Videodatei aus der Galerie („Video wählen“); sie wird in ZENITH übernommen und läuft als Live-Wallpaper stumm in einer Endlosschleife und füllt den Bildschirm (zugeschnitten, nie verzerrt). Mit „Video 2“ ein zweites Video, genauso. Das Video hält an, wenn der Bildschirm aus ist.",
+                        "Auch in der App „ZENITH Hintergründe“ (Version 2.9): Szene „Video 1“ oder „Video 2“ wählen, „Video wählen“ tippen, „Als Hintergrund festlegen“. Das Standbild vom Anfang des Videos erscheint in der Vorschau und auf dem AOD-Bildschirm.",
+                        "Ehrlich dazu: Die Videos selbst bringt ZENITH nicht mit – die Clips mit den Telefonen sind Werbung von Herstellern und von anderen zusammengeschnitten, die kann ich nicht in die App legen und weitergeben. Du legst sie selbst hinein; die Fassungen ohne das CapCut-Logo hat dir der Assistent in dieser Unterhaltung geschickt. Neigung, Zoom und Größe gibt es bei einem Video nicht. Ich konnte es auf keinem Handy ausprobieren; ob ein Video auf deinem Telefon als Live-Wallpaper sauber läuft, hängt vom Telefon ab (Xiaomi lässt bei Energiesparen manchmal Hintergrunddienste pausieren).",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",
