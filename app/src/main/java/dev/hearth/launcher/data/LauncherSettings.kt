@@ -1709,6 +1709,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
                 aodClock = prefs.getBoolean("superAodClock", d.superParams.aodClock),
                 offsetX = prefs.getFloat("superOffsetX", d.superParams.offsetX).coerceIn(-0.45f, 0.45f),
                 offsetY = prefs.getFloat("superOffsetY", d.superParams.offsetY).coerceIn(-0.45f, 0.45f),
+                tint = prefs.getInt("superTint", d.superParams.tint).coerceIn(0, 9),
             ),
             sloganEverywhere = prefs.getBoolean("sloganEverywhere", d.sloganEverywhere),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
@@ -1979,6 +1980,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putBoolean("superAodClock", s.superParams.aodClock)
             .putFloat("superOffsetX", s.superParams.offsetX)
             .putFloat("superOffsetY", s.superParams.offsetY)
+            .putInt("superTint", s.superParams.tint)
             .putBoolean("sloganEverywhere", s.sloganEverywhere)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("zenithStrike", s.zenithStrike)

@@ -52,6 +52,7 @@ internal object SceneConfig {
             photo = p.getLong("photo", 0L),
             offsetX = p.getFloat("offsetX", 0f).coerceIn(-0.45f, 0.45f),
             offsetY = p.getFloat("offsetY", 0f).coerceIn(-0.45f, 0.45f),
+            tint = p.getInt("tint", 0).coerceIn(0, 9),
         )
     }
 }

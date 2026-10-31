@@ -90,6 +90,37 @@ enum class SuperScene(val label: String, val note: String) {
     val isScape: Boolean get() = this == Mountains || this == Silk || this == Spheres || this == Spray
 }
 
+/** The colours the silk scene comes in: green ("Smaragd") first, then black, red, blue … */
+object SuperTints {
+    val names: List<String> = listOf("Smaragd", "Schwarz", "Rot", "Blau", "Violett", "Gold", "Rosa", "Orange", "Türkis", "Silber")
+
+    // For each colour: the dark folds, the middle, the bright folds, the gleam on the crests and the sheen on the edges – red, green, blue each.
+    private val tones: Array<FloatArray> = arrayOf(
+        floatArrayOf(0.000f, 0.060f, 0.045f, 0.000f, 0.420f, 0.250f, 0.100f, 0.900f, 0.520f, 0.700f, 1.000f, 0.880f, 0.030f, 0.400f, 0.220f),
+        floatArrayOf(0.000f, 0.000f, 0.000f, 0.045f, 0.047f, 0.055f, 0.250f, 0.262f, 0.290f, 0.950f, 0.960f, 1.000f, 0.100f, 0.105f, 0.130f),
+        floatArrayOf(0.050f, 0.000f, 0.008f, 0.560f, 0.025f, 0.060f, 1.000f, 0.160f, 0.190f, 1.000f, 0.800f, 0.780f, 0.500f, 0.050f, 0.080f),
+        floatArrayOf(0.000f, 0.008f, 0.085f, 0.030f, 0.190f, 0.780f, 0.260f, 0.560f, 1.000f, 0.850f, 0.920f, 1.000f, 0.040f, 0.180f, 0.600f),
+        floatArrayOf(0.035f, 0.000f, 0.075f, 0.350f, 0.080f, 0.650f, 0.740f, 0.380f, 1.000f, 0.950f, 0.850f, 1.000f, 0.300f, 0.090f, 0.550f),
+        floatArrayOf(0.065f, 0.035f, 0.000f, 0.620f, 0.400f, 0.020f, 1.000f, 0.780f, 0.220f, 1.000f, 0.950f, 0.750f, 0.550f, 0.380f, 0.040f),
+        floatArrayOf(0.095f, 0.000f, 0.040f, 0.760f, 0.140f, 0.400f, 1.000f, 0.560f, 0.760f, 1.000f, 0.900f, 0.950f, 0.600f, 0.180f, 0.380f),
+        floatArrayOf(0.075f, 0.018f, 0.000f, 0.800f, 0.300f, 0.020f, 1.000f, 0.610f, 0.150f, 1.000f, 0.920f, 0.800f, 0.600f, 0.250f, 0.030f),
+        floatArrayOf(0.000f, 0.050f, 0.060f, 0.000f, 0.450f, 0.550f, 0.200f, 0.900f, 0.950f, 0.850f, 1.000f, 1.000f, 0.030f, 0.380f, 0.450f),
+        floatArrayOf(0.030f, 0.030f, 0.040f, 0.450f, 0.470f, 0.520f, 0.850f, 0.870f, 0.920f, 1.000f, 1.000f, 1.000f, 0.250f, 0.260f, 0.300f),
+    )
+
+    fun clamp(tint: Int): Int = tint.coerceIn(0, tones.size - 1)
+
+    /** The fifteen numbers the shader takes (see [tones]). */
+    fun tone(tint: Int): FloatArray = tones[clamp(tint)]
+
+    /** One of the three main colours (0 dark, 1 middle, 2 bright) as an opaque colour, for the processor's version. */
+    fun argb(tint: Int, slot: Int): Int {
+        val t = tone(tint)
+        fun channel(i: Int) = (t[slot * 3 + i].coerceIn(0f, 1f) * 255f + 0.5f).toInt()
+        return (0xFF shl 24) or (channel(0) shl 16) or (channel(1) shl 8) or channel(2)
+    }
+}
+
 /** What the landscapes need besides their pictures: the hour of the day (the sky of "Berge" follows it). */
 internal object SuperScape {
     /** The local time as hours 0 … 24 (7.5 = half past seven), read at most once a second. */
@@ -135,6 +166,8 @@ data class SuperParams(
     /** Where the body hangs on the lock screen, moved from its usual place: fractions of the screen's width (right is positive) and height (down is positive), −0.45 … 0.45. */
     val offsetX: Float = 0f,
     val offsetY: Float = 0f,
+    /** The colour of the silk scene ("Smaragd"): an index into [SuperTints]. */
+    val tint: Int = 0,
 )
 
 /** The photo of the "Foto" scene: one file in the app's own storage, made from a gallery photo at the screen's proportions. */
@@ -535,7 +568,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
             return
         }
         if (scene.isScape) {
-            drawScape(canvas, w, h, seconds, m)
+            drawScape(canvas, w, h, seconds, p, m)
             return
         }
         drawSky(canvas, w, h)
@@ -669,7 +702,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         return sum
     }
 
-    private fun drawScape(canvas: Canvas, w: Int, h: Int, seconds: Float, m: SuperMotion) {
+    private fun drawScape(canvas: Canvas, w: Int, h: Int, seconds: Float, p: SuperParams, m: SuperMotion) {
         val d = m.depth.coerceIn(0f, 1f)
         SuperCamera.pose(scene, m.lockFly, d, pose)
         val mag = maxOf(1f, pose.r * m.zoom)
@@ -681,12 +714,15 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         canvas.translate(-wf * pose.cx, -hf * pose.cy)
         if (scene == SuperScene.Silk) {
             // Bands of silk sliding over each other.
-            scapePaint.shader = LinearGradient(0f, 0f, wf, hf, intArrayOf(0xFF012A1E.toInt(), 0xFF05905A.toInt(), 0xFF0A3F2E.toInt(), 0xFF1BD68A.toInt(), 0xFF023B28.toInt()), null, Shader.TileMode.CLAMP)
+            val dark = SuperTints.argb(p.tint, 0)
+            val middle = SuperTints.argb(p.tint, 1)
+            val light = SuperTints.argb(p.tint, 2)
+            scapePaint.shader = LinearGradient(0f, 0f, wf, hf, intArrayOf(mixColor(dark, middle, 0.4f), middle, mixColor(dark, middle, 0.7f), light, mixColor(dark, middle, 0.5f)), null, Shader.TileMode.CLAMP)
             canvas.drawRect(-wf, -hf, 2f * wf, 2f * hf, scapePaint)
             scapePaint.shader = null
             for (i in 0 until 5) {
                 val y = hf * (0.1f + 0.2f * i) + sin(seconds * 0.35f + i) * hf * 0.04f
-                scapePaint.shader = LinearGradient(0f, y - hf * 0.12f, 0f, y + hf * 0.12f, intArrayOf(0x0027FFB0, 0x6627FFB0, 0x0027FFB0), null, Shader.TileMode.CLAMP)
+                scapePaint.shader = LinearGradient(0f, y - hf * 0.12f, 0f, y + hf * 0.12f, intArrayOf(light and 0xFFFFFF, (0x66 shl 24) or (light and 0xFFFFFF), light and 0xFFFFFF), null, Shader.TileMode.CLAMP)
                 canvas.drawRect(-wf, y - hf * 0.12f, 2f * wf, y + hf * 0.12f, scapePaint)
             }
             scapePaint.shader = null

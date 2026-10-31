@@ -24,6 +24,7 @@ import dev.hearth.launcher.wallpaper.PlanetPictures
 import dev.hearth.launcher.wallpaper.SuperDiag
 import dev.hearth.launcher.wallpaper.SuperPlaces
 import dev.hearth.launcher.wallpaper.SuperScene
+import dev.hearth.launcher.wallpaper.SuperTints
 import dev.hearth.launcher.wallpaper.SuperVideo
 import dev.hearth.launcher.wallpaper.WallpaperUpdater
 import kotlin.math.roundToInt
@@ -92,6 +93,30 @@ class MainActivity : Activity() {
                                     prefs.edit().putBoolean("askVideo", chosen.isVideo && !SuperVideo.exists(this@MainActivity, chosen)).apply()
                                     recreate()
                                 }
+                            }
+                            .show()
+                    }
+                },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(8) },
+            )
+        }
+
+        // The silk comes in other colours (black, red, blue …); the choice is there only while the silk is the chosen scene.
+        if (scene == SuperScene.Silk) {
+            column.addView(
+                Button(this).apply {
+                    isAllCaps = false
+                    val current = prefs.getInt("tint", 0).coerceIn(0, SuperTints.names.size - 1)
+                    text = "Farbe: ${SuperTints.names[current]}"
+                    setOnClickListener {
+                        val now = prefs.getInt("tint", 0).coerceIn(0, SuperTints.names.size - 1)
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle("Farbe")
+                            .setSingleChoiceItems(SuperTints.names.toTypedArray(), now) { dialog, which ->
+                                dialog.dismiss()
+                                prefs.edit().putInt("tint", which).apply()
+                                text = "Farbe: ${SuperTints.names[which]}"
+                                preview.reload()
                             }
                             .show()
                     }

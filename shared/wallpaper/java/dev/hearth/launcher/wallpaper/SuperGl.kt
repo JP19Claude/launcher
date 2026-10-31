@@ -1232,6 +1232,8 @@ internal class SuperGl(
         GLES20.glUniform2f(prog.u("uShift"), -(m.panX * 0.07f + m.tiltX * 0.03f), m.tiltY * 0.02f)
         GLES20.glUniform1f(prog.u("uStars"), if (p.stars && !m.ambient) 1f else 0f)
         GLES20.glUniform1f(prog.u("uFlash"), m.flash)
+        // The silk takes its colours from the app (the others have none to take).
+        if (scene == SuperScene.Silk) GLES20.glUniform3fv(prog.u("uTone"), 5, SuperTints.tone(p.tint), 0)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
     }
 
@@ -1562,6 +1564,7 @@ uniform vec3 uView;
 uniform vec2 uShift;
 uniform float uStars;
 uniform float uFlash;
+uniform vec3 uTone[5];
 out vec4 fragColor;
 
 const float PI = 3.14159265;
@@ -1851,12 +1854,13 @@ vec3 silk(vec2 p) {
   vec3 H = normalize(L + V);
   float spec = pow(max(dot(n, H), 0.0), 60.0);
   float sheen = pow(1.0 - max(dot(n, V), 0.0), 2.2);
-  vec3 deep = vec3(0.000, 0.060, 0.045);
-  vec3 mid = vec3(0.000, 0.420, 0.250);
-  vec3 bright = vec3(0.100, 0.900, 0.520);
+  // The colours come from the app (SuperTints): the dark folds, the middle, the bright folds, the gleam on the crests, the sheen on the edges.
+  vec3 deep = uTone[0];
+  vec3 mid = uTone[1];
+  vec3 bright = uTone[2];
   vec3 col = mix(deep, mid, smoothstep(0.30, 0.72, diff));
   col = mix(col, bright, smoothstep(0.70, 0.98, diff) * 0.85);
-  col += vec3(0.70, 1.0, 0.88) * spec * 0.90 + vec3(0.03, 0.40, 0.22) * sheen * 0.45;
+  col += uTone[3] * spec * 0.90 + uTone[4] * sheen * 0.45;
   col *= 0.70 + 0.50 * h0;
   return col;
 }

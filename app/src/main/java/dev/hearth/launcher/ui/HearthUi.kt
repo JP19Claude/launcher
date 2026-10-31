@@ -492,6 +492,15 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: „Smaragd“ in zehn Farben", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Die Seiden-Szene soll es auch in anderen Farben geben – Schwarz, Rot, Blau und so weiter –, und die Farbe soll sich nur ändern lassen, wenn man diese Szene gewählt hat.",
+                        "Jetzt gibt es bei „Smaragd“ eine Auswahl „Farbe“ mit zehn Farben: Smaragd (grün), Schwarz, Rot, Blau, Violett, Gold, Rosa, Orange, Türkis und Silber. Sie erscheint nur, solange „Smaragd“ die gewählte Szene ist – in ZENITH unter Einstellungen → Super-Wallpaper (direkt unter der Szene), in der App „ZENITH Hintergründe“ als Taste „Farbe“ ganz oben (Version 3.2). Die Vorschau und das Wallpaper wechseln sofort; die Falten und das Glänzen bleiben, nur die Farben ändern sich (bei Schwarz glänzt es silbern auf dunklem Satin).",
+                        "Ehrlich dazu: Ich habe alle zehn Farben am Rechner gerendert, nicht auf einem Handy. Die Szene heißt weiter „Smaragd“, auch wenn sie rot oder schwarz ist.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

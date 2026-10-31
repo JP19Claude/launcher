@@ -44,6 +44,7 @@ import dev.hearth.launcher.wallpaper.SuperPhoto
 import dev.hearth.launcher.wallpaper.SuperPlaces
 import dev.hearth.launcher.wallpaper.SuperRenderer
 import dev.hearth.launcher.wallpaper.SuperScene
+import dev.hearth.launcher.wallpaper.SuperTints
 import dev.hearth.launcher.wallpaper.SuperVideo
 import dev.hearth.launcher.wallpaper.SuperWallpaperService
 import dev.hearth.launcher.wallpaper.WallpaperUpdater
@@ -95,6 +96,16 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             onSelect = { scene -> update { it.copy(superParams = it.superParams.copy(scene = scene)) } },
         )
         Note(s.superScene.note)
+        // The silk comes in other colours: black, red, blue … (the choice shows only while this scene is the chosen one).
+        if (s.superScene == SuperScene.Silk) {
+            ChoiceRow(
+                label = "Farbe",
+                options = SuperTints.names.indices.toList(),
+                selected = params.tint.coerceIn(0, SuperTints.names.size - 1),
+                optionLabel = { SuperTints.names[it] },
+                onSelect = { index -> update { it.copy(superParams = it.superParams.copy(tint = index)) } },
+            )
+        }
         // Where the body lands when it has finished turning: the place in the middle of the zoom.
         val placeCount = SuperPlaces.count(s.superScene)
         if (placeCount > 0) {

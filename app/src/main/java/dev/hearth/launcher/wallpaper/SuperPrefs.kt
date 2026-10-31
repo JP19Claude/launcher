@@ -31,6 +31,7 @@ object SuperPrefs {
             aodClock = p.getBoolean("superAodClock", true),
             offsetX = p.getFloat("superOffsetX", 0f).coerceIn(-0.45f, 0.45f),
             offsetY = p.getFloat("superOffsetY", 0f).coerceIn(-0.45f, 0.45f),
+            tint = p.getInt("superTint", 0).coerceIn(0, 9),
         )
     }
 
