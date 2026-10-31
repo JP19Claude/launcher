@@ -102,13 +102,15 @@ object SuperCamera {
      * Fills [out] with the place of [scene] when the lock flight is at [lockFly] (0 = just begun … 1 = in the middle) and
      * the home flight at [depth] (0 = still on the lock screen … 1 = the closest zoom). The home flight moves the body
      * from where the lock flight has put it, so unlocking before the lock flight has ended makes no jump.
+     * [shiftX] and [shiftY] (fractions of the screen's width and height) move the place the body comes to rest on the lock screen – the
+     * body flies there from its corner; on the home flight the shift fades to 30 %, so that the close-up stays in view.
      */
-    fun pose(scene: SuperScene, lockFly: Float, depth: Float, out: SuperPose) {
+    fun pose(scene: SuperScene, lockFly: Float, depth: Float, out: SuperPose, shiftX: Float = 0f, shiftY: Float = 0f) {
         val s = shape(scene)
         // The body shoots in from the corner, swings a little past the middle (and grows a little past its size) and settles back.
         val f = easeOutBack(lockFly)
-        val cx0 = lerp(s[0], s[3], f)
-        val cy0 = lerp(s[1], s[4], f)
+        val cx0 = lerp(s[0], s[3] + shiftX, f)
+        val cy0 = lerp(s[1], s[4] + shiftY, f)
         val r0 = lerp(s[2], s[5], f)
         val d = depth.coerceIn(0f, 1f)
         // Home flight, as a change from the lock screen's rest: [dx], [dy] and the factor [scale] of the size.
@@ -135,8 +137,10 @@ object SuperCamera {
                 scale = (s[8] / s[5]) * (s[11] / s[8]).pow(e)
             }
         }
-        out.cx = cx0 + dx
-        out.cy = cy0 + dy
+        // (the shift as far as the body has flown to it, fading with the home flight)
+        val fade = 0.7f * d * f
+        out.cx = cx0 + dx - shiftX * fade
+        out.cy = cy0 + dy - shiftY * fade
         out.r = r0 * scale
     }
 

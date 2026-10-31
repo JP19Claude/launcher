@@ -194,6 +194,29 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
                 valueText = "${(params.size * 100f).roundToInt()} %",
             ) { v -> update { it.copy(superParams = it.superParams.copy(size = v)) } }
         }
+        // Where the body hangs on the lock screen: moved, e.g. up behind the clock (the photos, the geometry and the landscapes fill the screen).
+        if (s.superScene != SuperScene.Photo && s.superScene != SuperScene.Flag && s.superScene != SuperScene.Geometry && !s.superScene.isScape) {
+            SliderRow(
+                label = "Position waagerecht",
+                value = params.offsetX,
+                range = -0.45f..0.45f,
+                valueText = "${(params.offsetX * 100f).roundToInt()} %",
+            ) { v -> update { it.copy(superParams = it.superParams.copy(offsetX = v)) } }
+            SliderRow(
+                label = "Position senkrecht",
+                value = params.offsetY,
+                range = -0.45f..0.45f,
+                valueText = "${(params.offsetY * 100f).roundToInt()} %",
+            ) { v -> update { it.copy(superParams = it.superParams.copy(offsetY = v)) } }
+            Note("Verschiebt, wo ${if (s.superScene == SuperScene.Moon) "der Mond" else "der Körper"} auf dem Sperrbildschirm hängt – nach oben zum Beispiel hinter die Uhr. Auf dem Startbildschirm wirkt die Verschiebung nur noch zu 30 %, damit die Nahaufnahme im Bild bleibt.")
+            if (params.offsetX != 0f || params.offsetY != 0f) {
+                ActionRow(
+                    label = "Position zurücksetzen",
+                    description = "Zurück in die Mitte",
+                    onClick = { update { it.copy(superParams = it.superParams.copy(offsetX = 0f, offsetY = 0f)) } },
+                )
+            }
+        }
         ActionRow(
             label = "Als einzelne App herunterladen",
             description = "Jede Szene gibt es auch als eigene kleine App (ein Live-Wallpaper) – einzeln zu installieren und weiterzugeben. Öffnet die Download-Seite.",

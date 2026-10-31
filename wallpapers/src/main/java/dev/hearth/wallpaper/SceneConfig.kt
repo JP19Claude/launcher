@@ -48,6 +48,8 @@ internal object SceneConfig {
             aod = p.getBoolean("aod", false),
             aodDim = p.getFloat("aodDim", 0.45f).coerceIn(0.1f, 0.8f),
             aodClock = p.getBoolean("aodClock", true),
+            offsetX = p.getFloat("offsetX", 0f).coerceIn(-0.45f, 0.45f),
+            offsetY = p.getFloat("offsetY", 0f).coerceIn(-0.45f, 0.45f),
         )
     }
 }

@@ -305,6 +305,44 @@ class MainActivity : Activity() {
                 },
             )
         }
+        // Where the body hangs on the lock screen: moved right/left and down/up, e.g. up behind the clock.
+        if (scene != SuperScene.Flag && scene != SuperScene.Photo && scene != SuperScene.Geometry && !scene.isScape) {
+            fun positionSlider(title: String, key: String) {
+                val label = TextView(this).apply {
+                    setTextColor(Color.WHITE)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                    setPadding(0, dp(10), 0, 0)
+                }
+                fun show(percent: Int) {
+                    label.text = "$title  ${if (percent > 0) "+" else ""}$percent %"
+                }
+                val start = prefs.getFloat(key, 0f).coerceIn(-0.45f, 0.45f)
+                show((start * 100f).roundToInt())
+                column.addView(label)
+                column.addView(
+                    SeekBar(this).apply {
+                        max = 90
+                        progress = ((start + 0.45f) / 0.01f).roundToInt().coerceIn(0, 90)
+                        setOnSeekBarChangeListener(
+                            object : SeekBar.OnSeekBarChangeListener {
+                                override fun onProgressChanged(bar: SeekBar?, value: Int, fromUser: Boolean) {
+                                    val offset = -0.45f + value * 0.01f
+                                    show((offset * 100f).roundToInt())
+                                    if (!fromUser) return
+                                    prefs.edit().putFloat(key, offset).apply()
+                                    preview.reload()
+                                }
+
+                                override fun onStartTrackingTouch(bar: SeekBar?) = Unit
+                                override fun onStopTrackingTouch(bar: SeekBar?) = Unit
+                            },
+                        )
+                    },
+                )
+            }
+            positionSlider("Position waagerecht (← links, rechts →)", "offsetX")
+            positionSlider("Position senkrecht (↑ oben, unten ↓)", "offsetY")
+        }
         column.addView(
             Button(this).apply {
                 text = "Als Hintergrund festlegen"

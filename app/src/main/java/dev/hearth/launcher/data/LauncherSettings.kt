@@ -1707,6 +1707,8 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
                 aod = prefs.getBoolean("superAod", d.superParams.aod),
                 aodDim = prefs.getFloat("superAodDim", d.superParams.aodDim).coerceIn(0.1f, 0.8f),
                 aodClock = prefs.getBoolean("superAodClock", d.superParams.aodClock),
+                offsetX = prefs.getFloat("superOffsetX", d.superParams.offsetX).coerceIn(-0.45f, 0.45f),
+                offsetY = prefs.getFloat("superOffsetY", d.superParams.offsetY).coerceIn(-0.45f, 0.45f),
             ),
             sloganEverywhere = prefs.getBoolean("sloganEverywhere", d.sloganEverywhere),
             zenithBootIntro = prefs.getBoolean("zenithBootIntro", d.zenithBootIntro),
@@ -1975,6 +1977,8 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putBoolean("superAod", s.superParams.aod)
             .putFloat("superAodDim", s.superParams.aodDim)
             .putBoolean("superAodClock", s.superParams.aodClock)
+            .putFloat("superOffsetX", s.superParams.offsetX)
+            .putFloat("superOffsetY", s.superParams.offsetY)
             .putBoolean("sloganEverywhere", s.sloganEverywhere)
             .putBoolean("zenithBootIntro", s.zenithBootIntro)
             .putBoolean("zenithStrike", s.zenithStrike)
@@ -2187,7 +2191,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
             "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerPrivacy", "accent", "animations",
             // The Super-Wallpaper's body on the AOD (the still is drawn again when one of these changes).
-            "superAod", "superAodDim", "superScene", "superPlace", "superSize", "superPhoto",
+            "superAod", "superAodDim", "superScene", "superPlace", "superSize", "superPhoto", "superOffsetX", "superOffsetY",
         )
         const val KEY_CC_ENABLED = "ccEnabled"
     }

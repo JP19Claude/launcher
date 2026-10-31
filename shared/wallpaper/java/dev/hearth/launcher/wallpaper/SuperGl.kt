@@ -1002,7 +1002,7 @@ internal class SuperGl(
     private fun drawSphere(w: Int, h: Int, p: SuperParams, m: SuperMotion) {
         val prog = sphere ?: return
         val d = m.depth.coerceIn(0f, 1f)
-        SuperCamera.pose(scene, m.lockFly, d, pose)
+        SuperCamera.pose(scene, m.lockFly, d, pose, p.offsetX, p.offsetY)
         // The 600 seconds the shaders' clock counts: everything that moves on its own makes whole turns in them, so that nothing jumps.
         val tsec = shaderClock(m)
         val tw = 6.2831855f / 600f
@@ -1142,7 +1142,7 @@ internal class SuperGl(
     private fun drawDisc(w: Int, h: Int, p: SuperParams, m: SuperMotion) {
         val prog = sprite ?: return
         val d = m.depth.coerceIn(0f, 1f)
-        SuperCamera.pose(scene, m.lockFly, d, pose)
+        SuperCamera.pose(scene, m.lockFly, d, pose, p.offsetX, p.offsetY)
         val radius = w * pose.r * m.zoom * p.size
         val cx = w * pose.cx - m.panX * w * lerp(0.03f, 0.10f, d) + m.tiltX * w * lerp(0.02f, 0.05f, d)
         val cy = h - (h * pose.cy + m.tiltY * h * 0.02f)

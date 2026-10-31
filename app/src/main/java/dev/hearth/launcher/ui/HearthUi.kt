@@ -444,6 +444,15 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Den Himmelskörper verschieben", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Der Mond (oder Planet) soll sich verschieben lassen, damit er zum Beispiel auch unter der Uhr hängen kann. Unter Einstellungen → Super-Wallpaper gibt es jetzt zwei Regler: „Position waagerecht“ und „Position senkrecht“ (je bis zu 45 % der Bildschirmbreite beziehungsweise -höhe nach jeder Seite), dazu „Position zurücksetzen“. Die Vorschau oben zeigt die Verschiebung sofort. Nach oben geschoben hängt der Mond hinter der Uhr des Sperrbildschirms.",
+                        "Wie es wirkt: Der Körper fliegt beim Einschalten wie bisher von der Ecke ein, kommt aber an dem Ort an, den du eingestellt hast. Beim Entsperren zieht die Verschiebung auf 30 % zurück, damit die Nahaufnahme im Bild bleibt; auf dem Startbildschirm hängt der Körper also nur noch ein Stück verschoben. Das Standbild auf dem AOD (Planet auf dem AOD) hängt am selben Ort. Auch in jeder Hintergrund-App (Version 2.7), auch in „ZENITH Hintergründe“.",
+                        "Ehrlich dazu: Es gilt für den Mond, die Erde und die Planeten; die Fotos (Iwo Jima, eigenes Foto), die Geometrie und die Landschaften füllen den ganzen Bildschirm und haben nichts zu verschieben. Die Uhr liegt als Teil des Sperrbildschirms über dem Wallpaper; ob sie dort halbtransparent ist, bestimmt das System. Ich konnte es auf keinem Handy ausprobieren.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

@@ -29,6 +29,8 @@ object SuperPrefs {
             aod = p.getBoolean("superAod", false),
             aodDim = p.getFloat("superAodDim", 0.45f).coerceIn(0.1f, 0.8f),
             aodClock = p.getBoolean("superAodClock", true),
+            offsetX = p.getFloat("superOffsetX", 0f).coerceIn(-0.45f, 0.45f),
+            offsetY = p.getFloat("superOffsetY", 0f).coerceIn(-0.45f, 0.45f),
         )
     }
 
@@ -51,7 +53,7 @@ object SuperPrefs {
         renderer.draw(Canvas(scene), w, h, 5000L, params, motion)
         if (params.scene == SuperScene.Photo || params.scene == SuperScene.Flag || params.scene == SuperScene.Geometry || params.scene.isScape) return@runCatching scene
         val pose = SuperPose()
-        SuperCamera.pose(params.scene, 1f, 0f, pose)
+        SuperCamera.pose(params.scene, 1f, 0f, pose, params.offsetX, params.offsetY)
         val cx = w * pose.cx
         val cy = h * pose.cy
         val reach = w * pose.r * params.size * (if (params.scene == SuperScene.Saturn) 2.7f else 1.45f)
