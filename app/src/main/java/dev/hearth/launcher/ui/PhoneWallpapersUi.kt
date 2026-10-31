@@ -82,7 +82,7 @@ internal fun PhoneWallpapersSection(update: ((LauncherSettings) -> LauncherSetti
         }
     }
     // What cannot be shipped (the wallpapers are OnePlus') ZENITH draws itself, in the same spirit: the mountains and the flowing silk.
-    Section("Im OnePlus-Stil – von ZENITH selbst gemacht") {
+    Section("Im Stil moderner Handy-Hintergründe – von ZENITH selbst gemacht") {
         SuperScene.entries.filter { it.isScape }.forEachIndexed { index, scene ->
             if (index > 0) RowDivider()
             ActionRow(
@@ -94,7 +94,7 @@ internal fun PhoneWallpapersSection(update: ((LauncherSettings) -> LauncherSetti
                 },
             )
         }
-        Note("Das sind eigene Szenen von ZENITH, nicht die von OnePlus – gezeichnet von der Grafik des Telefons, ohne ein einziges Bild von OnePlus. Tippen wählt die Szene und öffnet das Super-Wallpaper, dort „Als Live-Wallpaper festlegen“.")
+        Note("Das sind eigene Szenen von ZENITH, nicht die Wallpaper von OnePlus oder anderen Herstellern – gezeichnet von der Grafik des Telefons, ohne ein einziges Bild von ihnen. Tippen wählt die Szene und öffnet das Super-Wallpaper, dort „Als Live-Wallpaper festlegen“.")
     }
     Section("Auswahl des Telefons") {
         ActionRow(

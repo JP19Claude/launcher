@@ -18,6 +18,7 @@ internal object SceneConfig {
     val choices: List<SuperScene> = listOf(
         SuperScene.Moon, SuperScene.Earth, SuperScene.Mars, SuperScene.Venus, SuperScene.Jupiter, SuperScene.Saturn, SuperScene.Neptune,
         SuperScene.Pluto, SuperScene.Io, SuperScene.Europa, SuperScene.Ganymede, SuperScene.Flag, SuperScene.Geometry, SuperScene.Mountains, SuperScene.Silk,
+        SuperScene.Spheres, SuperScene.Spray,
     )
 
     /** The scene now: the build's own, or the one chosen in the app with every scene. */

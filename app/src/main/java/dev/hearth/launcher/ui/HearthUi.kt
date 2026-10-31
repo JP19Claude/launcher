@@ -453,6 +453,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Zwei weitere Szenen – „Sphären“ und „Gischt“", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Zwei Live-Wallpaper aus Videos (ein blaues Wallpaper mit großen Kugeln und das Wallpaper aus einer Teilchen-Gischt in Türkis, Weiß und Rot) sollen in die App. Die Wallpaper in den Videos sind Werke der Hersteller, ich kann sie nicht kopieren oder einbauen – ich habe nur die Videos angesehen und dann zwei eigene Szenen im selben Geist gezeichnet.",
+                        "„Sphären“: große blaue Kugeln, die sich überlappen und langsam umeinander ziehen – mit leuchtendem Rand auf der Lichtseite, Schatten aufeinander und einem Verlauf von Indigo zu Lavendel. „Gischt“: ein Schwarm feiner Teilchen, der als breite Welle durchs Bild zieht – Türkis und Weiß, unten ein korallroter Schwall – vor Schwarz; die Teilchen strömen von allein, die Welle wogt. Beide folgen der Neigung und den Seiten, fliegen beim Einschalten ein, zoomen beim Entsperren und blitzen beim Tippen auf.",
+                        "Zu wählen unter Einstellungen → Super-Wallpaper → Szene, auf der Seite „OnePlus Live-Wallpaper“ im Abschnitt „Im Stil moderner Handy-Hintergründe – von ZENITH selbst gemacht“ und in „ZENITH Hintergründe“ (Version 2.8). Ohne die nötige Grafik zeichnet der Prozessor eine einfachere Fassung.",
+                        "Ehrlich dazu: Das sind nicht die Wallpaper aus den Videos, sondern eigene Szenen im ähnlichen Stil – bewusst nicht nachgezeichnet. Ich habe sie nur am Rechner (Software-Grafik) gerendert, nicht auf einem Handy; wie flüssig sie laufen, weiß ich nicht. Größe und Landeplatz gibt es bei ihnen nicht.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

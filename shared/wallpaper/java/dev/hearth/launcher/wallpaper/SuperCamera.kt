@@ -75,6 +75,8 @@ object SuperCamera {
         // has no edge – the mountains start with a close look at the sky, pull back to the whole range and, unlocked, dive down into the valley.
         SuperScene.Mountains -> floatArrayOf(0.30f, 0.22f, 1.9f, 0.50f, 0.50f, 1.0f, 0.50f, 0.53f, 1.08f, 0.50f, 0.62f, 1.45f)
         SuperScene.Silk -> floatArrayOf(0.30f, 0.30f, 1.8f, 0.50f, 0.50f, 1.0f, 0.50f, 0.50f, 1.12f, 0.50f, 0.50f, 1.55f)
+        SuperScene.Spheres -> floatArrayOf(0.30f, 0.28f, 1.8f, 0.50f, 0.50f, 1.0f, 0.50f, 0.50f, 1.10f, 0.50f, 0.56f, 1.45f)
+        SuperScene.Spray -> floatArrayOf(0.34f, 0.30f, 1.8f, 0.50f, 0.50f, 1.0f, 0.50f, 0.50f, 1.10f, 0.54f, 0.54f, 1.50f)
         else -> {
             // The planets: as close as the Moon. The solid ones have maps of 8192 × 4096 or 16384 × 8192 (Io's, the softest, not quite as close); the gas planets' maps are smaller and a fine
             // cloud structure is drawn on them, Saturn only comes as close as its ring still sweeps across the picture.

@@ -98,11 +98,11 @@ class PhoneWallpapersActivity : Activity() {
         }
         if (SceneConfig.all) {
             // What cannot be shipped (the wallpapers are OnePlus') this app draws itself, in the same spirit.
-            column.addView(text("Im OnePlus-Stil – von ZENITH selbst gemacht", 13f, 0xFF7F8896.toInt(), bold = true, top = dp(22)))
+            column.addView(text("Im Stil moderner Handy-Hintergründe – von ZENITH selbst gemacht", 13f, 0xFF7F8896.toInt(), bold = true, top = dp(22)))
             SceneConfig.choices.filter { it.isScape }.forEach { column.addView(ownRow(it)) }
             column.addView(
                 text(
-                    "Das sind eigene Szenen, nicht die von OnePlus – ohne ein einziges Bild von OnePlus. Tippen wählt die Szene und öffnet die App; dort „Als Live-Wallpaper festlegen“.",
+                    "Das sind eigene Szenen, nicht die Wallpaper von OnePlus oder anderen Herstellern – ohne ein einziges Bild von ihnen. Tippen wählt die Szene und öffnet die App; dort „Als Live-Wallpaper festlegen“.",
                     13f, 0xFF7F8896.toInt(), top = dp(6),
                 ),
             )

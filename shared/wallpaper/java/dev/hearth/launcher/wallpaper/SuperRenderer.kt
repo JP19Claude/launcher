@@ -65,10 +65,18 @@ enum class SuperScene(val label: String, val note: String) {
     Silk(
         "Smaragd",
         "Fließende smaragdgrüne Seide mit glänzenden Falten – von ZENITH selbst gezeichnet, im Stil der Wellen-Hintergründe von Telefonen. Sie bewegt sich ruhig von allein, folgt der Neigung und kommt beim Entsperren näher.",
+    ),
+    Spheres(
+        "Sphären",
+        "Große blaue Kugeln, die sich überlappen und langsam umeinander ziehen – mit leuchtendem Rand auf der Lichtseite und Schatten aufeinander, vor einem Verlauf von Indigo zu Lavendel. Von ZENITH selbst gezeichnet, im Stil moderner Handy-Hintergründe; sie folgen der Neigung und kommen beim Entsperren näher.",
+    ),
+    Spray(
+        "Gischt",
+        "Ein Schwarm feiner Teilchen, der als breite Welle durchs Bild zieht – Türkis und Weiß, unten ein korallroter Schwall – vor Schwarz. Von ZENITH selbst gezeichnet, im Stil moderner Handy-Hintergründe; die Teilchen strömen von allein, die Welle wogt langsam, und beim Entsperren kommt die Kamera näher.",
     );
 
     /** A landscape ZENITH draws itself (no body in the dark): it has no size to set and no sphere, and shows the whole picture on the always-on screen. */
-    val isScape: Boolean get() = this == Mountains || this == Silk
+    val isScape: Boolean get() = this == Mountains || this == Silk || this == Spheres || this == Spray
 }
 
 /** What the landscapes need besides their pictures: the hour of the day (the sky of "Berge" follows it). */
@@ -671,6 +679,38 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
                 canvas.drawRect(-wf, y - hf * 0.12f, 2f * wf, y + hf * 0.12f, scapePaint)
             }
             scapePaint.shader = null
+            canvas.restore()
+            return
+        }
+        if (scene == SuperScene.Spheres) {
+            scapePaint.shader = LinearGradient(0f, 0f, 0f, hf, 0xFF130F44.toInt(), 0xFF7573DB.toInt(), Shader.TileMode.CLAMP)
+            canvas.drawRect(-wf, -hf, 2f * wf, 2f * hf, scapePaint)
+            val sway = sin(seconds * 0.3f) * wf * 0.02f
+            val balls = floatArrayOf(0.30f, 0.20f, 0.10f, 0.39f, 0.30f, 0.30f, 0.58f, 0.80f, 0.40f)
+            for (i in 0 until 3) {
+                val bx = wf * balls[i * 3] + sway * (i + 1)
+                val by = hf * balls[i * 3 + 1]
+                val br = wf * balls[i * 3 + 2] * 1.4f
+                scapePaint.shader = RadialGradient(bx + br * 0.35f, by + br * 0.35f, br * 1.1f, intArrayOf(0xFF7FA6FF.toInt(), 0xFF1B4DEB.toInt(), 0xFF05094A.toInt()), floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
+                canvas.drawCircle(bx, by, br, scapePaint)
+            }
+            scapePaint.shader = null
+            canvas.restore()
+            return
+        }
+        if (scene == SuperScene.Spray) {
+            canvas.drawColor(0xFF010305.toInt())
+            starPaint.style = Paint.Style.FILL
+            for (i in 0 until STAR_COUNT) {
+                val x = stars[i * 4] * wf
+                val y = stars[i * 4 + 1] * hf
+                val distance = abs(hypot(x - wf * 0.7f, y - hf * 0.3f) - wf * 0.6f) / (wf * 0.25f)
+                if (distance > 1.6f) continue
+                val weight = kotlin.math.exp(-distance * distance)
+                starPaint.color = if (y > hf * 0.8f && x > wf * 0.5f) 0xFFDB3350.toInt() else if (weight > 0.5f) 0xFF2A9EA8.toInt() else 0xFFDDF5F6.toInt()
+                starPaint.alpha = (80 + 175 * weight).toInt().coerceIn(0, 255)
+                canvas.drawCircle(x, y, stars[i * 4 + 2] * 1.1f, starPaint)
+            }
             canvas.restore()
             return
         }

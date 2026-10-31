@@ -280,7 +280,7 @@ internal class SuperGl(
                     }
                     true
                 }
-                SuperScene.Mountains, SuperScene.Silk -> {
+                SuperScene.Mountains, SuperScene.Silk, SuperScene.Spheres, SuperScene.Spray -> {
                     kind = Kind.SCAPE
                     true
                 }
@@ -1194,7 +1194,15 @@ internal class SuperGl(
         GLES20.glUniform2f(prog.u("uRes"), w.toFloat(), h.toFloat())
         GLES20.glUniform4f(prog.u("uBox"), 0f, 0f, w.toFloat(), h.toFloat())
         GLES20.glUniform1f(prog.u("uTime"), shaderClock(m))
-        GLES20.glUniform1i(prog.u("uScene"), if (scene == SuperScene.Silk) 1 else 0)
+        GLES20.glUniform1i(
+            prog.u("uScene"),
+            when (scene) {
+                SuperScene.Silk -> 1
+                SuperScene.Spheres -> 2
+                SuperScene.Spray -> 3
+                else -> 0
+            },
+        )
         GLES20.glUniform1f(prog.u("uHour"), if (fixedHour >= 0f) fixedHour else SuperScape.hourNow())
         GLES20.glUniform3f(prog.u("uView"), pose.cx, pose.cy, maxOf(0.5f, pose.r * m.zoom))
         // The pages and the tilt slide the layers against each other (the near ones further): the mountains have depth.
@@ -1831,6 +1839,117 @@ vec3 silk(vec2 p) {
   return col;
 }
 
+// ---------------------------------------------------------------- the spheres
+vec4 sphereAt(vec2 p, vec2 c, float R, vec2 front, float frontR, float px) {
+  vec2 d = (p - c) / R;
+  float len = length(d);
+  float a = 1.0 - smoothstep(1.0 - px / R, 1.0 + px / R, len);
+  if (a <= 0.0) return vec4(0.0);
+  float z = sqrt(max(1.0 - len * len, 0.0));
+  vec3 n = vec3(d, z);
+  vec3 L = normalize(vec3(0.55, -0.62, 0.50));
+  float lam = max(dot(n, L), 0.0);
+  vec3 deep = vec3(0.012, 0.020, 0.165);
+  vec3 blue = vec3(0.050, 0.240, 0.930);
+  vec3 pale = vec3(0.520, 0.640, 1.000);
+  vec3 col = mix(deep, blue, pow(lam, 0.65));
+  col = mix(col, pale, pow(lam, 4.0) * 0.55);
+  // The edge glows on the side the light comes from: a thin bright crescent.
+  float side = clamp(dot(normalize(d + 0.0001), L.xy) * 0.5 + 0.5, 0.0, 1.0);
+  float rim = pow(1.0 - z, 2.6);
+  col += vec3(0.30, 0.55, 1.00) * rim * (0.20 + 1.6 * pow(side, 3.0));
+  col += vec3(0.90, 0.95, 1.00) * pow(max(dot(n, normalize(L + vec3(0.0, 0.0, 1.0))), 0.0), 90.0) * 0.28;
+  // The shadow of the sphere in front, thrown away from the light.
+  if (frontR > 0.0) {
+    float sh = length(p - (front - L.xy * 0.10)) / frontR;
+    col *= 1.0 - 0.62 * (1.0 - smoothstep(0.88, 1.12, sh));
+  }
+  return vec4(col, a);
+}
+
+vec3 spheres(vec2 p) {
+  float w = TAU * uTime / 600.0;
+  float px = 1.0 / (uRes.x * uView.z);
+  vec3 col = mix(vec3(0.43, 0.45, 0.86), vec3(0.075, 0.060, 0.265), smoothstep(-0.95, 0.80, p.y));
+  col += vec3(0.05, 0.05, 0.12) * smoothstep(0.6, -0.1, abs(p.x));
+  vec2 c2 = vec2(0.30, 0.80) + 0.060 * vec2(cos(w * 21.0 + 2.0), sin(w * 15.0 + 1.0)) + uShift * vec2(0.3, 0.3);
+  vec2 c0 = vec2(-0.22, 0.30) + 0.050 * vec2(cos(w * 18.0), sin(w * 24.0 + 0.5)) + uShift * vec2(0.6, 0.6);
+  vec2 c1 = vec2(0.16, -0.46) + 0.070 * vec2(cos(w * 24.0 + 4.0), sin(w * 18.0 + 3.0)) + uShift * vec2(1.0, 1.0);
+  float r2 = 0.20 * (1.0 + 0.02 * sin(w * 30.0));
+  float r0 = 0.64 * (1.0 + 0.012 * sin(w * 12.0 + 1.0));
+  float r1 = 0.47 * (1.0 + 0.016 * sin(w * 18.0));
+  vec4 s2 = sphereAt(p, c2, r2, c0, r0, px);
+  col = mix(col, s2.rgb, s2.a);
+  vec4 s0 = sphereAt(p, c0, r0, c1, r1, px);
+  col = mix(col, s0.rgb, s0.a);
+  vec4 s1 = sphereAt(p, c1, r1, vec2(0.0), 0.0, px);
+  col = mix(col, s1.rgb, s1.a);
+  // A soft glow of light in the corner they are lit from.
+  col += vec3(0.20, 0.30, 0.70) * exp(-length(p - vec2(0.55, -0.95)) * 2.4) * 0.45;
+  return col;
+}
+
+// ---------------------------------------------------------------- the spray
+float sprayDensity(vec2 p) {
+  float w = TAU * uTime / 600.0;
+  vec2 q = p;
+  q += 0.22 * vec2(sin(q.y * 2.6 + w * 15.0), cos(q.x * 2.2 + w * 12.0));
+  q += 0.10 * vec2(sin(q.y * 5.3 - w * 30.0 + 1.0), sin(q.x * 4.7 + w * 24.0));
+  float d = length(q - vec2(0.60, 0.40)) - 0.78;
+  float band = exp(-sq(d / 0.20));
+  float rag = 0.30 + 1.0 * fbm4(q * 3.2);
+  return clamp(band * rag * 1.7, 0.0, 1.0);
+}
+
+float sprayCoral(vec2 p) {
+  float w = TAU * uTime / 600.0;
+  vec2 q = p + 0.12 * vec2(sin(p.y * 4.0 + w * 18.0), cos(p.x * 3.5 + w * 15.0));
+  float d = length((q - vec2(0.52, -0.90)) * vec2(1.0, 0.8)) / 0.36;
+  return clamp(exp(-d * d) * (0.35 + 1.1 * fbm3(q * 4.0 + 7.0)) * 1.5, 0.0, 1.0);
+}
+
+// One scale of particles: a grid that streams along dir, a particle in some of its cells, more where the spray is dense.
+vec3 sprayDots(vec2 p, vec2 dir, vec2 perp, float s, float cellsPer600, float seed, float stretch) {
+  vec2 g = vec2(dot(p, dir) * s + cellsPer600 * uTime / 600.0, dot(p, perp) * s);
+  vec2 id = floor(g);
+  vec2 f = fract(g) - 0.5;
+  float h = h21(id + seed);
+  vec2 off = (vec2(h21(id + seed + 3.7), h21(id + seed + 8.1)) - 0.5) * 0.55;
+  float cu = (id.x + 0.5 + off.x - cellsPer600 * uTime / 600.0) / s;
+  float cv = (id.y + 0.5 + off.y) / s;
+  vec2 pc = dir * cu + perp * cv;
+  float D = sprayDensity(pc);
+  float C = sprayCoral(pc);
+  float dens = max(D, C);
+  float on = step(h, dens * dens * 0.85);
+  vec2 e = f - off;
+  e.x /= stretch;
+  float rad = (0.06 + 0.13 * h21(id + seed + 1.3));
+  float dot1 = 1.0 - smoothstep(rad * 0.55, rad, length(e));
+  vec3 teal = vec3(0.03, 0.42, 0.46);
+  vec3 white = vec3(0.86, 0.96, 0.97);
+  vec3 coral = vec3(0.86, 0.20, 0.30);
+  vec3 c = mix(white, teal, smoothstep(0.25, 0.85, D));
+  c = mix(c, coral, smoothstep(0.1, 0.6, C) * step(D, C + 0.05));
+  return c * dot1 * on * (0.55 + 0.45 * h21(id + seed + 5.1)) * 1.45;
+}
+
+vec3 spray(vec2 p) {
+  vec2 dir = normalize(vec2(0.55, -0.83));
+  vec2 perp = vec2(-dir.y, dir.x);
+  vec3 col = vec3(0.000, 0.004, 0.010);
+  float D = sprayDensity(p);
+  float C = sprayCoral(p);
+  // Fine streaks along the flow inside the body of the spray, and a dark teal haze under them.
+  float streak = 0.55 * n1(dot(p, perp) * 90.0 + 3.0) + 0.45 * n1(dot(p, perp) * 34.0 + 11.0);
+  col += vec3(0.008, 0.120, 0.140) * D * D * (0.20 + 0.80 * streak);
+  col += vec3(0.300, 0.040, 0.075) * C * C * (0.20 + 0.80 * streak);
+  col += sprayDots(p, dir, perp, 52.0, 240.0, 0.0, 1.8);
+  col += sprayDots(p, dir, perp, 96.0, 420.0, 17.0, 2.2);
+  col += sprayDots(p, dir, perp, 176.0, 720.0, 41.0, 2.8);
+  return col;
+}
+
 void main() {
   vec2 uv = gl_FragCoord.xy / uRes;
   float A = uRes.y / uRes.x;
@@ -1840,8 +1959,12 @@ void main() {
   if (uScene == 0) {
     setSky();
     col = mountains(p);
-  } else {
+  } else if (uScene == 1) {
     col = silk(p + uShift * 0.4);
+  } else if (uScene == 2) {
+    col = spheres(p);
+  } else {
+    col = spray(p + uShift * 0.3);
   }
   // A flash lifts everything a little; the corners are a little darker.
   col += uFlash * 0.12 * (0.4 + 0.6 * col);
