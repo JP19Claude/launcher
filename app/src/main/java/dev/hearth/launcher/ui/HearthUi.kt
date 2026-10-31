@@ -483,6 +483,15 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Video wählen gleich oben – und die Videos bleiben deine", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: „Video 1“ und „Video 2“ sehen gleich aus – ein leerer Sternenhimmel –, es sind nicht die Videos, die ich geschickt habe. Das liegt daran, dass ZENITH die Videos nicht mitbringt: Es sind Werbeclips von Herstellern, von anderen zusammengeschnitten; die lege ich nicht in eine App, die man weitergibt.",
+                        "Damit es nicht mehr nach „kaputt“ aussieht: In der App „ZENITH Hintergründe“ steht bei „Video 1“ und „Video 2“ ganz oben die Taste „Video aus der Galerie wählen“ (vorher weit unten), mit einem Hinweis, solange noch kein Video da ist. Wählst du die Szene „Video 1“ oder „Video 2“ ohne Video, öffnet sich die Galerie von selbst. Schalter und Regler, die ein Video nicht braucht (Neigung, Entsperr-Flug, Sterne, Geschwindigkeit), sind dort ausgeblendet.",
+                        "Ehrlich dazu: Du musst die Datei einmal selbst wählen; danach bleibt sie in der App. Nicht auf dem Handy ausprobiert.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

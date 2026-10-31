@@ -86,7 +86,10 @@ class MainActivity : Activity() {
                             .setSingleChoiceItems(names, SceneConfig.choices.indexOf(scene).coerceAtLeast(0)) { dialog, which ->
                                 dialog.dismiss()
                                 if (SceneConfig.choices[which] != scene) {
-                                    SceneConfig.choose(this@MainActivity, SceneConfig.choices[which])
+                                    val chosen = SceneConfig.choices[which]
+                                    SceneConfig.choose(this@MainActivity, chosen)
+                                    // A video scene with no video yet: the chooser opens by itself on the new page.
+                                    prefs.edit().putBoolean("askVideo", chosen.isVideo && !SuperVideo.exists(this@MainActivity, chosen)).apply()
                                     recreate()
                                 }
                             }
@@ -94,6 +97,31 @@ class MainActivity : Activity() {
                     }
                 },
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(8) },
+            )
+        }
+
+        // A video of your own: a file of the gallery, copied into the app and played muted in a loop. The first thing on the page, as nothing runs without it.
+        if (scene.isVideo) {
+            val have = SuperVideo.exists(this, scene)
+            column.addView(
+                Button(this).apply {
+                    isAllCaps = false
+                    text = if (have) "${scene.label}: anderes Video wählen" else "${scene.label}: Video aus der Galerie wählen"
+                    setOnClickListener { pickVideo() }
+                },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(4) },
+            )
+            column.addView(
+                TextView(this).apply {
+                    text = if (have) {
+                        "Das Video läuft stumm in einer Endlosschleife, bildfüllend. Die App bringt kein Video mit – das hier ist deine Datei."
+                    } else {
+                        "Noch kein Video gewählt – ohne Video bleibt der Hintergrund ein leerer Sternenhimmel. Tippe auf die Taste oben und nimm die Datei aus deiner Galerie oder dem Download-Ordner."
+                    }
+                    setTextColor(if (have) 0xFFB9C1CC.toInt() else 0xFFE0A458.toInt())
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                    setPadding(0, 0, 0, dp(10))
+                },
             )
         }
 
@@ -112,11 +140,14 @@ class MainActivity : Activity() {
                 },
             )
         }
-        option("Neigung folgen", "tilt")
-        option("Entsperr-Flug und Seitenwechsel", "zoom")
-        option("Sterne", "stars")
+        // (a video has no tilt, flight, stars or speed)
+        if (!scene.isVideo) {
+            option("Neigung folgen", "tilt")
+            option("Entsperr-Flug und Seitenwechsel", "zoom")
+            option("Sterne", "stars")
+        }
 
-        column.addView(
+        if (!scene.isVideo) column.addView(
             TextView(this).apply {
                 text = "Geschwindigkeit"
                 setTextColor(Color.WHITE)
@@ -124,7 +155,7 @@ class MainActivity : Activity() {
                 setPadding(0, dp(10), 0, 0)
             },
         )
-        column.addView(
+        if (!scene.isVideo) column.addView(
             SeekBar(this).apply {
                 max = 28
                 progress = ((prefs.getFloat("speed", 1f) - 0.2f) / 0.1f).toInt().coerceIn(0, 28)
@@ -348,29 +379,6 @@ class MainActivity : Activity() {
             positionSlider("Position waagerecht (← links, rechts →)", "offsetX")
             positionSlider("Position senkrecht (↑ oben, unten ↓)", "offsetY")
         }
-        if (scene.isVideo) {
-            // A video of your own: a file of the gallery, copied into the app and played muted in a loop.
-            column.addView(
-                Button(this).apply {
-                    isAllCaps = false
-                    text = if (SuperVideo.exists(this@MainActivity, scene)) "Anderes Video wählen" else "Video wählen"
-                    setOnClickListener {
-                        val pick = Intent(Intent.ACTION_GET_CONTENT).setType("video/*").addCategory(Intent.CATEGORY_OPENABLE)
-                        @Suppress("DEPRECATION")
-                        startActivityForResult(Intent.createChooser(pick, "Video wählen"), PICK_VIDEO)
-                    }
-                },
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(14) },
-            )
-            column.addView(
-                TextView(this).apply {
-                    text = "Die Datei kommt aus deiner Galerie und läuft stumm in einer Endlosschleife, bildfüllend. Die App bringt kein Video mit."
-                    setTextColor(0xFFB9C1CC.toInt())
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                    setPadding(0, dp(2), 0, 0)
-                },
-            )
-        }
         column.addView(
             Button(this).apply {
                 text = "Als Hintergrund festlegen"
@@ -406,6 +414,11 @@ class MainActivity : Activity() {
                 setPadding(0, dp(14), 0, 0)
             },
         )
+        // Just chosen: a video scene with no video asks for one right away.
+        if (scene.isVideo && prefs.getBoolean("askVideo", false)) {
+            prefs.edit().putBoolean("askVideo", false).apply()
+            if (!SuperVideo.exists(this, scene)) column.post { pickVideo() }
+        }
         // What went wrong the last time with the graphics or a video (a wallpaper that stays black says nothing else).
         SuperDiag.last(this)?.let { text ->
             column.addView(
@@ -534,6 +547,13 @@ class MainActivity : Activity() {
             if (update == null) look() else install(update)
         }
         look()
+    }
+
+    /** Opens the gallery's chooser for the video of the scene. */
+    private fun pickVideo() {
+        val pick = Intent(Intent.ACTION_GET_CONTENT).setType("video/*").addCategory(Intent.CATEGORY_OPENABLE)
+        @Suppress("DEPRECATION")
+        startActivityForResult(Intent.createChooser(pick, "Video wählen"), PICK_VIDEO)
     }
 
     /** The video the person picked: copied into the app (off the main thread), then the page starts over with it. */
