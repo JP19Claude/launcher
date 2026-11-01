@@ -648,9 +648,11 @@ enum class GlimmerMode(val label: String) {
     DynamicIsland("Dynamic Island 1:1"),
     /** For a screen with no hole for the camera (a laptop): a black notch hanging from the top edge, like the MacBook's. */
     Notch("MacBook-Notch"),
+    /** The same for the newer MacBooks' Dynamic Island: a small pill that floats a little below the top edge. */
+    MacIsland("MacBook-Insel"),
 }
 
-/** The size of the MacBook notch mode's notch, in dp. */
+/** The size of the notch (or of the MacBook island's pill), in dp. */
 data class GlimmerNotch(val width: Int = 190, val height: Int = 34)
 
 /** The color Glimmer shimmers in when something new arrives. */
@@ -1249,6 +1251,8 @@ data class LauncherSettings(
     val glimmerSmall: Boolean = false,
     /** How big the notch is in the MacBook notch mode. */
     val glimmerNotch: GlimmerNotch = GlimmerNotch(),
+    /** How big the pill is in the MacBook island mode. */
+    val glimmerIsland: GlimmerNotch = GlimmerNotch(width = 128, height = 32),
     val badgeStyle: BadgeStyle = BadgeStyle.Number,
     /** Double tap on empty home screen space locks the phone (needs the accessibility service). */
     val doubleTapLock: Boolean = true,
@@ -1295,6 +1299,7 @@ data class LauncherSettings(
             glimmerOffsetY = d.glimmerOffsetY,
             glimmerSmall = d.glimmerSmall,
             glimmerNotch = d.glimmerNotch,
+            glimmerIsland = d.glimmerIsland,
         )
     }
 
@@ -1302,7 +1307,7 @@ data class LauncherSettings(
     val glimmerSizeIsDefault: Boolean
         get() = LauncherSettings().let { d ->
             glimmerWidth == d.glimmerWidth && glimmerOffsetX == d.glimmerOffsetX && glimmerOffsetY == d.glimmerOffsetY &&
-                glimmerSmall == d.glimmerSmall && glimmerNotch == d.glimmerNotch
+                glimmerSmall == d.glimmerSmall && glimmerNotch == d.glimmerNotch && glimmerIsland == d.glimmerIsland
         }
 
     /** How wide Glimmer is: the 85 % mode makes it narrower (height, content and text stay as they are). */
@@ -1313,6 +1318,15 @@ data class LauncherSettings(
 
     /** True in the MacBook notch mode (the island is a black notch hanging from the top edge). */
     val glimmerIsNotch: Boolean get() = glimmerMode == GlimmerMode.Notch
+
+    /** True in the MacBook island mode (a small pill floating a little below the top edge). */
+    val glimmerIsMacIsland: Boolean get() = glimmerMode == GlimmerMode.MacIsland
+
+    /** One of the two MacBook modes: no camera to look for, always at the top in the middle, with a size of its own. */
+    val glimmerIsMac: Boolean get() = glimmerIsNotch || glimmerIsMacIsland
+
+    /** The size set for the MacBook mode that is on. */
+    val glimmerMacSize: GlimmerNotch get() = if (glimmerIsMacIsland) glimmerIsland else glimmerNotch
 
     /**
      * The settings Glimmer actually runs with: as chosen, or in the Dynamic Island mode the
@@ -1380,6 +1394,7 @@ data class LauncherSettings(
             glimmerBreathe = d.glimmerBreathe,
             glimmerSmall = d.glimmerSmall,
             glimmerNotch = d.glimmerNotch,
+            glimmerIsland = d.glimmerIsland,
         )
     }
 
@@ -1876,6 +1891,10 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
                 width = prefs.getInt("glimmerNotchW", d.glimmerNotch.width).coerceIn(80, 420),
                 height = prefs.getInt("glimmerNotchH", d.glimmerNotch.height).coerceIn(16, 90),
             ),
+            glimmerIsland = GlimmerNotch(
+                width = prefs.getInt("glimmerIslandW", d.glimmerIsland.width).coerceIn(60, 420),
+                height = prefs.getInt("glimmerIslandH", d.glimmerIsland.height).coerceIn(16, 90),
+            ),
             badgeStyle = enumOf("badgeStyle", d.badgeStyle),
             doubleTapLock = prefs.getBoolean("doubleTapLock", d.doubleTapLock),
             dockSize = prefs.getInt("dockSize", d.dockSize),
@@ -2144,6 +2163,8 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putBoolean("glimmerSmall", s.glimmerSmall)
             .putInt("glimmerNotchW", s.glimmerNotch.width)
             .putInt("glimmerNotchH", s.glimmerNotch.height)
+            .putInt("glimmerIslandW", s.glimmerIsland.width)
+            .putInt("glimmerIslandH", s.glimmerIsland.height)
             .putString("badgeStyle", s.badgeStyle.name)
             .putBoolean("doubleTapLock", s.doubleTapLock)
             .putInt("dockSize", s.dockSize)
@@ -2220,7 +2241,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "zenithDaylight", "zenithStrikeSystem", "strikeColor", "strikeSpeed", "strikeOnCharge", "strikeOnFull", "chargeGuard", "chargeLimit", "newAppGuard", "projectZenith", "projectZenithGlass", "projectColorOs", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "glassLook", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
-            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerNotchW", "glimmerNotchH", "glimmerPrivacy", "accent", "animations",
+            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerNotchW", "glimmerNotchH", "glimmerIslandW", "glimmerIslandH", "glimmerPrivacy", "accent", "animations",
             // The Super-Wallpaper's body on the AOD (the still is drawn again when one of these changes).
             "superAod", "superAodDim", "superScene", "superPlace", "superSize", "superPhoto", "superOffsetX", "superOffsetY",
         )

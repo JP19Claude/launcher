@@ -976,7 +976,7 @@ class GlimmerController(private val service: GlimmerService) {
     private fun cameraAtEdge(): Pair<Int, android.graphics.Rect>? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
         // "At the top" sideways: as if the camera weren't at an edge. The notch always hangs from the top edge.
-        if (settings.glimmerSideways == dev.hearth.launcher.data.GlimmerSideways.Top || settings.glimmerIsNotch) return null
+        if (settings.glimmerSideways == dev.hearth.launcher.data.GlimmerSideways.Top || settings.glimmerIsMac) return null
         return runCatching {
             val cutout = windowManager.currentWindowMetrics.windowInsets.displayCutout ?: return null
             val top = cutout.boundingRectTop
@@ -1082,8 +1082,9 @@ class GlimmerController(private val service: GlimmerService) {
     }
 
     private fun topInsetPx(): Int {
-        // The notch hangs from the top edge (the nudge down is the only thing that moves it).
+        // The notch hangs from the top edge (the nudge down is the only thing that moves it); the MacBook island floats a little below it.
         if (settings.glimmerIsNotch) return dp(settings.glimmerOffsetY.toFloat()).coerceAtLeast(0)
+        if (settings.glimmerIsMacIsland) return dp(MAC_ISLAND_GAP + settings.glimmerOffsetY.toFloat()).coerceAtLeast(0)
         // Turned with the phone: from the camera's edge, the same as from the top when upright.
         upright()?.let { u ->
             return ((u.fromEdge - dp(IDLE_HEIGHT) / 2).coerceAtLeast(dp(4f)) + dp(settings.glimmerOffsetY.toFloat())).coerceAtLeast(0)
@@ -1227,7 +1228,7 @@ class GlimmerController(private val service: GlimmerService) {
                     ?: when {
                         // Sideways it stays at the camera, if the camera's edge is known.
                         // (The notch is always there, also on a screen that is wider than tall: a laptop's.)
-                        !settings.glimmerIdlePill || (sideways && edge == 0 && turned == 0 && !settings.glimmerIsNotch) || aod || stepBack -> IslandContent.Hidden
+                        !settings.glimmerIdlePill || (sideways && edge == 0 && turned == 0 && !settings.glimmerIsMac) || aod || stepBack -> IslandContent.Hidden
                         // The iPhone's island is just there on the lock screen, no padlock in it.
                         settings.glimmerIsDynamicIsland -> IslandContent.Idle
                         padlockOpen -> IslandContent.Lock(open = true)
@@ -1261,14 +1262,20 @@ class GlimmerController(private val service: GlimmerService) {
                                 micOn -> PrivacyUse.Microphone
                                 else -> PrivacyUse.None
                             },
-                            camera = if (settings.glimmerIsNotch) {
+                            camera = if (settings.glimmerIsMac) {
                                 // The notch stands in for the camera: compact content splits left and right of it, unfolded content starts below it.
-                                CameraHole(
-                                    x = 0.dp,
-                                    y = (settings.glimmerNotch.height / 2f).dp,
-                                    radius = (settings.glimmerNotch.width / 2f).dp,
-                                    halfHeight = (settings.glimmerNotch.height / 2f).dp,
-                                )
+                                // The island's pill has none: a small gap in the middle, as if a camera were there.
+                                val box = settings.glimmerMacSize
+                                if (settings.glimmerIsNotch) {
+                                    CameraHole(
+                                        x = 0.dp,
+                                        y = (box.height / 2f).dp,
+                                        radius = (box.width / 2f).dp,
+                                        halfHeight = (box.height / 2f).dp,
+                                    )
+                                } else {
+                                    CameraHole(x = 0.dp, y = (box.height / 2f).dp)
+                                }
                             } else run {
                                 val unit = density
                                 val (hx, hy, hw, hh) = holePx
@@ -1586,6 +1593,8 @@ class GlimmerController(private val service: GlimmerService) {
 
     private companion object {
         const val IDLE_WIDTH = 108f
+        /** The MacBook island floats this far (dp) below the top edge, before the nudge from the settings. */
+        const val MAC_ISLAND_GAP = 6f
         const val IDLE_HEIGHT = ISLAND_HEIGHT_DP
         const val PAD = 8f
         val GREEN = Color(0xFF34C759)

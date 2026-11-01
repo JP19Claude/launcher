@@ -295,6 +295,8 @@ fun islandSize(
     narrow: Float = 1f,
     /** The MacBook notch mode: the empty island is the notch itself, and every state is at least as tall as it and wide enough to leave it room. */
     notch: DpSize? = null,
+    /** In the notch mode: the room left for content on each side of it (the island's pill, with no camera in it, needs less). */
+    notchRoom: Dp = 112.dp,
 ): DpSize {
     // Unfolded it's always as wide as at 100 % (the 85 % mode only slims the small states).
     val full = if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, 420f).dp
@@ -304,7 +306,7 @@ fun islandSize(
         ((screenWidthDp * 0.44f).coerceIn(150f, 190f) * widthScale * narrow).coerceAtMost(screenWidthDp - 60f).dp
     }
     // Beside the notch there has to be room for something on each side.
-    val compact = if (notch != null) maxOf(compactBase, notch.width + 112.dp) else compactBase
+    val compact = if (notch != null) maxOf(compactBase, notch.width + notchRoom) else compactBase
     val barHeight = if (notch != null) maxOf(ISLAND_HEIGHT_DP.dp, notch.height) else ISLAND_HEIGHT_DP.dp
     val idle = (if (dynamicIsland) ISLAND_HEIGHT_DP * 3.375f else (screenWidthDp * 0.27f).coerceIn(86f, 110f) * widthScale) * narrow
     return when {
@@ -398,9 +400,11 @@ fun GlimmerIsland(
         }
     }
     val hasSecondary = secondary != null && !expanded
-    // The MacBook notch mode: a black tab hanging from the top edge (its top corners square while it touches the edge).
-    val notchSize = if (settings.glimmerIsNotch) DpSize(settings.glimmerNotch.width.dp, settings.glimmerNotch.height.dp) else null
-    val flatTop = notchSize != null && topInset <= 0.dp
+    // The MacBook modes: the notch is a black tab hanging from the top edge (its top corners square while it touches the edge),
+    // the MacBook island a small pill below it; both with a size of their own.
+    val notchSize = if (settings.glimmerIsMac) settings.glimmerMacSize.let { DpSize(it.width.dp, it.height.dp) } else null
+    val hanging = settings.glimmerIsNotch
+    val flatTop = hanging && topInset <= 0.dp
     val target = islandSize(
         content,
         expanded,
@@ -411,6 +415,7 @@ fun GlimmerIsland(
         cameraClearance = cameraClearance(camera),
         narrow = settings.glimmerNarrow,
         notch = notchSize,
+        notchRoom = if (hanging) 112.dp else 72.dp,
     )
     LaunchedEffect(target) { onTargetSize(target) }
     val collapseAfter = settings.glimmerAutoCollapse
@@ -449,9 +454,9 @@ fun GlimmerIsland(
     // round as the iPhone's unfolded island (44) or the Face ID square (30).
     val cornerCap by animateDpAsState(
         when {
-            expanded -> if (notchSize != null) 30.dp else if (settings.glimmerIsDynamicIsland) 42.dp else 44.dp
+            expanded -> if (hanging) 30.dp else if (settings.glimmerIsDynamicIsland) 42.dp else 44.dp
             content is IslandContent.Unlock -> 30.dp
-            else -> if (notchSize != null) 14.dp else 60.dp
+            else -> if (hanging) 14.dp else 60.dp
         },
         tween(320, easing = FastOutSlowInEasing),
         label = "islandCorner",

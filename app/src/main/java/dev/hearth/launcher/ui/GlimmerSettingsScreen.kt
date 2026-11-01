@@ -337,7 +337,14 @@ private fun GlimmerPreview(chosen: LauncherSettings, media: MediaRepository) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .offset(x = s.glimmerOffsetX.dp, y = (if (s.glimmerIsNotch) s.glimmerOffsetY.coerceAtLeast(0) else s.glimmerOffsetY).dp),
+                    .offset(
+                        x = s.glimmerOffsetX.dp,
+                        y = when {
+                            s.glimmerIsNotch -> s.glimmerOffsetY.coerceAtLeast(0)
+                            s.glimmerIsMacIsland -> s.glimmerOffsetY.coerceAtLeast(-6)
+                            else -> s.glimmerOffsetY
+                        }.dp,
+                    ),
             ) {
                 CompositionLocalProvider(
                     LocalSettings provides s,
@@ -348,17 +355,21 @@ private fun GlimmerPreview(chosen: LauncherSettings, media: MediaRepository) {
                         expanded = expanded && unfoldable,
                         style = s.glimmerStyle,
                         screenWidthDp = screenWidth,
-                        // (The MacBook notch hangs from the very top, and stands in for the camera.)
-                        topInset = if (s.glimmerIsNotch) 0.dp else 14.dp,
-                        camera = if (s.glimmerIsNotch) {
-                            CameraHole(
+                        // (The MacBook notch hangs from the very top, and stands in for the camera; the MacBook island floats a little below it.)
+                        topInset = when {
+                            s.glimmerIsNotch -> 0.dp
+                            s.glimmerIsMacIsland -> 6.dp
+                            else -> 14.dp
+                        },
+                        camera = when {
+                            s.glimmerIsNotch -> CameraHole(
                                 x = 0.dp,
                                 y = (s.glimmerNotch.height / 2f).dp,
                                 radius = (s.glimmerNotch.width / 2f).dp,
                                 halfHeight = (s.glimmerNotch.height / 2f).dp,
                             )
-                        } else {
-                            CameraHole()
+                            s.glimmerIsMacIsland -> CameraHole(x = 0.dp, y = (s.glimmerIsland.height / 2f).dp)
+                            else -> CameraHole()
                         },
                         media = media,
                         glow = s.glimmerGlow,
