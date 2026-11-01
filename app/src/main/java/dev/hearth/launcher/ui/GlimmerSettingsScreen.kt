@@ -337,7 +337,7 @@ private fun GlimmerPreview(chosen: LauncherSettings, media: MediaRepository) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .offset(x = s.glimmerOffsetX.dp, y = s.glimmerOffsetY.dp),
+                    .offset(x = s.glimmerOffsetX.dp, y = (if (s.glimmerIsNotch) s.glimmerOffsetY.coerceAtLeast(0) else s.glimmerOffsetY).dp),
             ) {
                 CompositionLocalProvider(
                     LocalSettings provides s,
@@ -348,7 +348,18 @@ private fun GlimmerPreview(chosen: LauncherSettings, media: MediaRepository) {
                         expanded = expanded && unfoldable,
                         style = s.glimmerStyle,
                         screenWidthDp = screenWidth,
-                        topInset = 14.dp,
+                        // (The MacBook notch hangs from the very top, and stands in for the camera.)
+                        topInset = if (s.glimmerIsNotch) 0.dp else 14.dp,
+                        camera = if (s.glimmerIsNotch) {
+                            CameraHole(
+                                x = 0.dp,
+                                y = (s.glimmerNotch.height / 2f).dp,
+                                radius = (s.glimmerNotch.width / 2f).dp,
+                                halfHeight = (s.glimmerNotch.height / 2f).dp,
+                            )
+                        } else {
+                            CameraHole()
+                        },
                         media = media,
                         glow = s.glimmerGlow,
                         onToggle = { expanded = !expanded },
