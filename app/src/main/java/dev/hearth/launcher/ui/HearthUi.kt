@@ -501,6 +501,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Glimmer als MacBook-Notch – für das Galaxy Book", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Auf dem Galaxy Book (Android, die Kamera sitzt im Rahmen, nicht im Bildschirm) ist Glimmer nicht zu sehen. Glimmer sitzt sonst genau um die Kamera, und im Querformat – also auf einem Laptop immer – versteckt es die leere Pille, wenn keine Kamera am Rand zu finden ist. Gewünscht: so wie bei den neuen MacBooks mit der Notch, in der Größe einstellbar.",
+                        "Neu: Unter Einstellungen → Glimmer → Modus gibt es „MacBook-Notch“. Dann ist Glimmer immer da, auch im Querformat: eine schwarze Kerbe, die oben in der Mitte am Bildschirmrand hängt (oben eckig, unten rund). Musik, Anrufe, Timer, Nachrichten und alles andere von Glimmer klappen aus der Kerbe heraus – kompakt mit Inhalt links und rechts neben der Kerbe, aufgeklappt darunter. Leuchten, Rand und fließende Farben sind in diesem Modus aus (sie gehören zur Pille); der Rest von Glimmer bleibt.",
+                        "Größe einstellen: Unter „Größe & Position“ gibt es „Breite der Kerbe“ (80 bis 420 dp, Standard 190) und „Höhe der Kerbe“ (16 bis 90 dp, Standard 34) sowie „Nach links / rechts“ und „Nach oben / unten“ (nach unten geschoben schwebt die Kerbe als Pille mit Abstand). Die Änderung siehst du sofort; „Größe & Position zurücksetzen“ stellt alles zurück.",
+                        "Ehrlich dazu: Nach der Beschreibung und den Bildern gebaut, auf dem Galaxy Book nicht ausprobiert. Wie die Kerbe zum Bildschirmrand deines Geräts passt, hängt davon ab, wie Android dort den oberen Rand (Statusleiste, Fenstermodus) behandelt; passt es nicht, helfen die Regler für Position und Größe. Glimmer arbeitet über die Bedienungshilfe „Glimmer“ – die muss auf dem Gerät an sein.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

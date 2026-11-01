@@ -975,8 +975,8 @@ class GlimmerController(private val service: GlimmerService) {
      */
     private fun cameraAtEdge(): Pair<Int, android.graphics.Rect>? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
-        // "At the top" sideways: as if the camera weren't at an edge.
-        if (settings.glimmerSideways == dev.hearth.launcher.data.GlimmerSideways.Top) return null
+        // "At the top" sideways: as if the camera weren't at an edge. The notch always hangs from the top edge.
+        if (settings.glimmerSideways == dev.hearth.launcher.data.GlimmerSideways.Top || settings.glimmerIsNotch) return null
         return runCatching {
             val cutout = windowManager.currentWindowMetrics.windowInsets.displayCutout ?: return null
             val top = cutout.boundingRectTop
@@ -1082,6 +1082,8 @@ class GlimmerController(private val service: GlimmerService) {
     }
 
     private fun topInsetPx(): Int {
+        // The notch hangs from the top edge (the nudge down is the only thing that moves it).
+        if (settings.glimmerIsNotch) return dp(settings.glimmerOffsetY.toFloat()).coerceAtLeast(0)
         // Turned with the phone: from the camera's edge, the same as from the top when upright.
         upright()?.let { u ->
             return ((u.fromEdge - dp(IDLE_HEIGHT) / 2).coerceAtLeast(dp(4f)) + dp(settings.glimmerOffsetY.toFloat())).coerceAtLeast(0)
@@ -1224,7 +1226,8 @@ class GlimmerController(private val service: GlimmerService) {
                     ?: visible.firstOrNull()
                     ?: when {
                         // Sideways it stays at the camera, if the camera's edge is known.
-                        !settings.glimmerIdlePill || (sideways && edge == 0 && turned == 0) || aod || stepBack -> IslandContent.Hidden
+                        // (The notch is always there, also on a screen that is wider than tall: a laptop's.)
+                        !settings.glimmerIdlePill || (sideways && edge == 0 && turned == 0 && !settings.glimmerIsNotch) || aod || stepBack -> IslandContent.Hidden
                         // The iPhone's island is just there on the lock screen, no padlock in it.
                         settings.glimmerIsDynamicIsland -> IslandContent.Idle
                         padlockOpen -> IslandContent.Lock(open = true)
@@ -1258,7 +1261,15 @@ class GlimmerController(private val service: GlimmerService) {
                                 micOn -> PrivacyUse.Microphone
                                 else -> PrivacyUse.None
                             },
-                            camera = run {
+                            camera = if (settings.glimmerIsNotch) {
+                                // The notch stands in for the camera: compact content splits left and right of it, unfolded content starts below it.
+                                CameraHole(
+                                    x = 0.dp,
+                                    y = (settings.glimmerNotch.height / 2f).dp,
+                                    radius = (settings.glimmerNotch.width / 2f).dp,
+                                    halfHeight = (settings.glimmerNotch.height / 2f).dp,
+                                )
+                            } else run {
                                 val unit = density
                                 val (hx, hy, hw, hh) = holePx
                                 val known = hw > 0 && hh > 0

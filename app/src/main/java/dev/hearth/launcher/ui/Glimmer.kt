@@ -293,23 +293,28 @@ fun islandSize(
     cameraClearance: Dp = 0.dp,
     /** The 85 % mode: every state narrower, the height as it is. */
     narrow: Float = 1f,
+    /** The MacBook notch mode: the empty island is the notch itself, and every state is at least as tall as it and wide enough to leave it room. */
+    notch: DpSize? = null,
 ): DpSize {
     // Unfolded it's always as wide as at 100 % (the 85 % mode only slims the small states).
     val full = if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, 420f).dp
-    val compact = if (dynamicIsland) {
+    val compactBase = if (dynamicIsland) {
         (ISLAND_HEIGHT_DP * 6.2f).coerceAtMost(screenWidthDp - 60f).dp * narrow
     } else {
         ((screenWidthDp * 0.44f).coerceIn(150f, 190f) * widthScale * narrow).coerceAtMost(screenWidthDp - 60f).dp
     }
+    // Beside the notch there has to be room for something on each side.
+    val compact = if (notch != null) maxOf(compactBase, notch.width + 112.dp) else compactBase
+    val barHeight = if (notch != null) maxOf(ISLAND_HEIGHT_DP.dp, notch.height) else ISLAND_HEIGHT_DP.dp
     val idle = (if (dynamicIsland) ISLAND_HEIGHT_DP * 3.375f else (screenWidthDp * 0.27f).coerceIn(86f, 110f) * widthScale) * narrow
     return when {
         content is IslandContent.Hidden -> DpSize(0.dp, 0.dp)
-        content is IslandContent.Idle -> DpSize(idle.dp, ISLAND_HEIGHT_DP.dp)
+        content is IslandContent.Idle -> notch ?: DpSize(idle.dp, ISLAND_HEIGHT_DP.dp)
         // A little wider than the idle pill, for the padlock on its left.
-        content is IslandContent.Lock -> DpSize(idle.dp + 26.dp, ISLAND_HEIGHT_DP.dp)
+        content is IslandContent.Lock -> if (notch != null) DpSize(notch.width + 26.dp, notch.height) else DpSize(idle.dp + 26.dp, ISLAND_HEIGHT_DP.dp)
         // Like Face ID on the iPhone: the island becomes a rounded square for the moment.
         content is IslandContent.Unlock -> DpSize(UNLOCK_SIZE_DP.dp, UNLOCK_SIZE_DP.dp)
-        !expanded -> DpSize(compact, ISLAND_HEIGHT_DP.dp)
+        !expanded -> DpSize(compact, barHeight)
         else -> DpSize(
             full,
             cameraClearance + when (content) {
@@ -393,6 +398,9 @@ fun GlimmerIsland(
         }
     }
     val hasSecondary = secondary != null && !expanded
+    // The MacBook notch mode: a black tab hanging from the top edge (its top corners square while it touches the edge).
+    val notchSize = if (settings.glimmerIsNotch) DpSize(settings.glimmerNotch.width.dp, settings.glimmerNotch.height.dp) else null
+    val flatTop = notchSize != null && topInset <= 0.dp
     val target = islandSize(
         content,
         expanded,
@@ -402,6 +410,7 @@ fun GlimmerIsland(
         settings.glimmerIsDynamicIsland,
         cameraClearance = cameraClearance(camera),
         narrow = settings.glimmerNarrow,
+        notch = notchSize,
     )
     LaunchedEffect(target) { onTargetSize(target) }
     val collapseAfter = settings.glimmerAutoCollapse
@@ -440,9 +449,9 @@ fun GlimmerIsland(
     // round as the iPhone's unfolded island (44) or the Face ID square (30).
     val cornerCap by animateDpAsState(
         when {
-            expanded -> if (settings.glimmerIsDynamicIsland) 42.dp else 44.dp
+            expanded -> if (notchSize != null) 30.dp else if (settings.glimmerIsDynamicIsland) 42.dp else 44.dp
             content is IslandContent.Unlock -> 30.dp
-            else -> 60.dp
+            else -> if (notchSize != null) 14.dp else 60.dp
         },
         tween(320, easing = FastOutSlowInEasing),
         label = "islandCorner",
@@ -637,6 +646,7 @@ fun GlimmerIsland(
                 // AI Fluid: unfolded, Claude's colors drift inside the black island too.
                 style = if (settings.glimmerAiFluid && expanded && style == GlimmerStyle.Black && !dimmed) GlimmerStyle.Fluid else style,
                 corner = corner,
+                flatTop = flatTop,
                 tint = islandTint,
                 modifier = Modifier
                     .drawBehind {
@@ -963,13 +973,16 @@ private fun IslandShape(
     corner: Dp,
     modifier: Modifier,
     tint: Color = Color.Black,
+    /** The notch: square at the top (it hangs from the screen's edge), round below. */
+    flatTop: Boolean = false,
     content: @Composable () -> Unit,
 ) {
+    val shape = if (flatTop) RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomEnd = corner, bottomStart = corner) else RoundedCornerShape(corner)
     when (style) {
         // Dark, with the activity's color glowing through from the top (vivo, OPPO).
         GlimmerStyle.Tinted -> Box(
             modifier
-                .clip(RoundedCornerShape(corner))
+                .clip(shape)
                 .background(
                     Brush.verticalGradient(
                         listOf(
@@ -981,7 +994,7 @@ private fun IslandShape(
         ) { content() }
         GlimmerStyle.Black -> Box(
             modifier
-                .clip(RoundedCornerShape(corner))
+                .clip(shape)
                 .background(Color.Black),
         ) { content() }
         // AI Fluid: black, with Claude's colors drifting slowly inside like an AI thinking.
@@ -989,7 +1002,7 @@ private fun IslandShape(
             val drift = flowPhase(9000, LocalSettings.current.animations)
             Box(
                 modifier
-                    .clip(RoundedCornerShape(corner))
+                    .clip(shape)
                     .background(Color.Black)
                     .drawBehind {
                         val t = drift?.invoke() ?: 1f
@@ -1011,7 +1024,7 @@ private fun IslandShape(
             cornerRadius = corner,
             refraction = 14.dp,
             tint = Color.Black.copy(alpha = 0.45f),
-            modifier = modifier.clip(RoundedCornerShape(corner)),
+            modifier = modifier.clip(shape),
         ) { content() }
     }
 }

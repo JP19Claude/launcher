@@ -1136,6 +1136,8 @@ fun SettingsScreen(
 internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
     // In the Dynamic Island mode the iPhone decides the look and handling; those rows step aside.
     val di = s.glimmerIsDynamicIsland
+    // The MacBook notch mode (a laptop's screen has no hole for the camera: Glimmer hangs from the top edge as a black notch).
+    val nt = s.glimmerIsNotch
     Column {
     // Clawd first: one switch, and he's part of everything the island does.
     Section("Clawd") {
@@ -1210,7 +1212,10 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
         if (di) Note(
             "Dynamic Island 1:1: Glimmer verhält sich wie die Insel des iPhones – reines Schwarz, ihre Proportionen (Pille, kompakte Aktivitäten, aufgeklappt fast bildschirmbreit), Cover als abgerundetes Quadrat, auf dem Sperrbildschirm nur die Pille. Antippen öffnet die App, gedrückt halten klappt auf. Glimmers Extras (Leuchten, Rand, Nachrichten, Doppeltippen, Titel wischen, Akku beim Laden) sind aus. Deine eigenen Einstellungen bleiben gespeichert und kommen zurück, wenn du wieder „Glimmer“ wählst.",
         )
-        if (!di) ChoiceRow(
+        if (nt) Note(
+            "MacBook-Notch: für einen Bildschirm ohne Loch für die Kamera, etwa ein Galaxy Book. Glimmer ist immer da – auch im Querformat – als schwarze Kerbe, die oben in der Mitte am Bildschirmrand hängt, wie bei den neuen MacBooks. Größe und Platz stellst du unten bei „Größe & Position“ ein. Musik, Anrufe, Timer und Nachrichten klappen aus der Kerbe heraus; Leuchten, Rand und fließende Farben sind aus (die gehören zur Pille), alles andere von Glimmer bleibt.",
+        )
+        if (!di && !nt) ChoiceRow(
             label = "Aussehen",
             options = GlimmerStyle.entries,
             selected = s.glimmerStyle,
@@ -1302,23 +1307,33 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             description = "Die kleine Insel ist 15 % schmaler; aufgeklappt bleibt Glimmer so groß wie bei 100 %. Höhe, Inhalte und Schrift bleiben gleich",
             checked = s.glimmerSmall,
         ) { v -> update { it.copy(glimmerSmall = v) } }
-        if (!di) SliderRow(
+        if (nt) {
+            IntSlider("Breite der Kerbe", s.glimmerNotch.width, 80..420, " dp") { v -> update { it.copy(glimmerNotch = it.glimmerNotch.copy(width = v)) } }
+            IntSlider("Höhe der Kerbe", s.glimmerNotch.height, 16..90, " dp") { v -> update { it.copy(glimmerNotch = it.glimmerNotch.copy(height = v)) } }
+        }
+        if (!di && !nt) SliderRow(
             label = "Breite",
             value = s.glimmerWidth,
             range = 0.8f..1.3f,
             valueText = "${(s.glimmerWidth * 100).roundToInt()} %",
         ) { v -> update { it.copy(glimmerWidth = (v * 20).roundToInt() / 20f) } }
         IntSlider("Nach links / rechts", s.glimmerOffsetX, -40..40, " dp") { v -> update { it.copy(glimmerOffsetX = v) } }
-        IntSlider("Nach oben / unten", s.glimmerOffsetY, -10..24, " dp") { v -> update { it.copy(glimmerOffsetY = v) } }
-        Note("Sitzt Glimmer nicht genau um deine Kamera, schieb es hier zurecht. Die Änderung siehst du sofort.")
-        ChoiceRow(
+        IntSlider("Nach oben / unten", s.glimmerOffsetY, if (nt) 0..40 else -10..24, " dp") { v -> update { it.copy(glimmerOffsetY = v) } }
+        Note(
+            if (nt) {
+                "Die Kerbe hängt am oberen Rand (0 dp). Nach unten geschoben schwebt sie als Pille mit etwas Abstand. Die Änderung siehst du sofort."
+            } else {
+                "Sitzt Glimmer nicht genau um deine Kamera, schieb es hier zurecht. Die Änderung siehst du sofort."
+            },
+        )
+        if (!nt) ChoiceRow(
             label = "Im Querformat",
             options = GlimmerSideways.entries,
             selected = s.glimmerSideways,
             optionLabel = { it.label },
             onSelect = { v -> update { it.copy(glimmerSideways = v) } },
         )
-        Note(
+        if (!nt) Note(
             when (s.glimmerSideways) {
                 GlimmerSideways.Upright -> "Senkrecht: Glimmer dreht sich mit dem Handy und bleibt genau so um die Kamera wie im Hochformat – als senkrechte Pille am Rand, auch aufgeklappt."
                 GlimmerSideways.Across -> "Quer: Glimmer liegt waagerecht neben der Kamera und reicht vom Rand ins Bild."
@@ -1330,7 +1345,7 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             description = if (s.glimmerSizeIsDefault) {
                 "Ist schon Standard: normale Breite, genau über der Kamera"
             } else {
-                "Breite 100 %, nicht verschoben – wieder genau über der Kamera"
+                "Breite 100 %, Kerbe 190 × 34 dp, nicht verschoben – wieder genau über der Kamera"
             },
         ) { update { it.withGlimmerSizeReset() } }
     }
