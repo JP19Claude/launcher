@@ -1234,9 +1234,10 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             optionLabel = { it.label },
             onSelect = { style -> update { it.copy(glimmerMusicStyle = style) } },
         )
-        if (!di) SwitchRow(
+        // (The notch is always there; the island's pill too, if it is on.)
+        if (!di && !nt) SwitchRow(
             label = "Kleine Pille, wenn nichts läuft",
-            description = "Wie beim iPhone; im Querformat ausgeblendet",
+            description = if (mi) "Aus: die Insel zeigt sich nur, wenn etwas läuft. An: sie ist immer da, auch im Querformat" else "Wie beim iPhone; im Querformat ausgeblendet",
             checked = s.glimmerIdlePill,
         ) { v -> update { it.copy(glimmerIdlePill = v) } }
     }

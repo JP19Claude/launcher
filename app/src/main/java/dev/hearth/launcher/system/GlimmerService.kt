@@ -276,9 +276,16 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         }
     }
 
+    /**
+     * A laptop's or tablet's screen (600 dp and up, or one of the MacBook modes): the screenshots taken every second (and the one of home)
+     * made it stutter and, with many windows open, the pictures didn't match what was closed. There the fly-in goes without them: the app's
+     * colored card with its icon flies, which costs nothing.
+     */
+    private fun bigScreen(): Boolean = resources.configuration.smallestScreenWidthDp >= 600 || current().glimmerIsMac
+
     /** An app opened from Hearth came to the front. */
     fun startAppSnapshots() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || bigScreen()) return
         snapshots.clear()
         snapshotCount = 0
         frontSecure = false
@@ -343,7 +350,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
 
     /** Covering the launcher's own closing animation: on, and possible (pictures need Android 11). */
     private fun coverWanted(): Boolean =
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && current().glimmerFlyInCover && flyInHere()
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && current().glimmerFlyInCover && flyInHere() && !bigScreen()
 
     private fun isKeyboard(pkg: String): Boolean = runCatching {
         getSystemService(android.view.inputmethod.InputMethodManager::class.java)

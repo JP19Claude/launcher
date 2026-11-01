@@ -513,6 +513,17 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Fehler behoben und für den Laptop mit Android angepasst", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung vom Galaxy Book: Nach dem Entsperren bleibt das Schloss in Glimmer stehen, und die Schließ-Animation ruckelt und zeigt Fehler.",
+                        "Das Schloss: Glimmer merkte sich den Sperrzustand nur, wenn Android ihn meldete (Bildschirm an/aus, „Entsperrt“). Ein Laptop mit Android entsperrt oft anders – ohne dass der Bildschirm zwischendurch ausgeht –, und dann kam keine Meldung. Jetzt schaut Glimmer bei eingeschaltetem Bildschirm selbst nach: alle zweieinhalb Sekunden, solange das Gerät offen ist, und alle 0,6 Sekunden, solange es gesperrt ist. Das Schloss verschwindet also kurz nach dem Entsperren und kommt nach dem Sperren wieder.",
+                        "Die Schließ-Animation: Während eine App vorn war, machte Glimmer fast jede Sekunde ein Bildschirmfoto, damit die App selbst in die Insel fliegen kann (und eines vom Startbildschirm). Auf einem großen Bildschirm (ab 600 dp Breite) und in den MacBook-Modi ruckelte das und passte bei vielen offenen Fenstern nicht zu dem, was gerade zuging. Dort macht Glimmer diese Bildschirmfotos jetzt gar nicht mehr; stattdessen fliegt die Karte in der Farbe der App mit ihrem Symbol – das kostet nichts. Auf Handys bleibt alles wie vorher.",
+                        "Außerdem: „Kleine Pille, wenn nichts läuft“ sagte „im Querformat ausgeblendet“, auch in den MacBook-Modi, wo es nicht stimmt. In der MacBook-Notch gibt es den Schalter nicht mehr (sie ist immer da), in der MacBook-Insel steht jetzt, was er wirklich tut.",
+                        "Ehrlich dazu: Auf dem Galaxy Book ausprobieren kann ich es nicht; die Schloss-Korrektur und das Weglassen der Bildschirmfotos treffen die Ursachen, die ich im Code finde. Wenn die Schließ-Animation dort trotzdem Fehler zeigt, schalte „Apps fliegen beim Schließen in Glimmer“ aus und sag mir, was genau passiert (welche App, was du siehst).",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

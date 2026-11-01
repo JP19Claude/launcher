@@ -410,6 +410,28 @@ class GlimmerController(private val service: GlimmerService) {
         handler.removeCallbacks(refreshState)
         refreshState.run()
         for (delay in longArrayOf(350, 1000, 2500)) handler.postDelayed(refreshState, delay)
+        scheduleLockPoll()
+    }
+
+    /**
+     * While the screen is on, the lock state is looked at now and then (quickly while it is locked). The broadcasts for waking and unlocking
+     * are all that Android promises, and a device that unlocks another way – a laptop with Android, a key with a fingerprint, no screen going
+     * off in between – may send none: then the padlock would stay in the island after the unlocking, or never come back after locking.
+     */
+    private var pollingLock = false
+    private val lockPoll = object : Runnable {
+        override fun run() {
+            pollingLock = false
+            if (scope == null) return
+            if (service.getSystemService(PowerManager::class.java)?.isInteractive == false) return
+            updateLocked()
+            scheduleLockPoll()
+        }
+    }
+    private fun scheduleLockPoll() {
+        if (pollingLock) return
+        pollingLock = true
+        handler.postDelayed(lockPoll, if (locked.value) 600L else 2500L)
     }
 
     private var root: View? = null
@@ -564,7 +586,11 @@ class GlimmerController(private val service: GlimmerService) {
                 Intent.ACTION_SCREEN_OFF, Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> {
                     refreshSoon()
                     // Standby folds the island up, like the iPhone's.
-                    if (intent.action == Intent.ACTION_SCREEN_OFF) expanded.value = false
+                    if (intent.action == Intent.ACTION_SCREEN_OFF) {
+                        expanded.value = false
+                        handler.removeCallbacks(lockPoll)
+                        pollingLock = false
+                    }
                     when (intent.action) {
                         // Woken up while locked: the face (or finger) is being checked.
                         Intent.ACTION_SCREEN_ON -> startUnlockScan()
@@ -749,6 +775,7 @@ class GlimmerController(private val service: GlimmerService) {
             addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED)
         }
         updateLocked()
+        scheduleLockPoll()
         // Start from how things are, so only real changes flash.
         dndOn = service.getSystemService(NotificationManager::class.java)?.currentInterruptionFilter?.let { f ->
             f != NotificationManager.INTERRUPTION_FILTER_ALL && f != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
@@ -865,6 +892,7 @@ class GlimmerController(private val service: GlimmerService) {
         code.value = null
         unlock.value = null
         watching = false
+        pollingLock = false
         lockOpening.value = false
         // Their timers are cancelled below, so they would otherwise stay forever.
         alert.value = null
