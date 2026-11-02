@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -82,7 +83,8 @@ fun AppLibraryPage(
     modifier: Modifier = Modifier,
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        // (A computer's wide screen: as many cards side by side as fit, instead of two huge ones.)
+        columns = if (isWideScreen()) GridCells.Adaptive(190.dp) else GridCells.Fixed(2),
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 16.dp, bottom = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(22.dp),
@@ -283,7 +285,8 @@ fun LibraryFolderOverlay(folder: LibraryFolderContent?, actions: AppActions, onD
             contentAlignment = Alignment.Center,
         ) {
             Column(
-                Modifier.fillMaxWidth(0.9f),
+                // (no wider than 640 dp: on a computer's wide screen the folder stays a folder)
+                Modifier.fillMaxWidth(0.9f).widthIn(max = 640.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(

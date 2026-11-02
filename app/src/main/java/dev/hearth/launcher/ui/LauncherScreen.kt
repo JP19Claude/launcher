@@ -205,6 +205,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val appUsage by vm.appUsage.collectAsStateWithLifecycle()
     var openFolder by remember { mutableStateOf<LibraryFolderContent?>(null) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
+    // The letter typed on a computer's keyboard that opened the finder (it starts with it).
+    var searchSeed by rememberSaveable { mutableStateOf("") }
     // Galaxy × Claude: One UI's app drawer (swipe up) instead of the App Library page.
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
     // Be Smarter: the sheet that rises when the home screen is held.
@@ -290,7 +292,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
         }
     }
 
-    val columns = settings.columns.coerceIn(3, 6)
+    // A computer's wide screen has room for more columns than a phone.
+    val columns = settings.columns.coerceIn(3, if (isWideScreen()) 12 else 6)
     val rows = settings.rows.coerceIn(3, 9)
     val clockRows = if (settings.clockStyle == ClockStyle.Hidden) 0 else 2
     // Galaxy × Claude's Now Brief is about two rows tall, the Claude card one.
@@ -625,6 +628,19 @@ fun LauncherScreen(vm: LauncherViewModel) {
             else -> drawerOpen = false
         }
     }
+
+    // A computer's keyboard: typing on the bare home screen starts the finder with the typed letter, as on a computer's launcher.
+    LaunchedEffect(Unit) {
+        vm.typedSearch.collect { text ->
+            val bare = !searchOpen && !settingsOpen && !controlOpen && !assistantOpen && !editMode && !smartSheetOpen && !selecting &&
+                menu == null && renaming == null && openHomeFolder == null && openFolder == null && !widgetPickerOpen
+            if (bare) {
+                searchSeed = text
+                searchOpen = true
+            }
+        }
+    }
+    LaunchedEffect(searchOpen) { if (!searchOpen) searchSeed = "" }
 
     val light = rememberGlassLight(settings.glassMotion)
     // Be Smarter: the colors of the chosen theme (Ambient Design takes them from the wallpaper).
@@ -1297,6 +1313,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                     SearchOverlay(
                         apps = apps,
                         actions = actions,
+                        initialQuery = searchSeed,
                         onLaunch = { app, bounds ->
                             launchApp(app, bounds)
                             searchOpen = false

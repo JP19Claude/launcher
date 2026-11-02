@@ -206,7 +206,8 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .systemBarsPadding(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            // (On a computer's wide screen the cards stay in the middle, no wider than a phone's settings would be at a push.)
+            contentPadding = PaddingValues(horizontal = wideGutter(16.dp), vertical = 12.dp),
         ) {
             // Hearth UI 14, like One UI 9: on the start page a big title in the upper part of
             // the screen that slides and fades away as the list comes up.
@@ -777,7 +778,7 @@ fun SettingsScreen(
 
             if (shows("home")) item {
                 Section("Homescreen") {
-                    IntSlider("Spalten", s.columns, 3..6) { v -> update { it.copy(columns = v) } }
+                    IntSlider("Spalten", s.columns, 3..(if (isWideScreen()) 12 else 6)) { v -> update { it.copy(columns = v) } }
                     IntSlider("Reihen", s.rows, 4..8) { v -> update { it.copy(rows = v) } }
                     RowDivider()
                     ChoiceRow(
@@ -1085,7 +1086,7 @@ fun SettingsScreen(
                 Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(start = 24.dp, end = 16.dp, top = 10.dp),
+                    .padding(start = wideGutter(16.dp) + 8.dp, end = wideGutter(16.dp), top = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(

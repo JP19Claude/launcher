@@ -3,6 +3,7 @@ package dev.hearth.launcher
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -39,6 +40,27 @@ class MainActivity : ComponentActivity() {
                 LauncherScreen(viewModel)
             }
         }
+    }
+
+    /**
+     * A computer's keyboard (an Android laptop, a tablet with one): Esc steps back, and a letter typed on the bare home screen starts the
+     * finder with it. A text field that has the focus takes its keys first, so nothing typed into one is lost.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (super.dispatchKeyEvent(event)) return true
+        if (event.action != KeyEvent.ACTION_DOWN || event.repeatCount != 0) return false
+        if (event.keyCode == KeyEvent.KEYCODE_ESCAPE) {
+            onBackPressedDispatcher.onBackPressed()
+            return true
+        }
+        if (event.isPrintingKey && !event.isCtrlPressed && !event.isAltPressed && !event.isMetaPressed) {
+            val code = event.unicodeChar
+            if (code > ' '.code) {
+                viewModel.typeToSearch(String(Character.toChars(code)))
+                return true
+            }
+        }
+        return false
     }
 
     /** True between leaving the launcher (onStop) and showing it again (onResume). */

@@ -524,6 +524,18 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Notch-Animation nicht mehr abgeschnitten, ZENITH für den Laptop", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung vom Galaxy Book: Die Lade-Animation in der MacBook-Notch war abgeschnitten. Ich habe vier Ursachen gefunden und behoben.",
+                        "Der grüne Lade-Streifen lief als Linie genau auf der Kante der Kerbe – die obere Hälfte lag am Bildschirmrand und fiel weg – und hatte runde obere Ecken, obwohl die Kerbe oben eckig am Rand hängt. Jetzt folgt er der echten Form (oben offen: an einer Seite hinunter, am Fuß entlang, an der anderen hinauf) und liegt ganz sichtbar innen.",
+                        "Neben der Kerbe blieben links und rechts nur etwa 45 dp Platz. Die Lade-Anzeige („100 %“ mit Balken), die Zeit eines Anrufs und die Musik brauchen mehr und wurden abgeschnitten. Die Kerbe lässt jetzt 156 dp Platz (bei Anruf, Musik und Code 184 dp) und wird dafür breiter.",
+                        "Die Lichtringe, der Rand und der fließende Rand folgten bisher einer ringsum runden Pille und passten oben nicht zur Kerbe. Jetzt folgen sie der Kerbenform. Außerdem schwillt die Insel bei einem Antippen oder beim Hereinfliegen einer App nicht mehr über das Fenster hinaus (eine 300 dp breite Kerbe wäre sonst an beiden Seiten beschnitten worden).",
+                        "Für den Laptop mit Android: Die Größe des Fensters zu ändern (Desktop-Modus, Tastatur an- oder abstecken, Drehen) startet den Launcher nicht mehr neu. Auf der Tastatur öffnet ein getippter Buchstabe auf dem Startbildschirm die Suche mit diesem Buchstaben, Esc geht zurück. Auf breiten Bildschirmen (ab 840 dp) sind bis zu 12 Spalten einstellbar, die Suche zeigt mehr Spalten, die App-Mediathek legt mehr Karten nebeneinander, Ordner werden nicht breiter als 640 dp, und die Einstellungen bleiben in der Mitte statt über den ganzen Bildschirm zu laufen. Auf Handys bleibt alles wie vorher.",
+                        "Ehrlich dazu: Auf dem Galaxy Book ausprobieren kann ich es nicht; ich habe die Ursachen im Code gesucht und gezielt behoben. Wenn dort noch etwas abgeschnitten ist, sag mir, bei welcher Anzeige (Laden, Anruf, Musik …) und ein Foto hilft.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Das ist ein Nachbau mit eigenem Code, kein Comet Launcher: Ich habe die hochgeladene Datei (Comet Launcher 3.28.1) nur gelesen – ihre Farben, Namen und die Reihenfolge der Einstellungen – und nichts davon kopiert oder verändert.",

@@ -243,6 +243,30 @@ val AiFluidColors = listOf(
 )
 
 /**
+ * A line [inset] inside the edge of an island of [width] × [height]: all round, or – [flatTop], hanging from the screen's edge –
+ * open at the top: down one side, along the foot and up the other (nothing at the edge it hangs from, and none of it cut off by the screen).
+ */
+internal fun islandEdgePath(width: Float, height: Float, radius: Float, flatTop: Boolean, inset: Float): androidx.compose.ui.graphics.Path {
+    val l = inset
+    val t = inset
+    val r = width - inset
+    val b = height - inset
+    val rad = (radius - inset).coerceIn(0f, minOf(r - l, b - t) / 2f)
+    return androidx.compose.ui.graphics.Path().apply {
+        if (flatTop) {
+            moveTo(l, 0f)
+            lineTo(l, b - rad)
+            arcTo(androidx.compose.ui.geometry.Rect(l, b - 2 * rad, l + 2 * rad, b), 180f, -90f, false)
+            lineTo(r - rad, b)
+            arcTo(androidx.compose.ui.geometry.Rect(r - 2 * rad, b - 2 * rad, r, b), 90f, -90f, false)
+            lineTo(r, 0f)
+        } else {
+            addRoundRect(androidx.compose.ui.geometry.RoundRect(androidx.compose.ui.geometry.Rect(l, t, r, b), CornerRadius(rad)))
+        }
+    }
+}
+
+/**
  * AI Fluid: a gradient in Claude's colors flows round the edge of an element, with a soft
  * glow on its inner side – like the light around an AI at work. [strength] dims or brightens
  * it (above 1 for a moment when something new comes).
@@ -254,6 +278,8 @@ fun Modifier.aiFluidEdge(
     enabled: Boolean = true,
     /** False: the colors stand still (most surfaces – flowing costs a frame every frame). */
     flowing: Boolean = true,
+    /** Hanging from the screen's edge (the MacBook notch): no line along the top, the sides and the foot only. */
+    flatTop: Boolean = false,
 ): Modifier = composed {
     if (!enabled || strength <= 0.01f) return@composed this
     // ZENITH Metall: no colors running round – silver on top, green light along the foot.
@@ -309,12 +335,19 @@ fun Modifier.aiFluidEdge(
         val lineCorner = CornerRadius((r - w / 2f).coerceAtLeast(0f))
         val lineStroke = Stroke(w)
         val lineAlpha = (0.85f * strength * fade).coerceIn(0f, 1f)
+        val glowPath = if (flatTop) islandEdgePath(size.width, size.height, r, true, w * 1.5f) else null
+        val linePath = if (flatTop) islandEdgePath(size.width, size.height, r, true, w / 2f) else null
         onDrawWithContent {
             drawContent()
             val brush = still ?: brushAt(phase?.invoke() ?: 0.8f)
             // A soft glow inside the edge, then the line itself.
-            drawRoundRect(brush, topLeft = glowAt, size = glowSize, cornerRadius = glowCorner, style = glowStroke, alpha = glowAlpha)
-            drawRoundRect(brush, topLeft = lineAt, size = lineSize, cornerRadius = lineCorner, style = lineStroke, alpha = lineAlpha)
+            if (glowPath != null && linePath != null) {
+                drawPath(glowPath, brush, alpha = glowAlpha, style = glowStroke)
+                drawPath(linePath, brush, alpha = lineAlpha, style = lineStroke)
+            } else {
+                drawRoundRect(brush, topLeft = glowAt, size = glowSize, cornerRadius = glowCorner, style = glowStroke, alpha = glowAlpha)
+                drawRoundRect(brush, topLeft = lineAt, size = lineSize, cornerRadius = lineCorner, style = lineStroke, alpha = lineAlpha)
+            }
         }
     }
 }

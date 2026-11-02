@@ -255,8 +255,63 @@ enum class PrivacyUse { None, Microphone, Camera }
 /** The privacy dot sits at the pill's right end: compact content keeps clear of it. */
 private val LocalPrivacyDot = compositionLocalOf { false }
 
+/** How far the island may swell past its size on each side (the window is 8 dp wider on each side; the rest is the margin of the glow). */
+private const val SwellRoomDp = 6f
+
 /** Room kept free around the camera, so nothing even touches its edge. */
 private val CameraMargin = 5.dp
+
+/**
+ * The island's outline as a path: round all round, or – hanging from the screen's edge (the MacBook notch) – square at the top, so
+ * glow and light follow the real shape. [grow] widens it on every free side (the rings of light around it).
+ */
+private fun islandPath(width: Float, height: Float, radius: Float, flatTop: Boolean, grow: Float = 0f): Path {
+    val r = radius + grow
+    val round = CornerRadius(r)
+    val rect = androidx.compose.ui.geometry.Rect(-grow, if (flatTop) 0f else -grow, width + grow, height + grow)
+    return Path().apply {
+        addRoundRect(
+            androidx.compose.ui.geometry.RoundRect(
+                rect,
+                topLeft = if (flatTop) CornerRadius.Zero else round,
+                topRight = if (flatTop) CornerRadius.Zero else round,
+                bottomRight = round,
+                bottomLeft = round,
+            ),
+        )
+    }
+}
+
+/** A ring of light [spread] around the island, in the island's own shape. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.islandRing(
+    spread: Float,
+    radius: Float,
+    flatTop: Boolean,
+    brush: Brush,
+    alpha: Float,
+) {
+    if (flatTop) {
+        drawPath(islandPath(size.width, size.height, radius, true, spread), brush, alpha)
+    } else {
+        drawRoundRect(
+            brush = brush,
+            topLeft = Offset(-spread, -spread),
+            size = Size(size.width + spread * 2, size.height + spread * 2),
+            cornerRadius = CornerRadius(radius + spread),
+            alpha = alpha,
+        )
+    }
+}
+
+/**
+ * In the MacBook notch mode: the room left for content on each side of the notch, both sides together. The charging level ("100 %" and
+ * its bar) needs about 60 dp beside the notch, a call's time or music a bit more; the island (no camera in it) needs less.
+ */
+private fun notchRoomFor(content: IslandContent, hanging: Boolean): Dp = when {
+    !hanging -> 72.dp
+    content is IslandContent.Live || content is IslandContent.Media || content is IslandContent.Code -> 184.dp
+    else -> 156.dp
+}
 
 /** Top padding of unfolded content when there's no camera to keep clear of. */
 private val ExpandedTop = 14.dp
@@ -415,7 +470,7 @@ fun GlimmerIsland(
         cameraClearance = cameraClearance(camera),
         narrow = settings.glimmerNarrow,
         notch = notchSize,
-        notchRoom = if (hanging) 112.dp else 72.dp,
+        notchRoom = notchRoomFor(content, hanging),
     )
     LaunchedEffect(target) { onTargetSize(target) }
     val collapseAfter = settings.glimmerAutoCollapse
@@ -462,6 +517,8 @@ fun GlimmerIsland(
         label = "islandCorner",
     )
     val corner = minOf(height / 2, cornerCap)
+    // The shape's outline for borders (the notch is square at the top, where it hangs from the screen's edge).
+    val outlineShape = if (flatTop) RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomEnd = corner, bottomStart = corner) else RoundedCornerShape(corner)
     // What is drawn while the island shrinks away: the last thing it showed.
     val lastShown = remember { arrayOf<IslandContent>(IslandContent.Hidden) }
     if (!hidden) lastShown[0] = content
@@ -640,7 +697,9 @@ fun GlimmerIsland(
                     alpha = (if (dimmed) 0.62f else 1f) * fade
                     val s = (if (expanded) 1f else hop.value) * press.value
                     val q = if (expanded) 0f else squash.value
-                    scaleX = s * (1f + 0.14f * q)
+                    // (never wider than the window has room for: a 300 dp pill swelling by 14 % would be cut off at both sides)
+                    val room = 1f + 2f * SwellRoomDp.dp.toPx() / width.toPx().coerceAtLeast(1f)
+                    scaleX = min(s * (1f + 0.14f * q), room)
                     scaleY = s * (1f - 0.12f * q)
                     translationX = denied.value * 7.dp.toPx()
                     transformOrigin = TransformOrigin(0.5f, 0f)
@@ -656,16 +715,12 @@ fun GlimmerIsland(
                 modifier = Modifier
                     .drawBehind {
                         // Breathing light around the island while something runs (Fluid Cloud).
+                        val ringRadius = if (flatTop) corner.toPx() else size.height / 2f
                         val b = breath?.value ?: 0f
                         if (b > 0.01f && !expanded) {
                             for (i in 1..3) {
                                 val spread = i * 2.2.dp.toPx() * (0.6f + 0.4f * b)
-                                drawRoundRect(
-                                    color = glowColor.copy(alpha = b * 0.22f / i),
-                                    topLeft = Offset(-spread, -spread),
-                                    size = Size(size.width + spread * 2, size.height + spread * 2),
-                                    cornerRadius = CornerRadius(size.height / 2 + spread),
-                                )
+                                islandRing(spread, ringRadius, flatTop, SolidColor(glowColor), b * 0.22f / i)
                             }
                         }
                         val a = shimmer.value
@@ -674,20 +729,9 @@ fun GlimmerIsland(
                             for (i in 1..4) {
                                 val spread = i * 1.6.dp.toPx()
                                 if (rainbow) {
-                                    drawRoundRect(
-                                        brush = Brush.sweepGradient(RainbowColors, center = center),
-                                        topLeft = Offset(-spread, -spread),
-                                        size = Size(size.width + spread * 2, size.height + spread * 2),
-                                        cornerRadius = CornerRadius(size.height / 2 + spread),
-                                        alpha = a * 0.4f / i,
-                                    )
+                                    islandRing(spread, ringRadius, flatTop, Brush.sweepGradient(RainbowColors, center = center), a * 0.4f / i)
                                 } else {
-                                    drawRoundRect(
-                                        color = glowColor.copy(alpha = a * 0.32f / i),
-                                        topLeft = Offset(-spread, -spread),
-                                        size = Size(size.width + spread * 2, size.height + spread * 2),
-                                        cornerRadius = CornerRadius(size.height / 2 + spread),
-                                    )
+                                    islandRing(spread, ringRadius, flatTop, SolidColor(glowColor), a * 0.32f / i)
                                 }
                             }
                         }
@@ -696,11 +740,11 @@ fun GlimmerIsland(
                     .then(
                         when (settings.glimmerOutline) {
                             GlimmerOutline.Off -> Modifier
-                            GlimmerOutline.Subtle -> Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(corner))
+                            GlimmerOutline.Subtle -> Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), outlineShape)
                             GlimmerOutline.Colored -> Modifier.border(
                                 1.5.dp,
                                 if (rainbow) Brush.sweepGradient(RainbowColors) else SolidColor(glowColorOf(drawn, settings.accent.color).copy(alpha = 0.75f)),
-                                RoundedCornerShape(corner),
+                                outlineShape,
                             )
                         },
                     )
@@ -708,6 +752,7 @@ fun GlimmerIsland(
                     // brighter for a moment when something new comes.
                     .aiFluidEdge(
                         corner = corner,
+                        flatTop = flatTop,
                         // Quiet round the empty pill, bright while something runs or arrives.
                         strength = (if (isPassive(drawn) && drawn !is IslandContent.Arrival) 0.3f else 0.75f) + 0.8f * shimmer.value,
                         enabled = settings.glimmerAiFluid && !dimmed && !hidden && drawn !is IslandContent.Unlock,
@@ -722,7 +767,8 @@ fun GlimmerIsland(
                         if (p > 0f) {
                             val cx = size.width / 2f
                             val cy = size.height / 2f
-                            val turn = p * 360f - 90f
+                            // Round the pill the streak starts at the top; hanging from the edge (the notch) it runs down one side, along the foot and up the other.
+                            val turn = if (flatTop) -14f + p * 300f else p * 360f - 90f
                             val streak = object : ShaderBrush() {
                                 override fun createShader(size: Size) = android.graphics.SweepGradient(
                                     cx,
@@ -733,11 +779,13 @@ fun GlimmerIsland(
                             }
                             // Fades in at the start and out at the end of its round.
                             val fade = (minOf(p, 1f - p) * 6f).coerceIn(0f, 1f)
-                            drawRoundRect(
+                            val line = 2.dp.toPx()
+                            // Inside the edge by half its width and a hair more: all of it is seen, none is cut off by the window or the screen.
+                            drawPath(
+                                islandEdgePath(size.width, size.height, corner.toPx(), flatTop, line * 0.5f + 0.5f),
                                 brush = streak,
-                                cornerRadius = CornerRadius(corner.toPx()),
-                                style = Stroke(2.dp.toPx()),
                                 alpha = fade,
+                                style = Stroke(line, cap = StrokeCap.Round),
                             )
                         }
                     }

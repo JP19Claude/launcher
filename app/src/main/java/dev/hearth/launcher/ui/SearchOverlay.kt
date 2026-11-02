@@ -83,8 +83,10 @@ fun SearchOverlay(
     claudeFirst: Boolean = false,
     /** Hearth UI 15: a secret code (*#0*#, *#1234# …) opens its hidden menu. */
     onSecret: (SecretMenu) -> Unit = {},
+    /** What the finder starts with (the letter typed on a computer's keyboard that opened it). */
+    initialQuery: String = "",
 ) {
-    var query by rememberSaveable { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf(initialQuery) }
     val focusRequester = remember { FocusRequester() }
     val trimmed = query.trim()
     // Easter egg: a rainbow, when you look for one.
@@ -108,7 +110,9 @@ fun SearchOverlay(
                 .sortedByDescending { it.label.startsWith(trimmed, ignoreCase = true) }
         }
     }
-    val columns = LocalSettings.current.columns.coerceIn(4, 5)
+    // On a computer's wide screen the results fill the room with more columns instead of a few far-apart icons.
+    val wideColumns = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp / 110).coerceIn(6, 12)
+    val columns = if (isWideScreen()) wideColumns else LocalSettings.current.columns.coerceIn(4, 5)
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
@@ -335,9 +339,15 @@ private fun SearchField(
     trailing: (@Composable () -> Unit)? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
+    // The text with its cursor: at the end when the text comes from outside (the letter that opened the finder), else where it is being edited.
+    var edited by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(value, androidx.compose.ui.text.TextRange(value.length))) }
+    val shown = if (edited.text == value) edited else androidx.compose.ui.text.input.TextFieldValue(value, androidx.compose.ui.text.TextRange(value.length))
     BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
+        value = shown,
+        onValueChange = {
+            edited = it
+            if (it.text != value) onValueChange(it.text)
+        },
         singleLine = true,
         textStyle = TextStyle(color = Color.White, fontSize = 17.sp),
         cursorBrush = SolidColor(Color(0xFFFFB494)),

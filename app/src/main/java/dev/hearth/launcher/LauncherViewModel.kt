@@ -486,6 +486,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _settingsRequests.tryEmit(Unit)
     }
 
+    private val _typedSearch = MutableSharedFlow<String>(extraBufferCapacity = 8)
+
+    /** A key typed on a computer's keyboard while the home screen has nothing else to take it: it opens the finder with that letter. */
+    val typedSearch: SharedFlow<String> = _typedSearch.asSharedFlow()
+
+    fun typeToSearch(text: String) {
+        _typedSearch.tryEmit(text)
+    }
+
     fun consumeSettingsRequest() {
         _settingsRequests.resetReplayCache()
     }
