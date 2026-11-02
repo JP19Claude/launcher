@@ -42,6 +42,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -1778,8 +1780,8 @@ private fun LongPressArea(onLongPress: (Offset) -> Unit, onDoubleTap: () -> Unit
             .onGloballyPositioned { origin = it.positionInRoot() }
             // A computer's mouse: the right button opens the home screen menu at once (and keeps the tap detector below out of it).
             .pointerInput(Unit) {
-                androidx.compose.foundation.gestures.awaitEachGesture {
-                    val down = androidx.compose.foundation.gestures.awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                     if (currentEvent.buttons.isSecondaryPressed) {
                         down.consume()
                         longPress(origin + down.position)
