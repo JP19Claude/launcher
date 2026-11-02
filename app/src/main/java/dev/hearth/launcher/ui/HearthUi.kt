@@ -235,6 +235,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Hotfix: Die Notch kürzer und ruhiger", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Die Ereignisse und Animationen in der MacBook-Notch sahen nicht gut aus, und die Notch wurde bei einem Ereignis zu lang.",
+                        "Kürzer: Beim letzten Fix hatte ich der Notch viel Platz neben der Kerbe gegeben, damit nichts abgeschnitten wird – das machte sie bei jedem Ereignis zu einem langen Balken. Jetzt wächst sie nur noch so viel, wie der Inhalt braucht: bei einem Symbol oder Punkt um 72 dp (vorher 112), beim Laden und bei Meldungen um 96 dp, bei Musik um 84 dp, bei der Zeit eines Anrufs oder Timers um 128 dp. Beim Laden steht in der Notch nur noch die Prozentzahl, ohne Balken. Ausgeklappt ist sie höchstens 380 dp breit (vorher 420), und ein zweites Bläschen daneben gibt es nicht mehr – ein Wisch zur Seite holt die nächste Aktivität.",
+                        "Ruhiger: Die Notch federt nicht mehr über ihre Größe hinaus, drückt sich beim Eintreffen nicht mehr zusammen und bläht sich nicht auf, hat keinen Weichzeichner und skaliert ihren Inhalt nicht mehr – ein Inhalt blendet in den nächsten über. Antippen drückt sie nur noch um 2 % statt 6 %.",
+                        "Ehrlich dazu: Auf dem Galaxy Book sehe ich es nicht. Die Breiten sind aus der Schriftgröße geschätzt; wenn bei einem Ereignis noch etwas abgeschnitten ist oder die Notch noch zu lang wirkt, sag mir bitte, bei welchem (Laden, Anruf, Musik, Timer …) – ein Foto hilft.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
                     listOf(
                         "Ausprobiert habe ich das weder auf einem PC noch auf einem Laptop mit Android. Wenn Glimmer Drop dort etwas anderes zeigt als hier beschrieben, hilft ein Foto der Seite und die rote Zeile unter dem Titel.",

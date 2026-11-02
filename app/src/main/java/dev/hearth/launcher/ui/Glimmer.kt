@@ -304,13 +304,17 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.islandRing(
 }
 
 /**
- * In the MacBook notch mode: the room left for content on each side of the notch, both sides together. The charging level ("100 %" and
- * its bar) needs about 60 dp beside the notch, a call's time or music a bit more; the island (no camera in it) needs less.
+ * In the MacBook notch mode: the room left for content on each side of the notch, both sides together – as little as the content needs, so
+ * the notch only grows by a hand's breadth (like the real thing) and not into a long bar. A side holds (room / 2 - 11) dp of content:
+ * a symbol or dot needs 22, "85 %" about 34, music 22, a call's or timer's time about 50. The island (no camera in it) needs less.
  */
 private fun notchRoomFor(content: IslandContent, hanging: Boolean): Dp = when {
     !hanging -> 72.dp
-    content is IslandContent.Live || content is IslandContent.Media || content is IslandContent.Code -> 184.dp
-    else -> 156.dp
+    content is IslandContent.Live -> if (content.notice.hasTime) 128.dp else 112.dp
+    content is IslandContent.Code -> 116.dp
+    content is IslandContent.Charging || content is IslandContent.Alert -> 96.dp
+    content is IslandContent.Media -> 84.dp
+    else -> 72.dp
 }
 
 /** Top padding of unfolded content when there's no camera to keep clear of. */
@@ -354,7 +358,8 @@ fun islandSize(
     notchRoom: Dp = 112.dp,
 ): DpSize {
     // Unfolded it's always as wide as at 100 % (the 85 % mode only slims the small states).
-    val full = if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, 420f).dp
+    // (Hanging from the screen's edge as the MacBook's notch, unfolded it stays a card of 380 dp, not as wide as the screen would let it.)
+    val full = if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, if (notch != null) 380f else 420f).dp
     val compactBase = if (dynamicIsland) {
         (ISLAND_HEIGHT_DP * 6.2f).coerceAtMost(screenWidthDp - 60f).dp * narrow
     } else {
@@ -454,7 +459,8 @@ fun GlimmerIsland(
             }
         }
     }
-    val hasSecondary = secondary != null && !expanded
+    // (The MacBook notch has no second bubble splitting off beside it – that would only make it longer; a swipe sideways brings the next activity.)
+    val hasSecondary = secondary != null && !expanded && !settings.glimmerIsNotch
     // The MacBook modes: the notch is a black tab hanging from the top edge (its top corners square while it touches the edge),
     // the MacBook island a small pill below it; both with a size of their own.
     val notchSize = if (settings.glimmerIsMac) settings.glimmerMacSize.let { DpSize(it.width.dp, it.height.dp) } else null
@@ -487,7 +493,8 @@ fun GlimmerIsland(
         GlimmerMotion.Normal -> 0f
         GlimmerMotion.Playful -> -0.2f
     }
-    fun damp(ratio: Float) = (ratio + springiness).coerceIn(0.25f, 1f)
+    // (Hanging from the screen's edge as the MacBook's notch it settles without a bounce: a tab that swings past its size looks like a glitch.)
+    fun damp(ratio: Float) = if (hanging) maxOf(ratio, 0.95f) else (ratio + springiness).coerceIn(0.25f, 1f)
 
     // Like the Dynamic Island: unfolding stretches out sideways first and then drops down with
     // a little bounce; folding pulls up first and is quicker; going away has no bounce at all.
@@ -540,7 +547,8 @@ fun GlimmerIsland(
         val pulsed = pulse != lastPulse[0]
         lastPulse[0] = pulse
         if ((content is IslandContent.Idle || content is IslandContent.Lock) && !pulsed) return@LaunchedEffect
-        launch {
+        // (The hanging notch neither squeezes nor swells: its edge is the screen's.)
+        if (!hanging) launch {
             if (pulsed) {
                 squash.snapTo(0f)
                 squash.animateTo(1f, tween(110))
@@ -617,7 +625,7 @@ fun GlimmerIsland(
     // How sharp the content is: from a blur to clear whenever it changes or unfolds.
     val clarity = remember { Animatable(1f) }
     LaunchedEffect(key, expanded) {
-        if (!animations || dimmed || isPassive(content)) {
+        if (!animations || dimmed || isPassive(content) || hanging) {
             clarity.snapTo(1f)
             return@LaunchedEffect
         }
@@ -794,7 +802,7 @@ fun GlimmerIsland(
                         detectTapGestures(
                             onPress = {
                                 if (pressableNow) {
-                                    pressScope.launch { press.animateTo(if (expandedNow) 1.015f else 1.06f, spring(dampingRatio = 0.7f, stiffness = 700f)) }
+                                    pressScope.launch { press.animateTo(if (expandedNow) 1.015f else if (hanging) 1.02f else 1.06f, spring(dampingRatio = 0.7f, stiffness = 700f)) }
                                     tryAwaitRelease()
                                     pressScope.launch { press.animateTo(1f, spring(dampingRatio = 0.42f, stiffness = 520f)) }
                                 }
@@ -866,6 +874,8 @@ fun GlimmerIsland(
                     transitionSpec = {
                         val top = TransformOrigin(0.5f, 0f)
                         when {
+                            // The hanging notch: one content fades into the next – no scaling and sliding about while the notch itself moves.
+                            hanging -> fadeIn(tween(170, delayMillis = 70)).togetherWith(fadeOut(tween(90)))
                             // Unfolding: the small content melts away, the big one grows in from
                             // the top while the shape is still stretching.
                             targetState.second && !initialState.second ->
@@ -1368,8 +1378,11 @@ private fun CompactContent(content: IslandContent) {
             IslandContent.Torch -> Text("An", color = Yellow, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             is IslandContent.Charging -> Row(verticalAlignment = Alignment.CenterVertically) {
                 RollingText("${content.level} %", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.width(4.dp))
-                LevelBar(content.level / 100f, Green, Modifier.size(20.dp, 11.dp), charging = true)
+                // (In the MacBook notch the percent alone: the bar would only make it longer.)
+                if (!LocalSettings.current.glimmerIsNotch) {
+                    Spacer(Modifier.width(4.dp))
+                    LevelBar(content.level / 100f, Green, Modifier.size(20.dp, 11.dp), charging = true)
+                }
             }
             // The code itself (smaller when long, so it fits beside the camera); after the tap a green "Kopiert".
             is IslandContent.Code -> if (content.copied) {
@@ -1401,8 +1414,10 @@ private fun CompactContent(content: IslandContent) {
                 )
                 // Charging and battery: a small battery filling up, like on the iPhone.
                 content.level?.let { level ->
-                    Spacer(Modifier.width(4.dp))
-                    LevelBar(level, content.color, Modifier.size(20.dp, 11.dp), charging = isChargingAlert(content))
+                    if (!LocalSettings.current.glimmerIsNotch) {
+                        Spacer(Modifier.width(4.dp))
+                        LevelBar(level, content.color, Modifier.size(20.dp, 11.dp), charging = isChargingAlert(content))
+                    }
                 }
             }
             else -> Unit
