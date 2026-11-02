@@ -351,8 +351,16 @@ object GlimmerDrop {
         _exchange.value = null
         touchToken = touched
         rssi.clear()
+        _signal.value = Signal()
+        // The Wi-Fi needs no permission and no Bluetooth: a laptop or PC, or a phone on the same network, finds the others this way.
+        startLan(c)
         if (!hasPermissions(c)) {
-            _phase.value = Phase.Failed("Glimmer Drop braucht noch „Geräte in der Nähe“ und den Standort – der wird nur gebraucht, um das andere Handy zu finden.")
+            if (lan?.isRunning == true) {
+                _phase.value = Phase.Searching
+                _signal.value = Signal(problem = "Ohne „Geräte in der Nähe“ geht nur das WLAN: kein Berühren, kein Bluetooth")
+            } else {
+                _phase.value = Phase.Failed("Glimmer Drop braucht noch „Geräte in der Nähe“ und den Standort – der wird nur gebraucht, um das andere Handy zu finden.")
+            }
             return
         }
         _phase.value = Phase.Searching
@@ -365,6 +373,7 @@ object GlimmerDrop {
         if (!sessionOpen) return
         sessionOpen = false
         stopNearby()
+        stopLan()
         stopBeacon()
         _phase.value = Phase.Off
         _exchange.value = null
@@ -376,6 +385,262 @@ object GlimmerDrop {
         closedWith = touchToken
         uiShown = false
         app?.let { if (backgroundWanted) startBeacon(it, background = true) }
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // The Wi-Fi (ZENITH 22): for laptops, PCs and tablets without a Bluetooth beacon or Google Play services – and for phones on the same network
+    // -----------------------------------------------------------------------------------------
+
+    private const val LAN_ID = "lan:link"
+
+    /** When the offer doesn't say how big a file is, this much may come at most (2 GB). */
+    private const val LAN_MAX_UNKNOWN = 2_000_000_000L
+
+    private var lan: GlimmerLan? = null
+    private var lanLink: GlimmerLan.Link? = null
+
+    /** Whether I said yes to what the other one shares, and how many bytes of files may still come over the Wi-Fi. */
+    @Volatile
+    private var lanAccepted = false
+
+    @Volatile
+    private var lanBudget = 0L
+    private var lanDoneBytes = 0L
+    private val lanQueue = ArrayDeque<Long>()
+
+    private val _lanAddress = MutableStateFlow<String?>(null)
+
+    /** This device's address in the network ("192.168.1.5:47831"), to type in on another device that doesn't find it by itself. */
+    val lanAddress: StateFlow<String?> = _lanAddress.asStateFlow()
+
+    private fun startLan(context: Context) {
+        stopLan()
+        val l = GlimmerLan(
+            context,
+            token,
+            { displayName(context).take(40) },
+            onPeers = { list -> scope.launch { setLanPeers(list) } },
+            onIncoming = { link -> scope.launch { adoptLanLink(link) } },
+        )
+        if (l.start()) {
+            lan = l
+            _lanAddress.value = GlimmerLan.localAddress()?.let { "$it:${l.port}" }
+        }
+    }
+
+    private fun stopLan() {
+        lan?.stop()
+        lan = null
+        val old = lanLink
+        lanLink = null
+        old?.close()
+        lanQueue.clear()
+        lanAccepted = false
+        lanBudget = 0L
+        _lanAddress.value = null
+        _nearby.value = _nearby.value.filterNot { it.endpointId.startsWith("lan:") }
+    }
+
+    /** The devices in the network that have Glimmer Drop open (a device Nearby already found is listed once, by Nearby). */
+    private fun setLanPeers(list: List<GlimmerLan.Peer>) {
+        if (!sessionOpen || lan == null) return
+        val viaNearby = _nearby.value.filterNot { it.endpointId.startsWith("lan:") }
+        val viaLan = list.filter { p -> viaNearby.none { it.token == p.token } }.map { Peer("lan:${it.host}:${it.port}", it.token, it.name) }
+        _nearby.value = viaNearby + viaLan
+        tryTouchConnect()
+    }
+
+    private fun connectLan(hostAndPort: String, name: String) {
+        val l = lan ?: return
+        if (connectedId != null || lanLink != null) return
+        val host = hostAndPort.substringBeforeLast(':')
+        val port = hostAndPort.substringAfterLast(':').toIntOrNull() ?: return
+        _phase.value = Phase.Connecting(name)
+        scope.launch {
+            val link = withContext(Dispatchers.IO) { l.connect(host, port) }
+            when {
+                !sessionOpen -> link?.close()
+                link == null -> {
+                    if (connectedId == null) _phase.value = Phase.Searching
+                    _signal.value = _signal.value.copy(problem = "Die Verbindung zu $name klappt nicht – sind beide im selben WLAN, und lässt es (oder eine Firewall) das zu?")
+                }
+                else -> adoptLanLink(link)
+            }
+        }
+    }
+
+    /** Connects to an address typed in ("192.168.1.5" or "192.168.1.5:47831"). */
+    fun connectToAddress(text: String) {
+        val t = text.trim()
+        if (t.isEmpty()) return
+        connectLan(if (':' in t) t else "$t:${GlimmerLan.PORT}", t.substringBefore(':'))
+    }
+
+    /** A connection over the Wi-Fi exists (either side opened it): the two introduce themselves, and then it works like the Nearby one. */
+    private fun adoptLanLink(link: GlimmerLan.Link) {
+        val context = app
+        if (context == null || !sessionOpen || connectedId != null || lanLink != null) {
+            link.close()
+            return
+        }
+        lanLink = link
+        lanAccepted = false
+        lanBudget = 0L
+        lanDoneBytes = 0L
+        lanQueue.clear()
+        if (_phase.value !is Phase.Connecting) _phase.value = Phase.Connecting(link.remote)
+        link.start(object : GlimmerLan.Link.Events {
+            override fun json(text: String) {
+                scope.launch { if (lanLink === link) lanMessage(text) }
+            }
+
+            override fun fileBegin(size: Long): java.io.File? {
+                if (!lanAccepted || size < 0 || size > lanBudget) return null
+                lanBudget -= size
+                return java.io.File(context.cacheDir, "drop_in_${System.nanoTime()}")
+            }
+
+            override fun fileProgress(done: Long, size: Long) {
+                scope.launch { lanInProgress(done) }
+            }
+
+            override fun fileEnd(file: java.io.File) {
+                scope.launch { lanFileDone(file, link) }
+            }
+
+            override fun closed() {
+                scope.launch {
+                    if (lanLink === link) {
+                        lanLink = null
+                        linkLost()
+                    }
+                }
+            }
+        })
+        link.sendJson(JSONObject().put("t", "id").put("token", token).put("name", displayName(context).take(40)).toString())
+    }
+
+    private fun lanMessage(text: String) {
+        val o = runCatching { JSONObject(text) }.getOrNull() ?: return
+        if (o.optString("t") == "id") {
+            if (connectedId != null) return
+            val name = o.optString("name").ifBlank { "Gerät" }
+            connectedId = LAN_ID
+            _exchange.value = Exchange(peer = name)
+            _phase.value = Phase.Connected
+            runCatching { client?.stopDiscovery() }
+            runCatching { client?.stopAdvertising() }
+            _island.tryEmit(IslandMoment("Glimmer Drop", name))
+            sendHello(LAN_ID)
+            return
+        }
+        if (connectedId == LAN_ID) onMessage(LAN_ID, text)
+    }
+
+    /** The Wi-Fi connection ended: like a lost Nearby one – unfinished is a failure, finished goes back to searching. */
+    private fun linkLost() {
+        if (connectedId != LAN_ID) {
+            if (sessionOpen && _phase.value is Phase.Connecting) _phase.value = Phase.Searching
+            return
+        }
+        connectedId = null
+        lanAccepted = false
+        lanQueue.clear()
+        val ex = _exchange.value
+        val unfinished = ex != null && (ex.incoming == Step.Running || ex.outgoing == Step.Running)
+        if (unfinished && sessionOpen) {
+            _phase.value = Phase.Failed("Die Verbindung ist abgerissen. Verbindet die Geräte noch einmal.")
+        } else if (sessionOpen) {
+            _phase.value = Phase.Searching
+            app?.let { startNearby(it) }
+        }
+        touchToken = null
+    }
+
+    private fun lanInProgress(doneOfCurrent: Long) {
+        val ex = _exchange.value ?: return
+        val total = (ex.offer?.files?.sumOf { it.size.coerceAtLeast(0L) } ?: 0L).coerceAtLeast(1L)
+        _exchange.value = ex.copy(inProgress = ((lanDoneBytes + doneOfCurrent).toFloat() / total).coerceIn(0f, 0.99f))
+    }
+
+    /** A file has come over the Wi-Fi in full: it belongs to the oldest announced one; into the gallery or downloads. */
+    private fun lanFileDone(file: java.io.File, link: GlimmerLan.Link) {
+        val context = app
+        val id = lanQueue.removeFirstOrNull()
+        val meta = id?.let { incomingMeta[it] }
+        if (context == null || id == null || meta == null || lanLink !== link) {
+            file.delete()
+            return
+        }
+        lanDoneBytes += file.length()
+        scope.launch {
+            val uri = withContext(Dispatchers.IO) { store(context, meta, Uri.fromFile(file), deleteSource = false).also { file.delete() } }
+            received(meta, incomingIndex[id] ?: -1, uri)
+        }
+    }
+
+    /** A source to send over the Wi-Fi and its size: a file straight from where it is, a stream of unknown size copied to the cache first. */
+    private fun openForLan(context: Context, f: OutFile): Pair<java.io.InputStream, Long>? = runCatching {
+        val pfd = context.contentResolver.openFileDescriptor(f.uri, "r") ?: return@runCatching null
+        val size = pfd.statSize
+        if (size >= 0) {
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd) to size
+        } else {
+            val temp = java.io.File(context.cacheDir, "drop_out_${System.nanoTime()}")
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd).use { input -> temp.outputStream().use { input.copyTo(it) } }
+            val stream: java.io.InputStream = object : java.io.FileInputStream(temp) {
+                override fun close() {
+                    super.close()
+                    temp.delete()
+                }
+            }
+            stream to temp.length()
+        }
+    }.getOrNull()
+
+    private fun lanSendFiles(list: List<OutFile>) {
+        val context = app ?: return
+        val link = lanLink ?: return
+        scope.launch {
+            val opened = withContext(Dispatchers.IO) {
+                list.mapIndexedNotNull { i, f -> openForLan(context, f)?.let { Triple(i, f, it) } }
+            }
+            if (opened.isEmpty()) {
+                if (list.isNotEmpty()) fail("Senden hat nicht geklappt.")
+                return@launch
+            }
+            val total = opened.sumOf { it.third.second }.coerceAtLeast(1L)
+            var offset = 0L
+            val last = opened.lastIndex
+            opened.forEachIndexed { n, (i, f, source) ->
+                val (stream, size) = source
+                val start = offset
+                offset += size
+                val meta = JSONObject().put("t", "file").put("id", i + 1L).put("i", i).put("name", f.name).put("mime", f.mime).put("size", size).toString()
+                link.sendFile(
+                    meta,
+                    stream,
+                    size,
+                    progress = { done -> scope.launch { lanOutProgress((start + done).toFloat() / total, false) } },
+                    finished = { ok ->
+                        scope.launch {
+                            if (!ok) {
+                                _exchange.value = _exchange.value?.copy(outgoing = Step.Declined)
+                                fail("Senden hat nicht geklappt.")
+                            } else if (n == last) {
+                                lanOutProgress(1f, true)
+                            }
+                        }
+                    },
+                )
+            }
+        }
+    }
+
+    private fun lanOutProgress(p: Float, finished: Boolean) {
+        val ex = _exchange.value ?: return
+        _exchange.value = ex.copy(outProgress = p.coerceIn(0f, 1f), outgoing = if (finished) Step.Done else Step.Running)
+        emitProgress("Senden", p, finished)
     }
 
     /** Try again after a failure (permissions just granted, Bluetooth just on …). */
@@ -392,7 +657,7 @@ object GlimmerDrop {
     private fun startNearby(context: Context) {
         val c = runCatching { Nearby.getConnectionsClient(context) }.getOrNull()
         if (c == null) {
-            _phase.value = Phase.Failed("Glimmer Drop braucht die Google Play-Dienste.")
+            nearbyProblem("Glimmer Drop braucht für Nearby die Google Play-Dienste.")
             return
         }
         client = c
@@ -400,11 +665,11 @@ object GlimmerDrop {
         c.startAdvertising(
             name, SERVICE_ID, lifecycle,
             AdvertisingOptions.Builder().setStrategy(Strategy.P2P_POINT_TO_POINT).build(),
-        ).addOnFailureListener { e -> if (!alreadyRunning(e)) fail(problemText(e, "starten")) }
+        ).addOnFailureListener { e -> if (!alreadyRunning(e)) nearbyProblem(problemText(e, "starten")) }
         c.startDiscovery(
             SERVICE_ID, discovery,
             DiscoveryOptions.Builder().setStrategy(Strategy.P2P_POINT_TO_POINT).build(),
-        ).addOnFailureListener { e -> if (!alreadyRunning(e)) fail(problemText(e, "suchen")) }
+        ).addOnFailureListener { e -> if (!alreadyRunning(e)) nearbyProblem(problemText(e, "suchen")) }
     }
 
     /** Nearby's errors in words – a missing permission says which one. */
@@ -444,13 +709,22 @@ object GlimmerDrop {
         if (sessionOpen) _phase.value = Phase.Failed(message)
     }
 
+    /** Nearby doesn't work here (no Google Play services, no Bluetooth …): with the Wi-Fi running that is no failure, just a note under the title. */
+    private fun nearbyProblem(message: String) {
+        if (lan?.isRunning == true) {
+            if (sessionOpen) _signal.value = _signal.value.copy(problem = "Nearby geht hier nicht – das WLAN schon. ($message)")
+        } else {
+            fail(message)
+        }
+    }
+
     private val discovery = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
             if (info.serviceId != SERVICE_ID) return
             val raw = info.endpointName
             val peerToken = raw.substringBefore('|', "")
             val name = raw.substringAfter('|', raw)
-            _nearby.value = _nearby.value.filterNot { it.endpointId == endpointId } + Peer(endpointId, peerToken, name)
+            _nearby.value = _nearby.value.filterNot { it.endpointId == endpointId || (it.token == peerToken && it.endpointId.startsWith("lan:")) } + Peer(endpointId, peerToken, name)
             tryTouchConnect()
         }
 
@@ -498,6 +772,10 @@ object GlimmerDrop {
 
     /** Connect to a phone nearby (a touch, or a tap in the list). */
     fun connect(peer: Peer) {
+        if (peer.endpointId.startsWith("lan:")) {
+            connectLan(peer.endpointId.removePrefix("lan:"), peer.name)
+            return
+        }
         val c = client ?: return
         val context = app ?: return
         if (connectedId != null) return
@@ -567,6 +845,10 @@ object GlimmerDrop {
     )
 
     private fun sendBytes(endpointId: String, json: JSONObject) {
+        if (endpointId == LAN_ID) {
+            lanLink?.sendJson(json.toString())
+            return
+        }
         client?.sendPayload(endpointId, Payload.fromBytes(json.toString().toByteArray(Charsets.UTF_8)))
     }
 
@@ -624,6 +906,16 @@ object GlimmerDrop {
         val id = connectedId ?: return
         val ex = _exchange.value ?: return
         val offer = ex.offer ?: return
+        // (Over the Wi-Fi a file is only taken from the connection after yes, and no more than the offer said.)
+        lanAccepted = accept
+        lanBudget = if (!accept) {
+            0L
+        } else if (offer.files.any { it.size <= 0L }) {
+            LAN_MAX_UNKNOWN
+        } else {
+            offer.files.sumOf { it.size } + 4096L
+        }
+        lanDoneBytes = 0L
         sendBytes(id, JSONObject().put("t", "answer").put("ok", accept))
         _exchange.value = if (accept) {
             ex.copy(
@@ -735,8 +1027,11 @@ object GlimmerDrop {
             }
             "file" -> {
                 val id = o.optLong("id")
-                incomingMeta[id] = FileInfo(o.optString("name"), o.optString("mime"), o.optLong("size"))
+                // (Only the name, never a path: a file lands in the gallery or downloads, nowhere else.)
+                val fileName = o.optString("name").substringAfterLast('/').substringAfterLast('\\')
+                incomingMeta[id] = FileInfo(fileName, o.optString("mime"), o.optLong("size"))
                 incomingIndex[id] = o.optInt("i", -1)
+                if (endpointId == LAN_ID) lanQueue.addLast(id)
                 finishFile(id)
             }
             "thumb" -> {
@@ -749,6 +1044,10 @@ object GlimmerDrop {
     }
 
     private fun sendFiles(endpointId: String, list: List<OutFile>) {
+        if (endpointId == LAN_ID) {
+            lanSendFiles(list)
+            return
+        }
         val context = app ?: return
         val c = client ?: return
         list.forEachIndexed { i, f ->
@@ -769,17 +1068,22 @@ object GlimmerDrop {
         val context = app ?: return
         scope.launch {
             val uri = withContext(Dispatchers.IO) { save(context, meta, payload) }
-            val ex = _exchange.value ?: return@launch
-            val got = ex.received.files + ReceivedFile(meta.name, meta.mime, uri, incomingIndex[id] ?: -1)
-            val expected = ex.offer?.files?.size ?: got.size
-            val finished = got.size >= expected
-            _exchange.value = ex.copy(
-                received = ex.received.copy(files = got),
-                incoming = if (finished) Step.Done else ex.incoming,
-                inProgress = if (finished) 1f else ex.inProgress,
-            )
-            if (finished) _island.tryEmit(IslandMoment("Empfangen", ex.offer?.summary().orEmpty(), 1f))
+            received(meta, incomingIndex[id] ?: -1, uri)
         }
+    }
+
+    /** A file has been saved: it joins what was received; with the last one the exchange is done. */
+    private fun received(meta: FileInfo, index: Int, uri: Uri?) {
+        val ex = _exchange.value ?: return
+        val got = ex.received.files + ReceivedFile(meta.name, meta.mime, uri, index)
+        val expected = ex.offer?.files?.size ?: got.size
+        val finished = got.size >= expected
+        _exchange.value = ex.copy(
+            received = ex.received.copy(files = got),
+            incoming = if (finished) Step.Done else ex.incoming,
+            inProgress = if (finished) 1f else ex.inProgress,
+        )
+        if (finished) _island.tryEmit(IslandMoment("Empfangen", ex.offer?.summary().orEmpty(), 1f))
     }
 
     private fun save(context: Context, meta: FileInfo, payload: Payload): Uri? = runCatching {
@@ -792,6 +1096,11 @@ object GlimmerDrop {
             javaFile?.let { Uri.fromFile(it) }
         }
         if (source == null) return@runCatching null
+        store(context, meta, source, deleteSource = true)
+    }.getOrNull()
+
+    /** Puts a received file into the gallery (photos, videos, music) or the downloads, in the folder "Glimmer Drop". */
+    private fun store(context: Context, meta: FileInfo, source: Uri, deleteSource: Boolean): Uri? = runCatching {
         val name = meta.name.ifBlank { "Glimmer Drop ${System.currentTimeMillis()}" }
         val mime = meta.mime.ifBlank { "application/octet-stream" }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
@@ -820,7 +1129,7 @@ object GlimmerDrop {
             resolver.openOutputStream(target)?.use { output -> input.copyTo(output) }
         }
         resolver.update(target, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
-        runCatching { resolver.delete(source, null, null) }
+        if (deleteSource) runCatching { resolver.delete(source, null, null) }
         target
     }.getOrNull()
 
@@ -964,7 +1273,11 @@ object GlimmerDrop {
             _signal.value = Signal(problem = "„Geräte in der Nähe“ ist nicht erlaubt")
             return
         }
-        val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter ?: return
+        val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter
+        if (adapter == null) {
+            _signal.value = Signal(problem = "Dieses Gerät hat kein Bluetooth – Glimmer Drop geht über das WLAN")
+            return
+        }
         if (!adapter.isEnabled) {
             _signal.value = Signal(problem = "Bluetooth ist aus")
             return

@@ -1,16 +1,15 @@
 {
  "bg": [
-  "#040A1C",
-  "#0B2468",
-  "#2F7BFF"
+  "#020D0C",
+  "#06332E",
+  "#1FA98A"
  ],
- "glowA": "#9A6BFF",
- "glowB": "#8FE3FF",
- "accent": "#62C8FF",
- "label": "H O R I Z O N T",
- "os": "ClaudeOS 8.0",
- "aurora": "Eis",
- "stars": false,
- "fireworks": false,
- "style": "horizon"
+ "glowA": "#2FD2A0",
+ "glowB": "#FFE9A8",
+ "accent": "#5CF2C1",
+ "label": "M E R I D I A N",
+ "os": "ClaudeOS 9.0",
+ "aurora": "Zenith",
+ "stars": true,
+ "fireworks": false
 }

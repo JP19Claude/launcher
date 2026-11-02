@@ -22,6 +22,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.semantics.onClick
@@ -337,6 +338,16 @@ internal fun Modifier.tapMenuOrDrag(
 ): Modifier = pointerInput(Unit) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
+        // A computer's mouse: the right button is the long press – the menu opens at once, without waiting.
+        if (currentEvent.buttons.isSecondaryPressed) {
+            down.consume()
+            onLongPress()
+            while (true) {
+                val event = awaitPointerEvent()
+                if (event.changes.none { it.pressed }) break
+            }
+            return@awaitEachGesture
+        }
         onPressChange(true)
         // 1 = lifted (tap), 2 = moved or taken over by scrolling, null = long press.
         val early = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {

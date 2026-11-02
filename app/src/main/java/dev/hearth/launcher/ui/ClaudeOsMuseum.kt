@@ -58,6 +58,7 @@ internal val ClaudeOsEras = listOf(
     ClaudeOsEra("6.0", "Helios", ClaudeMarkStyle.Helios, "Sonnenfinsternis: den Mond von der Sonne schieben."),
     ClaudeOsEra("7.0", "Apex", ClaudeMarkStyle.Apex, "Den Gipfel besteigen: das Claude-Zeichen mit dem Finger nach oben ziehen, bis das Polarlicht aufwacht."),
     ClaudeOsEra("8.0", "Horizon", ClaudeMarkStyle.Horizon, "Über den Horizont: das Claude-Zeichen von links nach rechts tragen – ein ganzer Tag von der Dämmerung bis zu den Sternen."),
+    ClaudeOsEra("9.0", "Meridian", ClaudeMarkStyle.Meridian, "Den Meridian hinauf: das Claude-Zeichen mit dem Finger vom Boden durchs Blau des Tages bis in die Sterne tragen."),
 )
 
 /** The ClaudeOS for [version] (the newest one not newer than it). */
@@ -163,6 +164,7 @@ internal val SystemEras = listOf(
     SystemEra("20.0", "ZENITH", "Jubiläum", "Feuerwerk: zwanzig Tipps, zwanzig Feuerwerke – eins für jede Version."),
     SystemEra("21.0", "ZENITH", "Horizont", "Horizont: den Horizont zur Seite ziehen und einundzwanzig Lichter in den Bergen anzünden – dann geht die Sonne auf."),
     SystemEra("21.5", "ZENITH", "Comet", "Glasblasen: einundzwanzig Blasen aus Liquid Glass aufsteigen lassen und zum Platzen bringen."),
+    SystemEra("22.0", "ZENITH", "Meridian", "Meridian: zweiundzwanzigmal in den Himmel tippen – jeder Strahl trägt die Sonne ein Stück höher, bis sie im Zenit steht."),
 )
 
 /** The big version a [version] belongs to (the newest one not newer than it). */

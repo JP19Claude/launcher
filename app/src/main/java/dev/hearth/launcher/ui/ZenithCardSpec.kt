@@ -70,6 +70,19 @@ class ZenithCardSpec(
             horizon = true,
         )
 
+        /** ZENITH 22's own card, built in – the dark green of the Z rising into the light of the midday sun. */
+        val Meridian = ZenithCardSpec(
+            bg = listOf(Color(0xFF020D0C), Color(0xFF06332E), Color(0xFF1FA98A)),
+            glowA = Color(0xFF2FD2A0),
+            glowB = Color(0xFFFFE9A8),
+            accent = Color(0xFF5CF2C1),
+            label = "M E R I D I A N",
+            os = "${ClaudeOs.NAME} 9.0",
+            aurora = AuroraLook.Zenith,
+            stars = true,
+            fireworks = false,
+        )
+
         private fun color(text: String): Color = Color(android.graphics.Color.parseColor(text.trim()))
 
         /** The card an update file carries, or null if there is none or it can't be read. */
@@ -222,6 +235,7 @@ internal fun DrawScope.drawHorizonCard(spec: ZenithCardSpec, charge: Float) {
 
 /** The card a version has of its own, built in: ZENITH 21's, ZENITH 20's (the jubilee), none before. */
 internal fun zenithBuiltInCard(version: String): ZenithCardSpec? = when {
+    versionNumber(version) >= 22f -> ZenithCardSpec.Meridian
     versionNumber(version) >= 21f -> ZenithCardSpec.Horizon
     versionNumber(version) >= 20f -> ZenithCardSpec.Jubilee
     else -> null

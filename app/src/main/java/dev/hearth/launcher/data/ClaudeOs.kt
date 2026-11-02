@@ -10,7 +10,7 @@ package dev.hearth.launcher.data
  */
 object ClaudeOs {
     const val NAME = "ClaudeOS"
-    const val VERSION = "8.0"
+    const val VERSION = "9.0"
 
     /**
      * Like Android's desserts: each ClaudeOS has a codename. 1.0 was "Ember", the glow Hearth
@@ -22,9 +22,11 @@ object ClaudeOs {
      * the day and the sun's arc; 7.0 is "Apex", the summit, under ZENITH 20: the jubilee – the
      * Zentrale, the weather, the aurora and the Z-Nacht are part of the ground now; 8.0 is "Horizon",
      * under ZENITH 21: the view beyond the summit – the themes (the jubilee's gold stays on request),
-     * the Smart look with its own settings and the way over from Smart Launcher are part of the ground now.
+     * the Smart look with its own settings and the way over from Smart Launcher are part of the ground now;
+     * 9.0 is "Meridian", under ZENITH 22: the sun at its highest point – the computer is part of the ground now: Glimmer
+     * as the MacBook's notch and island, Glimmer Drop over the Wi-Fi, and the launcher for wide screens, a keyboard and a mouse.
      */
-    const val CODENAME = "Horizon"
+    const val CODENAME = "Meridian"
 
     /** "ClaudeOS 1.0" */
     val full: String get() = "$NAME $VERSION"

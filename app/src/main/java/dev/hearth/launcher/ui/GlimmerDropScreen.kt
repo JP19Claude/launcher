@@ -116,6 +116,8 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
     val shareProfile by GlimmerDrop.shareProfile.collectAsState()
     val ready by GlimmerDrop.ready.collectAsState()
     val signal by GlimmerDrop.signal.collectAsState()
+    val lanAddress by GlimmerDrop.lanAddress.collectAsState()
+    var typedAddress by remember { mutableStateOf("") }
     var profile by remember { mutableStateOf(GlimmerDrop.profile(context)) }
     var editing by remember { mutableStateOf(false) }
     var writing by remember { mutableStateOf(false) }
@@ -186,7 +188,7 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
             Spacer(Modifier.height(4.dp))
             Text(
                 when (val p = phase) {
-                    GlimmerDrop.Phase.Off, GlimmerDrop.Phase.Searching -> "Halte die Oberkante deines Handys an ein anderes Handy mit Glimmer – oder tippe unten auf ein Handy in der Nähe."
+                    GlimmerDrop.Phase.Off, GlimmerDrop.Phase.Searching -> "Halte die Oberkante deines Handys an ein anderes Handy mit Glimmer – oder tippe unten auf ein Gerät in der Nähe. Am PC, am Laptop und im selben WLAN erscheint das andere Gerät unten von selbst."
                     is GlimmerDrop.Phase.Connecting -> "Verbinde mit ${p.peer} …"
                     GlimmerDrop.Phase.Connected -> "Verbunden mit ${exchange?.peer.orEmpty()}"
                     is GlimmerDrop.Phase.Failed -> p.message
@@ -232,7 +234,13 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
                     }
                 }
             }
-            if (phase is GlimmerDrop.Phase.Searching && !GlimmerDrop.bluetoothOn(context)) {
+            if (phase is GlimmerDrop.Phase.Searching && !GlimmerDrop.hasPermissions(context)) {
+                Spacer(Modifier.height(10.dp))
+                DropButton("Erlaubnis fürs Berühren geben", DropBlue) {
+                    onPicking()
+                    permissions.launch(GlimmerDrop.neededPermissions())
+                }
+            } else if (phase is GlimmerDrop.Phase.Searching && !GlimmerDrop.bluetoothOn(context)) {
                 Spacer(Modifier.height(10.dp))
                 DropButton("Bluetooth einschalten", DropBlue) {
                     onPicking()
@@ -347,8 +355,37 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
                         ) {
                             Avatar(p.name, 36.dp)
                             Spacer(Modifier.width(12.dp))
-                            Text(p.name, color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                            Column(Modifier.weight(1f)) {
+                                Text(p.name, color = Color.White, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                if (p.endpointId.startsWith("lan:")) {
+                                    Text("im WLAN", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                                }
+                            }
                             Text("Verbinden", color = DropBlue, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
+
+            // The Wi-Fi way (a laptop or PC, or phones that don't feel each other): this device's address, and a field for the other one's.
+            if (phase is GlimmerDrop.Phase.Searching) {
+                DropSection("Im selben WLAN") {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text(
+                            "Beide Geräte brauchen Glimmer Drop offen und dasselbe WLAN. Das andere Gerät erscheint oben unter „In der Nähe“; findet es sich nicht, gib seine Adresse ein.",
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontSize = 13.sp,
+                            lineHeight = 17.sp,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            lanAddress?.let { "Diese Adresse: $it" } ?: "Kein WLAN gefunden – ohne Netzwerk geht dieser Weg nicht.",
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 14.sp,
+                        )
+                        Field("Adresse des anderen Geräts (z. B. 192.168.1.20)", typedAddress, KeyboardType.Uri) { typedAddress = it }
+                        DropButton("Mit dieser Adresse verbinden", DropBlue, Modifier.fillMaxWidth()) {
+                            if (typedAddress.isBlank()) hint = "Gib erst die Adresse ein" else GlimmerDrop.connectToAddress(typedAddress)
                         }
                     }
                 }
@@ -380,7 +417,7 @@ fun GlimmerDropScreen(onPicking: () -> Unit, onClose: () -> Unit) {
                 }
             }
             Text(
-                "Funktioniert zwischen Handys mit Glimmer – mit ZENITH oder nur der Glimmer-App (Bluetooth an). Empfangenes landet in der Galerie bzw. unter Downloads im Ordner „Glimmer Drop“.",
+                "Funktioniert zwischen Geräten mit Glimmer – mit ZENITH oder nur der Glimmer-App: Handys berühren sich (Bluetooth an), am PC, am Laptop und im selben WLAN geht es über das WLAN. Empfangenes landet in der Galerie bzw. unter Downloads im Ordner „Glimmer Drop“.",
                 color = Color.White.copy(alpha = 0.45f),
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center,

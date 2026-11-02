@@ -202,6 +202,48 @@ internal object HearthChangelog {
 
     val releases: List<ChangeRelease> = listOf(
         ChangeRelease(
+            version = "22.0",
+            name = "Meridian",
+            summary = "ZENITH 22 „Meridian“ auf ClaudeOS 9 „Meridian“: ZENITH auf dem Computer – Glimmer Drop geht jetzt auch über das WLAN (am PC oder Laptop mit Android, ohne Bluetooth-Signal und ohne Google Play-Dienste), ein Rechtsklick öffnet das Menü eines Symbols, dazu die Karte der Version in Dunkelgrün und Mittagslicht und je ein neues Osterei hinter ZENITH 22 und ClaudeOS 9.",
+            sections = listOf(
+                ChangeSection(
+                    "Glimmer Drop über das WLAN", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung vom PC: Glimmer Drop ging dort nicht. Die Ursache, die ich im Code finde: Bisher brauchte es zwei Dinge, die ein PC oder Laptop meist nicht hat – ein Bluetooth-Signal (damit zwei Handys spüren, dass sie sich berühren) und Googles „Nearby“ (die Google Play-Dienste). Ohne die Erlaubnis „Geräte in der Nähe“ brach es außerdem sofort ab.",
+                        "Jetzt gibt es einen zweiten Weg, der nur ein WLAN braucht: Beide Geräte öffnen Glimmer Drop im selben WLAN, das andere erscheint unter „In der Nähe“ (mit dem Zusatz „im WLAN“), ein Tippen auf „Verbinden“ stellt die Verbindung her. Danach läuft alles wie gewohnt: Kontaktkarte, Fotos, Dateien, Links und Text, und gespeichert wird erst, wenn die andere Seite „Annehmen“ tippt. Die Dateien gehen direkt von Gerät zu Gerät, nicht übers Internet; angenommen werden nur so viele Bytes, wie das Angebot genannt hat.",
+                        "Findet sich das andere Gerät nicht von selbst, zeigt der neue Abschnitt „Im selben WLAN“ die Adresse dieses Geräts und ein Feld für die des anderen – einmal eintippen genügt. Fehlt die Erlaubnis „Geräte in der Nähe“, bricht Glimmer Drop nicht mehr ab: Nur das Berühren und Bluetooth fehlen dann, das WLAN geht weiter. Und wo Nearby nicht geht, steht das als Hinweis unter dem Titel statt als Fehler.",
+                        "Ehrlich dazu: Auf einem PC ausprobieren kann ich es nicht. Das WLAN muss die Geräte untereinander zulassen – Gast-WLANs, manche Router und Firewalls tun das nicht, und ein Android in einer virtuellen Maschine mit eigenem Netz sieht das WLAN nicht. Dann hilft die Adresse nur, wenn die beiden einander überhaupt erreichen.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "ZENITH auf dem Computer", Icons.Rounded.Settings, Green,
+                    listOf(
+                        "Ein Rechtsklick auf ein App-Symbol öffnet sofort das Menü, ohne zu warten – so wie das lange Drücken auf dem Handy.",
+                        "Ein getippter Buchstabe auf dem Startbildschirm öffnet die Suche mit diesem Buchstaben, Esc geht zurück. Das Fenster in der Größe zu ändern, die Tastatur an- oder abzustecken oder zu drehen startet den Launcher nicht mehr neu. Auf breiten Bildschirmen (ab 840 dp) gibt es bis zu 12 Spalten, mehr Spalten in der Suche und der App-Mediathek, Einstellungen in der Mitte und Ordner in vernünftiger Breite.",
+                        "Glimmer als MacBook-Notch und als MacBook-Insel, mit der Lade-Animation, die nicht mehr abgeschnitten wird, kam schon mit den Hotfixes von 21.5 – ZENITH 22 baut darauf auf. Auch das ist nicht auf dem Galaxy Book ausprobiert.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Meridian: Karte, Eier, ClaudeOS 9", Icons.Rounded.Star, Pink,
+                    listOf(
+                        "Die Karte der Version ist neu: das dunkle Grün des Z, das ins Licht der Mittagssonne steigt. Die Karten des Systems und das Z nehmen mit dem Theme „Horizont“ ihre Farbe an (jetzt Mint statt Blau); wer das Gold des Jubiläums mag, wählt es weiter in den Einstellungen.",
+                        "Hinter der Versionsnummer 22.0 steckt ein neues Osterei: zweiundzwanzigmal in den Himmel tippen – jeder Strahl trägt die Sonne ein Stück höher, bis sie im Zenit steht. Hinter ClaudeOS 9.0 „Meridian“ liegt ein zweites: das Claude-Zeichen mit dem Finger den Meridian hinauftragen, vom Boden durchs Blau bis in die Sterne. Beide stehen auch in der Ruhmeshalle und im ClaudeOS-Museum.",
+                        "ClaudeOS bewegt sich auf 9.0 „Meridian“: Der Boden unter Hearth, Glimmer und Clawd umfasst jetzt auch den Computer – Glimmer als Notch und Insel, Glimmer Drop im WLAN, der Launcher für breite Bildschirme, Tastatur und Maus.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Ehrlich dazu", Icons.Rounded.CheckCircle, Green,
+                    listOf(
+                        "Ausprobiert habe ich das weder auf einem PC noch auf einem Laptop mit Android. Wenn Glimmer Drop dort etwas anderes zeigt als hier beschrieben, hilft ein Foto der Seite und die rote Zeile unter dem Titel.",
+                    ),
+                    hearth,
+                ),
+            ),
+        ),
+        ChangeRelease(
             version = "21.5",
             name = "Comet",
             summary = "ZENITH 21.5: „Be Comet“ – im Clawd Illuminati, neben „Be Smarter“, baut ein zweiter Modus den Launcher um wie bei CometOS: klares Liquid Glass, eine große Uhr aus Glas, das Dock als gläserne Kapsel, die App-Bibliothek, das Kontrollzentrum von oben rechts – und ZENITH und ClaudeOS im Kern der Einstellungen.",
