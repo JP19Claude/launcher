@@ -118,6 +118,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.layout.offset
@@ -1775,6 +1776,21 @@ private fun LongPressArea(onLongPress: (Offset) -> Unit, onDoubleTap: () -> Unit
     Box(
         modifier
             .onGloballyPositioned { origin = it.positionInRoot() }
+            // A computer's mouse: the right button opens the home screen menu at once (and keeps the tap detector below out of it).
+            .pointerInput(Unit) {
+                androidx.compose.foundation.gestures.awaitEachGesture {
+                    val down = androidx.compose.foundation.gestures.awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    if (currentEvent.buttons.isSecondaryPressed) {
+                        down.consume()
+                        longPress(origin + down.position)
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (event.changes.none { it.pressed }) break
+                            event.changes.forEach { it.consume() }
+                        }
+                    }
+                }
+            }
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = { longPress(origin + it) },

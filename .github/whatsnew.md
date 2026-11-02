@@ -2,7 +2,7 @@ ZENITH 22.0 „Meridian“ auf ClaudeOS 9.0 „Meridian“
 
 ✨ Neu in 22.0
 • Glimmer Drop über das WLAN – für den PC und den Laptop mit Android, die kein Bluetooth-Signal und keine Google Play-Dienste haben, und für Handys im selben WLAN: beide Geräte öffnen Glimmer Drop, das andere erscheint unter „In der Nähe“ („im WLAN“), Tippen verbindet, Annehmen speichert; ein Abschnitt „Im selben WLAN“ zeigt die eigene Adresse und nimmt die des anderen Geräts; ohne die Erlaubnis „Geräte in der Nähe“ bricht Glimmer Drop nicht mehr ab; ehrlich: nicht auf einem PC ausprobiert, das WLAN muss die Geräte untereinander zulassen
-• ZENITH auf dem Computer – ein Rechtsklick auf ein App-Symbol öffnet das Menü, ein getippter Buchstabe öffnet die Suche, Esc geht zurück, die Fenstergröße zu ändern startet den Launcher nicht neu, breite Bildschirme haben bis zu 12 Spalten
+• ZENITH auf dem Computer – ein Rechtsklick auf ein App-Symbol oder auf freie Fläche des Startbildschirms öffnet das Menü, ein getippter Buchstabe öffnet die Suche, Esc geht zurück, die Fenstergröße zu ändern startet den Launcher nicht neu, breite Bildschirme haben bis zu 12 Spalten
 • Neue Karte der Version (dunkles Grün ins Licht der Mittagssonne), je ein neues Osterei hinter ZENITH 22.0 (zweiundzwanzig Strahlen tragen die Sonne in den Zenit) und hinter ClaudeOS 9.0 „Meridian“ (das Claude-Zeichen den Meridian hinauftragen), beide auch in Ruhmeshalle und Museum
 
 ✨ Neu in 21.5

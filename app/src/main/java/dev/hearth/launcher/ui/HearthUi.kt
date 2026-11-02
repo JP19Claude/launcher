@@ -219,7 +219,7 @@ internal object HearthChangelog {
                 ChangeSection(
                     "ZENITH auf dem Computer", Icons.Rounded.Settings, Green,
                     listOf(
-                        "Ein Rechtsklick auf ein App-Symbol öffnet sofort das Menü, ohne zu warten – so wie das lange Drücken auf dem Handy.",
+                        "Ein Rechtsklick auf ein App-Symbol öffnet sofort das Menü, ohne zu warten – so wie das lange Drücken auf dem Handy; ein Rechtsklick auf freier Fläche des Startbildschirms öffnet dessen Menü.",
                         "Ein getippter Buchstabe auf dem Startbildschirm öffnet die Suche mit diesem Buchstaben, Esc geht zurück. Das Fenster in der Größe zu ändern, die Tastatur an- oder abzustecken oder zu drehen startet den Launcher nicht mehr neu. Auf breiten Bildschirmen (ab 840 dp) gibt es bis zu 12 Spalten, mehr Spalten in der Suche und der App-Mediathek, Einstellungen in der Mitte und Ordner in vernünftiger Breite.",
                         "Glimmer als MacBook-Notch und als MacBook-Insel, mit der Lade-Animation, die nicht mehr abgeschnitten wird, kam schon mit den Hotfixes von 21.5 – ZENITH 22 baut darauf auf. Auch das ist nicht auf dem Galaxy Book ausprobiert.",
                     ),
