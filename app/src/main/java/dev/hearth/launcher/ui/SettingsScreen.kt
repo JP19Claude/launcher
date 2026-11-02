@@ -1141,6 +1141,8 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
     val nt = s.glimmerIsNotch
     val mi = s.glimmerIsMacIsland
     val mac = nt || mi
+    // The phone's notch: a black tab from the top edge round the real camera.
+    val pn = s.glimmerIsPhoneNotch
     Column {
     // Clawd first: one switch, and he's part of everything the island does.
     Section("Clawd") {
@@ -1221,7 +1223,10 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
         if (nt) Note(
             "MacBook-Notch: für einen Bildschirm ohne Loch für die Kamera, etwa ein Galaxy Book. Glimmer ist immer da – auch im Querformat – als schwarze Kerbe, die oben in der Mitte am Bildschirmrand hängt, wie bei den neuen MacBooks. Größe und Platz stellst du unten bei „Größe & Position“ ein. Musik, Anrufe, Timer und Nachrichten klappen aus der Kerbe heraus; Leuchten, Rand und fließende Farben sind aus (die gehören zur Pille), alles andere von Glimmer bleibt.",
         )
-        if (!di && !nt) ChoiceRow(
+        if (pn) Note(
+            "Notch (Handy): Glimmer als schwarze Kerbe, die oben am Bildschirmrand hängt und genau um deine Kamera sitzt – wie die Notch der iPhones vor der Dynamic Island. Sie ist immer da, wächst bei Musik, Anrufen, Timern, Laden und Meldungen nur so weit, wie der Inhalt braucht, und klappt auf. Ruhig und ohne Wackeln; Leuchten, Rand und Fließfarben gibt es hier nicht. Die Breite stellst du unter „Größe & Position“ ein, die Lage mit „Nach oben / unten“ (0 = am Rand)."
+        )
+        if (!di && !nt && !pn) ChoiceRow(
             label = "Aussehen",
             options = GlimmerStyle.entries,
             selected = s.glimmerStyle,
@@ -1236,7 +1241,7 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             onSelect = { style -> update { it.copy(glimmerMusicStyle = style) } },
         )
         // (The notch is always there; the island's pill too, if it is on.)
-        if (!di && !nt) SwitchRow(
+        if (!di && !nt && !pn) SwitchRow(
             label = "Kleine Pille, wenn nichts läuft",
             description = if (mi) "Aus: die Insel zeigt sich nur, wenn etwas läuft. An: sie ist immer da, auch im Querformat" else "Wie beim iPhone; im Querformat ausgeblendet",
             checked = s.glimmerIdlePill,
@@ -1329,9 +1334,9 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             valueText = "${(s.glimmerWidth * 100).roundToInt()} %",
         ) { v -> update { it.copy(glimmerWidth = (v * 20).roundToInt() / 20f) } }
         IntSlider("Nach links / rechts", s.glimmerOffsetX, -40..40, " dp") { v -> update { it.copy(glimmerOffsetX = v) } }
-        IntSlider("Nach oben / unten", s.glimmerOffsetY, if (nt) 0..40 else if (mi) -6..40 else -10..24, " dp") { v -> update { it.copy(glimmerOffsetY = v) } }
+        IntSlider("Nach oben / unten", s.glimmerOffsetY, if (nt || pn) 0..40 else if (mi) -6..40 else -10..24, " dp") { v -> update { it.copy(glimmerOffsetY = v) } }
         Note(
-            if (nt) {
+            if (nt || pn) {
                 "Die Kerbe hängt am oberen Rand (0 dp). Nach unten geschoben schwebt sie als Pille mit etwas Abstand. Die Änderung siehst du sofort."
             } else if (mi) {
                 "Die Pille schwebt 6 dp unter dem oberen Rand; mit „Nach oben / unten“ rückst du sie näher an den Rand (-6) oder weiter weg. Die Änderung siehst du sofort."

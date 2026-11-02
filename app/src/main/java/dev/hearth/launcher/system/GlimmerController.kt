@@ -1111,7 +1111,8 @@ class GlimmerController(private val service: GlimmerService) {
 
     private fun topInsetPx(): Int {
         // The notch hangs from the top edge (the nudge down is the only thing that moves it); the MacBook island floats a little below it.
-        if (settings.glimmerIsNotch) return dp(settings.glimmerOffsetY.toFloat()).coerceAtLeast(0)
+        // (The phone's notch too: round the real camera, but from the very edge.)
+        if (settings.glimmerHangs) return dp(settings.glimmerOffsetY.toFloat()).coerceAtLeast(0)
         if (settings.glimmerIsMacIsland) return dp(MAC_ISLAND_GAP + settings.glimmerOffsetY.toFloat()).coerceAtLeast(0)
         // Turned with the phone: from the camera's edge, the same as from the top when upright.
         upright()?.let { u ->

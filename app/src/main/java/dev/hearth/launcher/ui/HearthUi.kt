@@ -235,6 +235,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Neu: Die Notch auch für Handys", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Die Notch soll es nicht nur für MacBooks geben, sondern auch für Telefone. Neu unter Einstellungen → Glimmer → Modus: „Notch (Handy)“.",
+                        "Sie ist eine schwarze Kerbe, die oben am Bildschirmrand hängt und genau um die echte Kamera sitzt – wie die Notch der iPhones vor der Dynamic Island: oben eckig, unten abgerundet, immer da. Bei Musik, Anrufen, Timern, Laden und Meldungen wächst sie zur Seite, nur so weit, wie der Inhalt braucht; unter dem Bild der Kamera klappt sie auf. Dazu die ruhigen Bewegungen der MacBook-Notch (ohne Wackeln und Federn).",
+                        "Die Breite stellst du mit dem Regler „Breite“ unter „Größe & Position“ ein, die Lage mit „Nach oben / unten“ (0 = am Rand; nach unten geschoben schwebt sie als Pille). Schwarz, Leuchten, Rand und Fließfarben gibt es in diesem Modus nicht, die Notch bleibt schlicht.",
+                        "Ehrlich dazu: Ich konnte sie nicht auf einem Handy sehen. Sie sitzt dort, wo Android die Kamera meldet; wenn sie schief sitzt, rückt „Nach links / rechts“ sie zurecht, und ein Foto hilft mir, es richtig zu machen.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Hotfix: Die Notch kürzer und ruhiger", Icons.Rounded.Star, Blue,
                     listOf(
                         "Rückmeldung: Die Ereignisse und Animationen in der MacBook-Notch sahen nicht gut aus, und die Notch wurde bei einem Ereignis zu lang.",

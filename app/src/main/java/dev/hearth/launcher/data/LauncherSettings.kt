@@ -646,6 +646,8 @@ enum class GlimmerUnlock(val label: String) {
 enum class GlimmerMode(val label: String) {
     Glimmer("Glimmer"),
     DynamicIsland("Dynamic Island 1:1"),
+    /** For a phone: a black notch hanging from the top edge round the real camera – the iPhone's notch before its Dynamic Island. */
+    PhoneNotch("Notch (Handy)"),
     /** For a screen with no hole for the camera (a laptop): a black notch hanging from the top edge, like the MacBook's. */
     Notch("MacBook-Notch"),
     /** The same for the newer MacBooks' Dynamic Island: a small pill that floats a little below the top edge. */
@@ -1319,6 +1321,12 @@ data class LauncherSettings(
     /** True in the MacBook notch mode (the island is a black notch hanging from the top edge). */
     val glimmerIsNotch: Boolean get() = glimmerMode == GlimmerMode.Notch
 
+    /** True in the phone's notch mode (a black notch hanging from the top edge round the real camera). */
+    val glimmerIsPhoneNotch: Boolean get() = glimmerMode == GlimmerMode.PhoneNotch
+
+    /** Either notch: a tab hanging from the screen's edge, square at the top, which settles without a bounce. */
+    val glimmerHangs: Boolean get() = glimmerIsNotch || glimmerIsPhoneNotch
+
     /** True in the MacBook island mode (a small pill floating a little below the top edge). */
     val glimmerIsMacIsland: Boolean get() = glimmerMode == GlimmerMode.MacIsland
 
@@ -1341,6 +1349,16 @@ data class LauncherSettings(
             glimmerGlow = false,
             glimmerOutline = GlimmerOutline.Off,
             glimmerWidth = 1f,
+            glimmerBreathe = false,
+            glimmerAiFluid = false,
+        )
+    } else if (glimmerIsPhoneNotch) {
+        // The phone's notch: black and plain as well; its width stays the user's own.
+        copy(
+            glimmerStyle = GlimmerStyle.Black,
+            glimmerIdlePill = true,
+            glimmerGlow = false,
+            glimmerOutline = GlimmerOutline.Off,
             glimmerBreathe = false,
             glimmerAiFluid = false,
         )

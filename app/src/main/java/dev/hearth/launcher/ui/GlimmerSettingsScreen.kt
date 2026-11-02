@@ -340,7 +340,7 @@ private fun GlimmerPreview(chosen: LauncherSettings, media: MediaRepository) {
                     .offset(
                         x = s.glimmerOffsetX.dp,
                         y = when {
-                            s.glimmerIsNotch -> s.glimmerOffsetY.coerceAtLeast(0)
+                            s.glimmerHangs -> s.glimmerOffsetY.coerceAtLeast(0)
                             s.glimmerIsMacIsland -> s.glimmerOffsetY.coerceAtLeast(-6)
                             else -> s.glimmerOffsetY
                         }.dp,
@@ -357,7 +357,7 @@ private fun GlimmerPreview(chosen: LauncherSettings, media: MediaRepository) {
                         screenWidthDp = screenWidth,
                         // (The MacBook notch hangs from the very top, and stands in for the camera; the MacBook island floats a little below it.)
                         topInset = when {
-                            s.glimmerIsNotch -> 0.dp
+                            s.glimmerHangs -> 0.dp
                             s.glimmerIsMacIsland -> 6.dp
                             else -> 14.dp
                         },

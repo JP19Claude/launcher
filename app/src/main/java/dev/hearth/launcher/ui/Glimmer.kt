@@ -258,6 +258,10 @@ private val LocalPrivacyDot = compositionLocalOf { false }
 /** How far the island may swell past its size on each side (the window is 8 dp wider on each side; the rest is the margin of the glow). */
 private const val SwellRoomDp = 6f
 
+/** The phone's notch: the room on each side of the camera in the empty notch, and below the camera. */
+private val PhoneNotchPad = 20.dp
+private val PhoneNotchRim = 8.dp
+
 /** Room kept free around the camera, so nothing even touches its edge. */
 private val CameraMargin = 5.dp
 
@@ -365,8 +369,8 @@ fun islandSize(
     } else {
         ((screenWidthDp * 0.44f).coerceIn(150f, 190f) * widthScale * narrow).coerceAtMost(screenWidthDp - 60f).dp
     }
-    // Beside the notch there has to be room for something on each side.
-    val compact = if (notch != null) maxOf(compactBase, notch.width + notchRoom) else compactBase
+    // Beside the notch there has to be room for something on each side (and no more: a notch only grows by what its content needs).
+    val compact = if (notch != null) notch.width + notchRoom else compactBase
     val barHeight = if (notch != null) maxOf(ISLAND_HEIGHT_DP.dp, notch.height) else ISLAND_HEIGHT_DP.dp
     val idle = (if (dynamicIsland) ISLAND_HEIGHT_DP * 3.375f else (screenWidthDp * 0.27f).coerceIn(86f, 110f) * widthScale) * narrow
     return when {
@@ -459,12 +463,21 @@ fun GlimmerIsland(
             }
         }
     }
-    // (The MacBook notch has no second bubble splitting off beside it – that would only make it longer; a swipe sideways brings the next activity.)
-    val hasSecondary = secondary != null && !expanded && !settings.glimmerIsNotch
+    // (A notch has no second bubble splitting off beside it – that would only make it longer; a swipe sideways brings the next activity.)
+    val hasSecondary = secondary != null && !expanded && !settings.glimmerHangs
     // The MacBook modes: the notch is a black tab hanging from the top edge (its top corners square while it touches the edge),
     // the MacBook island a small pill below it; both with a size of their own.
-    val notchSize = if (settings.glimmerIsMac) settings.glimmerMacSize.let { DpSize(it.width.dp, it.height.dp) } else null
-    val hanging = settings.glimmerIsNotch
+    val phoneNotch = settings.glimmerIsPhoneNotch
+    val notchSize = when {
+        settings.glimmerIsMac -> settings.glimmerMacSize.let { DpSize(it.width.dp, it.height.dp) }
+        // The phone's notch: a tab round the real camera – as wide as the camera plus a hand's breadth (the width setting scales it), as tall as the camera plus a rim.
+        phoneNotch -> DpSize(
+            ((camera.radius * 2 + PhoneNotchPad * 2) * settings.glimmerWidth).coerceAtLeast(64.dp),
+            maxOf(camera.bottom + PhoneNotchRim, ISLAND_HEIGHT_DP.dp),
+        )
+        else -> null
+    }
+    val hanging = settings.glimmerHangs
     val flatTop = hanging && topInset <= 0.dp
     val target = islandSize(
         content,
@@ -476,7 +489,8 @@ fun GlimmerIsland(
         cameraClearance = cameraClearance(camera),
         narrow = settings.glimmerNarrow,
         notch = notchSize,
-        notchRoom = notchRoomFor(content, hanging),
+        // (The phone's notch already has its pad round the camera on each side: that much less room is added.)
+        notchRoom = if (phoneNotch) (notchRoomFor(content, true) - PhoneNotchPad * 2).coerceAtLeast(24.dp) else notchRoomFor(content, hanging),
     )
     LaunchedEffect(target) { onTargetSize(target) }
     val collapseAfter = settings.glimmerAutoCollapse
@@ -1379,7 +1393,7 @@ private fun CompactContent(content: IslandContent) {
             is IslandContent.Charging -> Row(verticalAlignment = Alignment.CenterVertically) {
                 RollingText("${content.level} %", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 // (In the MacBook notch the percent alone: the bar would only make it longer.)
-                if (!LocalSettings.current.glimmerIsNotch) {
+                if (!LocalSettings.current.glimmerHangs) {
                     Spacer(Modifier.width(4.dp))
                     LevelBar(content.level / 100f, Green, Modifier.size(20.dp, 11.dp), charging = true)
                 }
@@ -1414,7 +1428,7 @@ private fun CompactContent(content: IslandContent) {
                 )
                 // Charging and battery: a small battery filling up, like on the iPhone.
                 content.level?.let { level ->
-                    if (!LocalSettings.current.glimmerIsNotch) {
+                    if (!LocalSettings.current.glimmerHangs) {
                         Spacer(Modifier.width(4.dp))
                         LevelBar(level, content.color, Modifier.size(20.dp, 11.dp), charging = isChargingAlert(content))
                     }
