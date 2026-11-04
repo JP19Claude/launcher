@@ -40,7 +40,7 @@ import dev.hearth.launcher.data.ZenithTheme
 /** A theme as a small card: its ground, its label, its number. */
 @Composable
 internal fun ZenithThemeTile(theme: ZenithTheme, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val card = if (theme == ZenithTheme.Jubilee) ZenithCardSpec.Jubilee else ZenithCardSpec.Horizon
+    val card = themeCard(theme)
     val shape = RoundedCornerShape(22.dp)
     Column(
         modifier
@@ -52,25 +52,42 @@ internal fun ZenithThemeTile(theme: ZenithTheme, selected: Boolean, modifier: Mo
     ) {
         Text(card.label, color = card.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1)
         Spacer(Modifier.height(26.dp))
-        Text(if (theme == ZenithTheme.Jubilee) "20" else "21", color = Color.White, fontSize = 44.sp, fontWeight = FontWeight.Black)
+        Text(
+            when (theme) {
+                ZenithTheme.Jubilee -> "20"
+                ZenithTheme.Horizon -> "21"
+                ZenithTheme.Meridian -> "22"
+            },
+            color = Color.White,
+            fontSize = 44.sp,
+            fontWeight = FontWeight.Black,
+        )
         Text(theme.label, color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp, maxLines = 2)
     }
 }
 
-/** The two tiles side by side. */
+/** The card a theme has of its own. */
+internal fun themeCard(theme: ZenithTheme): ZenithCardSpec = when (theme) {
+    ZenithTheme.Meridian -> ZenithCardSpec.Meridian
+    ZenithTheme.Horizon -> ZenithCardSpec.Horizon
+    ZenithTheme.Jubilee -> ZenithCardSpec.Jubilee
+}
+
+/** The three tiles side by side: the newest first. */
 @Composable
 internal fun ZenithThemeTiles(selected: ZenithTheme, onPick: (ZenithTheme) -> Unit) {
     Row(Modifier.fillMaxWidth()) {
-        ZenithThemeTile(ZenithTheme.Horizon, selected == ZenithTheme.Horizon, Modifier.weight(1f)) { onPick(ZenithTheme.Horizon) }
-        Spacer(Modifier.width(12.dp))
-        ZenithThemeTile(ZenithTheme.Jubilee, selected == ZenithTheme.Jubilee, Modifier.weight(1f)) { onPick(ZenithTheme.Jubilee) }
+        ZenithTheme.entries.forEachIndexed { i, theme ->
+            if (i > 0) Spacer(Modifier.width(10.dp))
+            ZenithThemeTile(theme, selected == theme, Modifier.weight(1f)) { onPick(theme) }
+        }
     }
 }
 
-/** Once, after the update to ZENITH 21: the new theme, or the jubilee's kept? (Changeable later in the settings.) */
+/** Once, after the update to ZENITH 22: Meridian, the new theme – or the one of ZENITH 21 or the jubilee's kept? (Changeable later in the settings.) */
 @Composable
 internal fun ZenithThemeChoice(onChoose: (ZenithTheme) -> Unit) {
-    var picked by remember { mutableStateOf(ZenithTheme.Horizon) }
+    var picked by remember { mutableStateOf(ZenithTheme.Meridian) }
     BackHandler { onChoose(picked) }
     Box(
         Modifier
@@ -88,10 +105,10 @@ internal fun ZenithThemeChoice(onChoose: (ZenithTheme) -> Unit) {
                 .padding(22.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("ZENITH 21", color = ZenithCardSpec.Horizon.accent, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
+            Text("ZENITH 22", color = ZenithCardSpec.Meridian.accent, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
             Spacer(Modifier.height(8.dp))
             Text(
-                "Ein neues Theme – oder das Jubiläum behalten?",
+                "Ein neues Theme – oder ein älteres behalten?",
                 color = Color.White,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -102,7 +119,7 @@ internal fun ZenithThemeChoice(onChoose: (ZenithTheme) -> Unit) {
             Spacer(Modifier.height(14.dp))
             Text(picked.note, color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp, lineHeight = 19.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(18.dp))
-            val accent = if (picked == ZenithTheme.Jubilee) ZenithCardSpec.Jubilee.accent else ZenithCardSpec.Horizon.accent
+            val accent = themeCard(picked).accent
             Box(
                 Modifier
                     .fillMaxWidth()

@@ -224,6 +224,8 @@ class WallpaperRepository(private val context: Context) {
         display.getRealMetrics(metrics)
         // Hearth stands upright: measured while the phone was sideways (a video, a game), the
         // copy came out landscape and glass behind the settings covered only the top half.
+        // (A computer's wide screen (a laptop, a big tablet) is what it is, landscape: the copy has to match it, or the glass shows the wrong part.)
+        if (context.resources.configuration.smallestScreenWidthDp >= 600) return metrics.widthPixels to metrics.heightPixels
         return minOf(metrics.widthPixels, metrics.heightPixels) to maxOf(metrics.widthPixels, metrics.heightPixels)
     }
 

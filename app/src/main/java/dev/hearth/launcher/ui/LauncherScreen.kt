@@ -156,6 +156,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import dev.hearth.launcher.LauncherViewModel
 import dev.hearth.launcher.data.AppInfo
+import dev.hearth.launcher.data.withZenithTheme
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import dev.hearth.launcher.data.EasterEggs
 import dev.hearth.launcher.data.ClockFont
@@ -295,8 +296,6 @@ fun LauncherScreen(vm: LauncherViewModel) {
         }
     }
 
-    // A computer's wide screen has room for more columns than a phone.
-    val columns = settings.columns.coerceIn(3, if (isWideScreen()) 12 else 6)
     val rows = settings.rows.coerceIn(3, 9)
     val clockRows = if (settings.clockStyle == ClockStyle.Hidden) 0 else 2
     // Galaxy × Claude's Now Brief is about two rows tall, the Claude card one.
@@ -311,6 +310,15 @@ fun LauncherScreen(vm: LauncherViewModel) {
         apps.filterNot { it.key in dockKeys || it.key in settings.removedFromHome }
     }
     val homeWidgets by vm.widgets.homeWidgets.collectAsStateWithLifecycle()
+    // A computer's wide screen has room for more columns than a phone: with no widgets on the home screen (their places are tied to the
+    // columns) it fills the whole width – about one column to every 118 dp – instead of four icons far apart.
+    val wideScreen = isWideScreen()
+    val screenWidthDp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
+    val columns = if (wideScreen && homeWidgets.isEmpty()) {
+        maxOf(settings.columns, screenWidthDp / 118).coerceIn(3, 12)
+    } else {
+        settings.columns.coerceIn(3, if (wideScreen) 12 else 6)
+    }
     val pinned by vm.homePositions.collectAsStateWithLifecycle()
     val folders by vm.folders.collectAsStateWithLifecycle()
     val badges by NotificationHub.badges.collectAsStateWithLifecycle()
@@ -679,11 +687,11 @@ fun LauncherScreen(vm: LauncherViewModel) {
     }
     // ZENITH Smart: the welcome that moves you over from Smart Launcher – on the first start, or from the settings.
     var smartWelcome by remember { mutableStateOf(dev.hearth.launcher.BuildConfig.SMART && !HearthUi.smartWelcomeSeen(context)) }
-    // ZENITH 21: once, after the update – the new theme, or the jubilee's kept? (Not for a fresh install, not in ZENITH Smart.)
+    // ZENITH 22: once, after the update – Meridian, the new theme, or an older one kept? (Not for a fresh install, not in ZENITH Smart.)
     var themeAsk by remember {
         mutableStateOf(
             !CrashGuard.safe && dev.hearth.launcher.BuildConfig.ALL_IN_ONE && !dev.hearth.launcher.BuildConfig.SMART &&
-                versionNumber(dev.hearth.launcher.BuildConfig.VERSION_NAME) >= 21f && !HearthUi.themeAsked(context),
+                versionNumber(dev.hearth.launcher.BuildConfig.VERSION_NAME) >= 22f && !HearthUi.themeAsked(context),
         )
     }
     LaunchedEffect(themeAsk) {
@@ -1147,6 +1155,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             apps = dock,
                             actions = actions,
                             draggingKey = drag?.item?.key,
+                            // (The macOS dock's last tile: all apps.)
+                            onApps = { if (settings.galaxyClaude || settings.beSmarter) drawerOpen = true else searchOpen = true },
                             modifier = Modifier
                                 // ZENITH 19: the ZENITH dock nearly from edge to edge.
                                 .padding(
@@ -1635,7 +1645,8 @@ fun LauncherScreen(vm: LauncherViewModel) {
             // ZENITH 21: the question of the theme, after all that.
             if (themeAsk && !bootIntro && !showOmega && !showIntro && !jubilee && !strikeNow) {
                 ZenithThemeChoice { theme ->
-                    vm.updateSettings { it.copy(zenithTheme = theme) }
+                    // Meridian is put on at once, all of it (the mint accent, the aurora, the glass, Be Comet's accent); an older theme is only kept.
+                    vm.updateSettings { if (theme == dev.hearth.launcher.data.ZenithTheme.Meridian) it.withZenithTheme(theme) else it.copy(zenithTheme = theme) }
                     HearthUi.markThemeAsked(context)
                     themeAsk = false
                 }

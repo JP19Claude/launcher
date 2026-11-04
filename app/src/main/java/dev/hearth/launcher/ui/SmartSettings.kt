@@ -463,7 +463,7 @@ internal fun SsZenithPage(s: LauncherSettings, update: ((LauncherSettings) -> La
             "Jubiläums-Theme behalten",
             "Die goldene Karte und die goldenen Akzente von ZENITH 20 bleiben – auch mit ZENITH 21.",
             s.zenithTheme == ZenithTheme.Jubilee,
-        ) { v -> update { it.copy(zenithTheme = if (v) ZenithTheme.Jubilee else ZenithTheme.Horizon) } }
+        ) { v -> update { it.copy(zenithTheme = if (v) ZenithTheme.Jubilee else ZenithTheme.Meridian) } }
         SsLink("Theme auf das ganze System anwenden", "Polarlicht, Glas, Z-Angriff und ZENITH-Hintergrund passend setzen", { SsIcon(SsGlyph.Look) }) {
             update { it.withZenithTheme(it.zenithTheme) }
         }

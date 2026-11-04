@@ -433,7 +433,7 @@ fun SettingsScreen(
                         optionLabel = { it.label },
                         onSelect = { v -> update { it.copy(zenithTheme = v) } },
                     )
-                    Note("ZENITH 21 bringt ein neues Theme für die Karte der Version und die Karten des Systems. Das Jubiläums-Theme von ZENITH 20 – Mitternacht ins Gold – behältst du, indem du „Jubiläum · Gold“ wählst.")
+                    Note("ZENITH 22 bringt „Meridian“: dunkles Grün ins Licht der Mittagssonne, mit Mint als Farbe für die Karte der Version, die Karten des Systems, das Z und – mit „Theme auf das ganze System anwenden“ – den Akzent, das Glas, das Polarlicht und Be Comet. Das Theme von ZENITH 21 („Horizont“, Blau) und das Jubiläums-Theme von ZENITH 20 (Gold) behältst du, indem du sie wählst.")
                     ActionRow(
                         "Theme auf das ganze System anwenden",
                         "Polarlicht, Glas, Z-Angriff und ZENITH-Hintergrund passend zum Theme setzen",

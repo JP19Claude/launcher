@@ -137,11 +137,11 @@ object HearthUi {
         prefs(context).edit().putBoolean("zenith20Jubilee", true).apply()
     }
 
-    /** ZENITH 21: asked once whether the jubilee's theme stays. */
-    fun themeAsked(context: Context): Boolean = prefs(context).getBoolean("zenith21ThemeAsked", false)
+    /** ZENITH 22: asked once which theme stays – Meridian, the new one, Horizont or the jubilee's (asked again with this version, whatever was answered before). */
+    fun themeAsked(context: Context): Boolean = prefs(context).getBoolean("zenith22ThemeAsked", false)
 
     fun markThemeAsked(context: Context) {
-        prefs(context).edit().putBoolean("zenith21ThemeAsked", true).apply()
+        prefs(context).edit().putBoolean("zenith22ThemeAsked", true).apply()
     }
 
     /** ZENITH Smart: the welcome that helps you move over from Smart Launcher has been shown. */
@@ -206,6 +206,18 @@ internal object HearthChangelog {
             name = "Meridian",
             summary = "ZENITH 22 „Meridian“ auf ClaudeOS 9 „Meridian“: ZENITH auf dem Computer – Glimmer Drop geht jetzt auch über das WLAN (am PC oder Laptop mit Android, ohne Bluetooth-Signal und ohne Google Play-Dienste), ein Rechtsklick öffnet das Menü eines Symbols, dazu die Karte der Version in Dunkelgrün und Mittagslicht und je ein neues Osterei hinter ZENITH 22 und ClaudeOS 9.",
             sections = listOf(
+                ChangeSection(
+                    "Ein neues Aussehen: Meridian, das macOS-Dock, mehr Liquid Glass", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Rückmeldung vom Laptop: Be Comet sah schrecklich aus, zwischen ZENITH 21.5 und 22 war kaum ein Unterschied, und 22 hatte nicht einmal eine neue Farbe. Das ändert sich hier.",
+                        "Die neue Farbe: das Theme „Meridian“ – dunkles Grün ins Licht der Mittagssonne, mit Mint als Akzent, dazu Glas, Polarlicht, Z-Angriff und die Karte der Version in Mint. Nach dem Update fragt ZENITH einmal, welches Theme bleibt (Meridian ist vorgewählt, „Horizont“ und das Jubiläums-Gold bleiben wählbar); Meridian wird gleich ganz angewendet, auch als Akzent von Be Comet (Mint statt Blau). Später änderbar unter Einstellungen → ZENITH → Theme.",
+                        "Ein Dock wie bei macOS: ein neuer Dock-Stil „macOS-Dock“, in Be Comet statt der kleinen Kapsel. Eine Leiste aus Liquid Glass mit hellem Rand; die Icons wachsen, wenn du mit der Maus (oder mit dem Finger) darüberfährst – das eine unter dem Zeiger am meisten, die Nachbarn weniger, alle rücken zur Seite –, dann ein dünner Strich und die Kachel „Alle Apps“ mit einem Punkteraster, die die Suche mit allen Apps öffnet. In Be Comet ausschaltbar mit „Dock wie macOS“; sonst Einstellungen → Dock → Stil.",
+                        "Mehr Liquid Glass in Be Comet: eine stärkere Linse, mehr Farbsaum am Rand und ein helleres Glanzlicht (die Standardstärke ist höher; wer sie schon eingestellt hat, behält seinen Wert). Und wo ZENITH das Hintergrundbild nicht lesen darf, ist das Glas keine flache graue Platte mehr: hell oben, mit einem weichen Glanz am Fuß.",
+                        "Ehrlich dazu: Das echte Glas, das dein Hintergrundbild verbiegt, gibt es erst, wenn du ZENITH den „Zugriff auf alle Dateien“ erlaubst (das Banner „Echtes Glas aktivieren“ oben auf dem Startbildschirm). Ohne ihn bleibt es beim helleren Mattglas. Ob es sich auf dem Galaxy Book gut ansieht, kann ich nicht prüfen – ein Foto hilft.",
+                        "Der Startbildschirm nutzt die Breite: auf breiten Bildschirmen und ohne Widgets auf dem Startbildschirm sitzt etwa eine Spalte auf je 118 dp (bis 12) statt vier Icons weit auseinander. Die Kopie des Hintergrunds für das Glas hat auf großen Bildschirmen die echte, quere Form (vorher immer hochkant, das Glas zeigte den falschen Ausschnitt) und wird bei einer Änderung der Fenstergröße neu gemacht.",
+                    ),
+                    hearth,
+                ),
                 ChangeSection(
                     "Glimmer Drop über das WLAN", Icons.Rounded.Star, Blue,
                     listOf(

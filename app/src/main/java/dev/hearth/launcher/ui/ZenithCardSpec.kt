@@ -245,8 +245,12 @@ internal fun zenithBuiltInCard(version: String): ZenithCardSpec? = when {
  * The card to draw for [version]: with the jubilee's theme kept, the jubilee's whatever the version; else the one the
  * update file carries ([spec]), else the version's own built in.
  */
-internal fun cardFor(version: String, theme: dev.hearth.launcher.data.ZenithTheme, spec: ZenithCardSpec?): ZenithCardSpec? =
-    if (theme == dev.hearth.launcher.data.ZenithTheme.Jubilee && versionNumber(version) >= 20f) ZenithCardSpec.Jubilee else spec ?: zenithBuiltInCard(version)
+internal fun cardFor(version: String, theme: dev.hearth.launcher.data.ZenithTheme, spec: ZenithCardSpec?): ZenithCardSpec? = when {
+    // (A theme kept from an older version keeps its card whatever the version; Meridian takes the update file's card, else its own.)
+    theme == dev.hearth.launcher.data.ZenithTheme.Jubilee && versionNumber(version) >= 20f -> ZenithCardSpec.Jubilee
+    theme == dev.hearth.launcher.data.ZenithTheme.Horizon && versionNumber(version) >= 21f -> ZenithCardSpec.Horizon
+    else -> spec ?: zenithBuiltInCard(version)
+}
 
 /** The color of the system cards and the Z for [version] in [theme]. */
 internal fun zenithAccent(version: String, theme: dev.hearth.launcher.data.ZenithTheme): Color =

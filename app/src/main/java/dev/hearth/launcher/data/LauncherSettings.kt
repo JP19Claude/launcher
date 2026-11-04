@@ -92,6 +92,8 @@ enum class GlassTint(val label: String, val color: Color) {
     GalaxyOmega("Galaxy Zenith", Color(0xFF1E46B4).copy(alpha = 0.2f)),
     /** ZENITH 19: sunlit glass with a breath of green. */
     Zenith("Sonnenglas", Color(0xFF3FBF7F).copy(alpha = 0.13f)),
+    /** ZENITH 22: glass with a breath of mint and a trace of midday gold. */
+    Meridian("Meridian-Glas", Color(0xFF3DEBC0).copy(alpha = 0.15f)),
 }
 
 /**
@@ -148,6 +150,8 @@ enum class AuroraLook(val label: String, val colors: List<Color>) {
     Eis("Eisblau", listOf(Color(0xFF3FA9FF), Color(0xFF7DE3FF), Color(0xFF9A6BFF))),
     Violett("Violett", listOf(Color(0xFF9A6BFF), Color(0xFFFF6FB5), Color(0xFF5CC8FF))),
     Rubin("Rubin", listOf(Color(0xFFFF4155), Color(0xFFFF9A3D), Color(0xFFFF6FB5))),
+    /** ZENITH 22: mint into the gold of the midday sun. */
+    Meridian("Meridian", listOf(Color(0xFF3DEBC0), Color(0xFF5CF2C1), Color(0xFFFFE9A8))),
 }
 
 /**
@@ -170,6 +174,8 @@ enum class StrikeColor(val label: String, val color: Color) {
     Red("Rubin", Color(0xFFFF4155)),
     Gold("Gold", Color(0xFFFFB82E)),
     White("Weiß", Color(0xFFDDE8F0)),
+    /** ZENITH 22: Meridian's mint. */
+    Mint("Meridian-Mint", Color(0xFF3DEBC0)),
 }
 
 /** ZENITH 19.3, Core Enforcer Studio: how long the Z-Angriff takes. */
@@ -234,12 +240,15 @@ enum class SmartHours(val label: String) {
  * or "Jubiläum", the midnight and gold of ZENITH 20, kept.
  */
 enum class ZenithTheme(val label: String, val note: String) {
-    Horizon("ZENITH 21 · Horizont", "Das neue Theme: tiefes Blau ins Licht des Horizonts, eisblaue Akzente."),
+    /** ZENITH 22: the newest – dark green into the light of the midday sun, mint accents. */
+    Meridian("ZENITH 22 · Meridian", "Das neue Theme: dunkles Grün ins Licht der Mittagssonne, Mint-Akzente und Sonnenglas – für den Launcher, die Karten, das Z und Be Comet."),
+    Horizon("ZENITH 21 · Horizont", "Das Theme von ZENITH 21: tiefes Blau ins Licht des Horizonts, eisblaue Akzente."),
     Jubilee("Jubiläum · Gold", "Das Theme von ZENITH 20 bleibt: Mitternacht ins Gold, die goldene Karte, goldene Akzente."),
 }
 
 /** ZENITH 21, the whole system in a theme's colors at once (the aurora, the Z, the glass …) – and the theme itself. */
 fun LauncherSettings.withZenithTheme(theme: ZenithTheme): LauncherSettings = when (theme) {
+    ZenithTheme.Meridian -> CoreProfiles.meridianLook(this)
     ZenithTheme.Horizon -> CoreProfiles.horizonLook(this)
     ZenithTheme.Jubilee -> CoreProfiles.jubileeLook(this)
 }.copy(zenithTheme = theme)
@@ -442,7 +451,7 @@ enum class CometGlass(val label: String, val note: String) {
 data class CometStyle(
     val glass: CometGlass = CometGlass.Liquid,
     /** How much the glass frosts and bends what lies behind it (0–1). */
-    val strength: Float = 0.7f,
+    val strength: Float = 0.85f,
     /** How strongly the glass is tinted – how see-through the dock and the widgets are (0 clear … 1 milky). */
     val opacity: Float = 0.35f,
     val shape: IconShape = IconShape.Squircle,
@@ -457,7 +466,8 @@ data class CometStyle(
     val capsuleDock: Boolean = true,
     /** The App Library, the page after the last home page. */
     val library: Boolean = true,
-    val accent: AccentColor = AccentColor.Galaxy,
+    /** ZENITH 22: Meridian's mint (it was Galaxy blue). */
+    val accent: AccentColor = AccentColor.Meridian,
 )
 
 /** ZENITH 21.5, "Be Comet": the home clock. */
@@ -506,7 +516,8 @@ fun LauncherSettings.withCometLook(): LauncherSettings = if (!beComet || beSmart
         clockFont = if (cometClock == CometClockKind.Serif) ClockFont.Serif else cometClockFont,
         // The digits are glass on Liquid Glass; plain, soft white on solid surfaces.
         glassClocks = liquid,
-        dockStyle = if (cometCapsuleDock) DockStyle.Floating else DockStyle.Clear,
+        // ZENITH 22: the dock of macOS (a shelf of glass whose icons swell under the pointer) instead of the small capsule.
+        dockStyle = if (cometCapsuleDock) DockStyle.Mac else DockStyle.Clear,
         showLabels = cometLabels,
         showGreeting = false,
         showAppLibrary = cometLibrary,
@@ -517,10 +528,11 @@ fun LauncherSettings.withCometLook(): LauncherSettings = if (!beComet || beSmart
         dimWallpaper = cometDim,
         // Pulled down from the left corner: the notifications; from the right: the control center.
         swipeDownAction = SwipeDownAction.Split,
+        // (ZENITH 22: more of the liquid in Liquid Glass – a stronger lens, more color fringe at the rim, a brighter shine.)
         glassBlur = if (liquid) 0.6f + 1.6f * cometStrength else 2.2f,
-        glassRefraction = if (liquid) 0.4f + 2.0f * cometStrength else 0.1f,
-        glassDispersion = if (liquid) 0.1f + 0.9f * cometStrength else 0f,
-        glassSpecular = if (liquid) 0.6f + 1.2f * cometStrength else 0.3f,
+        glassRefraction = if (liquid) 0.7f + 2.4f * cometStrength else 0.1f,
+        glassDispersion = if (liquid) 0.25f + 1.0f * cometStrength else 0f,
+        glassSpecular = if (liquid) 0.9f + 1.5f * cometStrength else 0.3f,
         glassTintStrength = if (liquid) 0.3f + 1.7f * cometOpacity else 1f + 1.2f * cometOpacity,
         glassInteractive = true,
     )
@@ -595,6 +607,8 @@ enum class AccentColor(val label: String, val color: Color) {
     GalaxyOmega("Galaxy Zenith", Color(0xFF3D7BFF)),
     /** ZENITH 19: the green of the 19 in ZENITH's mark. */
     Zenith("Zenith-Grün", Color(0xFF2FD27A)),
+    /** ZENITH 22: the mint of Meridian. */
+    Meridian("Meridian-Mint", Color(0xFF3DEBC0)),
 }
 
 enum class SearchEngine(val label: String, val url: String?) {
@@ -818,6 +832,8 @@ enum class DockStyle(val label: String) {
     Ruby("Rubin-Glas"),
     /** ZENITH 19: a slanted plate of the Z's dark metal, green light along its foot. */
     Zenith("ZENITH-Dock"),
+    /** ZENITH 22: the dock of macOS – a shelf of liquid glass, the icons swelling as the pointer passes over them, a divider and "all apps". */
+    Mac("macOS-Dock"),
 }
 
 /** The color of Clawd's clothes; [color] null keeps each outfit's own colors. */
@@ -1039,7 +1055,7 @@ data class LauncherSettings(
     /** ZENITH 21: the color picked for Ambient Design with "Eigene Farbe" (ARGB). */
     val smartCustomColor: Int = 0xFF3A3F8F.toInt(),
     /** ZENITH 21: the theme of the system's cards – the new one, or the jubilee's gold kept. */
-    val zenithTheme: ZenithTheme = ZenithTheme.Horizon,
+    val zenithTheme: ZenithTheme = ZenithTheme.Meridian,
     /** ZENITH 20.5: the saying "Aim Higher." in every place of the system that has room for it. */
     val sloganEverywhere: Boolean = true,
     /** ZENITH 19: after the phone starts, the Z lights up once before the home screen. */

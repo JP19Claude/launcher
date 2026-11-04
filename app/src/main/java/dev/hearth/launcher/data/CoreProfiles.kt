@@ -82,6 +82,15 @@ object CoreProfiles {
         zenithWallpaper = true,
     )
 
+    /**
+     * ZENITH 22, the Meridian look in one tap: the aurora, the glass, the accent and the Z in Meridian's mint – and Be Comet's accent
+     * with them. (The wallpaper stays the user's own.)
+     */
+    fun meridianLook(s: LauncherSettings): LauncherSettings = s.withZenithTint(ZenithTint.Meridian).copy(
+        zenithAurora = true,
+        cometStyle = s.cometStyle.copy(accent = AccentColor.Meridian),
+    )
+
     /** A look rolled at random – bold, but always something that works. */
     fun rolled(s: LauncherSettings, r: Random = Random.Default): LauncherSettings {
         fun step(from: Float, to: Float) = (Math.round((from + r.nextFloat() * (to - from)) * 20f) / 20f)

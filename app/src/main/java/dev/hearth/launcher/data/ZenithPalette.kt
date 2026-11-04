@@ -26,6 +26,8 @@ enum class ZenithTint(
     Ice("Eisblau", Color(0xFF3FA9FF), Color(0xFF1B6FC4), Color(0xFF9AD8FF), AuroraLook.Eis, StrikeColor.Blue, AccentColor.Blue, GlassTint.Blue),
     Violet("Violett", Color(0xFF9A6BFF), Color(0xFF6038C8), Color(0xFFC9B0FF), AuroraLook.Violett, StrikeColor.Violet, AccentColor.Lilac, GlassTint.Galaxy),
     Ruby("Rubin", Color(0xFFFF4155), Color(0xFFB5192B), Color(0xFFFF9AA5), AuroraLook.Rubin, StrikeColor.Red, AccentColor.Ruby, GlassTint.Ruby),
+    /** ZENITH 22: Meridian's mint. */
+    Meridian("Meridian-Mint", Color(0xFF3DEBC0), Color(0xFF14997F), Color(0xFF9CFFE6), AuroraLook.Meridian, StrikeColor.Mint, AccentColor.Meridian, GlassTint.Meridian),
 }
 
 /** ZENITH 20.1: the color of the home screen's light – ZENITH's own, or one of its own. */
@@ -36,6 +38,7 @@ enum class HomeLightColor(val label: String, val tint: ZenithTint?) {
     Ice("Eisblau", ZenithTint.Ice),
     Violet("Violett", ZenithTint.Violet),
     Ruby("Rubin", ZenithTint.Ruby),
+    Meridian("Meridian-Mint", ZenithTint.Meridian),
 }
 
 /**

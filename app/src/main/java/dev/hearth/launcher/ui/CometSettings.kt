@@ -265,7 +265,7 @@ private fun CmHomePage(s: LauncherSettings, update: ((LauncherSettings) -> Launc
 private fun CmDockPage(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit, back: () -> Unit) {
     CmPage("Dock & App-Bibliothek", back) {
         CmCard {
-            CmSwitchRow("Dock als Glas-Kapsel", "Aus: die Icons sitzen direkt auf dem Hintergrund.", s.cometCapsuleDock) { v ->
+            CmSwitchRow("Dock wie macOS", "Eine Leiste aus Liquid Glass; die Icons wachsen, wenn du mit der Maus oder dem Finger darüberfährst, ganz rechts steht „Alle Apps“. Aus: die Icons sitzen direkt auf dem Hintergrund.", s.cometCapsuleDock) { v ->
                 update { it.copy(cometStyle = it.cometStyle.copy(capsuleDock = v)) }
             }
             CmDivider()
@@ -368,7 +368,7 @@ private fun CmZenithPage(s: LauncherSettings, update: ((LauncherSettings) -> Lau
                 "Jubiläums-Theme behalten",
                 "Die goldene Karte und die goldenen Akzente von ZENITH 20 bleiben – auch mit ZENITH 21.",
                 s.zenithTheme == ZenithTheme.Jubilee,
-            ) { v -> update { it.copy(zenithTheme = if (v) ZenithTheme.Jubilee else ZenithTheme.Horizon) } }
+            ) { v -> update { it.copy(zenithTheme = if (v) ZenithTheme.Jubilee else ZenithTheme.Meridian) } }
             CmDivider()
             CmLink("Theme auf das ganze System anwenden", "Polarlicht, Glas, Z-Angriff und ZENITH-Hintergrund passend setzen", SsGlyph.Look) {
                 update { it.withZenithTheme(it.zenithTheme) }

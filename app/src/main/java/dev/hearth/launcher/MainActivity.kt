@@ -63,6 +63,12 @@ class MainActivity : ComponentActivity() {
         return false
     }
 
+    /** A window made bigger or smaller, turned, a keyboard attached (these no longer restart the launcher): the wallpaper copy for the glass is made again to fit. */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        viewModel.refreshWallpaper()
+    }
+
     /** True between leaving the launcher (onStop) and showing it again (onResume). */
     private var wasInBackground = false
 

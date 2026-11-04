@@ -734,6 +734,18 @@ fun LiquidGlass(
                     val shade = center - Offset(l.x, l.y) * reach
 
                     drawOutline(outline, fill)
+                    // No wallpaper to look through (the launcher may not read the files): the glass gets its depth from light alone –
+                    // brighter at the top, a soft glow back from the floor – instead of lying there as a flat grey plate.
+                    if (backdrop == null) {
+                        drawOutline(
+                            outline,
+                            Brush.verticalGradient(
+                                0f to Color.White.copy(alpha = 0.20f),
+                                0.45f to Color.White.copy(alpha = 0.05f),
+                                1f to Color.White.copy(alpha = 0.12f),
+                            ),
+                        )
+                    }
                     drawOutline(
                         outline,
                         Brush.linearGradient(
