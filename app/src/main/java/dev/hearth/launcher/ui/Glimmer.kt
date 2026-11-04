@@ -736,6 +736,28 @@ fun GlimmerIsland(
                 tint = islandTint,
                 modifier = Modifier
                     .drawBehind {
+                        // The notch hangs from the screen's edge: where it meets it, the black flares out in a curve to each side – the
+                        // shoulders of a real notch – instead of a box stuck to the edge. (The window has 8 dp to spare on each side.)
+                        if (flatTop) {
+                            val r = 7.dp.toPx().coerceAtMost(size.height / 2f)
+                            val w = size.width
+                            val left = Path().apply {
+                                moveTo(-r, 0f)
+                                lineTo(0f, 0f)
+                                lineTo(0f, r)
+                                arcTo(androidx.compose.ui.geometry.Rect(-2 * r, 0f, 0f, 2 * r), 0f, -90f, false)
+                                close()
+                            }
+                            val right = Path().apply {
+                                moveTo(w + r, 0f)
+                                lineTo(w, 0f)
+                                lineTo(w, r)
+                                arcTo(androidx.compose.ui.geometry.Rect(w, 0f, w + 2 * r, 2 * r), 180f, 90f, false)
+                                close()
+                            }
+                            drawPath(left, Color.Black)
+                            drawPath(right, Color.Black)
+                        }
                         // Breathing light around the island while something runs (Fluid Cloud).
                         val ringRadius = if (flatTop) corner.toPx() else size.height / 2f
                         val b = breath?.value ?: 0f
@@ -1054,7 +1076,8 @@ private fun IslandShape(
     flatTop: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    val shape = if (flatTop) RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomEnd = corner, bottomStart = corner) else RoundedCornerShape(corner)
+    // ZENITH 22: iOS's continuous corners (the curve eases in and out, no seam where it meets the edge); a pill is still a plain pill.
+    val shape: androidx.compose.ui.graphics.Shape = ContinuousCornerShape(top = if (flatTop) 0.dp else corner, bottom = corner)
     when (style) {
         // Dark, with the activity's color glowing through from the top (vivo, OPPO).
         GlimmerStyle.Tinted -> Box(

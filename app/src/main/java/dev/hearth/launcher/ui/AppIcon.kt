@@ -431,7 +431,20 @@ fun AppIconImage(app: AppInfo, size: Dp, modifier: Modifier = Modifier) {
             colorFilter = hologram,
             modifier = modifier
                 .size(size)
-                .shadow(elevation = 6.dp, shape = settings.iconShape.clipShape(), clip = true)
+                // Be Comet: iOS's soft, wide shadow instead of Material's hard one.
+                .then(
+                    if (settings.beComet) {
+                        Modifier.shadow(
+                            elevation = 10.dp,
+                            shape = settings.iconShape.clipShape(),
+                            clip = true,
+                            ambientColor = Color.Black.copy(alpha = 0.18f),
+                            spotColor = Color.Black.copy(alpha = 0.34f),
+                        )
+                    } else {
+                        Modifier.shadow(elevation = 6.dp, shape = settings.iconShape.clipShape(), clip = true)
+                    },
+                )
                 .then(sheen),
         )
 
@@ -445,20 +458,80 @@ fun AppIconImage(app: AppInfo, size: Dp, modifier: Modifier = Modifier) {
                 .then(sheen),
         )
 
-        IconKind.Glyph, IconKind.MonoGlyph -> LiquidGlass(
-            cornerRadius = settings.iconShape.glassCorner(size),
-            refraction = size * 0.2f,
-            blur = 10.dp,
-            modifier = modifier.size(size),
-            darkens = false,
-        ) {
-            Image(
-                bitmap = app.icon,
-                contentDescription = app.label,
-                colorFilter = hologram ?: glyphFilter(settings.iconStyle, app.iconKind, settings.accent),
-                modifier = Modifier.fillMaxSize(),
+        IconKind.Glyph, IconKind.MonoGlyph ->
+            if (settings.beComet && hologram == null) {
+                // Be Comet: iOS's colored tiles with a white glyph (every app its own color) instead of a pale glass tile.
+                CometGlyphTile(app, size, settings.iconShape, modifier)
+            } else {
+                LiquidGlass(
+                    cornerRadius = settings.iconShape.glassCorner(size),
+                    refraction = size * 0.2f,
+                    blur = 10.dp,
+                    modifier = modifier.size(size),
+                    darkens = false,
+                ) {
+                    Image(
+                        bitmap = app.icon,
+                        contentDescription = app.label,
+                        colorFilter = hologram ?: glyphFilter(settings.iconStyle, app.iconKind, settings.accent),
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
+    }
+}
+
+/** The tile colors of Be Comet's glyph icons – the bright top and the deeper foot of an iOS-like gradient. */
+private val CometTileColors = listOf(
+    Color(0xFF5AB8FF) to Color(0xFF1B6FF0),
+    Color(0xFF6EE79A) to Color(0xFF16A34A),
+    Color(0xFFFFB45A) to Color(0xFFF2740F),
+    Color(0xFFFF7A8A) to Color(0xFFE5253F),
+    Color(0xFFB58CFF) to Color(0xFF6A3FE0),
+    Color(0xFF5EE3D5) to Color(0xFF0E9F9A),
+    Color(0xFFFF8EC7) to Color(0xFFE23C8F),
+    Color(0xFF8E9BFF) to Color(0xFF3F4BD6),
+    Color(0xFFFFD866) to Color(0xFFF2A600),
+    Color(0xFFA7B1BF) to Color(0xFF5C6776),
+)
+
+/**
+ * ZENITH 22, Be Comet: an icon that is only a glyph (the system's own apps) on a colored tile of iOS's kind – a gradient from a bright
+ * top to a deeper foot, a gloss over its upper half, a soft shadow, the glyph in white. The color comes from the app, so it stays.
+ */
+@Composable
+private fun CometGlyphTile(app: AppInfo, size: Dp, iconShape: IconShape, modifier: Modifier) {
+    val (top, foot) = CometTileColors[(app.key.hashCode() and 0x7fffffff) % CometTileColors.size]
+    val shape = iconShape.clipShape()
+    Box(
+        modifier
+            .size(size)
+            .shadow(
+                elevation = 10.dp,
+                shape = shape,
+                clip = true,
+                ambientColor = Color.Black.copy(alpha = 0.18f),
+                spotColor = Color.Black.copy(alpha = 0.34f),
             )
-        }
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(top, foot))),
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            bitmap = app.icon,
+            contentDescription = app.label,
+            colorFilter = if (app.iconKind == IconKind.MonoGlyph) ColorFilter.tint(Color.White, BlendMode.SrcIn) else monoTint(Color.White),
+            modifier = Modifier.size(size * 0.6f),
+        )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        0f to Color.White.copy(alpha = 0.30f),
+                        0.5f to Color.Transparent,
+                    ),
+                ),
+        )
     }
 }
 

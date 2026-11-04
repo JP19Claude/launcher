@@ -60,6 +60,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -203,7 +204,12 @@ fun LauncherScreen(vm: LauncherViewModel) {
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
     val night by remember(systemDark) { derivedStateOf { storedSettings.nightActive(clock.value.hour, systemDark) } }
     // OMEGA UI 18: Claude Mythos lays its takeover over everything chosen.
-    val settings = remember(storedSettings, night) { (if (night) storedSettings.forNight() else storedSettings).mythic().safeLook().withSmartLook().withCometLook().withColorOsLook() }
+    // A computer's wide screen (an Android laptop, a big tablet): the icons are bigger – a phone's 56 dp look lost on a screen 1,300 dp wide.
+    val wideScreen = isWideScreen()
+    val settings = remember(storedSettings, night, wideScreen) {
+        (if (night) storedSettings.forNight() else storedSettings).mythic().safeLook().withSmartLook().withCometLook().withColorOsLook()
+            .let { if (wideScreen) it.copy(iconSize = (it.iconSize * 1.3f).roundToInt().coerceIn(it.iconSize, 92)) else it }
+    }
     val library by vm.library.collectAsStateWithLifecycle()
     val assistantOpen by vm.assistantOpen.collectAsStateWithLifecycle()
     val appUsage by vm.appUsage.collectAsStateWithLifecycle()
@@ -311,11 +317,10 @@ fun LauncherScreen(vm: LauncherViewModel) {
     }
     val homeWidgets by vm.widgets.homeWidgets.collectAsStateWithLifecycle()
     // A computer's wide screen has room for more columns than a phone: with no widgets on the home screen (their places are tied to the
-    // columns) it fills the whole width – about one column to every 118 dp – instead of four icons far apart.
-    val wideScreen = isWideScreen()
+    // columns) it fills the whole width – about one column to every 140 dp – instead of four icons far apart.
     val screenWidthDp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
     val columns = if (wideScreen && homeWidgets.isEmpty()) {
-        maxOf(settings.columns, screenWidthDp / 118).coerceIn(3, 12)
+        maxOf(settings.columns, screenWidthDp / 140).coerceIn(3, 12)
     } else {
         settings.columns.coerceIn(3, if (wideScreen) 12 else 6)
     }
@@ -1048,10 +1053,13 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                             )
                                         }
                                         if (needsWallpaperAccess) {
-                                            WallpaperAccessHint(
-                                                onClick = requestWallpaperAccess,
-                                                modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 12.dp),
-                                            )
+                                            // (A bar 1,300 dp wide looks cheap: at most 560 dp, in the middle.)
+                                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                                                WallpaperAccessHint(
+                                                    onClick = requestWallpaperAccess,
+                                                    modifier = Modifier.widthIn(max = 560.dp).padding(start = 4.dp, end = 4.dp, bottom = 12.dp),
+                                                )
+                                            }
                                         }
                                     } else {
                                         Spacer(Modifier.padding(top = 12.dp))

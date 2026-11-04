@@ -520,6 +520,9 @@ fun LauncherSettings.withCometLook(): LauncherSettings = if (!beComet || beSmart
         dockStyle = if (cometCapsuleDock) DockStyle.Mac else DockStyle.Clear,
         showLabels = cometLabels,
         showGreeting = false,
+        // (ZENITH 22: no saying under the clock – a calm iOS-like home screen; the search capsule stays.)
+        sloganEverywhere = false,
+        showSearchPill = true,
         showAppLibrary = cometLibrary,
         animations = true,
         accent = cometAccent,

@@ -214,7 +214,26 @@ internal object HearthChangelog {
                         "Ein Dock wie bei macOS: ein neuer Dock-Stil „macOS-Dock“, in Be Comet statt der kleinen Kapsel. Eine Leiste aus Liquid Glass mit hellem Rand; die Icons wachsen, wenn du mit der Maus (oder mit dem Finger) darüberfährst – das eine unter dem Zeiger am meisten, die Nachbarn weniger, alle rücken zur Seite –, dann ein dünner Strich und die Kachel „Alle Apps“ mit einem Punkteraster, die die Suche mit allen Apps öffnet. In Be Comet ausschaltbar mit „Dock wie macOS“; sonst Einstellungen → Dock → Stil.",
                         "Mehr Liquid Glass in Be Comet: eine stärkere Linse, mehr Farbsaum am Rand und ein helleres Glanzlicht (die Standardstärke ist höher; wer sie schon eingestellt hat, behält seinen Wert). Und wo ZENITH das Hintergrundbild nicht lesen darf, ist das Glas keine flache graue Platte mehr: hell oben, mit einem weichen Glanz am Fuß.",
                         "Ehrlich dazu: Das echte Glas, das dein Hintergrundbild verbiegt, gibt es erst, wenn du ZENITH den „Zugriff auf alle Dateien“ erlaubst (das Banner „Echtes Glas aktivieren“ oben auf dem Startbildschirm). Ohne ihn bleibt es beim helleren Mattglas. Ob es sich auf dem Galaxy Book gut ansieht, kann ich nicht prüfen – ein Foto hilft.",
-                        "Der Startbildschirm nutzt die Breite: auf breiten Bildschirmen und ohne Widgets auf dem Startbildschirm sitzt etwa eine Spalte auf je 118 dp (bis 12) statt vier Icons weit auseinander. Die Kopie des Hintergrunds für das Glas hat auf großen Bildschirmen die echte, quere Form (vorher immer hochkant, das Glas zeigte den falschen Ausschnitt) und wird bei einer Änderung der Fenstergröße neu gemacht.",
+                        "Der Startbildschirm nutzt die Breite: auf breiten Bildschirmen und ohne Widgets auf dem Startbildschirm sitzt etwa eine Spalte auf je 140 dp (bis 12) statt vier Icons weit auseinander. Die Kopie des Hintergrunds für das Glas hat auf großen Bildschirmen die echte, quere Form (vorher immer hochkant, das Glas zeigte den falschen Ausschnitt) und wird bei einer Änderung der Fenstergröße neu gemacht.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Be Comet im iOS-Look", Icons.Rounded.Star, Pink,
+                    listOf(
+                        "Rückmeldung: Der ganze Launcher sah auf dem Laptop billig aus – nicht hochwertig und ohne das Gefühl von iOS. Be Comet bekommt deshalb einen Schliff.",
+                        "Die Symbole: Apps, die nur ein Symbol haben (die Systemapps), liegen in Be Comet auf bunten Kacheln wie bei iOS – ein Verlauf vom hellen Kopf zum tieferen Fuß, Glanz über der oberen Hälfte, das Symbol in Weiß, jede App in ihrer eigenen Farbe (sie bleibt). Alle Symbole haben einen weichen, weiten Schatten statt des harten Material-Schattens.",
+                        "Der Laptop: Die Symbole sind auf breiten Bildschirmen um ein Drittel größer (bis 92 dp), die Spalten sitzen auf je 140 dp. Der Spruch unter der Uhr („AIM HIGHER“) fällt in Be Comet weg, die Suchkapsel „Suchen“ bleibt, und das Banner „Echtes Glas aktivieren“ ist höchstens 560 dp breit statt über den ganzen Bildschirm gespannt.",
+                        "Ehrlich dazu: Ich sehe es nicht auf deinem Bildschirm. Wenn dir an den Kacheln, den Farben oder den Abständen etwas nicht gefällt, sag mir bitte genau was – ein Foto hilft.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
+                    "Notch und Insel feiner", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Die Ecken von iOS: Die Insel (Dynamic Island, MacBook-Insel) und die Notch haben jetzt „kontinuierliche“ Ecken – die Kurve läuft weich in die gerade Kante und hat keine Naht, so wie Apple die Insel, die Symbole und die Karten schneidet. Besonders aufgeklappt sieht man es.",
+                        "Die Schultern der Notch: Wo die Notch am Bildschirmrand hängt, schwingt das Schwarz in einer Kurve nach außen, wie bei einer echten Notch – statt wie ein Kasten an den Rand geklebt zu wirken.",
+                        "Ehrlich dazu: Die Form habe ich am Rechner nachgerechnet und gezeichnet, aber nicht auf dem Gerät gesehen. Wenn dir an der Notch oder der Insel etwas Bestimmtes nicht gefällt (Größe, Tempo, Abstand, ein Ereignis), sag es mir genau.",
                     ),
                     hearth,
                 ),
