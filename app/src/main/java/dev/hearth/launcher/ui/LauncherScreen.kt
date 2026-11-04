@@ -1653,7 +1653,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
             // ZENITH 21: the question of the theme, after all that.
             if (themeAsk && !bootIntro && !showOmega && !showIntro && !jubilee && !strikeNow) {
                 ZenithThemeChoice { theme ->
-                    // Meridian is put on at once, all of it (the mint accent, the aurora, the glass, Be Comet's accent); an older theme is only kept.
+                    // Meridian is put on at once, all of it (the coral accent, the aurora, the glass, Be Comet's accent); an older theme is only kept.
                     vm.updateSettings { if (theme == dev.hearth.launcher.data.ZenithTheme.Meridian) it.withZenithTheme(theme) else it.copy(zenithTheme = theme) }
                     HearthUi.markThemeAsked(context)
                     themeAsk = false

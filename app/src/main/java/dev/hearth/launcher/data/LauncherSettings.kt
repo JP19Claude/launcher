@@ -92,8 +92,8 @@ enum class GlassTint(val label: String, val color: Color) {
     GalaxyOmega("Galaxy Zenith", Color(0xFF1E46B4).copy(alpha = 0.2f)),
     /** ZENITH 19: sunlit glass with a breath of green. */
     Zenith("Sonnenglas", Color(0xFF3FBF7F).copy(alpha = 0.13f)),
-    /** ZENITH 22: glass with a breath of mint and a trace of midday gold. */
-    Meridian("Meridian-Glas", Color(0xFF3DEBC0).copy(alpha = 0.15f)),
+    /** ZENITH 22: glass with a breath of coral. */
+    Meridian("Meridian-Glas", Color(0xFFFF7A9C).copy(alpha = 0.15f)),
 }
 
 /**
@@ -150,8 +150,8 @@ enum class AuroraLook(val label: String, val colors: List<Color>) {
     Eis("Eisblau", listOf(Color(0xFF3FA9FF), Color(0xFF7DE3FF), Color(0xFF9A6BFF))),
     Violett("Violett", listOf(Color(0xFF9A6BFF), Color(0xFFFF6FB5), Color(0xFF5CC8FF))),
     Rubin("Rubin", listOf(Color(0xFFFF4155), Color(0xFFFF9A3D), Color(0xFFFF6FB5))),
-    /** ZENITH 22: mint into the gold of the midday sun. */
-    Meridian("Meridian", listOf(Color(0xFF3DEBC0), Color(0xFF5CF2C1), Color(0xFFFFE9A8))),
+    /** ZENITH 22: coral rose, violet and the amber of a sunrise over the planet's rim. */
+    Meridian("Meridian", listOf(Color(0xFFFF7A9C), Color(0xFFB65CFF), Color(0xFFFFB36B))),
 }
 
 /**
@@ -174,8 +174,8 @@ enum class StrikeColor(val label: String, val color: Color) {
     Red("Rubin", Color(0xFFFF4155)),
     Gold("Gold", Color(0xFFFFB82E)),
     White("Weiß", Color(0xFFDDE8F0)),
-    /** ZENITH 22: Meridian's mint. */
-    Mint("Meridian-Mint", Color(0xFF3DEBC0)),
+    /** ZENITH 22: Meridian's coral. */
+    Meridian("Meridian-Koralle", Color(0xFFFF7A9C)),
 }
 
 /** ZENITH 19.3, Core Enforcer Studio: how long the Z-Angriff takes. */
@@ -240,8 +240,8 @@ enum class SmartHours(val label: String) {
  * or "Jubiläum", the midnight and gold of ZENITH 20, kept.
  */
 enum class ZenithTheme(val label: String, val note: String) {
-    /** ZENITH 22: the newest – dark green into the light of the midday sun, mint accents. */
-    Meridian("ZENITH 22 · Meridian", "Das neue Theme: dunkles Grün ins Licht der Mittagssonne, Mint-Akzente und Sonnenglas – für den Launcher, die Karten, das Z und Be Comet."),
+    /** ZENITH 22: the newest – night violet into the coral light of a sunrise over the planet's rim. */
+    Meridian("ZENITH 22 · Meridian", "Das neue Theme: Nachtviolett ins Koralllicht eines Sonnenaufgangs über dem Planetenrand, Koralle als Akzent – für den Launcher, die Karten, das Z und Be Comet."),
     Horizon("ZENITH 21 · Horizont", "Das Theme von ZENITH 21: tiefes Blau ins Licht des Horizonts, eisblaue Akzente."),
     Jubilee("Jubiläum · Gold", "Das Theme von ZENITH 20 bleibt: Mitternacht ins Gold, die goldene Karte, goldene Akzente."),
 }
@@ -466,7 +466,7 @@ data class CometStyle(
     val capsuleDock: Boolean = true,
     /** The App Library, the page after the last home page. */
     val library: Boolean = true,
-    /** ZENITH 22: Meridian's mint (it was Galaxy blue). */
+    /** ZENITH 22: Meridian's coral (it was Galaxy blue). */
     val accent: AccentColor = AccentColor.Meridian,
 )
 
@@ -610,8 +610,8 @@ enum class AccentColor(val label: String, val color: Color) {
     GalaxyOmega("Galaxy Zenith", Color(0xFF3D7BFF)),
     /** ZENITH 19: the green of the 19 in ZENITH's mark. */
     Zenith("Zenith-Grün", Color(0xFF2FD27A)),
-    /** ZENITH 22: the mint of Meridian. */
-    Meridian("Meridian-Mint", Color(0xFF3DEBC0)),
+    /** ZENITH 22: the coral of Meridian. */
+    Meridian("Meridian-Koralle", Color(0xFFFF7A9C)),
 }
 
 enum class SearchEngine(val label: String, val url: String?) {
@@ -1667,6 +1667,17 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
     private inline fun <reified T : Enum<T>> enumOf(key: String, default: T): T =
         prefs.getString(key, null)?.let { name -> enumValues<T>().firstOrNull { it.name == name } } ?: default
 
+    /**
+     * ZENITH 22: "Horizont" was only the default theme of ZENITH 21 – with 22 the new one is the default, so whoever still has it
+     * gets Meridian, once (what is chosen afterwards stays).
+     */
+    private fun migratedTheme(stored: ZenithTheme): ZenithTheme {
+        if (prefs.getBoolean("zenith22Theme", false)) return stored
+        val theme = if (stored == ZenithTheme.Horizon) ZenithTheme.Meridian else stored
+        prefs.edit().putBoolean("zenith22Theme", true).putString("zenithTheme", theme.name).apply()
+        return theme
+    }
+
     private fun read(): LauncherSettings {
         val d = LauncherSettings()
         return LauncherSettings(
@@ -1753,7 +1764,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             smartHours = enumOf("smartHours", d.smartHours),
             smartHideAllDay = prefs.getBoolean("smartHideAllDay", d.smartHideAllDay),
             smartCustomColor = prefs.getInt("smartCustomColor", d.smartCustomColor),
-            zenithTheme = enumOf("zenithTheme", d.zenithTheme),
+            zenithTheme = migratedTheme(enumOf("zenithTheme", d.zenithTheme)),
             beComet = prefs.getBoolean("beComet", d.beComet),
             cometStyle = CometStyle(
                 glass = enumOf("cometGlass", d.cometGlass),

@@ -66,10 +66,10 @@ import kotlin.random.Random
  * meridian, from the ground to the stars).
  */
 
-private val MeridianInk = Color(0xFF030B0E)
-private val MeridianDeep = Color(0xFF07322F)
-private val MeridianSky = Color(0xFF1B7F8F)
-private val MeridianMint = Color(0xFF5CF2C1)
+private val MeridianInk = Color(0xFF0B0414)
+private val MeridianDeep = Color(0xFF3A1058)
+private val MeridianSky = Color(0xFF9A2F78)
+private val MeridianMint = Color(0xFFFF7A9C)
 private val MeridianSun = Color(0xFFFFE9A8)
 
 /** A ray of light from the sun to where a finger touched the sky. */
@@ -106,7 +106,7 @@ internal fun MeridianEgg(version: String, name: String, onClose: () -> Unit) {
                 Brush.verticalGradient(
                     listOf(
                         lerp(MeridianInk, MeridianSky, rise.coerceIn(0f, 1f) * 0.8f),
-                        lerp(MeridianDeep, Color(0xFF9CE8D2), rise.coerceIn(0f, 1f) * 0.75f),
+                        lerp(MeridianDeep, Color(0xFFFFB36B), rise.coerceIn(0f, 1f) * 0.75f),
                     ),
                 ),
             ),

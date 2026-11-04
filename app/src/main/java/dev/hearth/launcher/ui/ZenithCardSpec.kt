@@ -43,6 +43,11 @@ class ZenithCardSpec(
      * horizon and three ridges ("style": "horizon" in the update file; older apps ignore it).
      */
     val horizon: Boolean = false,
+    /**
+     * ZENITH 22's own picture: a planet's rim glowing in the dark, a halo high over it and a thin line of light from the one to the
+     * other – the meridian ("style": "meridian" in the update file; older apps ignore it and draw the sky with arcs).
+     */
+    val meridian: Boolean = false,
 ) {
     companion object {
         /** ZENITH 20's own card, built in – it also shows when the update file carries none. */
@@ -70,17 +75,18 @@ class ZenithCardSpec(
             horizon = true,
         )
 
-        /** ZENITH 22's own card, built in – the dark green of the Z rising into the light of the midday sun. */
+        /** ZENITH 22's own card, built in – night violet into the coral light of a sunrise over a planet's rim. */
         val Meridian = ZenithCardSpec(
-            bg = listOf(Color(0xFF020D0C), Color(0xFF06332E), Color(0xFF1FA98A)),
-            glowA = Color(0xFF2FD2A0),
-            glowB = Color(0xFFFFE9A8),
-            accent = Color(0xFF5CF2C1),
+            bg = listOf(Color(0xFF0B0414), Color(0xFF3A1058), Color(0xFF9A2F78)),
+            glowA = Color(0xFFFF7A9C),
+            glowB = Color(0xFFFFB36B),
+            accent = Color(0xFFFF7A9C),
             label = "M E R I D I A N",
             os = "${ClaudeOs.NAME} 9.0",
-            aurora = AuroraLook.Zenith,
+            aurora = AuroraLook.Meridian,
             stars = true,
             fireworks = false,
+            meridian = true,
         )
 
         private fun color(text: String): Color = Color(android.graphics.Color.parseColor(text.trim()))
@@ -104,6 +110,7 @@ class ZenithCardSpec(
                 stars = o.optBoolean("stars", true),
                 fireworks = o.optBoolean("fireworks", true),
                 horizon = o.optString("style").equals("horizon", ignoreCase = true),
+                meridian = o.optString("style").equals("meridian", ignoreCase = true),
             )
         }.getOrNull()
     }
@@ -117,6 +124,10 @@ class ZenithCardSpec(
 internal fun DrawScope.drawZenithSpecCard(spec: ZenithCardSpec, charge: Float) {
     if (spec.horizon) {
         drawHorizonCard(spec, charge)
+        return
+    }
+    if (spec.meridian) {
+        drawMeridianCard(spec, charge)
         return
     }
     val w = size.width
@@ -233,7 +244,107 @@ internal fun DrawScope.drawHorizonCard(spec: ZenithCardSpec, charge: Float) {
     ridge(h * 0.94f, h * 0.035f, 0.90f, lerp(night, Color.Black, 0.3f), Color.Black.copy(alpha = 0.95f))
 }
 
-/** The card a version has of its own, built in: ZENITH 21's, ZENITH 20's (the jubilee), none before. */
+/**
+ * ZENITH 22's card: a planet seen from orbit – its dark body low in the picture, its rim glowing coral and amber where a sun is about
+ * to come up behind it –, a soft halo high in the sky (the Z and its number stand in it), a thin line of light from the halo down to the
+ * rim: the meridian, and a few faint stars. [charge] (0..1, the Z held) brightens the light.
+ */
+internal fun DrawScope.drawMeridianCard(spec: ZenithCardSpec, charge: Float) {
+    val w = size.width
+    val h = size.height
+    val night = spec.bg.first()
+    val mid = spec.bg[spec.bg.size / 2]
+    val low = spec.bg.last()
+    val coral = spec.glowA
+    val amber = spec.glowB
+    val rimY = h * 0.80f
+    // The sky: night overhead, the violet, the magenta lying on the planet's rim.
+    drawRect(Brush.verticalGradient(listOf(night, mid, low), startY = 0f, endY = rimY))
+    // A few faint stars.
+    val r = Random(22)
+    repeat(46) {
+        val x = r.nextFloat() * w
+        val y = r.nextFloat() * h * 0.62f
+        drawCircle(Color.White.copy(alpha = 0.18f + 0.5f * r.nextFloat()), (0.5f + r.nextFloat() * 1.3f) * density, Offset(x, y))
+    }
+    // The halo high up, behind the Z.
+    val halo = Offset(w * 0.5f, h * 0.2f)
+    drawCircle(
+        Brush.radialGradient(
+            listOf(coral.copy(alpha = 0.30f + 0.1f * charge), coral.copy(alpha = 0.075f), Color.Transparent),
+            center = halo,
+            radius = w * 0.62f,
+        ),
+        radius = w * 0.62f,
+        center = halo,
+    )
+    drawCircle(
+        Brush.radialGradient(listOf(Color.White.copy(alpha = 0.22f + 0.1f * charge), Color.Transparent), center = halo, radius = w * 0.3f),
+        radius = w * 0.3f,
+        center = halo,
+    )
+    // The planet: a circle far bigger than the card, only its upper rim in the picture.
+    val radius = w * 1.55f
+    val planet = Offset(w * 0.5f, rimY + radius)
+    // Its body: plum just under the rim, black deeper down.
+    drawCircle(
+        Brush.radialGradient(
+            0f to Color(0xFF06020B),
+            0.70f to Color(0xFF06020B),
+            1f to Color(0xFF2A0C3A),
+            center = planet,
+            radius = radius,
+        ),
+        radius = radius,
+        center = planet,
+    )
+    // The rim's glow, strongest at the top where the sun comes up and fading to the sides: layers from wide and faint to thin and bright.
+    // (Clear in the color itself, not black: no dark fringe where the glow dies away.)
+    val glow = Brush.sweepGradient(
+        0.60f to coral.copy(alpha = 0f),
+        0.75f to coral,
+        0.90f to coral.copy(alpha = 0f),
+        center = planet,
+    )
+    val hot = lerp(amber, Color.White, 0.5f)
+    val lit = Brush.sweepGradient(
+        0.64f to hot.copy(alpha = 0f),
+        0.75f to hot,
+        0.86f to hot.copy(alpha = 0f),
+        center = planet,
+    )
+    val k = 1f + 0.25f * charge
+    drawCircle(glow, radius = radius, center = planet, alpha = (0.10f * k).coerceAtMost(1f), style = Stroke(width = w * 0.12f))
+    drawCircle(glow, radius = radius, center = planet, alpha = (0.18f * k).coerceAtMost(1f), style = Stroke(width = w * 0.07f))
+    drawCircle(glow, radius = radius, center = planet, alpha = (0.34f * k).coerceAtMost(1f), style = Stroke(width = w * 0.035f))
+    drawCircle(lit, radius = radius, center = planet, alpha = (0.85f * k).coerceAtMost(1f), style = Stroke(width = w * 0.012f))
+    // Where the sun comes up.
+    val flare = Offset(w * 0.5f, rimY)
+    drawCircle(
+        Brush.radialGradient(listOf(Color.White.copy(alpha = 0.55f + 0.2f * charge), Color.Transparent), center = flare, radius = w * 0.34f),
+        radius = w * 0.34f,
+        center = flare,
+    )
+    drawCircle(
+        Brush.radialGradient(listOf(amber.copy(alpha = 0.22f), Color.Transparent), center = flare, radius = w * 0.62f),
+        radius = w * 0.62f,
+        center = flare,
+    )
+    // Fine lines on the planet, round the point under the sun.
+    val line = Stroke(width = 1f * density)
+    listOf(0.70f, 0.82f, 0.93f).forEach { f ->
+        drawCircle(coral.copy(alpha = 0.16f), radius = radius * f, center = planet, style = line)
+    }
+    // The meridian: a thin line of light from the halo to the rim.
+    drawLine(
+        Brush.verticalGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.38f), Color.Transparent), startY = h * 0.28f, endY = rimY),
+        Offset(w * 0.5f, h * 0.28f),
+        Offset(w * 0.5f, rimY),
+        strokeWidth = maxOf(1f, w * 0.0015f),
+    )
+}
+
+/** The card a version has of its own, built in: ZENITH 22's, ZENITH 21's, ZENITH 20's (the jubilee), none before. */
 internal fun zenithBuiltInCard(version: String): ZenithCardSpec? = when {
     versionNumber(version) >= 22f -> ZenithCardSpec.Meridian
     versionNumber(version) >= 21f -> ZenithCardSpec.Horizon

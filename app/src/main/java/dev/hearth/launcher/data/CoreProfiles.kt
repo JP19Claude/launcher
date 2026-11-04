@@ -83,7 +83,7 @@ object CoreProfiles {
     )
 
     /**
-     * ZENITH 22, the Meridian look in one tap: the aurora, the glass, the accent and the Z in Meridian's mint – and Be Comet's accent
+     * ZENITH 22, the Meridian look in one tap: the aurora, the glass, the accent and the Z in Meridian's coral – and Be Comet's accent
      * with them. (The wallpaper stays the user's own.)
      */
     fun meridianLook(s: LauncherSettings): LauncherSettings = s.withZenithTint(ZenithTint.Meridian).copy(

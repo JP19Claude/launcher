@@ -1,15 +1,16 @@
 {
  "bg": [
-  "#020D0C",
-  "#06332E",
-  "#1FA98A"
+  "#0B0414",
+  "#3A1058",
+  "#9A2F78"
  ],
- "glowA": "#2FD2A0",
- "glowB": "#FFE9A8",
- "accent": "#5CF2C1",
+ "glowA": "#FF7A9C",
+ "glowB": "#FFB36B",
+ "accent": "#FF7A9C",
  "label": "M E R I D I A N",
  "os": "ClaudeOS 9.0",
- "aurora": "Zenith",
+ "aurora": "Meridian",
  "stars": true,
- "fireworks": false
+ "fireworks": false,
+ "style": "meridian"
 }

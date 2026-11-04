@@ -38,7 +38,7 @@ enum class ClaudeMarkStyle(val title: String, val colors: List<Color>) {
     Helios("ClaudeOS 6 „Helios“", listOf(Color(0xFFFFFFFF), Color(0xFFFFD34D), Color(0xFF2FD27A))),
     Apex("ClaudeOS 7 „Apex“", listOf(Color(0xFFFFFFFF), Color(0xFFB9E6FF), Color(0xFF7C5CFF))),
     Horizon("ClaudeOS 8 „Horizon“", listOf(Color(0xFFFFFFFF), Color(0xFFFFC27A), Color(0xFF4F8DFF))),
-    Meridian("ClaudeOS 9 „Meridian“", listOf(Color(0xFFFFFFFF), Color(0xFFFFE9A8), Color(0xFF2FD2A0))),
+    Meridian("ClaudeOS 9 „Meridian“", listOf(Color(0xFFFFFFFF), Color(0xFFFFE9A8), Color(0xFFFF7A9C))),
 }
 
 /**

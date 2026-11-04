@@ -344,7 +344,7 @@ fun ZenithVersionHero(
             .drawBehind { if (look != null) drawZenithSpecCard(look, charge.value) else drawZenithCard(charge.value) },
     ) {
         val cardWidth = maxWidth
-        look?.aurora?.let { ZenithAurora(it, Modifier.matchParentSize(), strength = if (look?.horizon == true) 0.4f else 0.75f) }
+        look?.aurora?.let { ZenithAurora(it, Modifier.matchParentSize(), strength = if (look?.horizon == true || look?.meridian == true) 0.4f else 0.75f) }
         Column(
             Modifier.fillMaxWidth().padding(top = maxHeight * (if (saying) 0.075f else 0.1f)),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -361,7 +361,8 @@ fun ZenithVersionHero(
                 onCharged = if (look != null) goFireworks else null,
             )
             Text(
-                "ZENITH $version · ${look?.os.orEmpty().ifBlank { ClaudeOs.full }}",
+                // (The running version says its own ClaudeOS – a card kept from an older theme must not say "ClaudeOS 8" under a 22.)
+                "ZENITH $version · ${if (version == dev.hearth.launcher.BuildConfig.VERSION_NAME) ClaudeOs.full else look?.os.orEmpty().ifBlank { ClaudeOs.full }}",
                 color = Color.White.copy(alpha = 0.78f),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Light,
