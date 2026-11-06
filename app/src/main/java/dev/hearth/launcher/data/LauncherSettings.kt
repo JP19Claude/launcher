@@ -243,8 +243,15 @@ private fun LauncherSettings.withColorOsMode(): LauncherSettings = copy(
     showLabels = true,
     animations = true,
     fluidRims = FluidRims.Calm,
-    // Liquid Glass, as ColorOS 17 has it – clear, hardly tinted, bending what lies behind it with a deep lens, a fringe of colour at the
-    // rim and a bright edge of light; not frosted (little blur).
+    // (its glass: see withColorOsGlass)
+).withColorOsGlass()
+
+/**
+ * ZENITH 22.1: the glass of ColorOS 17 – Liquid Glass: clear, hardly tinted, bending what lies behind it with a deep lens, a fringe of
+ * colour at the rim and a bright edge of light; not frosted (little blur). "Be ColorOS" always draws it; switching on the ColorOS look of
+ * Projekt Zenith sets it once (the glass stays free to set there).
+ */
+fun LauncherSettings.withColorOsGlass(): LauncherSettings = copy(
     glassLook = GlassLook.Liquid,
     glassTint = GlassTint.Clear,
     glassBlur = 0.8f,

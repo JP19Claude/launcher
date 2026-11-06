@@ -379,7 +379,7 @@ private val Advantages = listOf(
     Advantage("Sicherungen mit Passwort", "Deine Einstellungen als Datei, mit AES-256 verschlüsselt – ohne dein Passwort liest sie niemand."),
     Advantage("Core Enforcer Studio", "Den ganzen Look würfeln, als Profil speichern und mit einem Tipp wechseln – Icons, Uhr, Dock, Glas, Farben.", oneUi = true),
     Advantage("Z-Angriff", "Die ZENITH-Animation in deiner Farbe und deinem Tempo – nach Updates, beim Tresor, beim Laden oder per Doppeltipp."),
-    Advantage("Projekt Zenith", "Ein verstecktes System im System – mit eigenem Glas-Modus und einem ColorOS-17.1-Look zum Einstellen."),
+    Advantage("Projekt Zenith", "Ein verstecktes System im System – mit eigenem Glas-Modus und einem ColorOS-17-Look zum Einstellen."),
     Advantage("ZENITH-Monitor", "Akku mit Temperatur und Spannung, Arbeitsspeicher, Speicher und Laufzeit live als Widget."),
     Advantage("Ein Spiel in jeder Version", "Jede ZENITH-Version versteckt ihr eigenes Easter Egg – samt Ruhmeshalle aller Funde.", oneUi = true, colorOs = true),
     Advantage("Werbeblocker fürs ganze Handy", "Ein Tipp, und AdGuard blockt Werbung und Tracker in allen Apps – ohne extra App."),

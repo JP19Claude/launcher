@@ -2243,8 +2243,8 @@ private fun ColorOSClock(settings: LauncherSettings, modifier: Modifier = Modifi
     val accent = settings.accent.color
 
     Column(modifier) {
-        ClockDigits(
-            settings,
+        // As on ColorOS 17: big light white digits, and every 1 in red (drawn as plain digits, also with "clocks of glass" on).
+        RollingText(
             text = time,
             color = Color.White,
             fontFamily = clockFamily(settings, null),
@@ -2253,6 +2253,7 @@ private fun ColorOSClock(settings: LauncherSettings, modifier: Modifier = Modifi
             lineHeight = 86.sp,
             letterSpacing = (-2).sp,
             style = OnWallpaperText,
+            charColor = { c -> if (c == '1') ColorOsRed else null },
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = date, color = Color.White.copy(alpha = 0.9f), fontSize = 16.sp, style = OnWallpaperText)
@@ -2284,6 +2285,9 @@ private fun ColorOSClock(settings: LauncherSettings, modifier: Modifier = Modifi
 }
 
 private val ClaudeTerracotta = Color(0xFFD97757)
+
+/** ColorOS's red: the 1 of its clock. */
+private val ColorOsRed = Color(0xFFFF3B30)
 
 /** One UI's home clock: big, bold digits set close, the date and battery underneath. */
 @Composable

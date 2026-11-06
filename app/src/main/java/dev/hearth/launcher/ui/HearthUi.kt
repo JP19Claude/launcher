@@ -238,6 +238,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "ColorOS 17: rotes Eins, Liquid Glass", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Rückmeldung: Das Glas soll Liquid Glass sein und der Look „ColorOS 17“ heißen – und bei der Uhr soll die 1 rot sein.",
+                        "Die Uhr im ColorOS-Look (auch in „Be ColorOS“) zeigt jede 1 in Rot, die übrigen Ziffern bleiben weiß und leicht. Sie wird jetzt immer als schlichte Ziffern gezeichnet, auch wenn „Uhren aus Glas“ an ist – Glasziffern können keine Farbe pro Ziffer.",
+                        "Der Schalter in Projekt Zenith heißt „ColorOS-17-Look“ (nicht mehr 17.1). Beim Einschalten stellt er einmal Liquid Glass ein – klar, wenig Unschärfe, tiefe Linse, Farbsaum, heller Lichtrand –, danach bleibt das Glas dort frei einstellbar. Die Voreinstellung „ColorOS“ unter „Glas einstellen“ ist dieselbe. In „Be ColorOS“ ist das Glas fest.",
+                        "Ehrlich dazu: Das Rot (ein kräftiges Rot, wie das von iOS) und die Glaswerte habe ich nach Gefühl gewählt; ein Foto der echten Uhr hilft, den Ton zu treffen.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Be ColorOS: der ganze Launcher als ColorOS 17", Icons.Rounded.Star, Green,
                     listOf(
                         "Rückmeldung: Im Clawd Illuminati soll es einen Modus geben, der den ganzen Launcher zu einer 1:1-Kopie von ColorOS 17 macht – das Glas, die Fluid-Animation, alles gleich.",

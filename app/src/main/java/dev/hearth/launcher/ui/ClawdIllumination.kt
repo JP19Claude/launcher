@@ -70,6 +70,7 @@ import dev.hearth.launcher.data.EasterEggs
 import dev.hearth.launcher.data.GlassTint
 import dev.hearth.launcher.data.LauncherSettings
 import dev.hearth.launcher.data.zenithMetal
+import dev.hearth.launcher.data.withColorOsGlass
 import dev.hearth.launcher.data.showSlogan
 import dev.hearth.launcher.data.Perk
 import dev.hearth.launcher.data.has
@@ -744,12 +745,17 @@ private fun ProjectZenithGate(settings: LauncherSettings, onChange: ((LauncherSe
             "Projekt Zenith aus echtem Flüssigglas statt Hologramm: Flächen und Dock biegen das Licht, grün getönt, mit den grünen Linien des HUD.",
             settings.projectZenithGlass,
         ) { v -> onChange { it.copy(projectZenithGlass = v, projectColorOs = if (v) false else it.projectColorOs) } }
-        // ZENITH 19.2: the whole system as ColorOS 17.1 dresses it, the glass free to set.
+        // ZENITH 19.2: the whole system as ColorOS 17 dresses it, in Liquid Glass (set once on switching on), the glass free to set.
         IlluminationSwitch(
-            "◐", "ColorOS-17.1-Look",
-            "Das ganze System im Stil von ColorOS 17.1 – Liquid Glass, runde Squircle-Icons, die ColorOS-Uhr, das ColorOS-Schnellmenü, schwebendes Dock, dein eigener Hintergrund. Das Glas stellst du unten frei ein; ausgeschaltet ist alles wieder wie vorher.",
+            "◐", "ColorOS-17-Look",
+            "Das ganze System im Stil von ColorOS 17 – Liquid Glass (beim Einschalten eingestellt), runde Squircle-Icons, die ColorOS-Uhr, das ColorOS-Schnellmenü, schwebendes Dock, dein eigener Hintergrund. Das Glas stellst du unten frei ein; ausgeschaltet ist alles wieder wie vorher.",
             settings.projectColorOs,
-        ) { v -> onChange { it.copy(projectColorOs = v, projectZenithGlass = if (v) false else it.projectZenithGlass) } }
+        ) { v ->
+            onChange {
+                val on = it.copy(projectColorOs = v, projectZenithGlass = if (v) false else it.projectZenithGlass)
+                if (v) on.withColorOsGlass() else on
+            }
+        }
         // ZENITH 19.3: the ColorOS look's own clock and dock.
         if (settings.projectColorOs) {
             ChoiceRow(

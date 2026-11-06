@@ -86,8 +86,29 @@ fun RollingText(
     letterSpacing: TextUnit = TextUnit.Unspecified,
     lineHeight: TextUnit = TextUnit.Unspecified,
     style: TextStyle = TextStyle.Default,
+    /** A colour of its own for some characters (ColorOS's clock: the 1 is red); null keeps [color]. */
+    charColor: ((Char) -> Color?)? = null,
 ) {
     if (!LocalSettings.current.animations) {
+        if (charColor != null) {
+            val painted = androidx.compose.ui.text.buildAnnotatedString {
+                text.forEach { c ->
+                    val own = charColor(c)
+                    if (own != null) {
+                        pushStyle(androidx.compose.ui.text.SpanStyle(color = own))
+                        append(c)
+                        pop()
+                    } else {
+                        append(c)
+                    }
+                }
+            }
+            Text(
+                painted, modifier, color = color, fontSize = fontSize, fontWeight = fontWeight, fontFamily = fontFamily,
+                fontStyle = fontStyle, letterSpacing = letterSpacing, lineHeight = lineHeight, style = style,
+            )
+            return
+        }
         Text(
             text, modifier, color = color, fontSize = fontSize, fontWeight = fontWeight, fontFamily = fontFamily,
             fontStyle = fontStyle, letterSpacing = letterSpacing, lineHeight = lineHeight, style = style,
@@ -107,7 +128,7 @@ fun RollingText(
                     label = "rollingChar",
                 ) { c ->
                     Text(
-                        c.toString(), color = color, fontSize = fontSize, fontWeight = fontWeight, fontFamily = fontFamily,
+                        c.toString(), color = charColor?.invoke(c) ?: color, fontSize = fontSize, fontWeight = fontWeight, fontFamily = fontFamily,
                         fontStyle = fontStyle, letterSpacing = letterSpacing, lineHeight = lineHeight, style = style,
                     )
                 }
