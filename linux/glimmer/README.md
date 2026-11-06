@@ -23,7 +23,8 @@ Außerhalb der Notch fängt Glimmer keine Mausklicks ab.
 Im Anwendungsmenü gibt es **„Glimmer"** (oder im Terminal `glimmer`, wenn es schon läuft). Das öffnet das Einstellungsfenster:
 Form (Notch oder die kleine Insel darunter), Größe und Breite/Höhe der Notch, was im Leerlauf zu sehen ist, Sprache, jedes Ereignis einzeln ein- und ausschalten, Start bei der Anmeldung –
 dazu die Knöpfe **Vorführung starten/beenden**, **Test-Benachrichtigung** und **Glimmer beenden**.
-Das Fenster zu schließen beendet Glimmer nicht, die Insel läuft weiter. Änderungen gelten sofort (Form und Größe nach einem kurzen Neustart).
+Das Fenster ist die Glimmer-App von ZENITH für den Desktop: derselbe dunkle Verlauf mit den driftenden Farben, die kleine Logo-Insel, eine Vorschau zum Antippen (sie geht durch Leerlauf, Musik, Laden, Benachrichtigung, Lautstärke und Akku schwach) und die Einstellungen in Glas-Karten; oben steht, was Glimmer auf deinem Desktop gefunden hat (Layer-Shell, Player, Benachrichtigungen, Lautstärke, Akku).
+Das Fenster zu schließen beendet Glimmer nicht, die Notch läuft weiter. Änderungen gelten sofort (Form und Größe nach einem kurzen Neustart).
 
 ## Voraussetzungen
 

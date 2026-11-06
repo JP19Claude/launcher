@@ -94,6 +94,7 @@ def _signal_add(sig, handler):
         warnings.simplefilter("ignore")
         return GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, sig, handler)
 
+FONT_FAMILY = "Roboto,Inter,Noto Sans,Cantarell,Sans"   # (ZENITH's own font first; Pango takes the first one the system has)
 DEBUG = bool(os.environ.get("GLIMMER_DEBUG"))
 # Programs we start must not inherit the preload (it would load GTK into every pactl call).
 CLEAN_ENV = {k: v for k, v in os.environ.items() if k != "LD_PRELOAD"}
@@ -331,7 +332,7 @@ def draw_text(cr, text, x, y, size, rgba, bold=False, max_w=None, align="left"):
         return 0
     layout = PangoCairo.create_layout(cr)
     fd = Pango.FontDescription()
-    fd.set_family("Sans")
+    fd.set_family(FONT_FAMILY)
     fd.set_weight(Pango.Weight.SEMIBOLD if bold else Pango.Weight.NORMAL)
     fd.set_absolute_size(size * Pango.SCALE)
     layout.set_font_description(fd)
@@ -355,7 +356,7 @@ def draw_text_block(cr, text, x, y, size, rgba, max_w, lines=2):
         return
     layout = PangoCairo.create_layout(cr)
     fd = Pango.FontDescription()
-    fd.set_family("Sans")
+    fd.set_family(FONT_FAMILY)
     fd.set_absolute_size(size * Pango.SCALE)
     layout.set_font_description(fd)
     layout.set_text(text, -1)
@@ -561,7 +562,7 @@ def alert_of(kind, data):
 def text_width(cr, text, size, bold=False):
     layout = PangoCairo.create_layout(cr)
     fd = Pango.FontDescription()
-    fd.set_family("Sans")
+    fd.set_family(FONT_FAMILY)
     fd.set_weight(Pango.Weight.SEMIBOLD if bold else Pango.Weight.NORMAL)
     fd.set_absolute_size(size * Pango.SCALE)
     layout.set_font_description(fd)
@@ -2071,27 +2072,69 @@ class App(Gtk.Application):
             return False
         text = html.unescape(re.sub(r"<[^>]+>", "", text or "")).strip()
         dur = clamp(timeout / 1000.0, 3.5, 8.0) if timeout and timeout > 0 else 5.0
-        self.post("notify", {"app": app, "summary": summary, "body": text, "icon": self.load_icon(icon)}, dur, 3)
+        self.post("notify", {"app": app, "summary": summary, "body": text, "icon": self.load_icon(icon, hints, app)}, dur, 3)
         return False
 
-    def load_icon(self, name):
-        if not name:
-            return None
+    def load_icon(self, name, hints=None, app_name=""):
+        """The app's picture for a notification: a picture sent with it, a file, a named icon of the theme, or the one of the program's
+        desktop entry. None if there is none (then a bell is drawn)."""
+        hints = hints or {}
+        size = 64
+        try:
+            data = hints.get("image-data") or hints.get("image_data") or hints.get("icon_data")
+            if data and len(data) >= 7:
+                w, h, rowstride, alpha, bits, channels, raw = data[:7]
+                pb = GdkPixbuf.Pixbuf.new_from_bytes(GLib.Bytes.new(bytes(raw)), GdkPixbuf.Colorspace.RGB, bool(alpha), bits, w, h, rowstride)
+                return pixbuf_to_surface(pb.scale_simple(size, size, GdkPixbuf.InterpType.BILINEAR))[0]
+        except Exception as e:  # noqa: BLE001
+            log("image-data:", e)
+        names = []
+        for key in ("image-path", "image_path"):
+            if hints.get(key):
+                names.append(str(hints[key]))
+        if name:
+            names.append(name)
+        entry = hints.get("desktop-entry")
+        if entry:
+            try:
+                info = Gio.DesktopAppInfo.new(str(entry) + ".desktop")
+                gicon = info.get_icon() if info is not None else None
+                if gicon is not None and hasattr(gicon, "get_names"):
+                    names += list(gicon.get_names())
+                elif gicon is not None and hasattr(gicon, "get_file"):
+                    names.append(gicon.get_file().get_path())
+            except Exception as e:  # noqa: BLE001
+                log("desktop entry:", e)
+        if app_name:
+            names.append(app_name.lower())
+        for n in names:
+            surf = self._icon_surface(n, size)
+            if surf is not None:
+                return surf
+        return None
+
+    def _icon_surface(self, name, size):
         try:
             path = None
             if name.startswith("file://"):
                 path = GLib.filename_from_uri(name)[0]
             elif name.startswith("/"):
                 path = name
-            else:
-                theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
-                paintable = theme.lookup_icon(name, None, 48, self.win.get_scale_factor() if self.win else 1, Gtk.TextDirection.NONE, 0)
-                f = paintable.get_file() if paintable is not None else None
-                path = f.get_path() if f is not None else None
-            if not path:
+            if path:
+                return pixbuf_to_surface(GdkPixbuf.Pixbuf.new_from_file_at_size(path, size, size))[0]
+            theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+            if not theme.has_icon(name):
                 return None
-            pb = GdkPixbuf.Pixbuf.new_from_file_at_size(path, 72, 72)
-            return pixbuf_to_surface(pb)[0]
+            paintable = theme.lookup_icon(name, None, size, 1, Gtk.TextDirection.NONE, 0)
+            # (The theme draws it itself, so svg and every other kind work as they do everywhere else on the desktop.)
+            snapshot = Gtk.Snapshot()
+            paintable.snapshot(snapshot, size, size)
+            node = snapshot.to_node()
+            if node is None:
+                return None
+            surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, size, size)
+            node.draw(cairo.Context(surf))
+            return surf
         except Exception as e:  # noqa: BLE001
             log("icon:", name, e)
             return None
@@ -2131,6 +2174,8 @@ class App(Gtk.Application):
         self.refresh()
         if self.area is not None:
             self.area.queue_draw()
+        if self.settings is not None and hasattr(self.settings, "refresh_preview"):
+            self.settings.refresh_preview()  # (the preview in the window follows at once)
 
     def _schedule_restart(self):
         if self._restart_id:
@@ -2327,164 +2372,404 @@ def set_autostart(on):
         print("Glimmer: der Autostart ließ sich nicht ändern (%s)." % e, file=sys.stderr)
 
 
+APP_CSS = """
+window.glimmer-app { background: #09090b; color: #ffffff; font-family: "Roboto", "Inter", "Noto Sans", "Cantarell", sans-serif; }
+.glimmer-app scrolledwindow, .glimmer-app viewport { background: transparent; }
+.glimmer-app undershoot, .glimmer-app overshoot { background: none; }
+.glimmer-app .g-title { font-size: 32px; font-weight: 600; color: #ffffff; }
+.glimmer-app .g-subtitle { font-size: 14px; color: rgba(255,255,255,0.65); }
+.glimmer-app .g-section { font-size: 13px; font-weight: 500; letter-spacing: 1px; color: rgba(255,255,255,0.65); margin: 20px 0 8px 10px; }
+.glimmer-app .g-card { background: rgba(255,255,255,0.085); border: 1px solid rgba(255,255,255,0.15); border-radius: 26px; padding: 6px 0; }
+.glimmer-app .g-row { padding: 11px 18px; }
+.glimmer-app .g-label { font-size: 15px; color: #ffffff; }
+.glimmer-app .g-desc { font-size: 13px; color: rgba(255,255,255,0.65); }
+.glimmer-app .g-divider { background: rgba(255,255,255,0.14); min-height: 1px; margin: 0 18px; }
+.glimmer-app .g-note { font-size: 13px; color: rgba(255,255,255,0.65); padding: 10px 18px 12px 18px; }
+.glimmer-app .g-caption { font-size: 12px; color: rgba(255,255,255,0.5); margin: 6px 0 4px 0; }
+.glimmer-app .g-footer { font-size: 12px; color: rgba(255,255,255,0.5); }
+.glimmer-app .g-on { color: #34c759; }
+.glimmer-app .g-off { color: #ff9f0a; }
+.glimmer-app button.g-action { background: transparent; border: none; border-radius: 0; box-shadow: none; padding: 0; min-height: 0; color: #ffffff; }
+.glimmer-app button.g-action:hover { background: rgba(255,255,255,0.07); }
+.glimmer-app button.g-action:active { background: rgba(255,255,255,0.12); }
+.glimmer-app .g-chevron { font-size: 20px; color: rgba(255,255,255,0.45); }
+.glimmer-app .g-danger { color: #ff453a; }
+.glimmer-app switch { min-width: 54px; min-height: 32px; border-radius: 16px; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.28); box-shadow: none; outline: none; }
+.glimmer-app switch:checked { background: #34c759; border-color: rgba(255,255,255,0.35); }
+.glimmer-app switch slider { min-width: 26px; min-height: 26px; margin: 2px; border-radius: 13px; background: #ffffff; border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+.glimmer-app switch image, .glimmer-app switch label { color: transparent; }
+.glimmer-app scale trough { min-height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; border: none; margin: 0; padding: 0; }
+.glimmer-app scale highlight { background: #ffffff; border-radius: 3px; border: none; margin: 0; padding: 0; min-width: 0; min-height: 0; }
+.glimmer-app scale slider { min-width: 22px; min-height: 22px; margin: -8px; background: #ffffff; border-radius: 11px; border: none; box-shadow: 0 1px 4px rgba(0,0,0,0.45); }
+.glimmer-app scale value { font-size: 14px; color: rgba(255,255,255,0.65); }
+.glimmer-app dropdown > button { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); border-radius: 15px; box-shadow: none; padding: 5px 12px; color: #ffffff; min-height: 24px; }
+.glimmer-app dropdown > button:hover { background: rgba(255,255,255,0.18); }
+.glimmer-app popover contents { background: #1c1b22; border-radius: 16px; border: 1px solid rgba(255,255,255,0.14); }
+.glimmer-app scrollbar slider { background: rgba(255,255,255,0.25); }
+"""
+
+
 def build_settings(app):
-    """The window of the app: what is shown, how it looks, a demo, and the way to quit."""
+    """The app's window, like the Glimmer app of ZENITH: dark, with Glimmer's colours drifting behind it, a little island as its logo, a live
+    preview you can tap, and the settings in cards of glass."""
     cfg = app.cfg
+    display = Gdk.Display.get_default()
+    provider = Gtk.CssProvider()
+    try:
+        provider.load_from_string(APP_CSS)
+    except AttributeError:
+        provider.load_from_data(APP_CSS.encode(), -1)
+    Gtk.StyleContext.add_provider_for_display(display, provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+
     win = Gtk.Window(application=app)
     win.set_title("Glimmer")
-    win.set_default_size(500, 700)
+    win.set_default_size(470, 880)
+    win.add_css_class("glimmer-app")
     win.connect("close-request", lambda w: (w.set_visible(False), True)[1])  # closing the window does not end Glimmer
 
-    outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-    win.set_child(outer)
+    overlay = Gtk.Overlay()
+    win.set_child(overlay)
+
+    # --- behind everything: the dark gradient, and the colours drifting through it (as ZENITH's Fluid backdrop)
+    def draw_backdrop(area, cr, w, h, *rest):
+        t = (time.monotonic() % 24.0) / 24.0 * 2.0 * math.pi
+        g = cairo.LinearGradient(0, 0, 0, h)
+        g.add_color_stop_rgb(0.0, 0x1B / 255, 0x17 / 255, 0x20 / 255)
+        g.add_color_stop_rgb(1.0, 0x09 / 255, 0x09 / 255, 0x0B / 255)
+        cr.set_source(g)
+        cr.paint()
+        colours = [(1.0, 0.624, 0.039), (0.557, 0.42, 1.0), (0.851, 0.467, 0.341)]
+        for i, c in enumerate(colours):
+            phase = i * 2.1
+            cx = w * (0.5 + 0.38 * math.cos(t + phase))
+            cy = h * (0.32 + 0.26 * math.sin(t * 0.8 + phase * 1.3) + 0.22 * i / len(colours))
+            r = w * (0.55 + 0.12 * math.sin(t * 1.3 + phase))
+            rg = cairo.RadialGradient(cx, cy, 0, cx, cy, r)
+            rg.add_color_stop_rgba(0.0, *c, 0.26 * 0.8)
+            rg.add_color_stop_rgba(1.0, *c, 0.0)
+            cr.set_source(rg)
+            cr.arc(cx, cy, r, 0, 2 * math.pi)
+            cr.fill()
+    backdrop = Gtk.DrawingArea()
+    backdrop.set_hexpand(True)
+    backdrop.set_vexpand(True)
+    backdrop.set_draw_func(draw_backdrop)
+    overlay.set_child(backdrop)
+
     scroll = Gtk.ScrolledWindow()
-    scroll.set_vexpand(True)
     scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-    outer.append(scroll)
-    page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-    for side in ("top", "bottom", "start", "end"):
-        getattr(page, "set_margin_" + side)(20)
+    scroll.set_hexpand(True)
+    scroll.set_vexpand(True)
+    overlay.add_overlay(scroll)
+    page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+    page.set_margin_start(16)
+    page.set_margin_end(16)
+    page.set_margin_top(12)
+    page.set_margin_bottom(24)
     scroll.set_child(page)
 
-    def lbl(text, markup=False, css=(), wrap=False):
-        label = Gtk.Label(xalign=0.0)
-        (label.set_markup if markup else label.set_text)(text)
+    def lbl(text, css, wrap=False, xalign=0.0):
+        label = Gtk.Label(xalign=xalign)
+        label.set_text(text)
+        label.add_css_class(css)
         if wrap:
             label.set_wrap(True)
-            label.set_max_width_chars(46)
-        for c in css:
-            label.add_css_class(c)
+            label.set_max_width_chars(44)
         return label
 
-    def section(title):
-        head = lbl("<b>%s</b>" % title, markup=True)
-        head.set_margin_top(16)
+    # --- the logo: a little island that breathes
+    def draw_logo(area, cr, w, h, *rest):
+        k = 0.5 - 0.5 * math.cos(2.0 * math.pi * time.monotonic() / 4.4)
+        pw, ph = 120 + 48 * k, 34
+        x, y = (w - pw) / 2.0, (h - ph) / 2.0
+        body_path(cr, x, y, pw, ph, ph / 2.0, ph / 2.0)
+        cr.set_source_rgb(0, 0, 0)
+        cr.fill()
+        draw_glyph(cr, "spark", x + 9, y + 6, 22, (0.851, 0.467, 0.341))
+        rrect(cr, x + pw - 24, y + 11, 12, 12, 6)
+        cr.set_source_rgb(0x1C / 255, 0x1C / 255, 0x22 / 255)
+        cr.fill()
+    logo = Gtk.DrawingArea()
+    logo.set_content_width(260)
+    logo.set_content_height(62)
+    logo.set_draw_func(draw_logo)
+    logo.set_halign(Gtk.Align.CENTER)
+    logo.set_margin_top(14)
+    page.append(logo)
+    title = lbl("Glimmer", "g-title", xalign=0.5)
+    title.set_margin_top(6)
+    page.append(title)
+    page.append(lbl("Die Notch auf deinem Desktop, in jeder App", "g-subtitle", xalign=0.5))
+
+    # --- the preview: tap it to unfold, like the real one
+    demo_player_obj = demo_player(cfg)
+    preview_state = {"isl": None, "index": 0, "last": time.monotonic()}
+
+    def demos():
+        return [
+            ("idle", None),
+            ("music", demo_player_obj),
+            ("power", {"state": "charging", "pct": 72}),
+            ("notify", {"app": "Signal", "summary": "Mia", "body": "Kommst du später noch vorbei? Ich bring Kuchen mit.", "icon": None}),
+            ("volume", {"pct": 64, "muted": False}),
+            ("power", {"state": "low", "pct": 19}),
+        ]
+
+    def new_preview():
+        isl = Island(dict(app.cfg, scale=1.0))
+        preview_state["isl"] = isl
+        kind, data = demos()[preview_state["index"]]
+        isl.show(kind, data, False)
+        isl.snap()
+    new_preview()
+
+    def draw_preview(area, cr, w, h, *rest):
+        cr.save()
+        rrect(cr, 0, 0, w, h, 28)
+        cr.clip()
+        g = cairo.LinearGradient(0, 0, 0, h)
+        g.add_color_stop_rgb(0.0, 0x3A / 255, 0x2F / 255, 0x4A / 255)
+        g.add_color_stop_rgb(1.0, 0x15 / 255, 0x12 / 255, 0x1B / 255)
+        cr.set_source(g)
+        cr.paint()
+        preview_state["isl"].draw(cr, w, h, time.monotonic())
+        cr.restore()
+    preview = Gtk.DrawingArea()
+    preview.set_content_height(150)
+    preview.set_hexpand(True)
+    preview.set_draw_func(draw_preview)
+    preview.set_margin_top(18)
+    page.append(preview)
+    page.append(lbl("Vorschau · antippen zum Aufklappen", "g-caption", xalign=0.5))
+
+    def preview_tap(gesture, n, x, y):
+        isl = preview_state["isl"]
+        if isl.kind in (None, "idle"):
+            return
+        kind, data = isl.kind, isl.data
+        isl.show(kind, data, not isl.expanded)
+        preview_state["last"] = time.monotonic()
+    click = Gtk.GestureClick()
+    click.connect("pressed", preview_tap)
+    preview.add_controller(click)
+
+    # --- cards
+    def section(text):
+        head = lbl(text.upper(), "g-section")
         page.append(head)
-        frame = Gtk.Frame()
-        box = Gtk.ListBox()
-        box.set_selection_mode(Gtk.SelectionMode.NONE)
-        frame.set_child(box)
-        page.append(frame)
-        return box
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        card.add_css_class("g-card")
+        card.set_overflow(Gtk.Overflow.HIDDEN)
+        page.append(card)
+        return card
 
-    def add_row(box, title, sub, widget):
-        row = Gtk.ListBoxRow()
-        row.set_activatable(False)
-        line = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        for side in ("top", "bottom"):
-            getattr(line, "set_margin_" + side)(9)
-        for side in ("start", "end"):
-            getattr(line, "set_margin_" + side)(12)
-        texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        texts.set_hexpand(True)
-        texts.append(lbl(title))
-        if sub:
-            texts.append(lbl(sub, css=("dim-label", "caption"), wrap=True))
+    def divider(card):
+        if card.get_first_child() is not None:
+            sep = Gtk.Box()
+            sep.add_css_class("g-divider")
+            card.append(sep)
+
+    def texts(label, desc):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        box.set_hexpand(True)
+        box.append(lbl(label, "g-label"))
+        d = None
+        if desc is not None:
+            d = lbl(desc, "g-desc", wrap=True)
+            box.append(d)
+        return box, d
+
+    def add_row(card, label, desc, widget):
+        divider(card)
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        row.add_css_class("g-row")
+        box, _ = texts(label, desc)
         widget.set_valign(Gtk.Align.CENTER)
-        line.append(texts)
-        line.append(widget)
-        row.set_child(line)
-        box.append(row)
+        row.append(box)
+        row.append(widget)
+        card.append(row)
 
-    def add_switch(box, key, title, sub=""):
+    def add_switch(card, key, label, desc=None):
         sw = Gtk.Switch()
         sw.set_active(bool(cfg[key]))
         sw.connect("notify::active", lambda w, _p: app.set_option(key, w.get_active()))
-        add_row(box, title, sub, sw)
+        add_row(card, label, desc, sw)
 
-    page.append(lbl('<span size="xx-large" weight="bold">Glimmer</span>', markup=True))
-    page.append(lbl("Version %s · die Insel am oberen Bildschirmrand" % APP_VERSION, css=("dim-label",)))
-    status = ("Läuft. Die Insel sitzt oben am Bildschirmrand (Layer-Shell). Ein Tipp auf die leere Notch öffnet dieses Fenster."
-              if app.layered else
-              "Läuft als normales Fenster: ohne Layer-Shell (GNOME oder X11) sitzt die Insel nicht am Rand.")
-    page.append(lbl(status, css=("dim-label",), wrap=True))
+    def add_slider(card, key, label, desc, lo, hi, step, digits=0, as_int=True):
+        sc = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, lo, hi, step)
+        sc.set_value(float(cfg[key]))
+        sc.set_digits(digits)
+        sc.set_draw_value(True)
+        sc.set_value_pos(Gtk.PositionType.RIGHT)
+        sc.set_size_request(170, -1)
+        sc.connect("value-changed", lambda w: app.set_option(key, int(w.get_value()) if as_int else round(w.get_value(), 2)))
+        add_row(card, label, desc, sc)
 
-    box = section("Aussehen")
-    shape = Gtk.DropDown.new_from_strings(["Notch – am Rand angewachsen", "Insel – schwebt mit Abstand"])
-    shape.set_selected(0 if cfg["mode"] == "notch" else 1)
-    shape.connect("notify::selected", lambda w, _p: app.set_option("mode", "notch" if w.get_selected() == 0 else "island"))
-    add_row(box, "Form", "Notch wie beim MacBook, oder die kleine Insel darunter. Glimmer startet kurz neu.", shape)
-    size = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.6, 1.6, 0.05)
-    size.set_value(float(cfg["scale"]))
-    size.set_digits(2)
-    size.set_draw_value(True)
-    size.set_size_request(190, -1)
-    size.connect("value-changed", lambda w: app.set_option("scale", round(w.get_value(), 2)))
-    add_row(box, "Größe", "1,00 ist normal.", size)
-    idles = ["pill", "clock", "off"]
-    idle = Gtk.DropDown.new_from_strings(["Leere Notch", "Notch mit Uhrzeit", "Unsichtbar"])
-    idle.set_selected(idles.index(cfg["idle"]) if cfg["idle"] in idles else 0)
-    idle.connect("notify::selected", lambda w, _p: app.set_option("idle", idles[w.get_selected()]))
-    add_row(box, "Wenn nichts passiert", "Wie bei ZENITH bleibt die leere Notch stehen und wächst bei Ereignissen.", idle)
-    nw = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 120, 320, 5)
-    nw.set_value(float(cfg["notch_width"]))
-    nw.set_digits(0)
-    nw.set_draw_value(True)
-    nw.set_size_request(190, -1)
-    nw.connect("value-changed", lambda w: app.set_option("notch_width", int(w.get_value())))
-    add_row(box, "Breite der Notch", "In dp; 190 ist die Breite der MacBook-Notch in ZENITH.", nw)
-    nh = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 24, 60, 1)
-    nh.set_value(float(cfg["notch_height"]))
-    nh.set_digits(0)
-    nh.set_draw_value(True)
-    nh.set_size_request(190, -1)
-    nh.connect("value-changed", lambda w: app.set_option("notch_height", int(w.get_value())))
-    add_row(box, "Höhe der Notch", "34 wie in ZENITH.", nh)
-    fold = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 30, 1)
-    fold.set_value(float(cfg["auto_collapse"]))
-    fold.set_digits(0)
-    fold.set_draw_value(True)
-    fold.set_size_request(190, -1)
-    fold.connect("value-changed", lambda w: app.set_option("auto_collapse", int(w.get_value())))
-    add_row(box, "Aufgeklappt nach … Sekunden zuklappen", "0: bleibt aufgeklappt, bis du wieder tippst.", fold)
-    langs = ["auto", "de", "en"]
-    lang = Gtk.DropDown.new_from_strings(["Automatisch", "Deutsch", "English"])
-    lang.set_selected(langs.index(cfg["language"]) if cfg["language"] in langs else 0)
-    lang.connect("notify::selected", lambda w, _p: app.set_option("language", langs[w.get_selected()]))
-    add_row(box, "Sprache der Insel", "", lang)
+    def add_choice(card, key, label, desc, values, names):
+        dd = Gtk.DropDown.new_from_strings(names)
+        dd.set_selected(values.index(cfg[key]) if cfg[key] in values else 0)
+        dd.connect("notify::selected", lambda w, _p: app.set_option(key, values[w.get_selected()]))
+        add_row(card, label, desc, dd)
 
-    box = section("Musik")
-    add_switch(box, "music", "Musik zeigen", "Spotify, Firefox, VLC, mpv … – jeder Player, der sich meldet (MPRIS).")
-    add_switch(box, "music_persistent", "Kleine Notch mit Cover und Wellen, solange Musik läuft")
-    add_switch(box, "hover_reveal", "Maus auf der Notch klappt die Musik auf", "Zusätzlich zum Tippen; die Maus einen Moment dort lassen.")
+    def add_action(card, label, desc=None, on_click=None, danger=False, chevron=True):
+        divider(card)
+        button = Gtk.Button()
+        button.add_css_class("g-action")
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        row.add_css_class("g-row")
+        box, d = texts(label, desc)
+        name = box.get_first_child()
+        if danger:
+            name.add_css_class("g-danger")
+        row.append(box)
+        if chevron:
+            arrow = lbl("›", "g-chevron")
+            arrow.set_valign(Gtk.Align.CENTER)
+            row.append(arrow)
+        button.set_child(row)
+        if on_click:
+            button.connect("clicked", lambda _b: on_click())
+        card.append(button)
+        return name, d
 
-    box = section("Ereignisse")
-    add_switch(box, "charging", "Laden", "Grüner Lichtstreifen beim Anstecken, „Voll geladen“.")
-    add_switch(box, "low_battery", "Akku schwach", "Bei 20 % und 10 %.")
-    add_switch(box, "volume", "Lautstärke", "KDE zeigt dazu auch seine eigene Anzeige.")
-    add_switch(box, "notifications", "Benachrichtigungen", "Glimmer liest nur mit, die normalen Benachrichtigungen bleiben.")
+    # --- Einrichten: what Glimmer found on this desktop
+    card = section("Einrichten")
+    status_labels = {}
 
-    box = section("Start")
-    add_switch(box, "greet", "Beim Start „Glimmer läuft“ zeigen")
+    def status_row(key, label):
+        divider(card)
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        row.add_css_class("g-row")
+        box, d = texts(label, "")
+        state = lbl("", "g-label", xalign=1.0)
+        state.set_valign(Gtk.Align.CENTER)
+        row.append(box)
+        row.append(state)
+        card.append(row)
+        status_labels[key] = (state, d)
+
+    status_row("layer", "Layer-Shell")
+    status_row("music", "Musik (MPRIS)")
+    status_row("notify", "Benachrichtigungen")
+    status_row("volume", "Lautstärke")
+    status_row("battery", "Akku")
+
+    def refresh_status():
+        def put(key, on, text, desc):
+            state, d = status_labels[key]
+            state.set_text("An" if on else "Aus")
+            state.remove_css_class("g-on")
+            state.remove_css_class("g-off")
+            state.add_css_class("g-on" if on else "g-off")
+            d.set_text(text if on else desc)
+        put("layer", app.layered, "Die Notch sitzt oben am Bildschirmrand.",
+            "Ohne Layer-Shell (GNOME, X11) läuft sie nur als Fenster in der Ecke.")
+        names = [p.name.replace(MPRIS_PREFIX, "") for p in app.mpris.players.values() if p.known and not p.owner.startswith(":demo")]
+        put("music", bool(names), ", ".join(sorted(set(names))), "Kein Player läuft: Spotify, Firefox, VLC … melden sich von selbst.")
+        put("notify", getattr(app, "_notif_conn", None) is not None, "Glimmer liest mit; die normalen Benachrichtigungen bleiben.",
+            "Nicht erreichbar: der Nachrichtenbus erlaubt das Mitlesen nicht.")
+        tool = shutil.which("pactl") or shutil.which("wpctl")
+        put("volume", tool is not None, os.path.basename(tool) if tool else "", "Weder pactl noch wpctl gefunden (sudo pacman -S libpulse).")
+        info = read_power()
+        put("battery", info is not None, ("%d %%%s" % (info["pct"], ", am Strom" if info["plugged"] else "")) if info else "",
+            "Kein Akku gefunden (ein Desktop-PC hat keinen).")
+    refresh_status()
+    win.connect("map", lambda *_: refresh_status())
+    note = lbl("Glimmer läuft mit jedem Desktop mit Layer-Shell, auch mit mehreren Bildschirmen (Einstellung „monitor“ in der Datei).", "g-note", wrap=True)
+    card.append(note)
+
+    # --- the notch
+    card = section("Notch")
+    add_choice(card, "mode", "Form", "Die MacBook-Notch am Rand oder die kleine Insel darunter. Glimmer startet kurz neu.",
+               ["notch", "island"], ["Notch", "Insel"])
+    add_slider(card, "scale", "Größe", "1,00 ist normal.", 0.6, 1.6, 0.05, digits=2, as_int=False)
+    add_slider(card, "notch_width", "Breite der Notch", "190 wie in ZENITH.", 120, 320, 5)
+    add_slider(card, "notch_height", "Höhe der Notch", "34 wie in ZENITH.", 24, 60, 1)
+    add_choice(card, "idle", "Wenn nichts passiert", "Wie bei ZENITH bleibt die leere Notch stehen und wächst bei Ereignissen.",
+               ["pill", "clock", "off"], ["Leere Notch", "Mit Uhrzeit", "Unsichtbar"])
+    add_slider(card, "auto_collapse", "Aufgeklappt zuklappen nach", "Sekunden; 0: bleibt aufgeklappt, bis du wieder tippst.", 0, 30, 1)
+    add_choice(card, "language", "Sprache", None, ["auto", "de", "en"], ["Automatisch", "Deutsch", "English"])
+
+    # --- what it shows
+    card = section("Musik")
+    add_switch(card, "music", "Musik zeigen", "Jeder Player, der sich meldet (MPRIS).")
+    add_switch(card, "music_persistent", "Kleine Notch mit Cover und Wellen", "Solange Musik läuft.")
+    add_switch(card, "hover_reveal", "Maus auf der Notch klappt die Musik auf", "Zusätzlich zum Tippen; die Maus einen Moment dort lassen.")
+    card = section("Ereignisse")
+    add_switch(card, "charging", "Laden", "Grüner Funke und ein Lichtstreifen beim Anstecken, „Vollständig geladen“.")
+    add_switch(card, "low_battery", "Akku schwach", "Bei 20 % und 10 %.")
+    add_switch(card, "volume", "Lautstärke", "KDE zeigt dazu auch seine eigene Anzeige.")
+    add_switch(card, "notifications", "Benachrichtigungen", "App-Symbol und ein pulsierender Punkt; tippen klappt den Text auf.")
+
+    card = section("Start")
+    add_switch(card, "greet", "Beim Start „Glimmer läuft“ zeigen")
     auto = Gtk.Switch()
     auto.set_active(os.path.exists(AUTOSTART_FILE))
     auto.connect("notify::active", lambda w, _p: set_autostart(w.get_active()))
-    add_row(box, "Bei der Anmeldung starten", "", auto)
+    add_row(card, "Bei der Anmeldung starten", None, auto)
 
-    note = lbl("Das Fenster zu schließen beendet Glimmer nicht – die Insel läuft weiter. Zum Beenden: „Glimmer beenden“.",
-               css=("dim-label", "caption"), wrap=True)
-    note.set_margin_top(14)
-    page.append(note)
-
-    bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-    for side in ("top", "bottom", "start", "end"):
-        getattr(bar, "set_margin_" + side)(12)
-    demo = Gtk.Button(label="Vorführung starten")
-    app.demo_button = demo
+    card = section("Ausprobieren")
+    name, _d = add_action(card, "Vorführung starten", "Zeigt der Reihe nach alle Ereignisse.", lambda: app.stop_demo() if app.demo_running() else app.start_demo())
+    app.demo_button = name
     app._sync_demo_button()
-    demo.connect("clicked", lambda _b: app.stop_demo() if app.demo_running() else app.start_demo())
-    test = Gtk.Button(label="Test-Benachrichtigung")
-    test.connect("clicked", lambda _b: app.post(
+    add_action(card, "Test-Benachrichtigung", "So sieht eine Benachrichtigung aus.", lambda: app.post(
         "notify", {"app": "Glimmer", "summary": "So sieht eine Benachrichtigung aus", "body": "Mit zwei Zeilen Text darunter.", "icon": None}, 4.0, 3))
-    spacer = Gtk.Box()
-    spacer.set_hexpand(True)
-    quit_btn = Gtk.Button(label="Glimmer beenden")
-    quit_btn.add_css_class("destructive-action")
-    quit_btn.connect("clicked", lambda _b: app.quit_app())
-    for w in (demo, test, spacer, quit_btn):
-        bar.append(w)
-    outer.append(Gtk.Separator())
-    outer.append(bar)
+    add_action(card, "Glimmer beenden", "Das Fenster zu schließen beendet Glimmer nicht, die Notch läuft weiter.", app.quit_app, danger=True, chevron=False)
+
+    footer = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+    footer.set_halign(Gtk.Align.CENTER)
+    footer.set_margin_top(22)
+
+    def draw_spark(area, cr, w, h, *rest):
+        draw_glyph(cr, "spark", 0, 0, 14, app.island.accent)
+    spark = Gtk.DrawingArea()
+    spark.set_content_width(14)
+    spark.set_content_height(14)
+    spark.set_draw_func(draw_spark)
+    spark.set_valign(Gtk.Align.CENTER)
+    footer.append(spark)
+    footer.append(lbl("Glimmer für Linux %s · Teil von ZENITH" % APP_VERSION, "g-footer"))
+    page.append(footer)
+
+    # --- life: the backdrop drifts, the logo breathes, the preview goes through its moments (30 frames a second, only while it is on screen)
+    state = {"id": 0, "last": time.monotonic(), "n": 0, "ph": 150.0, "shown": 150.0}
+
+    def tick():
+        if not win.get_mapped():
+            state["id"] = 0
+            return False
+        now = time.monotonic()
+        dt = min(now - state["last"], 0.05)
+        state["last"] = now
+        state["n"] += 1
+        isl = preview_state["isl"]
+        isl.step(dt)
+        # (moves on by itself while folded; stays put while you look at it unfolded)
+        if not isl.expanded and now - preview_state["last"] > 2.6:
+            preview_state["last"] = now
+            preview_state["index"] = (preview_state["index"] + 1) % len(demos())
+            kind, data = demos()[preview_state["index"]]
+            isl.show(kind, data, False)
+        want = clamp(isl.h.x + 44, 150.0, 270.0)
+        state["ph"] += (want - state["ph"]) * min(1.0, dt * 12.0)
+        if abs(state["ph"] - state["shown"]) >= 1.0:
+            state["shown"] = state["ph"]
+            preview.set_content_height(int(state["ph"]))
+        preview.queue_draw()
+        logo.queue_draw()
+        if state["n"] % 3 == 0:
+            backdrop.queue_draw()
+        return True
+
+    def start_ticks(*_):
+        if not state["id"]:
+            state["last"] = time.monotonic()
+            state["id"] = GLib.timeout_add(33, tick)
+    win.connect("map", start_ticks)
+
+    def refresh_preview():
+        new_preview()
+    win.refresh_preview = refresh_preview
     return win
 
 
