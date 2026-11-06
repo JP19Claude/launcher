@@ -51,6 +51,8 @@ def _preload_layer_shell():
 
 
 _preload_layer_shell()
+# Glimmer draws everything itself; the built-in theme keeps a broken system theme from filling the terminal with warnings.
+os.environ.setdefault("GTK_THEME", "Adwaita")
 
 import argparse  # noqa: E402
 import html  # noqa: E402
