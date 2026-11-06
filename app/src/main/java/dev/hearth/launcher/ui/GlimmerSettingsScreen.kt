@@ -32,6 +32,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import dev.hearth.launcher.data.LiveNotice
+import dev.hearth.launcher.data.NoticeKind
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -305,6 +309,22 @@ private fun GlimmerPreview(chosen: LauncherSettings, media: MediaRepository) {
     val demos = remember {
         listOf<IslandContent>(
             IslandContent.Idle,
+            // A notification with words (unfold it: the card grows with them) and a live update with words beside the camera.
+            IslandContent.Message(
+                LiveNotice(
+                    key = "demo-msg", packageName = "", appLabel = "Signal", title = "Mia",
+                    text = "Kommst du später noch vorbei? Ich bring Kuchen mit – und die Fotos vom Wochenende habe ich auch dabei.",
+                    kind = NoticeKind.Message, chronometerBase = 0L, countDown = false, progress = 0, progressMax = 0,
+                    indeterminate = false, icon = null, contentIntent = null, actions = emptyList(),
+                ),
+            ),
+            IslandContent.Live(
+                LiveNotice(
+                    key = "demo-nav", packageName = "", appLabel = "Karten", title = "In 200 m rechts abbiegen", text = "Hauptstraße",
+                    kind = NoticeKind.Navigation, chronometerBase = 0L, countDown = false, progress = 0, progressMax = 0,
+                    indeterminate = false, icon = null, contentIntent = null, actions = emptyList(),
+                ),
+            ),
             IslandContent.Charging(72),
             IslandContent.Code("482913", "Bank", null),
             IslandContent.Alert(Glyph.Bell, "Klingeln", "An", Color(0xFFFF9F0A)),
@@ -326,11 +346,23 @@ private fun GlimmerPreview(chosen: LauncherSettings, media: MediaRepository) {
     val content = demos[index].let { if (s.glimmerDynamicStyle && it is IslandContent.Lock) IslandContent.Idle else it }
     val unfoldable = content !is IslandContent.Idle && content !is IslandContent.Lock
     val screenWidth = LocalConfiguration.current.screenWidthDp.toFloat()
+    // The preview is as tall as the island is now (unfolded, it grows with it – a fixed height cut the card off).
+    var islandHeight by remember { mutableStateOf(0.dp) }
+    val lift = when {
+        s.glimmerHangs -> 0
+        s.glimmerIsMacIsland -> 6
+        else -> 14
+    } + (if (s.glimmerHangs) s.glimmerOffsetY.coerceAtLeast(0) else s.glimmerOffsetY.coerceAtLeast(0))
+    val previewHeight by animateDpAsState(
+        (islandHeight + lift.dp + 30.dp).coerceAtLeast(150.dp),
+        spring(dampingRatio = 0.9f, stiffness = 300f),
+        label = "previewHeight",
+    )
     Column(Modifier.padding(vertical = 8.dp)) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(150.dp)
+                .height(previewHeight)
                 .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF3A2F4A), Color(0xFF15121B)))),
         ) {
@@ -376,7 +408,7 @@ private fun GlimmerPreview(chosen: LauncherSettings, media: MediaRepository) {
                         onToggle = { expanded = !expanded },
                         onCollapse = { expanded = false },
                         onOpen = { expanded = false },
-                        onTargetSize = {},
+                        onTargetSize = { islandHeight = it.height },
                     )
                 }
             }

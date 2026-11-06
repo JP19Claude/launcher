@@ -1331,6 +1331,9 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             description = "Die kleine Insel ist 15 % schmaler; aufgeklappt bleibt Glimmer so groß wie bei 100 %. Höhe, Inhalte und Schrift bleiben gleich",
             checked = s.glimmerSmall,
         ) { v -> update { it.copy(glimmerSmall = v) } }
+        // How big the unfolded island or notch is (a long notification makes it taller by itself).
+        PercentSlider("Aufgeklappt: Breite", s.glimmerExpand.width, 0.8f..1.3f) { v -> update { it.copy(glimmerExpand = it.glimmerExpand.copy(width = v)) } }
+        PercentSlider("Aufgeklappt: Höhe", s.glimmerExpand.height, 0.8f..1.5f) { v -> update { it.copy(glimmerExpand = it.glimmerExpand.copy(height = v)) } }
         if (nt) {
             IntSlider("Breite der Kerbe", s.glimmerNotch.width, 80..420, " dp") { v -> update { it.copy(glimmerNotch = it.glimmerNotch.copy(width = v)) } }
             IntSlider("Höhe der Kerbe", s.glimmerNotch.height, 16..90, " dp") { v -> update { it.copy(glimmerNotch = it.glimmerNotch.copy(height = v)) } }

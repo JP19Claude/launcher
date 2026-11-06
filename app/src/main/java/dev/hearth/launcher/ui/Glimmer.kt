@@ -54,6 +54,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -360,6 +361,9 @@ fun islandSize(
     notch: DpSize? = null,
     /** In the notch mode: the room left for content on each side of it (the island's pill, with no camera in it, needs less). */
     notchRoom: Dp = 112.dp,
+    /** The setting "unfolded size": how much wider and taller the unfolded island is than usual. */
+    expandWidth: Float = 1f,
+    expandHeight: Float = 1f,
 ): DpSize {
     // Unfolded it's always as wide as at 100 % (the 85 % mode only slims the small states).
     // (Hanging from the screen's edge as the MacBook's notch, unfolded it stays a card of 380 dp, not as wide as the screen would let it.)
@@ -380,20 +384,55 @@ fun islandSize(
         content is IslandContent.Lock -> if (notch != null) DpSize(notch.width + 26.dp, notch.height) else DpSize(idle.dp + 26.dp, ISLAND_HEIGHT_DP.dp)
         // Like Face ID on the iPhone: the island becomes a rounded square for the moment.
         content is IslandContent.Unlock -> DpSize(UNLOCK_SIZE_DP.dp, UNLOCK_SIZE_DP.dp)
-        !expanded -> DpSize(compact, barHeight)
-        else -> DpSize(
-            full,
-            cameraClearance + when (content) {
+        // (A live update with words – navigation, alarm – gets the room for them on both sides of the camera, not just one word.)
+        !expanded -> DpSize((compact + compactTextExtra(content) * 2f).coerceAtMost((screenWidthDp - 40f).dp).coerceAtLeast(compact), barHeight)
+        else -> {
+            // The unfolded card: the usual size times the setting, never wider than the screen.
+            val width = (full.value * expandWidth).coerceIn(minOf(160f, screenWidthDp - 8f), maxOf(screenWidthDp - 8f, 160f)).dp
+            // A notification's words are not cut off: the card grows with a long title or text.
+            val body = when (content) {
                 is IslandContent.Media -> 178.dp
-                is IslandContent.Live -> if (content.notice.actions.isNotEmpty()) 158.dp else 116.dp
-                is IslandContent.Message -> if (content.notice.actions.isNotEmpty()) 160.dp else 124.dp
+                is IslandContent.Live -> (if (content.notice.actions.isNotEmpty()) 158.dp else 116.dp) + noticeTextExtra(content.notice, width.value)
+                is IslandContent.Message -> (if (content.notice.actions.isNotEmpty()) 160.dp else 124.dp) + noticeTextExtra(content.notice, width.value)
                 is IslandContent.Charging -> 96.dp
                 is IslandContent.Code -> 112.dp
                 is IslandContent.Screenshot -> 132.dp
                 else -> 96.dp
-            },
-        )
+            }
+            DpSize(width, cameraClearance + body * expandHeight)
+        }
     }.let { if (hasSecondary && !expanded && !isPassive(content)) DpSize(it.width + SecondaryExtra, it.height) else it }
+}
+
+/**
+ * How much taller the unfolded card has to be for a notification's words: its title may run over two lines and its text over up to six
+ * (the card used to keep to two lines and cut the rest off with dots). An estimate from the number of characters and the room beside
+ * the badge – a little generous, so the last line is never squeezed.
+ */
+internal fun noticeTextExtra(notice: LiveNotice, widthDp: Float): Dp {
+    val timer = notice.kind == NoticeKind.Call || notice.kind == NoticeKind.Timer || notice.kind == NoticeKind.Recording
+    // The padding (18 each side), the badge with its gap (52), and what stands at the right (a timer's digits, a progress ring).
+    val room = (widthDp - 36f - 52f - (if (timer) 96f else if (notice.kind == NoticeKind.Progress) 44f else 0f)).coerceAtLeast(120f)
+    fun lines(text: String, charWidth: Float): Int =
+        text.split('\n').sumOf { line -> kotlin.math.ceil(line.length * charWidth * 1.08f / room).toInt().coerceAtLeast(1) }
+    val titleLines = lines(notice.title.ifBlank { notice.appLabel }, 8.6f).coerceIn(1, 2)
+    val textLines = if (notice.text.isBlank()) 0 else lines(notice.text, 6.5f).coerceIn(1, 6)
+    return ((titleLines - 1) * 20 + maxOf(textLines - 2, 0) * 17).dp
+}
+
+/**
+ * How much more room the small island gives, on each side of the camera, for the words of a live update (navigation, alarm, an app's
+ * update): they were cut after one word. About 7 dp a character against the 73 dp that were there; at most 110 dp more.
+ */
+internal fun compactTextExtra(content: IslandContent): Dp {
+    val notice = (content as? IslandContent.Live)?.notice ?: return 0.dp
+    val text = when (notice.kind) {
+        NoticeKind.Alarm -> notice.title.ifBlank { "Wecker" }
+        NoticeKind.Update -> notice.shortText ?: notice.title
+        NoticeKind.Navigation -> notice.title.ifBlank { notice.text }
+        else -> return 0.dp
+    }
+    return (text.length * 6.8f - 73f).coerceIn(0f, 110f).dp
 }
 
 /** Sends a notification's intent; Android 14+ wants the sender to vouch for opening a screen. */
@@ -479,19 +518,22 @@ fun GlimmerIsland(
     }
     val hanging = settings.glimmerHangs
     val flatTop = hanging && topInset <= 0.dp
-    val target = islandSize(
-        content,
-        expanded,
+    fun sizeOf(c: IslandContent, open: Boolean, withSecondary: Boolean): DpSize = islandSize(
+        c,
+        open,
         screenWidthDp,
-        hasSecondary,
+        withSecondary,
         settings.glimmerWidth,
         settings.glimmerIsDynamicIsland,
         cameraClearance = cameraClearance(camera),
         narrow = settings.glimmerNarrow,
         notch = notchSize,
         // (The phone's notch already has its pad round the camera on each side: that much less room is added.)
-        notchRoom = if (phoneNotch) (notchRoomFor(content, true) - PhoneNotchPad * 2).coerceAtLeast(24.dp) else notchRoomFor(content, hanging),
+        notchRoom = if (phoneNotch) (notchRoomFor(c, true) - PhoneNotchPad * 2).coerceAtLeast(24.dp) else notchRoomFor(c, hanging),
+        expandWidth = settings.glimmerExpand.width,
+        expandHeight = settings.glimmerExpand.height,
     )
+    val target = sizeOf(content, expanded, hasSecondary)
     LaunchedEffect(target) { onTargetSize(target) }
     val collapseAfter = settings.glimmerAutoCollapse
     // Keyed on which activity it is, not on its every update (a timer changes each second).
@@ -932,34 +974,40 @@ fun GlimmerIsland(
                     label = "islandContent",
                 ) { (c, e) ->
                     if (e) {
+                        // The card is laid out at the size it ends with, centred, and uncovered as the island grows (the shape clips it) –
+                        // not squeezed into the size the island has reached so far: its words kept re-wrapping, and for a moment only
+                        // one of them showed.
+                        val full = sizeOf(c, true, false)
                         Box(Modifier.fillMaxSize()) {
-                            ExpandedContent(
-                                c,
-                                media,
-                                onOpen = { onOpen(c) },
-                                onAction = { sendIntent(context, it); onCollapse() },
-                                onShare = { onShare(c) },
-                                topPadding = ExpandedTop + cameraClearance(camera),
-                            )
-                            // Clawd rides along, in the band beside the camera.
-                            if (settings.glimmerClawd && c !is IslandContent.Lock && c !is IslandContent.Unlock) {
-                                ExpandedClawd(c, band = ExpandedTop + cameraClearance(camera))
-                            }
-                            // Several things running: little dots like Samsung's Now Bar; swipe for the next.
-                            if (activityCount > 1) {
-                                Row(
-                                    Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .padding(bottom = 6.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(5.dp),
-                                ) {
-                                    repeat(activityCount.coerceAtMost(6)) { i ->
-                                        Box(
-                                            Modifier
-                                                .size(width = if (i == 0) 12.dp else 5.dp, height = 5.dp)
-                                                .clip(CircleShape)
-                                                .background(Color.White.copy(alpha = if (i == 0) 0.9f else 0.35f)),
-                                        )
+                            Box(Modifier.align(Alignment.TopCenter).requiredSize(full.width, full.height)) {
+                                ExpandedContent(
+                                    c,
+                                    media,
+                                    onOpen = { onOpen(c) },
+                                    onAction = { sendIntent(context, it); onCollapse() },
+                                    onShare = { onShare(c) },
+                                    topPadding = ExpandedTop + cameraClearance(camera),
+                                )
+                                // Clawd rides along, in the band beside the camera.
+                                if (settings.glimmerClawd && c !is IslandContent.Lock && c !is IslandContent.Unlock) {
+                                    ExpandedClawd(c, band = ExpandedTop + cameraClearance(camera))
+                                }
+                                // Several things running: little dots like Samsung's Now Bar; swipe for the next.
+                                if (activityCount > 1) {
+                                    Row(
+                                        Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .padding(bottom = 6.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                    ) {
+                                        repeat(activityCount.coerceAtMost(6)) { i ->
+                                            Box(
+                                                Modifier
+                                                    .size(width = if (i == 0) 12.dp else 5.dp, height = 5.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color.White.copy(alpha = if (i == 0) 0.9f else 0.35f)),
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -1351,6 +1399,8 @@ private fun CompactContent(content: IslandContent) {
                 }
             is IslandContent.Live -> {
                 val notice = content.notice
+                // (The island has made room for the words of a live update: see compactTextExtra.)
+                val words = compactTextExtra(content)
                 when (notice.kind) {
                     NoticeKind.Call, NoticeKind.Timer, NoticeKind.Recording -> {
                         val now = rememberLiveNow(notice)
@@ -1377,7 +1427,7 @@ private fun CompactContent(content: IslandContent) {
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 90.dp),
+                        modifier = Modifier.widthIn(max = 90.dp + words),
                     )
                     // Hotspot: how many are connected.
                     NoticeKind.Hotspot -> Text(
@@ -1396,7 +1446,7 @@ private fun CompactContent(content: IslandContent) {
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         style = TimeStyle,
-                        modifier = Modifier.widthIn(max = 90.dp),
+                        modifier = Modifier.widthIn(max = 90.dp + words),
                     )
                     // Navigation: the next distance ("200 m").
                     NoticeKind.Navigation -> Text(
@@ -1406,7 +1456,7 @@ private fun CompactContent(content: IslandContent) {
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 90.dp),
+                        modifier = Modifier.widthIn(max = 90.dp + words),
                     )
                     else -> PulseDot(Color.White)
                 }
@@ -1761,9 +1811,9 @@ private fun ExpandedContent(
                     LeadingBadge(content, 40.dp)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(notice.title.ifBlank { notice.appLabel }, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(notice.title.ifBlank { notice.appLabel }, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         if (notice.text.isNotBlank()) {
-                            Text(notice.text, color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(notice.text, color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, maxLines = 6, overflow = TextOverflow.Ellipsis)
                         }
                     }
                     if (notice.kind == NoticeKind.Call || notice.kind == NoticeKind.Timer || notice.kind == NoticeKind.Recording) {

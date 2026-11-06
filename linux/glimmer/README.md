@@ -26,7 +26,7 @@ Deine eigenen Einstellungen bleiben gespeichert und kommen zurück, wenn du den 
 | **Musik** (jeder MPRIS-Player: Spotify, Firefox, VLC, mpv, Elisa …) | Cover, farbige Wellen; Stil *Hyper Island* (Xiaomi), *Klassisch* oder *Fluid Cloud* (OPPO/OnePlus) | Cover, Titel, Interpret, Fortschritt zum Ziehen, ⏮ ⏯ ⏭ |
 | **Bestätigungscodes** | der Code in der Insel (Bank, Login, TAN …), ein Tipp kopiert ihn | großer Code, Knopf „Kopieren" |
 | **Bildschirmfotos** | das Bild als Vorschau | Bild, „Kopieren", „Ansehen" |
-| **Benachrichtigungen** | App-Symbol, pulsierender Punkt | App-Symbol, Titel, Text |
+| **Benachrichtigungen** | App-Symbol, pulsierender Punkt | App-Symbol, Titel (bis zu zwei Zeilen), Text (bis zu sechs) – die Karte wird dafür höher, nichts wird nach einem Wort abgeschnitten |
 | **Laden** · **Kabel** · **Akku schwach** · **Voll** | Funke und Prozent, ein Lichtstreifen läuft um die Insel | Prozent, Akku, der sich füllt |
 | **Lautstärke** | Lautsprecher, Prozent | Titel, Wert, Balken |
 | **Kopfhörer** (Bluetooth) · **Nicht stören** | Symbol, Wert | wie oben |
@@ -50,7 +50,7 @@ in Glas-Karten, wie in der Android-App:
 * **Clawd** – an/aus, auch im Leerlauf, Seite, Position, Größe, Aussehen (10 Farben bis *Regenbogen* und *Galaxy*), „Hallo" beim Start, nur einmal am Tag
 * **Glimmer** – anzeigen, Modus, Aussehen, Musik-Stil, kleine Pille im Leerlauf, Uhrzeit in der leeren Insel
 * **Gestaltung** – Leuchten bei Neuem und seine Farbe, AI-Fluid-Rand, atmendes Leuchten, Rand, Bewegung (ruhig · normal · verspielt)
-* **Größe & Position** – „Kleiner (85 %)", Gesamtgröße, Breite und Höhe der Kerbe bzw. der Pille, Breite, nach links/rechts, nach oben/unten, Zurücksetzen
+* **Größe & Position** – „Kleiner (85 %)", **Aufgeklappt: Breite und Höhe** (80 – 130 % und 80 – 150 %; eine lange Benachrichtigung macht die Karte von selbst höher), Gesamtgröße, Breite und Höhe der Kerbe bzw. der Pille, Breite, nach links/rechts, nach oben/unten, Zurücksetzen
 * **Bedienung** – Antippen öffnet die App, Doppeltippen, von selbst zuklappen (5 · 9 · 15 · 30 s · nie), Titel wischen, Maus auf der Insel klappt die Musik auf
 * **Was Glimmer zeigt** – Musik, Cover-Insel, Codes, Bildschirmfotos, Nachrichten, Kamera/Mikrofon, Kopfhörer/Nicht stören/Akku voll, Laden, Akku schwach, Akku beim Laden, Lautstärke
 * **Linux** – Start bei der Anmeldung, Sprache, Ebene (auch über Vollbild), Bildschirm
@@ -94,7 +94,7 @@ Schlüssel heißen wie in der Android-App:
 | Glimmer | `enabled` (`true`) · `mode` (`"notch"`, `"island"`, `"glimmer"`, `"dynamic_island"`) · `dynamic` (`false`; mit `"notch"`/`"island"`: die Dynamic Notch bzw. der Dynamic-Island-Stil) · `style` (`"black"`, `"glass"`, `"tinted"`, `"fluid"`) · `music_style` (`"hyper"`, `"classic"`, `"fluid_cloud"`) · `idle_pill` (`true`) · `idle_clock` (`false`) |
 | Clawd | `clawd` (`false`) · `clawd_idle` (`true`) · `clawd_side` (`"left"`, `"right"`) · `clawd_spot` (0 – 1) · `clawd_size` (0.7 – 1.4) · `clawd_skin` (`"terracotta"`, `"ocean"`, `"mint"`, `"lavender"`, `"gold"`, `"rose"`, `"snow"`, `"midnight"`, `"rainbow"`, `"galaxy"`) · `clawd_greeting` (`true`) · `clawd_greet_daily` (`false`) |
 | Gestaltung | `glow` (`true`) · `glow_color` (`"activity"`, `"accent"`, `"white"`, `"rainbow"`) · `ai_fluid` (`true`) · `breathe` (`false`) · `outline` (`"off"`, `"subtle"`, `"colored"`) · `motion` (`"calm"`, `"normal"`, `"playful"`) |
-| Größe & Position | `small` (`false`, 85 %) · `scale` (1.0; 0.6 – 2.5) · `width` (1.0; 0.8 – 1.3) · `notch_width`, `notch_height` (190, 34) · `island_width`, `island_height` (128, 32) · `offset_x` (0) · `offset_y` (0) |
+| Größe & Position | `small` (`false`, 85 %) · `expand_width` (1.0; 0.8 – 1.3) · `expand_height` (1.0; 0.8 – 1.5) · `scale` (1.0; 0.6 – 2.5) · `width` (1.0; 0.8 – 1.3) · `notch_width`, `notch_height` (190, 34) · `island_width`, `island_height` (128, 32) · `offset_x` (0) · `offset_y` (0) |
 | Bedienung | `tap_opens` (`false`) · `double_tap` (`"off"`, `"play_pause"`, `"oracle"`, `"coin"`, `"dice"`) · `auto_collapse` (9 s; 0: bleibt) · `swipe_tracks` (`true`) · `hover_reveal` (`false`) |
 | Was Glimmer zeigt | `music` · `music_persistent` · `notifications` · `codes` · `screenshots` · `privacy` · `alerts` · `charging` · `low_battery` · `volume` (alle `true`) · `charging_live` (`false`) |
 | Linux | `monitor` (0) · `layer` (`"overlay"` über Vollbild, `"top"` darunter) · `language` (`"auto"`, `"de"`, `"en"`) · `accent` (`"#FF7A9C"`, Farbe des Benachrichtigungspunkts) |

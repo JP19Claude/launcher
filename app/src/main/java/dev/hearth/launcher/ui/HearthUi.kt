@@ -238,6 +238,17 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Glimmer: aufgeklappt, Texte, Animation", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Die Größe der aufgeklappten Dynamic Island oder Notch soll einstellbar sein; bei manchen Benachrichtigungen mit Text wird ein Wort gezeigt und der Rest abgeschnitten; die Animation in der Insel und beim Aufklappen soll besser werden, es gibt Fehler.",
+                        "Die Größe: Einstellungen → Glimmer → Größe & Position hat jetzt „Aufgeklappt: Breite“ (80 bis 130 %) und „Aufgeklappt: Höhe“ (80 bis 150 %). Das gilt für jede Form – Pille, Dynamic Island, Notch, MacBook-Insel –, ohne Neustart.",
+                        "Die Texte: Die aufgeklappte Karte für eine Nachricht kannte nur zwei Zeilen Text und eine Zeile Titel und kappte den Rest mit Punkten. Jetzt darf der Titel über zwei, der Text über bis zu sechs Zeilen gehen, und die Karte wird dafür von selbst höher (geschätzt aus der Länge, lieber etwas großzügig). Und neben der Kamera hatten Navigation, Wecker und App-Updates nur Platz für etwa ein Wort – die kleine Insel wird jetzt so breit, dass ihr Text hineinpasst (höchstens 110 dp mehr auf jeder Seite, danach Punkte).",
+                        "Die Animation: Beim Aufklappen wurde der Inhalt in die Größe gezwängt, die die Insel gerade erreicht hatte – seine Worte brachen dabei ständig um und nur eines war zu sehen. Jetzt wird die Karte in der Größe gesetzt, mit der sie endet, in der Mitte, und beim Wachsen nur freigelegt. Die Vorschau in den Glimmer-Einstellungen wächst mit der aufgeklappten Insel (sie war auf 150 dp festgenagelt und schnitt die Karte ab) und zeigt jetzt auch eine lange Nachricht und eine Navigation.",
+                        "Ehrlich dazu: Ich habe nichts davon auf einem Handy gesehen, und die Zeilenzahl schätze ich aus den Zeichen. Wenn eine Karte zu hoch oder zu knapp ausfällt oder du weitere Fehler siehst, schreib mir, welche Aktivität und was genau passiert.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "ColorOS 17: rotes Eins, Liquid Glass", Icons.Rounded.Star, Green,
                     listOf(
                         "Rückmeldung: Das Glas soll Liquid Glass sein und der Look „ColorOS 17“ heißen – und bei der Uhr soll die 1 rot sein.",

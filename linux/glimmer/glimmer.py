@@ -144,6 +144,8 @@ DEFAULTS = {
     "island_height": 32,
     "offset_x": 0,
     "offset_y": 0,
+    "expand_width": 1.0,        # wie breit die aufgeklappte Insel/Notch ist (gegenüber der üblichen Größe)
+    "expand_height": 1.0,       # und wie hoch
     # Bedienung
     "tap_opens": False,
     "double_tap": "off",        # "off" | "play_pause" | "oracle" | "coin" | "dice"
@@ -186,6 +188,7 @@ RANGES = {
     "scale": (0.6, 2.5), "width": (0.8, 1.3), "clawd_spot": (0.0, 1.0), "clawd_size": (0.7, 1.4),
     "notch_width": (80, 420), "notch_height": (16, 90), "island_width": (60, 420), "island_height": (16, 90),
     "offset_x": (-40, 40), "offset_y": (-10, 40), "auto_collapse": (0, 120), "monitor": (0, 16),
+    "expand_width": (0.8, 1.3), "expand_height": (0.8, 1.5),
 }
 LINUX_ONLY = ("monitor", "layer", "language")
 
@@ -316,8 +319,8 @@ BODY_HEIGHT = {"music": 178, "notify": 124, "power": 96, "volume": 96, "alert": 
 
 def window_size(scale):
     """The window holds the biggest island there can be, moved as far as it can be moved, and its glow."""
-    w = (400 + 2 * (40 + 22)) * scale
-    h = (46 + 27 + 178 + 24) * scale
+    w = (520 + 2 * (40 + 22)) * scale                # (the widest unfolded island: 396 dp × 1.3)
+    h = (46 + 27 + 330 + 24) * scale                 # (the tallest: a long notification at 150 %)
     return int(math.ceil(w)), int(math.ceil(h))
 
 
@@ -492,13 +495,43 @@ def draw_text(cr, text, x, y, size, rgba, bold=False, max_w=None, align="left", 
     return w
 
 
-def draw_text_block(cr, text, x, y, size, rgba, max_w, lines=2):
-    """A few lines of wrapped text starting at y (the top)."""
+_measure = {"cr": None, "cache": {}}
+
+
+def text_line_count(text, size, max_w, bold=False):
+    """How many lines [text] takes wrapped to [max_w] (wrapped the way draw_text_block wraps it)."""
     if not text:
-        return
+        return 0
+    key = (text, size, int(max_w), bold)
+    got = _measure["cache"].get(key)
+    if got is not None:
+        return got
+    if _measure["cr"] is None:
+        _measure["cr"] = cairo.Context(cairo.ImageSurface(cairo.FORMAT_ARGB32, 1, 1))
+    layout = PangoCairo.create_layout(_measure["cr"])
+    fd = Pango.FontDescription()
+    fd.set_family(FONT_FAMILY)
+    fd.set_weight(Pango.Weight.SEMIBOLD if bold else Pango.Weight.NORMAL)
+    fd.set_absolute_size(size * Pango.SCALE)
+    layout.set_font_description(fd)
+    layout.set_text(text, -1)
+    layout.set_width(int(max(max_w, 1) * Pango.SCALE))
+    layout.set_wrap(Pango.WrapMode.WORD_CHAR)
+    n = layout.get_line_count()
+    if len(_measure["cache"]) > 200:
+        _measure["cache"].clear()
+    _measure["cache"][key] = n
+    return n
+
+
+def draw_text_block(cr, text, x, y, size, rgba, max_w, lines=2, bold=False):
+    """A few lines of wrapped text starting at y (the top). Returns the height it took."""
+    if not text:
+        return 0
     layout = PangoCairo.create_layout(cr)
     fd = Pango.FontDescription()
     fd.set_family(FONT_FAMILY)
+    fd.set_weight(Pango.Weight.SEMIBOLD if bold else Pango.Weight.NORMAL)
     fd.set_absolute_size(size * Pango.SCALE)
     layout.set_font_description(fd)
     layout.set_text(text, -1)
@@ -511,6 +544,7 @@ def draw_text_block(cr, text, x, y, size, rgba, max_w, lines=2):
     cr.set_source_rgba(*rgba)
     PangoCairo.show_layout(cr, layout)
     cr.restore()
+    return layout.get_pixel_size()[1]
 
 
 def fmt_time(us):
@@ -1113,6 +1147,7 @@ class Island:
 
     def size_for(self, kind, data, expanded):
         full = min(SCREEN_W - 22.0, 440.0) if self.di else min(SCREEN_W - 16.0, 380.0 if self.mac else 420.0)
+        full = min(full * float(self.cfg["expand_width"]), 520.0)
         if self.di:
             compact_base = min(ISLAND_H * 6.2, SCREEN_W - 60.0) * self.narrow
             idle = ISLAND_H * 3.375 * self.narrow
@@ -1127,7 +1162,15 @@ class Island:
             room = ROOMS.get(kind, 72) if self.hang else 72
             compact = (self.nw + room) if self.mac else compact_base
             return compact, (max(ISLAND_H, self.nh) if self.mac else ISLAND_H)
-        return full, self.clearance() + BODY_HEIGHT.get(kind, 96)
+        body = float(BODY_HEIGHT.get(kind, 96))
+        if kind == "notify":
+            # A notification's words are not cut off: the card grows with a long title or text (the title over two lines, the text over six).
+            d = data or {}
+            room = full - 36.0 - 52.0
+            title_lines = clamp(text_line_count(d.get("summary") or d.get("app") or tr("notification"), 16, room, True), 1, 2)
+            text_lines = clamp(text_line_count(d.get("body") or "", 13, room), 0, 6)
+            body += (title_lines - 1) * 20.0 + max(text_lines - 2, 0) * 17.0
+        return full, self.clearance() + body * float(self.cfg["expand_height"])
 
     def _damp(self, r):
         """(Hanging from the screen's edge it settles without a bounce: a tab swinging past its size looks like a glitch.)"""
@@ -1984,11 +2027,12 @@ class Island:
         self._app_icon(cr, d.get("icon"), x0, y0 + 5, 40)
         tx = x0 + 52
         mw = x1 - tx
-        draw_text(cr, d.get("summary") or d.get("app") or tr("notification"), tx, y0 + 10, 16, WHITE, bold=True, max_w=mw)
+        title = d.get("summary") or d.get("app") or tr("notification")
+        th = draw_text_block(cr, title, tx, y0 + 0.5, 16, WHITE, mw, lines=2, bold=True)
         if d.get("body"):
-            draw_text_block(cr, d["body"], tx, y0 + 21, 13, (1, 1, 1, 0.7), mw, lines=2)
+            draw_text_block(cr, d["body"], tx, y0 + 0.5 + th + 2.0, 13, (1, 1, 1, 0.7), mw, lines=6)
         elif d.get("app"):
-            draw_text(cr, d["app"], tx, y0 + 30, 13, (1, 1, 1, 0.7), max_w=mw)
+            draw_text(cr, d["app"], tx, y0 + 0.5 + th + 9.0, 13, (1, 1, 1, 0.7), max_w=mw)
 
     def _button(self, cr, x, y, w, h, label, fill, text_color, bold=True):
         rrect(cr, x, y, w, h, h / 2.0)
@@ -3676,7 +3720,7 @@ def build_settings(app):
             ("idle", None),
             ("music", demo_player_obj),
             ("power", {"state": "charging", "pct": 72}),
-            ("notify", {"app": "Signal", "summary": "Mia", "body": "Kommst du später noch vorbei? Ich bring Kuchen mit.", "icon": None}),
+            ("notify", {"app": "Signal", "summary": "Mia", "body": "Kommst du später noch vorbei? Ich bring Kuchen mit – und die Fotos vom Wochenende habe ich auch dabei.", "icon": None}),
             ("code", {"code": "482913", "app": "Bank", "icon": None, "copied": False}),
             ("volume", {"pct": 64, "muted": False}),
             ("alert", {"glyph": "headphones", "title": "AirPods", "value": "82 %", "color": GREEN, "level": 0.82}),
@@ -4001,6 +4045,10 @@ def build_settings(app):
     # --- Größe & Position
     card = section("Größe & Position")
     add_switch(card, "small", "Kleiner (85 %)", "Die kleine Insel ist 15 % schmaler; aufgeklappt bleibt Glimmer so groß wie bei 100 %. Höhe, Inhalte und Schrift bleiben gleich")
+    add_slider(card, "expand_width", "Aufgeklappt: Breite", "Wie breit die aufgeklappte Insel oder Notch ist.", 0.8, 1.3, 0.05, digits=2, as_int=False,
+               fmt=lambda v: "%d %%" % round(v * 100))
+    add_slider(card, "expand_height", "Aufgeklappt: Höhe", "Wie hoch sie ist; eine lange Benachrichtigung macht sie von selbst höher.", 0.8, 1.5, 0.05, digits=2, as_int=False,
+               fmt=lambda v: "%d %%" % round(v * 100))
     add_slider(card, "scale", "Gesamtgröße", "Alles zusammen, vom Bildschirm unabhängig; Glimmer startet kurz neu.", 0.6, 1.6, 0.05, digits=2, as_int=False,
                fmt=lambda v: "%d %%" % round(v * 100))
     add_slider(card, "notch_width", "Breite der Kerbe", None, 80, 420, 5, visible=lambda: app.cfg["mode"] == "notch", fmt=lambda v: "%d dp" % v)
@@ -4129,7 +4177,7 @@ def build_settings(app):
                 preview_state["index"] = (preview_state["index"] + 1) % n
                 kind, data = demos()[preview_state["index"]]
             isl.show(kind, data, False)
-        want = clamp(isl.h.x + isl.top_inset() * isl.s + 44, 150.0, 300.0)
+        want = clamp(isl.h.x + isl.top_inset() * isl.s + 44, 150.0, 420.0)
         state["ph"] += (want - state["ph"]) * min(1.0, dt * 12.0)
         if abs(state["ph"] - state["shown"]) >= 1.0:
             state["shown"] = state["ph"]
@@ -4282,7 +4330,7 @@ SNAPSHOT_MODES = (("notch", "notch", False), ("island", "island", False), ("glim
 def render_snapshot(cfg, path, modes=SNAPSHOT_MODES):
     """Draws every state of the island, in every mode, into one picture – no window, no display needed."""
     player = demo_player(cfg)
-    notice = {"app": "Signal", "summary": "Mia", "body": "Kommst du später noch vorbei? Ich bring Kuchen mit.", "icon": None}
+    notice = {"app": "Signal", "summary": "Mia", "body": "Kommst du später noch vorbei? Ich bring Kuchen mit – und die Fotos vom Wochenende habe ich auch dabei.", "icon": None}
     code = {"code": "482913", "app": "Bank", "icon": None, "copied": False}
     shot = {"path": "", "thumb": demo_art()}
     phones = {"glyph": "headphones", "title": "AirPods", "value": "82 %", "color": GREEN, "level": 0.82}
@@ -4307,7 +4355,7 @@ def render_snapshot(cfg, path, modes=SNAPSHOT_MODES):
     s = cfg["scale"]
     W, _H = window_size(s)
     pad = int(14 * s)
-    small, big = int(84 * s), int(270 * s)
+    small, big = int(84 * s), int(300 * s)
     heights = [big if scene[3] else small for scene in scenes]
     total = sum(heights) + (len(scenes) + 1) * pad // 2
     surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, len(modes) * W + (len(modes) + 1) * pad, total)
