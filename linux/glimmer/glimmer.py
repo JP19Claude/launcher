@@ -1,20 +1,22 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 """
-Glimmer für Linux – die Insel (oder der Notch) am oberen Bildschirmrand, als echtes Programm für den Desktop.
+Glimmer für Linux – die Notch von ZENITH, als echtes Programm für den Desktop.
 
-Sie zeigt, was gerade passiert:  Musik (jeder MPRIS-Player: Spotify, Firefox, VLC, mpv …), Laden / Akku, Lautstärke und
-Benachrichtigungen.  Ein Mausklick auf die Insel steuert die Musik, Rechtsklick schließt sie.
+Dieselbe Notch wie die MacBook-Notch in der Glimmer-App von ZENITH: schwarz, am oberen Bildschirmrand angewachsen, immer da – und sie wächst
+bei Ereignissen daraus heraus: Musik (jeder MPRIS-Player: Spotify, Firefox, VLC, mpv …), Laden / Akku, Lautstärke, Benachrichtigungen.
+Tippen klappt sie auf und zu, nach unten / oben ziehen auch, seitlich ziehen springt bei Musik zum nächsten Titel.
 
 Gebaut für Wayland-Desktops mit Layer-Shell (KDE Plasma, Hyprland, Sway, labwc …): GTK 4 + gtk4-layer-shell, gezeichnet mit Cairo.
 GNOME kennt Layer-Shell nicht – dort läuft Glimmer nur als normales Fenster.
 
-    glimmer                 starten
+    glimmer                 starten (läuft es schon: öffnet das Einstellungsfenster)
+    glimmer --settings      mit dem Einstellungsfenster starten
     glimmer --demo          zeigt der Reihe nach alle Ereignisse (zum Ausprobieren)
-    glimmer --mode island   schwebende Insel statt Notch;   --scale 1.3  größer
+    glimmer --mode island   die kleine Insel statt der Notch;   --scale 1.3  größer
     glimmer --snapshot x.png  zeichnet alle Zustände in ein Bild (braucht kein Fenster)
 
-Einstellungen: ~/.config/glimmer/config.json
+Einstellungen: ~/.config/glimmer/config.json (oder im Einstellungsfenster)
 """
 
 import os
@@ -106,17 +108,21 @@ def log(*a):
 # ------------------------------------------------------------------------------------------------------------------ settings
 
 DEFAULTS = {
-    "mode": "notch",            # "notch": am Rand angewachsen, mit Ohren · "island": schwebende Insel
+    "mode": "notch",            # "notch": wie die MacBook-Notch am Rand · "island": kleine schwebende Insel darunter
     "scale": 1.0,
+    "notch_width": 190,         # Größe der leeren Notch in dp (wie in ZENITH)
+    "notch_height": 34,
+    "island_width": 128,
+    "island_height": 32,
     "monitor": 0,               # Nummer des Bildschirms
     "layer": "overlay",         # "overlay": auch über Vollbild · "top"
     "language": "auto",         # "auto" | "de" | "en"
+    "idle": "pill",             # wenn nichts passiert: "pill" (die leere Notch) · "clock" (mit Uhrzeit) · "off" (unsichtbar)
+    "auto_collapse": 9,         # aufgeklappt nach so vielen Sekunden wieder zu (0: bleibt)
     "music": True,
-    "music_persistent": True,   # kleine Insel, solange Musik läuft
+    "music_persistent": True,   # kleine Notch mit Cover und Wellen, solange Musik läuft
     "greet": True,              # beim Start kurz „Glimmer läuft" zeigen
-    "track_popups": True,       # beim Titelwechsel kurz Titel und Interpret zeigen
-    "idle": "clock",            # wenn nichts passiert: "clock" (Uhrzeit) · "pill" (leere Insel) · "off" (unsichtbar)
-    "hover_reveal": True,       # Maus an den oberen Rand in der Mitte: Musiksteuerung erscheint
+    "hover_reveal": False,      # Maus oben in der Mitte klappt die Musik auf
     "charging": True,
     "low_battery": True,
     "volume": True,
@@ -133,6 +139,10 @@ def load_config(path=None):
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
+        if isinstance(data, dict) and "notch_width" not in data:
+            # (A file from before the notch was rebuilt after ZENITH's: those two choices go back to ZENITH's way, once.)
+            data.pop("idle", None)
+            data.pop("hover_reveal", None)
         for k, v in data.items():
             if k in cfg and isinstance(v, type(DEFAULTS[k])) or (k in cfg and isinstance(DEFAULTS[k], float) and isinstance(v, int)):
                 cfg[k] = v
@@ -151,17 +161,20 @@ def load_config(path=None):
     if cfg["mode"] not in ("notch", "island"):
         cfg["mode"] = "notch"
     if cfg["idle"] not in ("clock", "pill", "off"):
-        cfg["idle"] = "clock"
+        cfg["idle"] = "pill"
+    for key, lo, hi in (("notch_width", 80, 420), ("notch_height", 16, 90), ("island_width", 60, 300), ("island_height", 16, 80)):
+        cfg[key] = int(clamp(cfg[key], lo, hi))
+    cfg["auto_collapse"] = int(clamp(cfg["auto_collapse"], 0, 120))
     return cfg
 
 
 STRINGS = {
-    "de": {"charging": "Lädt", "full": "Voll geladen", "unplugged": "Akkubetrieb", "low": "Akku schwach",
-           "nothing": "Keine Wiedergabe", "muted": "Stumm", "notification": "Benachrichtigung",
-           "running": "Glimmer läuft", "hint": "Die Insel erscheint, wenn etwas passiert"},
-    "en": {"charging": "Charging", "full": "Fully charged", "unplugged": "On battery", "low": "Battery low",
-           "nothing": "Nothing playing", "muted": "Muted", "notification": "Notification",
-           "running": "Glimmer is running", "hint": "The island appears when something happens"},
+    "de": {"charging": "Lädt", "full": "Vollständig geladen", "unplugged": "Ladekabel getrennt", "low": "Akku schwach",
+           "volume": "Lautstärke", "nothing": "Keine Wiedergabe", "muted": "Stumm", "notification": "Benachrichtigung",
+           "running": "Glimmer läuft", "hint": "Tippe auf die Notch, um sie aufzuklappen"},
+    "en": {"charging": "Charging", "full": "Fully charged", "unplugged": "Unplugged", "low": "Battery low",
+           "volume": "Volume", "nothing": "Nothing playing", "muted": "Muted", "notification": "Notification",
+           "running": "Glimmer is running", "hint": "Click the notch to unfold it"},
 }
 _lang = "de"
 
@@ -189,24 +202,22 @@ def parse_color(text, fallback=(1.0, 0.48, 0.61)):
 
 # ------------------------------------------------------------------------------------------------------------------ geometry
 
-# Content sizes in dp (scaled by the setting "scale").
-LAYOUTS = {
-    "idle": (100, 30),
-    "music": (236, 36),
-    "music_open": (420, 152),
-    "track": (344, 64),
-    "volume": (248, 40),
-    "power": (236, 40),
-    "notify": (372, 88),
-}
-EAR = 13.0       # the notch's flares where it meets the edge of the screen
-MARGIN = 10.0    # the floating island's distance from the top
-SHADOW = 26.0    # room under the island for its shadow
+# The sizes are those of the Android Glimmer in ZENITH's MacBook modes (in dp; the setting "scale" scales all of it).
+NOTCH_SIZE = (190, 34)       # the empty notch
+ISLAND_SIZE = (128, 32)      # the floating MacBook island
+EAR = 7.0                    # the notch's shoulders, where it meets the screen's edge
+ISLAND_GAP = 6.0             # how far the floating island hangs below the edge
+FULL_WIDTH = 380.0           # unfolded
+EXPANDED_TOP = 14.0          # where unfolded content starts (plus the room below the notch)
+CAMERA_MARGIN = 5.0
+BAR_MIN = 30.0
+ROOMS = {"music": 84, "power": 96, "volume": 96, "notify": 72}            # beside the notch, both sides together
+BODY_HEIGHT = {"music": 178, "notify": 124, "power": 96, "volume": 96}    # unfolded, below the notch
 
 
 def window_size(scale):
-    w = (LAYOUTS["music_open"][0] + 2 * EAR + 30) * scale
-    h = (LAYOUTS["music_open"][1] + MARGIN + SHADOW) * scale
+    w = (FULL_WIDTH + 2 * (EAR + 14)) * scale
+    h = (27 + 178 + ISLAND_GAP + 20) * scale
     return int(math.ceil(w)), int(math.ceil(h))
 
 
@@ -308,8 +319,10 @@ def rrect(cr, x, y, w, h, r):
 WHITE = (1.0, 1.0, 1.0, 1.0)
 DIM = (1.0, 1.0, 1.0, 0.62)
 FAINT = (1.0, 1.0, 1.0, 0.20)
-GREEN = (0.30, 0.90, 0.55)
-RED = (1.0, 0.36, 0.34)
+GREEN = (0.204, 0.780, 0.349)    # the colours of ZENITH's Glimmer
+ORANGE = (1.0, 0.624, 0.039)
+RED = (1.0, 0.271, 0.227)
+YELLOW = (1.0, 0.839, 0.039)
 
 
 def draw_text(cr, text, x, y, size, rgba, bold=False, max_w=None, align="left"):
@@ -479,14 +492,17 @@ def draw_eq(cr, x, cy, h, t, playing, color):
 # ------------------------------------------------------------------------------------------------------------------ animation
 
 class Spring:
-    """A damped spring: the island's size, opacity and content move like something physical, not along a fixed curve."""
+    """A damped spring: the island's size and its little movements work like something physical, not along a fixed curve."""
 
     def __init__(self, value=0.0, k=520.0, ratio=0.9, eps=0.05):
         self.x = self.target = value
         self.v = 0.0
+        self.eps = eps
+        self.tune(k, ratio)
+
+    def tune(self, k, ratio):
         self.k = k
         self.c = 2.0 * ratio * math.sqrt(k)
-        self.eps = eps
 
     def step(self, dt):
         n = max(1, int(dt / 0.004))
@@ -505,97 +521,280 @@ class Spring:
         self.v = 0.0
 
 
+def spring_curve(t, k, ratio):
+    """How far a spring that starts at rest has come after t seconds: 0 → 1 (past it, if it is not fully damped)."""
+    if t <= 0:
+        return 0.0
+    wn = math.sqrt(k)
+    if ratio >= 1.0:
+        return 1.0 - math.exp(-wn * t) * (1.0 + wn * t)
+    wd = wn * math.sqrt(1.0 - ratio * ratio)
+    return 1.0 - math.exp(-ratio * wn * t) * (math.cos(wd * t) + ratio * wn / wd * math.sin(wd * t))
+
+
+def palette_of(p, fallback=(1.0, 1.0, 1.0)):
+    """The cover's colours (at least two), for the glow and the waves."""
+    pal = list(getattr(p, "palette", None) or [])
+    if not pal:
+        pal = [fallback]
+    return pal + pal if len(pal) == 1 else pal
+
+
+def alert_of(kind, data):
+    """A short system moment (charging, battery, volume) as the island shows it: symbol, title, value, colour, level."""
+    d = data or {}
+    if kind == "volume":
+        if d.get("muted"):
+            return {"glyph": "speaker_muted", "title": tr("volume"), "value": tr("muted"), "color": ORANGE, "level": None, "charging": False}
+        pct = d.get("pct", 0)
+        return {"glyph": "speaker", "title": tr("volume"), "value": "%d %%" % pct, "color": (1.0, 1.0, 1.0), "level": pct / 100.0, "charging": False}
+    state, pct = d.get("state", "unplugged"), d.get("pct", 0)
+    if state == "charging":
+        return {"glyph": "spark", "title": tr("charging"), "value": "%d %%" % pct, "color": GREEN, "level": pct / 100.0, "charging": True}
+    if state == "full":
+        return {"glyph": "battery_full", "title": tr("full"), "value": "100 %", "color": GREEN, "level": 1.0, "charging": False}
+    if state == "low":
+        return {"glyph": "battery", "title": tr("low"), "value": "%d %%" % pct, "color": RED, "level": pct / 100.0, "charging": False}
+    return {"glyph": "battery", "title": tr("unplugged"), "value": "%d %%" % pct, "color": (1.0, 1.0, 1.0), "level": pct / 100.0, "charging": False}
+
+
+def text_width(cr, text, size, bold=False):
+    layout = PangoCairo.create_layout(cr)
+    fd = Pango.FontDescription()
+    fd.set_family("Sans")
+    fd.set_weight(Pango.Weight.SEMIBOLD if bold else Pango.Weight.NORMAL)
+    fd.set_absolute_size(size * Pango.SCALE)
+    layout.set_font_description(fd)
+    layout.set_text(text, -1)
+    return layout.get_pixel_size()[0]
+
+
+def draw_glyph(cr, name, x, y, size, color, alpha=1.0):
+    """The island's little icons (the same drawings as in ZENITH), in a square [size] wide with its corner at (x, y)."""
+    cr.save()
+    cr.translate(x, y)
+    cr.scale(size, size)
+    cr.set_source_rgba(*color[:3], alpha)
+    cr.set_line_width(0.09)
+    cr.set_line_cap(cairo.LINE_CAP_ROUND)
+    cr.set_line_join(cairo.LINE_JOIN_ROUND)
+
+    def poly(*pts):
+        cr.new_path()
+        cr.move_to(*pts[0])
+        for pt in pts[1:]:
+            cr.line_to(*pt)
+        cr.close_path()
+        cr.fill()
+
+    def box(bx, by, bw, bh, r, stroke=False):
+        rrect(cr, bx, by, bw, bh, r)
+        (cr.stroke if stroke else cr.fill)()
+
+    if name == "play":
+        poly((0.3, 0.2), (0.8, 0.5), (0.3, 0.8))
+    elif name == "pause":
+        box(0.26, 0.2, 0.16, 0.6, 0.04)
+        box(0.58, 0.2, 0.16, 0.6, 0.04)
+    elif name == "next":
+        poly((0.2, 0.22), (0.62, 0.5), (0.2, 0.78))
+        box(0.66, 0.22, 0.12, 0.56, 0.03)
+    elif name == "previous":
+        poly((0.8, 0.22), (0.38, 0.5), (0.8, 0.78))
+        box(0.22, 0.22, 0.12, 0.56, 0.03)
+    elif name == "spark":
+        # a four-pointed sparkle with soft, concave sides (the charging symbol of ZENITH)
+        p = 0.12
+        cr.new_path()
+        cr.move_to(0.5, 0.0)
+        cr.curve_to(0.5 + p, 0.5 - p, 0.5 + p, 0.5 - p, 1.0, 0.5)
+        cr.curve_to(0.5 + p, 0.5 + p, 0.5 + p, 0.5 + p, 0.5, 1.0)
+        cr.curve_to(0.5 - p, 0.5 + p, 0.5 - p, 0.5 + p, 0.0, 0.5)
+        cr.curve_to(0.5 - p, 0.5 - p, 0.5 - p, 0.5 - p, 0.5, 0.0)
+        cr.close_path()
+        cr.fill()
+    elif name in ("battery", "battery_full"):
+        box(0.3, 0.18, 0.4, 0.68, 0.07, stroke=True)
+        box(0.42, 0.1, 0.16, 0.07, 0.02)
+        box(0.37, 0.5, 0.26, 0.29, 0.03)
+    elif name in ("speaker", "speaker_muted"):
+        poly((0.12, 0.38), (0.3, 0.38), (0.5, 0.2), (0.5, 0.8), (0.3, 0.62), (0.12, 0.62))
+        if name == "speaker":
+            for r in (0.17, 0.33):
+                cr.new_sub_path()
+                cr.arc(0.5, 0.5, r, -math.pi / 4, math.pi / 4)
+                cr.stroke()
+        else:
+            cr.move_to(0.62, 0.38)
+            cr.line_to(0.88, 0.62)
+            cr.move_to(0.88, 0.38)
+            cr.line_to(0.62, 0.62)
+            cr.stroke()
+    elif name == "bell":
+        cr.new_path()
+        cr.move_to(0.2, 0.72)
+        cr.line_to(0.8, 0.72)
+        cr.line_to(0.71, 0.6)
+        cr.line_to(0.71, 0.42)
+        cr.curve_to(0.71, 0.18, 0.29, 0.18, 0.29, 0.42)
+        cr.line_to(0.29, 0.6)
+        cr.close_path()
+        cr.stroke()
+        cr.new_path()
+        cr.arc(0.5, 0.84, 0.065, 0, 2 * math.pi)
+        cr.fill()
+    cr.restore()
+
+
 class Island:
-    """What the island looks like right now: the size springs, what it shows and how it draws it. Knows nothing of GTK."""
+    """What the island looks like right now – a port of the MacBook notch (and island) of ZENITH's Glimmer: the size springs, what it
+    shows and how it draws it. Knows nothing of GTK."""
 
     def __init__(self, cfg):
         self.cfg = cfg
+        self.clock = time.monotonic   # (replaceable, to film the motion frame by frame)
         self.s = cfg["scale"]
-        self.notch = cfg["mode"] == "notch"
+        self.hang = cfg["mode"] == "notch"
+        self.nw, self.nh = (cfg["notch_width"], cfg["notch_height"]) if self.hang else (cfg["island_width"], cfg["island_height"])
         self.accent = parse_color(cfg["accent"])
-        self.w = Spring(0, 560, 0.88, 0.1)
-        self.h = Spring(0, 560, 0.88, 0.1)
-        self.alpha = Spring(0, 900, 1.0, 0.01)
-        self.content = Spring(0, 620, 1.0, 0.01)
+        self.w = Spring(0.0, 380, 0.95, 0.1)
+        self.h = Spring(0.0, 520, 0.95, 0.1)
+        self.cap = Spring(14.0 if self.hang else 60.0, 280, 1.0, 0.1)   # how round the corners may be (dp)
+        self.press = Spring(1.0, 700, 0.7, 0.0005)
+        self.nudge = Spring(0.0, 380, 0.95, 0.002)
         self.kind = None
         self.data = None
-        self.open = False
+        self.expanded = False
         self.visible = False
+        self.prev = None            # (kind, data, expanded, since): the content that is fading out
+        self.changed_at = -100.0
+        self.sweep_at = -100.0
+        self._sweep_key = None
+        self.seek_drag = None       # the progress being dragged (0..1)
+        self.seek_rect = None
         self.hits = []
         self.ox = self.oy = 0.0
 
+    @property
+    def open(self):
+        return self.expanded
+
+    # --- sizes
+
+    def hole_half(self):
+        """Half the room the notch (or the island's small gap) takes in the middle: compact content keeps clear of it."""
+        return (self.nw / 2.0 if self.hang else 7.0) + CAMERA_MARGIN
+
+    def clearance(self):
+        """How much lower unfolded content starts, so that it begins below the notch."""
+        bottom = self.nh if self.hang else self.nh / 2.0 + 7.0
+        return max(0.0, bottom + CAMERA_MARGIN + 2.0 - EXPANDED_TOP)
+
+    def size_for(self, kind, expanded):
+        if kind in (None, "idle"):
+            return self.nw, self.nh
+        if not expanded:
+            return self.nw + (ROOMS.get(kind, 72) if self.hang else 72), max(BAR_MIN, self.nh)
+        return FULL_WIDTH, self.clearance() + BODY_HEIGHT.get(kind, 96)
+
+    def _tune(self):
+        def damp(r):  # (hanging from the screen's edge it settles without a bounce: a tab swinging past its size looks like a glitch)
+            return max(r, 0.95) if self.hang else r
+        if not self.visible:
+            self.w.tune(520, 1.0)
+            self.h.tune(520, 1.0)
+        elif self.expanded:
+            self.w.tune(330, damp(0.68))
+            self.h.tune(240, damp(0.72))
+        else:
+            self.w.tune(380, damp(0.78))
+            self.h.tune(520, damp(0.86))
+
     # --- what to show
 
-    def size_for(self):
-        k = self.kind
-        if k == "music":
-            return LAYOUTS["music_open" if self.open else "music"]
-        if k == "notify":
-            w, h = LAYOUTS["notify"]
-            return (w, h if (self.data or {}).get("body") else h - 24)
-        return LAYOUTS.get(k, (200, 36))
-
-    def show(self, kind, data, open_=False):
-        was_hidden = (not self.visible) or self.kind is None
-        changed = kind != self.kind or open_ != self.open or (kind == "notify" and data is not self.data)
-        self.kind, self.data, self.open = kind, data, open_
+    def show(self, kind, data, expanded=False):
+        now = self.clock()
+        changed = kind != self.kind or expanded != self.expanded or (kind == "notify" and data is not self.data)
+        if changed and self.kind is not None and self.visible:
+            self.prev = (self.kind, self.data, self.expanded, now)
+        key = (kind, (data or {}).get("state") if isinstance(data, dict) else None)
+        if key != self._sweep_key:
+            self._sweep_key = key
+            if key == ("power", "charging"):
+                self.sweep_at = now  # plugging in: a streak of green light runs round the island
+        self.kind, self.data, self.expanded = kind, data, expanded
         self.visible = True
-        tw, th = self.size_for()
-        s = self.s
-        if was_hidden:
-            self.w.x = tw * 0.5 * s
-            self.h.x = 1.0
-            self.w.v = self.h.v = 0.0
-            changed = True
-        self.w.target, self.h.target = tw * s, th * s
-        self.alpha.target = 1.0
+        tw, th = self.size_for(kind, expanded)
+        self._tune()
+        self.w.target, self.h.target = tw * self.s, th * self.s
+        self.cap.target = (30.0 if self.hang else 44.0) if expanded else (14.0 if self.hang else 60.0)
         if changed:
-            self.content.x = -0.25
-            self.content.v = 0.0
-            self.content.target = 1.0
+            self.changed_at = now
 
     def hide(self):
         if not self.visible:
             return
         self.visible = False
-        self.w.target = max(70 * self.s, self.w.x * 0.55)
-        self.h.target = 1.0
-        self.alpha.target = 0.0
+        self.expanded = False
+        self._tune()
+        self.w.target = 0.0  # (it shrinks away into the edge)
+        self.h.target = 0.0
+
+    def set_pressed(self, down):
+        if self.kind in (None, "idle"):
+            return
+        if down:
+            self.press.tune(700, 0.7)
+            self.press.target = (1.015 if self.expanded else 1.02) if self.hang else 1.06
+        else:
+            self.press.tune(520, 0.42)
+            self.press.target = 1.0
 
     def snap(self):
-        for sp in (self.w, self.h, self.alpha, self.content):
+        for sp in (self.w, self.h, self.cap, self.press, self.nudge):
             sp.snap()
-        self.content.x = 1.0
+        self.changed_at = -100.0
+        self.sweep_at = -100.0
+        self.prev = None
 
     def step(self, dt):
-        """Advances the springs; returns (still moving, something ambient – equaliser, charging sweep – is animating)."""
+        """Advances the springs; returns (still moving, something ambient – the waves, the pulse – is animating)."""
+        now = self.clock()
         moved = False
-        for sp in (self.w, self.h, self.alpha, self.content):
+        for sp in (self.w, self.h, self.cap, self.press, self.nudge):
             sp.step(dt)
             moved = moved or not sp.settled
-        if not self.visible and self.alpha.x < 0.01 and self.alpha.settled:
-            self.alpha.x = 0.0
+        if not self.visible and self.w.x < 1.0 and self.h.x < 1.0:
             self.kind = None
+            self.prev = None
+            self.w.x = self.h.x = 0.0
+            self.w.v = self.h.v = 0.0
             moved = False
+        if now - self.changed_at < 0.9 or (self.prev is not None and now - self.prev[3] < 0.2) or now - self.sweep_at < 1.25:
+            moved = True
         ambient = False
-        if self.kind in ("music", "track") and self.visible:
-            ambient = getattr(self.data, "status", "") == "Playing"
-        elif self.kind == "power" and self.visible:
+        if self.visible and self.kind == "music":
+            ambient = getattr(self.data, "status", "") == "Playing" or self.expanded
+        elif self.visible and self.kind == "power":
             ambient = (self.data or {}).get("state") == "charging"
+        elif self.visible and self.kind == "notify":
+            ambient = not self.expanded
+        elif self.visible and self.kind == "idle":
+            ambient = False
         return moved, ambient
 
     # --- geometry
 
     def geometry(self, W):
         s = self.s
-        w, h = max(self.w.x, 0.0), max(self.h.x, 0.0)
-        ear = min(EAR * s, h * 0.5) if self.notch else 0.0
-        return (W - w) / 2.0, (0.0 if self.notch else MARGIN * s), w, h, ear
+        bw, bh = max(self.w.x, 0.0), max(self.h.x, 0.0)
+        ear = min(EAR * s, bh / 2.0) if self.hang else 0.0
+        return (W - bw) / 2.0, (0.0 if self.hang else ISLAND_GAP * s), bw, bh, ear
 
     def input_rect(self, W, sensor):
-        if self.kind is not None and self.visible and self.alpha.x > 0.05:
-            bx, by, w, h, ear = self.geometry(W)
-            return int(bx - ear) - 1, int(by), int(w + 2 * ear) + 2, int(h) + 1
+        if self.kind is not None and self.visible:
+            bx, top, bw, bh, ear = self.geometry(W)
+            return int(bx - ear) - 1, int(top), int(bw + 2 * ear) + 2, int(bh) + 1
         if sensor:
             return int(W / 2 - 90 * self.s), 0, int(180 * self.s), 2
         return None
@@ -609,99 +808,173 @@ class Island:
                 return action, None
         return None
 
+    def seek_fraction(self, x):
+        if not self.seek_rect:
+            return 0.0
+        x0, x1 = self.seek_rect
+        return clamp(((x - self.ox) / self.s - x0) / max(x1 - x0, 1), 0.0, 1.0)
+
     # --- drawing
 
     def draw(self, cr, W, H, t):
         self.hits = []
-        if self.kind is None or self.alpha.x < 0.01:
+        self.seek_rect = None
+        if self.kind is None:
             return
         s = self.s
-        bx, by, w, h, ear = self.geometry(W)
-        if w < 2 or h < 1:
+        bx, top, bw, bh, ear = self.geometry(W)
+        if bw < 1 or bh < 1:
             return
-        a = clamp(self.alpha.x, 0.0, 1.0)
-        r = min(h / 2.0, (22 if self.notch else 26) * s)
-        rt = 0.0 if self.notch else r
+        now = self.clock()
+        fade = 1.0 if self.visible else clamp(bw / (40 * s), 0.0, 1.0)
+        corner = min(bh / 2.0, max(self.cap.x, 0.0) * s)
+        rt = 0.0 if self.hang else corner
 
         def path():
-            body_path(cr, bx, by, w, h, rt, r, ear)
+            body_path(cr, bx, top, bw, bh, rt, corner, ear)
 
-        if not self.notch:
-            for i in range(1, 6):
-                cr.save()
-                cr.translate(0, 4 * s)
-                path()
-                cr.set_line_width(i * 3.2 * s)
-                cr.set_source_rgba(0, 0, 0, 0.06 * a)
-                cr.stroke()
-                cr.restore()
+        cr.save()
+        sc = self.press.x
+        if abs(sc - 1.0) > 1e-4:
+            cr.translate(W / 2.0, top)
+            cr.scale(sc, sc)
+            cr.translate(-W / 2.0, -top)
         path()
-        cr.set_source_rgba(0, 0, 0, a)
+        cr.set_source_rgba(0, 0, 0, fade)
         cr.fill()
 
+        # Plugging in: a streak of green light runs down one side, along the foot and up the other.
+        p = (now - self.sweep_at) / 1.2
+        if 0.0 < p < 1.0:
+            self._streak(cr, bx, top, bw, bh, corner, 1.0 - (1.0 - p) ** 2.6, min(p, 1.0 - p) * 6.0)
+
+        ox, oy = bx, top
+        self.ox, self.oy = ox, oy
+        layers = []
+        if self.prev is not None:
+            out = 1.0 - clamp((now - self.prev[3]) / 0.09, 0.0, 1.0)
+            if out > 0.005:
+                layers.append((self.prev[0], self.prev[1], self.prev[2], out * fade, False))
+        layers.append((self.kind, self.data, self.expanded, clamp((now - self.changed_at - 0.07) / 0.17, 0.0, 1.0) * fade, True))
         cr.save()
-        cr.rectangle(0, 1 if self.notch else 0, W, H)
-        cr.clip()
         path()
-        cr.set_line_width(1.0)
-        cr.set_source_rgba(1, 1, 1, 0.075 * a)
-        cr.stroke()
-        if self.kind == "power" and (self.data or {}).get("state") == "charging":
-            path()
-            cr.set_line_width(2.0 * s)
-            cr.set_source_rgba(*GREEN, 0.25 * a)
-            cr.stroke()
-            phase = (t * 0.85) % 1.0
-            gx = bx - w * 0.3 + phase * w * 1.6
-            grad = cairo.LinearGradient(gx - w * 0.3, 0, gx + w * 0.3, 0)
-            grad.add_color_stop_rgba(0.0, *GREEN, 0.0)
-            grad.add_color_stop_rgba(0.5, *GREEN, 0.95 * a)
-            grad.add_color_stop_rgba(1.0, *GREEN, 0.0)
-            path()
-            cr.set_line_width(2.6 * s)
-            cr.set_source(grad)
-            cr.stroke()
+        cr.clip()
+        for kind, data, expanded, a, live in layers:
+            if a <= 0.005:
+                continue
+            if expanded and kind != "idle":
+                # (an unfolded card is laid out at its full size, centred, and uncovered as the island grows – it does not squeeze
+                # itself into the size the island has got to so far)
+                lw, lh = self.size_for(kind, True)
+            else:
+                lw, lh = bw / s, bh / s
+            lx = ox + (bw - lw * s) / 2.0
+            if live:
+                self.ox = lx
+            cr.push_group()
+            cr.save()
+            cr.translate(lx + self.nudge.x * 14 * s, oy)
+            cr.scale(s, s)
+            self._content(cr, kind, data, expanded, lw, lh, now, live)
+            cr.restore()
+            cr.pop_group_to_source()
+            cr.paint_with_alpha(a)
+        cr.restore()
         cr.restore()
 
-        tw, th = self.size_for()
-        self.ox, self.oy = bx + (w - tw * s) / 2.0, by
-        ca = clamp(self.content.x, 0.0, 1.0) * a
-        if ca < 0.01:
+    def _streak(self, cr, bx, top, bw, bh, corner, progress, fade):
+        """The outline without its top (that is the screen's edge), as a polyline, and a bright streak running along it."""
+        inset = 1.5 * self.s
+        budget = min(bw, bh) / 2.0
+        cr.new_path()
+        cr.move_to(bx + bw - inset, top + (0 if self.hang else corner))
+        cr.line_to(bx + bw - inset, top + bh - corner)
+        _add_corner(cr, corner, 0.6, budget, bx + bw - inset, top + bh - inset, 1, False)
+        _add_corner(cr, corner, 0.6, budget, bx + inset, top + bh - inset, 2, False)
+        cr.line_to(bx + inset, top + (0 if self.hang else corner))
+        pts, cum = [], [0.0]
+        for typ, coords in cr.copy_path_flat():
+            if typ in (cairo.PATH_MOVE_TO, cairo.PATH_LINE_TO):
+                if pts:
+                    cum.append(cum[-1] + math.hypot(coords[0] - pts[-1][0], coords[1] - pts[-1][1]))
+                pts.append(coords)
+        cr.new_path()
+        total = cum[-1]
+        if total < 1 or len(pts) < 2:
             return
+        trail = 0.42 * total
+        head = progress * (total + trail)
+        steps = 48
+        cr.set_line_width(2.0 * self.s)
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        for i in range(steps):
+            a0 = head - trail * (1.0 - i / steps)
+            a1 = head - trail * (1.0 - (i + 1) / steps)
+            if a1 < 0 or a0 > total:
+                continue
+            a0, a1 = max(a0, 0.0), min(a1, total)
+            if a1 <= a0:
+                continue
+            k = (i + 1) / steps
+            col = tuple(GREEN[j] + (1.0 - GREEN[j]) * clamp((k - 0.8) / 0.2, 0.0, 1.0) for j in range(3))
+            self._polyline(cr, pts, cum, a0, a1)
+            cr.set_source_rgba(*col, clamp(fade, 0.0, 1.0) * k * k)
+            cr.stroke()
+
+    @staticmethod
+    def _polyline(cr, pts, cum, a0, a1):
+        def at(d):
+            lo = 0
+            while lo < len(cum) - 2 and cum[lo + 1] < d:
+                lo += 1
+            seg = cum[lo + 1] - cum[lo]
+            f = 0.0 if seg <= 0 else clamp((d - cum[lo]) / seg, 0.0, 1.0)
+            return pts[lo][0] + (pts[lo + 1][0] - pts[lo][0]) * f, pts[lo][1] + (pts[lo + 1][1] - pts[lo][1]) * f
+        cr.new_path()
+        cr.move_to(*at(a0))
+        cr.line_to(*at((a0 + a1) / 2.0))
+        cr.line_to(*at(a1))
+
+    # --- content
+
+    def _content(self, cr, kind, data, expanded, bw, bh, now, live):
+        age = (now - self.changed_at) if live else 10.0
+        if kind == "idle":
+            if self.cfg.get("idle", "pill") == "clock":
+                draw_text(cr, time.strftime("%H:%M"), bw / 2.0, bh / 2.0, 13, (1.0, 1.0, 1.0, 0.92), bold=True, align="center")
+            return
+        if expanded:
+            if kind == "music":
+                self._exp_music(cr, data, bw, bh, now, live)
+            elif kind == "notify":
+                self._exp_notify(cr, data, bw, bh, live)
+            else:
+                self._exp_alert(cr, kind, data, bw, bh, now, age, live)
+        else:
+            self._compact(cr, kind, data, bw, bh, now, age)
+
+    def _around(self, cr, bw, bh, left, right, edge=6.0):
+        """Compact content split round the notch: something small on the left, the notch in the middle, something on the right.
+        What does not fit is cut at the notch's edge instead of running under it."""
+        half = self.hole_half()
+        hs = clamp(bw / 2.0 - half, 0.0, bw)
+        he = clamp(bw / 2.0 + half, hs, bw)
         cr.save()
-        path()
+        cr.rectangle(0, 0, hs, bh)
         cr.clip()
-        cr.push_group()
-        cr.save()
-        cr.translate(self.ox, self.oy)
-        cr.scale(s, s)
-        k = self.kind
-        if k in ("music", "track"):
-            self._music(cr, tw, th, t, k == "track")
-        elif k == "volume":
-            self._volume(cr, tw, th)
-        elif k == "power":
-            self._power(cr, tw, th)
-        elif k == "notify":
-            self._notify(cr, tw, th)
-        elif k == "idle":
-            self._idle(cr, tw, th)
+        left(cr, min(edge, hs), bh / 2.0)
         cr.restore()
-        cr.pop_group_to_source()
-        cr.paint_with_alpha(ca)
+        cr.save()
+        cr.rectangle(he, 0, bw - he, bh)
+        cr.clip()
+        right(cr, bw - min(edge, bw - he), bh / 2.0)
         cr.restore()
 
-    def _idle(self, cr, tw, th):
-        """Nothing is going on: the island stays, small, like the notch of a laptop – with the time, or empty."""
-        if self.cfg.get("idle", "clock") == "clock":
-            draw_text(cr, time.strftime("%H:%M"), tw / 2, th / 2, 13, (1.0, 1.0, 1.0, 0.92), bold=True, align="center")
-
-    def _art(self, cr, p, x, y, size):
+    def _cover(self, cr, p, x, y, size, radius, pal):
         cr.save()
-        body_path(cr, x, y, size, size, size * 0.22, size * 0.22)
+        rrect(cr, x, y, size, size, radius)
         cr.clip()
         art = getattr(p, "art", None)
-        acc = getattr(p, "accent", None) or self.accent
         if art is not None:
             cr.translate(x, y)
             cr.scale(size / art.get_width(), size / art.get_height())
@@ -709,115 +982,310 @@ class Island:
             cr.paint()
         else:
             g = cairo.LinearGradient(x, y, x + size, y + size)
-            g.add_color_stop_rgb(0, *[c * 0.9 for c in acc])
-            g.add_color_stop_rgb(1, *[c * 0.35 for c in acc])
+            for i, c in enumerate(pal):
+                g.add_color_stop_rgb(i / max(len(pal) - 1, 1), *c[:3])
             cr.set_source(g)
             cr.paint()
-            cr.set_source_rgba(1, 1, 1, 0.85)
-            icon_note(cr, x + size / 2, y + size / 2, size * 0.5)
         cr.restore()
 
-    def _music(self, cr, tw, th, t, track):
-        p = self.data
-        acc = getattr(p, "accent", None) or self.accent
-        playing = getattr(p, "status", "") == "Playing"
-        title = getattr(p, "title", "") or tr("nothing")
-        artist = getattr(p, "artist", "")
-        if track:
-            self._art(cr, p, 10, 10, 44)
-            draw_text(cr, title, 64, 24, 14, WHITE, bold=True, max_w=tw - 64 - 44)
-            draw_text(cr, artist, 64, 43, 12, DIM, max_w=tw - 64 - 44)
-            draw_eq(cr, tw - 30, 32, 20, t, playing, acc)
-            self.hits.append((0, 0, tw, th, "raise"))
-            return
-        if not self.open:
-            self._art(cr, p, 8, 6, 24)
-            draw_text(cr, title, 40, th / 2, 12.5, WHITE, max_w=tw - 40 - 36)
-            draw_eq(cr, tw - 28, th / 2, 14, t, playing, acc)
-            return
-        self._art(cr, p, 18, 18, 88)
-        self.hits.append((18, 18, 106, 106, "raise"))
-        x0, x1 = 124, tw - 20
-        draw_text(cr, title, x0, 30, 15.5, WHITE, bold=True, max_w=x1 - x0)
-        draw_text(cr, artist, x0, 51, 13, DIM, max_w=x1 - x0)
-        length = getattr(p, "length", 0) or 0
-        pos = p.position() if hasattr(p, "position") else 0
-        frac = clamp(pos / length, 0.0, 1.0) if length > 0 else 0.0
-        rrect(cr, x0, 78, x1 - x0, 4, 2)
-        cr.set_source_rgba(*FAINT)
-        cr.fill()
-        if frac > 0:
-            rrect(cr, x0, 78, max(4.0, (x1 - x0) * frac), 4, 2)
-            cr.set_source_rgba(*acc, 1)
+    def _wave(self, cr, x, y, w, h, pal, playing, now):
+        """Seven slim bars rising and falling like a sound wave, painted across the cover's colours."""
+        g = cairo.LinearGradient(x, 0, x + w, 0)
+        for i, c in enumerate(pal):
+            g.add_color_stop_rgb(i / max(len(pal) - 1, 1), *c[:3])
+        gap = w * 0.07
+        bwid = (w - gap * 6) / 7.0
+        phase = 2.0 * math.pi * now / 1.4
+        for i in range(7):
+            if playing:
+                a = abs(math.sin(phase * (1.0 + i * 0.17) + i * 0.9))
+                b = 0.6 + 0.4 * math.sin(phase * 0.5 + i * 1.3)
+                level = clamp(0.22 + 0.78 * a * b, 0.18, 1.0)
+            else:
+                level = 0.2
+            bar_h = h * level
+            rrect(cr, x + i * (bwid + gap), y + (h - bar_h) / 2.0, bwid, bar_h, bwid / 2.0)
+            cr.set_source(g)
             cr.fill()
-        draw_text(cr, fmt_time(pos), x0, 94, 10.5, DIM)
-        if length > 0:
-            draw_text(cr, fmt_time(length), x1, 94, 10.5, DIM, align="right")
-        self.hits.append((x0 - 4, 70, x1 + 4, 100, "seek"))
-        cx, cy = (x0 + x1) / 2.0, 124
-        cr.set_source_rgba(*WHITE)
-        icon_skip(cr, cx - 58, cy, 17, False)
-        icon_skip(cr, cx + 58, cy, 17, True)
-        cr.set_source_rgba(*WHITE)
-        (icon_pause if playing else icon_play)(cr, cx, cy, 24)
-        self.hits.append((cx - 80, cy - 20, cx - 36, cy + 20, "prev"))
-        self.hits.append((cx - 24, cy - 20, cx + 24, cy + 20, "playpause"))
-        self.hits.append((cx + 36, cy - 20, cx + 80, cy + 20, "next"))
 
-    def _volume(self, cr, tw, th):
-        d = self.data or {}
-        pct, muted = d.get("pct", 0), d.get("muted", False)
-        icon_speaker(cr, 28, th / 2, 17, pct / 100.0, muted, WHITE if not muted else DIM)
-        if muted:
-            draw_text(cr, tr("muted"), 54, th / 2, 13, DIM, bold=True)
-            return
-        x0, x1 = 50, tw - 56
-        rrect(cr, x0, th / 2 - 2.5, x1 - x0, 5, 2.5)
-        cr.set_source_rgba(*FAINT)
-        cr.fill()
-        fill = clamp(pct / 100.0, 0.0, 1.0)
-        if fill > 0:
-            rrect(cr, x0, th / 2 - 2.5, max(5.0, (x1 - x0) * fill), 5, 2.5)
-            cr.set_source_rgba(1, 1, 1, 0.95)
+    def _compact(self, cr, kind, data, bw, bh, now, age):
+        if kind == "music":
+            p = data
+            pal = palette_of(p)
+            playing = getattr(p, "status", "") == "Playing"
+            # The cover's colours glow softly through the black from both ends.
+            breath = 0.55 + 0.45 * (0.5 - 0.5 * math.cos(2.0 * math.pi * now / 3.6)) if playing else 0.45
+            g = cairo.LinearGradient(0, 0, bw, 0)
+            g.add_color_stop_rgba(0.0, *pal[0][:3], 0.34 * breath)
+            g.add_color_stop_rgba(0.38, *pal[0][:3], 0.0)
+            g.add_color_stop_rgba(0.62, *pal[-1][:3], 0.0)
+            g.add_color_stop_rgba(1.0, *pal[-1][:3], 0.30 * breath)
+            cr.rectangle(0, 0, bw, bh)
+            cr.set_source(g)
             cr.fill()
-        draw_text(cr, "%d" % pct, tw - 18, th / 2, 13, WHITE, bold=True, align="right")
 
-    def _power(self, cr, tw, th):
-        d = self.data or {}
-        state, pct = d.get("state", "unplugged"), d.get("pct", 0)
-        color = GREEN if state in ("charging", "full") else RED if state == "low" else (1.0, 1.0, 1.0)
-        icon_battery(cr, 30, th / 2, 20, pct, color)
-        if state == "charging":
-            cr.set_source_rgba(0.04, 0.12, 0.07, 1)
-            icon_bolt(cr, 29, th / 2, 11)
-        draw_text(cr, tr(state), 54, th / 2, 13, WHITE, bold=True, max_w=tw - 54 - 62)
-        draw_text(cr, "%d %%" % pct, tw - 18, th / 2, 14, color + (1.0,), bold=True, align="right")
+            def left(c, x, cy):
+                self._cover(c, p, x, cy - 10.5, 21, 7, pal)
 
-    def _notify(self, cr, tw, th):
-        d = self.data or {}
-        icon = d.get("icon")
-        cr.set_source_rgba(1, 1, 1, 0.92)
+            def right(c, x, cy):
+                if playing:
+                    self._wave(c, x - 4 - 30, cy - 7.5, 30, 15, pal, True, now)
+                else:
+                    draw_glyph(c, "play", x - 4 - 15, cy - 7.5, 15, pal[0])
+            self._around(cr, bw, bh, left, right)
+            return
+        if kind == "notify":
+            d = data or {}
+
+            def left(c, x, cy):
+                pop = 0.4 + 0.6 * spring_curve(age, 420, 0.45)
+                a = clamp((pop - 0.4) / 0.5, 0.0, 1.0)
+                c.save()
+                c.translate(x + 10, cy)
+                c.scale(pop, pop)
+                c.translate(-10, -10)
+                self._app_icon(c, d.get("icon"), 0, 0, 20, a)
+                c.restore()
+
+            def right(c, x, cy):
+                k = 0.6 + 0.4 * (0.5 - 0.5 * math.cos(2.0 * math.pi * now / 1.4))
+                c.set_source_rgba(*self.accent[:3], 1.0)
+                c.arc(x - 5, cy, 5 * k, 0, 2 * math.pi)
+                c.fill()
+            self._around(cr, bw, bh, left, right)
+            return
+        al = alert_of(kind, data)
+
+        def left(c, x, cy):
+            self._alert_glyph(c, al, x, cy - 10, 20, now, age)
+
+        def right(c, x, cy):
+            draw_text(c, al["value"], x - 2, cy, 12, (*al["color"][:3], 1.0), bold=True, max_w=96, align="right")
+        self._around(cr, bw, bh, left, right)
+
+    def _app_icon(self, cr, icon, x, y, size, alpha=1.0):
         if icon is not None:
             cr.save()
-            body_path(cr, 14, 14, 36, 36, 9, 9)
+            rrect(cr, x, y, size, size, size * 0.28)
             cr.clip()
-            cr.translate(14, 14)
-            cr.scale(36.0 / icon.get_width(), 36.0 / icon.get_height())
+            cr.translate(x, y)
+            cr.scale(size / icon.get_width(), size / icon.get_height())
             cr.set_source_surface(icon, 0, 0)
-            cr.paint()
+            cr.paint_with_alpha(alpha)
             cr.restore()
         else:
-            rrect(cr, 14, 14, 36, 36, 9)
-            cr.set_source_rgba(1, 1, 1, 0.12)
+            draw_glyph(cr, "bell", x, y, size, (1.0, 1.0, 1.0), alpha)
+
+    def _alert_glyph(self, cr, al, x, y, size, now, age):
+        """Each little system moment gets its own motion: the sparkle zaps in with a flash, the full battery sparkles twice."""
+        cx, cy = x + size / 2.0, y + size / 2.0
+        if al["glyph"] == "spark":
+            if age < 0.15:
+                z = 1.35 * max(age, 0.0) / 0.15
+            else:
+                z = 1.0 + 0.35 * (1.0 - spring_curve(age - 0.15, 420, 0.35))
+            f = max(0.0, 1.0 - age / 0.6)
+            if f > 0.01:
+                cr.set_source_rgba(*al["color"][:3], f * 0.45)
+                cr.arc(cx, cy, size * (0.35 + 0.4 * (1.0 - f)), 0, 2 * math.pi)
+                cr.fill()
+            alpha = 0.875 + 0.125 * math.cos(2.0 * math.pi * now / 1.8) if al["charging"] else 1.0
+            cr.save()
+            cr.translate(cx, cy)
+            cr.scale(z, z)
+            cr.translate(-cx, -cy)
+            draw_glyph(cr, "spark", x, y, size, al["color"], alpha)
+            cr.restore()
+            return
+        if al["glyph"] == "battery_full":
+            if age < 0.14:
+                g = 1.0 + 0.18 * age / 0.14
+            elif age < 0.26:
+                g = 1.18 - 0.23 * (age - 0.14) / 0.12
+            elif age < 0.38:
+                g = 0.95 + 0.17 * (age - 0.26) / 0.12
+            else:
+                g = 1.12 - 0.12 * spring_curve(age - 0.38, 300, 0.5)
+        else:
+            g = 0.6 + 0.4 * spring_curve(age, 380, 0.45)
+        cr.save()
+        cr.translate(cx, cy)
+        cr.scale(g, g)
+        cr.translate(-cx, -cy)
+        draw_glyph(cr, al["glyph"], x, y, size, al["color"], clamp(g, 0.0, 1.0) if al["glyph"] != "battery_full" else 1.0)
+        cr.restore()
+
+    # --- unfolded
+
+    def _exp_origin(self, bw, bh):
+        """The padded area unfolded content lives in: left, right, top (below the notch) and bottom."""
+        return 18.0, bw - 18.0, EXPANDED_TOP + self.clearance(), bh - 14.0
+
+    def _exp_music(self, cr, p, bw, bh, now, live):
+        pal = palette_of(p)
+        playing = getattr(p, "status", "") == "Playing"
+        x0, x1, y0, y1 = self._exp_origin(bw, bh)
+        # The cover's colours drift as soft light behind everything, as if the cover spilled into the island.
+        drift = 2.0 * math.pi * now / 9.0
+        cw, ch = x1 - x0, max(y1 - y0, 1.0)
+        strength = 0.5 if playing else 0.3
+        for cx, cy, col in (
+            (x0 + cw * (0.18 + 0.08 * math.sin(drift)), y0 + ch * (0.3 + 0.2 * math.cos(drift)), pal[0]),
+            (x0 + cw * (0.82 + 0.08 * math.cos(drift * 1.3)), y0 + ch * (0.7 + 0.2 * math.sin(drift * 0.8)), pal[1 % len(pal)]),
+            (x0 + cw * (0.5 + 0.25 * math.sin(drift * 0.7)), y0 + ch * (0.15 + 0.1 * math.cos(drift * 1.1)), pal[2 % len(pal)]),
+        ):
+            rg = cairo.RadialGradient(cx, cy, 0, cx, cy, cw * 0.55)
+            rg.add_color_stop_rgba(0.0, *col[:3], strength)
+            rg.add_color_stop_rgba(1.0, *col[:3], 0.0)
+            cr.set_source(rg)
+            cr.arc(cx, cy, cw * 0.55, 0, 2 * math.pi)
             cr.fill()
-            cr.set_source_rgba(1, 1, 1, 0.9)
-            icon_bell(cr, 32, 31, 17)
-        app = (d.get("app") or tr("notification")).upper()
-        x0, mw = 62, tw - 62 - 16
-        draw_text(cr, app, x0, 17, 10, DIM, max_w=mw)
-        draw_text(cr, d.get("summary", ""), x0, 34, 14, WHITE, bold=True, max_w=mw)
+        # header: cover with a glow, title and artist, the wave
+        ccx, ccy = x0 + 30, y0 + 30
+        rg = cairo.RadialGradient(ccx, ccy, 0, ccx, ccy, 54)
+        rg.add_color_stop_rgba(0.0, *pal[0][:3], 0.55)
+        rg.add_color_stop_rgba(1.0, *pal[0][:3], 0.0)
+        cr.set_source(rg)
+        cr.arc(ccx, ccy, 54, 0, 2 * math.pi)
+        cr.fill()
+        self._cover(cr, p, x0, y0, 60, 16, pal)
+        tx = x0 + 74
+        mw = x1 - 34 - tx
+        title = getattr(p, "title", "") or tr("nothing")
+        draw_text(cr, title, tx, y0 + 21, 17, WHITE, bold=True, max_w=mw)
+        draw_text(cr, getattr(p, "artist", ""), tx, y0 + 42, 14, (1, 1, 1, 0.7), max_w=mw)
+        self._wave(cr, x1 - 34, y0 + 20, 34, 20, pal, playing, now)
+        if live:
+            self.hits.append((x0, y0, x1, y0 + 60, "raise"))
+        # controls, from the bottom up
+        cy = y1 - 26
+        ctrl_top = y1 - 52
+        row_bottom = ctrl_top - 6
+        row_mid = row_bottom - 11
+        length = getattr(p, "length", 0) or 0
+        if length > 0:
+            pos = p.position() if hasattr(p, "position") else 0
+            frac = clamp(pos / length, 0.0, 1.0) if self.seek_drag is None else self.seek_drag
+            left_t = fmt_time(pos if self.seek_drag is None else self.seek_drag * length)
+            right_t = "-" + fmt_time(length - (pos if self.seek_drag is None else self.seek_drag * length))
+            lw = text_width(cr, left_t, 11)
+            rw = text_width(cr, right_t, 11)
+            draw_text(cr, left_t, x0, row_mid, 11, (1, 1, 1, 0.65))
+            draw_text(cr, right_t, x1, row_mid, 11, (1, 1, 1, 0.65), align="right")
+            bx0, bx1 = x0 + lw + 8, x1 - rw - 8
+            thick = 8.0 if self.seek_drag is not None else 4.0
+            cr.save()
+            rrect(cr, bx0, row_mid - thick / 2, bx1 - bx0, thick, thick / 2)
+            cr.clip()
+            cr.set_source_rgba(1, 1, 1, 0.2)
+            cr.paint()
+            cr.rectangle(bx0, row_mid - thick / 2, (bx1 - bx0) * frac, thick)
+            cr.set_source_rgb(*pal[0][:3])
+            cr.fill()
+            cr.restore()
+            if live:
+                self.seek_rect = (bx0, bx1)
+                self.hits.append((bx0, row_mid - 11, bx1, row_mid + 11, "seek"))
+        # the three buttons, spread evenly like Compose's SpaceEvenly
+        sizes = [44.0, 52.0, 44.0]
+        free = (x1 - x0) - sum(sizes)
+        gap = free / 4.0
+        names = ["previous", "pause" if playing else "play", "next"]
+        acts = ["prev", "playpause", "next"]
+        px = x0 + gap
+        for i, (sz, nm, act) in enumerate(zip(sizes, names, acts)):
+            bcx = px + sz / 2.0
+            if i == 1:
+                cr.set_source_rgba(1, 1, 1, 0.16)
+                cr.arc(bcx, cy, sz / 2.0, 0, 2 * math.pi)
+                cr.fill()
+            icon = 26.0 if i == 1 else 22.0
+            draw_glyph(cr, nm, bcx - icon / 2, cy - icon / 2, icon, (1.0, 1.0, 1.0))
+            if live:
+                self.hits.append((bcx - sz / 2, cy - sz / 2, bcx + sz / 2, cy + sz / 2, act))
+            px += sz + gap
+
+    def _exp_notify(self, cr, data, bw, bh, live):
+        d = data or {}
+        x0, x1, y0, y1 = self._exp_origin(bw, bh)
+        self._app_icon(cr, d.get("icon"), x0, y0 + 5, 40)
+        tx = x0 + 52
+        mw = x1 - tx
+        draw_text(cr, d.get("summary") or d.get("app") or tr("notification"), tx, y0 + 10, 16, WHITE, bold=True, max_w=mw)
         if d.get("body"):
-            draw_text_block(cr, d["body"], x0, 46, 12.5, DIM, mw, lines=2)
+            draw_text_block(cr, d["body"], tx, y0 + 21, 13, (1, 1, 1, 0.7), mw, lines=2)
+        elif d.get("app"):
+            draw_text(cr, d["app"], tx, y0 + 30, 13, (1, 1, 1, 0.7), max_w=mw)
+
+    def _exp_alert(self, cr, kind, data, bw, bh, now, age, live):
+        al = alert_of(kind, data)
+        x0, x1, y0, y1 = self._exp_origin(bw, bh)
+        cy = (y0 + y1) / 2.0
+        self._alert_glyph(cr, al, x0, cy - 20, 40, now, age)
+        draw_text(cr, al["title"], x0 + 54, cy - 11, 18, WHITE, bold=True, max_w=x1 - x0 - 54 - 62)
+        draw_text(cr, al["value"], x0 + 54, cy + 11, 15, (*al["color"][:3], 1.0), max_w=x1 - x0 - 54 - 62)
+        if al["level"] is not None:
+            self._level_bar(cr, x1 - 52, cy - 12, 52, 24, al["level"], al["color"], al["charging"], now, age)
+
+    def _level_bar(self, cr, x, y, w, h, level, color, charging, now, age):
+        """A small battery that fills up from empty when it appears; the charging one has a rocking edge, a gleam and a bolt."""
+        target = clamp(level, 0.0, 1.0)
+        fill = target * clamp(spring_curve(age - 0.1, 90, 0.75), 0.0, 1.05)
+        low = (not charging) and target <= 0.2
+        cr.save()
+        cr.translate(x, y)
+        nub = w * 0.08
+        body_w = w - nub
+        r = h * 0.3
+        cr.set_source_rgba(1, 1, 1, 0.35)
+        cr.set_line_width(h * 0.1)
+        rrect(cr, h * 0.05, h * 0.05, body_w - h * 0.1, h - h * 0.1, r)
+        cr.stroke()
+        rrect(cr, body_w + nub * 0.25, h * 0.32, nub * 0.75, h * 0.36, nub)
+        cr.fill()
+        pad = h * 0.18
+        iw, ih = body_w - 2 * pad, h - 2 * pad
+        fw = iw * clamp(fill, 0.0, 1.0)
+        if fw > 0.5:
+            alpha = 0.45 + 0.55 * (0.5 - 0.5 * math.cos(2.0 * math.pi * now / 1.3)) if low else 1.0
+            cr.save()
+            rrect(cr, pad, pad, iw, ih, r)
+            cr.clip()
+            amp = ih * 0.12 if charging else 0.0
+            phase = 2.0 * math.pi * now / 1.1
+            cr.new_path()
+            cr.move_to(pad, pad)
+            for i in range(9):
+                yy = pad + ih * i / 8.0
+                cr.line_to(max(pad + fw + amp * math.sin(phase + i * 0.9), pad), yy)
+            cr.line_to(pad, pad + ih)
+            cr.close_path()
+            cr.set_source_rgba(*color[:3], alpha)
+            cr.fill()
+            if charging:
+                gl = -0.4 + 1.8 * ((now % 1.7) / 1.7)
+                gx = pad + iw * gl
+                g = cairo.LinearGradient(gx - iw * 0.25, 0, gx + iw * 0.25, 0)
+                g.add_color_stop_rgba(0.0, 1, 1, 1, 0.0)
+                g.add_color_stop_rgba(0.5, 1, 1, 1, 0.55)
+                g.add_color_stop_rgba(1.0, 1, 1, 1, 0.0)
+                cr.rectangle(pad, pad, fw, ih)
+                cr.set_source(g)
+                cr.fill()
+            cr.restore()
+        if charging:
+            bcx, bcy, bh2 = body_w / 2.0, h / 2.0, h * 0.62
+            cr.new_path()
+            for i, (px, py) in enumerate(((0.12, -0.5), (-0.22, 0.06), (0.02, 0.06), (-0.12, 0.5), (0.22, -0.06), (-0.02, -0.06))):
+                (cr.move_to if i == 0 else cr.line_to)(bcx + bh2 * px, bcy + bh2 * py)
+            cr.close_path()
+            cr.set_source_rgba(0, 0, 0, 0.55)
+            cr.set_line_width(h * 0.08)
+            cr.set_line_join(cairo.LINE_JOIN_ROUND)
+            cr.stroke_preserve()
+            cr.set_source_rgb(1, 1, 1)
+            cr.fill()
+        cr.restore()
 
 
 # ------------------------------------------------------------------------------------------------------------------ media players
@@ -836,7 +1304,7 @@ class Player:
         self.length = 0
         self.art_url = ""
         self.art = None
-        self.accent = None
+        self.palette = None
         self.trackid = ""
         self._pos = 0
         self._stamp = time.monotonic()
@@ -885,7 +1353,7 @@ class Player:
             if url != self.art_url:
                 self.art_url = url
                 if not url:
-                    self.art, self.accent = None, None
+                    self.art, self.palette = None, None
                 changed.add("art")
         if "Position" in props:
             try:
@@ -896,14 +1364,14 @@ class Player:
 
 
 def pixbuf_to_surface(pb):
-    """A GdkPixbuf as a Cairo surface, and its average colour lifted to a bright accent."""
+    """A GdkPixbuf as a Cairo surface, and the cover's colours (up to three, bright enough to read on black)."""
     w, h, rs, nc = pb.get_width(), pb.get_height(), pb.get_rowstride(), pb.get_n_channels()
     data = pb.get_pixels()
     surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
     stride = surf.get_stride()
     surf.flush()
     buf = surf.get_data()
-    sr = sg = sb = n = 0
+    bins = {}   # hue bin -> [weight, r, g, b]
     for y in range(h):
         row, out = y * rs, y * stride
         for x in range(w):
@@ -914,25 +1382,43 @@ def pixbuf_to_surface(pb):
                 r, g, b = r * a // 255, g * a // 255, b * a // 255
             o = out + x * 4
             buf[o], buf[o + 1], buf[o + 2], buf[o + 3] = b, g, r, a
-            if (x + y) % 3 == 0:
-                sr, sg, sb, n = sr + r, sg + g, sb + b, n + 1
+            if (x + y) % 2 == 0 and a > 128:
+                mx, mn = max(r, g, b), min(r, g, b)
+                sat = 0.0 if mx == 0 else (mx - mn) / mx
+                val = mx / 255.0
+                if sat > 0.28 and val > 0.28:
+                    if mx == mn:
+                        hue = 0.0
+                    elif mx == r:
+                        hue = ((g - b) / (mx - mn)) % 6
+                    elif mx == g:
+                        hue = (b - r) / (mx - mn) + 2
+                    else:
+                        hue = (r - g) / (mx - mn) + 4
+                    slot = bins.setdefault(int(hue * 2) % 12, [0.0, 0.0, 0.0, 0.0])
+                    wgt = sat * val
+                    slot[0] += wgt
+                    slot[1] += r * wgt
+                    slot[2] += g * wgt
+                    slot[3] += b * wgt
     surf.mark_dirty()
-    if n == 0:
-        return surf, None
-    r, g, b = sr / n / 255.0, sg / n / 255.0, sb / n / 255.0
-    mx, mn = max(r, g, b), min(r, g, b)
-    if mx - mn < 0.08:
-        return surf, (0.9, 0.9, 0.95)
-    # Stretch it: strong colour, bright enough to read on black.
-    k = 0.92 / mx
-    r, g, b = r * k, g * k, b * k
-    mean = (r + g + b) / 3
-    r, g, b = [clamp(mean + (c - mean) * 1.35, 0.0, 1.0) for c in (r, g, b)]
-    return surf, (r, g, b)
+    colours = []
+    for slot_id, slot in sorted(bins.items(), key=lambda kv: -kv[1][0]):
+        if slot[0] <= 0:
+            continue
+        if any(min(abs(slot_id - o), 12 - abs(slot_id - o)) < 2 for o in [c[1] for c in colours]):
+            continue
+        r, g, b = slot[1] / slot[0] / 255.0, slot[2] / slot[0] / 255.0, slot[3] / slot[0] / 255.0
+        k = 0.95 / max(r, g, b, 0.01)
+        colours.append(((min(r * k, 1.0), min(g * k, 1.0), min(b * k, 1.0)), slot_id))
+        if len(colours) == 3:
+            break
+    palette = [c[0] for c in colours] or [(0.9, 0.9, 0.95)]
+    return surf, palette
 
 
 def load_art_async(url, done):
-    """Fetches cover art off the main thread; done(surface, accent) runs on it (through idle_add)."""
+    """Fetches cover art off the main thread; done(surface, palette) runs on it (through idle_add)."""
     def work():
         try:
             if url.startswith("file://"):
@@ -953,8 +1439,8 @@ def load_art_async(url, done):
             w, h = pb.get_width(), pb.get_height()
             side = min(w, h)
             pb = pb.new_subpixbuf((w - side) // 2, (h - side) // 2, side, side).scale_simple(120, 120, GdkPixbuf.InterpType.BILINEAR)
-            surf, accent = pixbuf_to_surface(pb)
-            GLib.idle_add(done, surf, accent)
+            surf, palette = pixbuf_to_surface(pb)
+            GLib.idle_add(done, surf, palette)
         except Exception as e:  # noqa: BLE001 – a missing cover is never a reason to stop
             log("cover:", e)
     threading.Thread(target=work, daemon=True).start()
@@ -1088,8 +1574,11 @@ class App(Gtk.Application):
         self.transient = None
         self.pending = []
         self._expire_id = 0
-        self.hover_open = False
-        self.pinned = False
+        self.expanded = False       # unfolded (a tap): the big card instead of the small one
+        self._collapse_id = 0
+        self._hover_expanded = False
+        self._d0 = None
+        self._dseek = False
         self._leave_id = 0
         self._dwell_id = 0
         self._inside = False
@@ -1145,10 +1634,12 @@ class App(Gtk.Application):
         motion.connect("enter", self.on_enter)
         motion.connect("leave", self.on_leave)
         area.add_controller(motion)
-        left = Gtk.GestureClick()
-        left.set_button(1)
-        left.connect("pressed", self.on_click)
-        area.add_controller(left)
+        drag = Gtk.GestureDrag()
+        drag.set_button(1)
+        drag.connect("drag-begin", self.on_drag_begin)
+        drag.connect("drag-update", self.on_drag_update)
+        drag.connect("drag-end", self.on_drag_end)
+        area.add_controller(drag)
         right = Gtk.GestureClick()
         right.set_button(3)
         right.connect("pressed", self.on_right_click)
@@ -1259,15 +1750,16 @@ class App(Gtk.Application):
         p = self.active()
         if self.transient is not None:
             t = self.transient
-            isl.show(t["kind"], t["data"], False)
-        elif (self.hover_open or self.pinned) and p is not None and self.cfg["music"]:
-            isl.show("music", p, True)
-            self._start_pos_timer()
-        elif self.music_visible():
-            isl.show("music", p, False)
+            isl.show(t["kind"], t["data"], self.expanded)
+        elif p is not None and self.cfg["music"] and (self.expanded or self.music_visible()):
+            isl.show("music", p, self.expanded)
+            if self.expanded:
+                self._start_pos_timer()
         elif self.cfg["idle"] != "off":
+            self.expanded = False
             isl.show("idle", None, False)
         else:
+            self.expanded = False
             isl.hide()
         self._clock_sync()
         self.update_input()
@@ -1329,6 +1821,7 @@ class App(Gtk.Application):
 
     def _start(self, ev):
         self.transient = ev
+        self._fold()
         self._arm()
         self.refresh()
 
@@ -1345,6 +1838,7 @@ class App(Gtk.Application):
             self._arm()
             return False
         self.transient = None
+        self._fold()
         while self.pending:
             ev = self.pending.pop(0)
             if now - ev["born"] < 8:
@@ -1360,32 +1854,64 @@ class App(Gtk.Application):
             self._expire_id = 0
         self.transient = None
         self.pending.clear()
-        self.pinned = False
-        self.hover_open = False
+        self._fold()
         self.refresh()
 
-    # --- mouse
+    # --- unfolding
+
+    def _fold(self):
+        """Folded again (without the refresh): what was unfolded is over."""
+        self.expanded = False
+        self._hover_expanded = False
+        if self._collapse_id:
+            GLib.source_remove(self._collapse_id)
+            self._collapse_id = 0
+
+    def set_expanded(self, on):
+        if on and self.island.kind in (None, "idle"):
+            return
+        if on == self.expanded:
+            return
+        self.expanded = on
+        if self._collapse_id:
+            GLib.source_remove(self._collapse_id)
+            self._collapse_id = 0
+        secs = int(self.cfg["auto_collapse"])
+        if on:
+            if secs > 0:
+                self._collapse_id = GLib.timeout_add(secs * 1000, self._auto_collapse)
+            if self.transient is not None:  # (what is unfolded stays until it is folded)
+                self.transient["until"] = max(self.transient["until"], time.monotonic() + max(secs, 3) + 1.0)
+                self._arm()
+        else:
+            self._hover_expanded = False
+            if self.transient is not None:
+                self.transient["until"] = min(self.transient["until"], time.monotonic() + 1.2)
+                self._arm()
+        self.refresh()
+
+    def _auto_collapse(self):
+        self._collapse_id = 0
+        self.set_expanded(False)
+        return False
+
+    # --- mouse: a tap unfolds and folds, a pull down unfolds, a pull up folds, sideways over music skips the track
 
     def on_enter(self, ctrl, x, y, *rest):
         self._inside = True
         if self._leave_id:
             GLib.source_remove(self._leave_id)
             self._leave_id = 0
-        if self.transient is not None or not self.cfg["music"] or self.active() is None:
+        if not self.cfg["hover_reveal"] or self.transient is not None or not self.cfg["music"] or self.active() is None:
             return
-        if self.island.kind in (None, "idle"):
-            # Only the idle island (or the thin strip at the screen's edge) is there: it opens once the pointer stays a moment,
-            # so that passing by on the way to a window's title bar does not open it.
-            if not self._dwell_id:
-                self._dwell_id = GLib.timeout_add(320, self._dwell)
-            return
-        self.hover_open = True
-        self.refresh()
+        if not self._dwell_id:  # (a moment's wait, so that passing by on the way to a window's title bar does not unfold it)
+            self._dwell_id = GLib.timeout_add(320, self._dwell)
 
     def _dwell(self):
         self._dwell_id = 0
-        if self._inside and self.transient is None and self.active() is not None:
-            self.hover_open = True
+        if self._inside and self.transient is None and self.active() is not None and not self.expanded:
+            self._hover_expanded = True
+            self.expanded = True
             self.refresh()
         return False
 
@@ -1399,20 +1925,70 @@ class App(Gtk.Application):
 
         def later():
             self._leave_id = 0
-            if not self.pinned:
-                self.hover_open = False
-                self.refresh()
+            if self._hover_expanded:
+                self.set_expanded(False)
             return False
         self._leave_id = GLib.timeout_add(450, later)
 
-    def on_click(self, gesture, n, x, y, *rest):
+    def on_drag_begin(self, gesture, x, y):
+        isl = self.island
+        self._d0 = (x, y)
+        act = isl.hit(x, y)
+        self._dseek = bool(act and act[0] == "seek")
+        if self._dseek:
+            isl.seek_drag = act[1]
+        isl.set_pressed(True)  # it swells a little under the pointer
+        self.kick()
+
+    def on_drag_update(self, gesture, ox, oy):
+        if self._dseek and self._d0 is not None:
+            self.island.seek_drag = self.island.seek_fraction(self._d0[0] + ox)
+            self.kick()
+
+    def on_drag_end(self, gesture, ox, oy):
+        isl = self.island
+        isl.set_pressed(False)
+        self.kick()
+        if self._d0 is None:
+            return
+        x0, y0 = self._d0
+        self._d0 = None
+        p = self.active()
+        if self._dseek:
+            self._dseek = False
+            frac = isl.seek_fraction(x0 + ox)
+            isl.seek_drag = None
+            if p is not None:
+                self.mpris.seek_to(p, frac)
+            return
+        if math.hypot(ox, oy) < 6:
+            self._tap(x0, y0)
+            return
+        if isl.kind in (None, "idle"):
+            return
+        threshold = 18 * isl.s
+        vertical = abs(oy) > abs(ox)
+        if vertical and oy > threshold and not self.expanded:
+            self.set_expanded(True)
+        elif vertical and oy < -threshold and self.expanded:
+            self.set_expanded(False)
+        elif not vertical and abs(ox) > threshold * 2 and not self.expanded and isl.kind == "music" and p is not None:
+            forward = ox < 0
+            self.mpris.call(p, "Next" if forward else "Previous")
+            isl.nudge.x = -1.0 if forward else 1.0  # the content leans the way the track goes
+            isl.nudge.v = 0.0
+            isl.nudge.target = 0.0
+
+    def _tap(self, x, y):
         isl = self.island
         p = self.active()
         if isl.kind == "idle":
-            self.open_settings()
+            self.open_settings()  # (the empty notch is the app's door)
             return
-        act = isl.hit(x, y)
-        if act and p is not None:
+        if isl.kind is None:
+            return
+        act = isl.hit(x, y) if self.expanded else None
+        if act and p is not None and isl.kind == "music":
             action, value = act
             if action == "prev":
                 self.mpris.call(p, "Previous")
@@ -1425,19 +2001,17 @@ class App(Gtk.Application):
                     self.refresh()
             elif action == "raise":
                 self.mpris.raise_player(p)
-            elif action == "seek":
-                self.mpris.seek_to(p, value)
             self.kick()
             return
-        if isl.kind == "music" and p is not None:
-            self.pinned = not (self.pinned and isl.open)
-            self.hover_open = True
-            self.refresh()
-        else:
-            self.dismiss()
+        self.set_expanded(not self.expanded)
 
     def on_right_click(self, gesture, n, x, y, *rest):
-        self.dismiss()
+        # (what holding does on the phone: it opens the app behind what is shown – for music the player; the rest just goes away)
+        p = self.active()
+        if self.island.kind == "music" and self.transient is None and p is not None:
+            self.mpris.raise_player(p)
+        elif self.island.kind in ("volume", "power", "notify"):
+            self.dismiss()
 
     # --- events
 
@@ -1445,9 +2019,9 @@ class App(Gtk.Application):
         if "art" in changed and p.art_url:
             url = p.art_url
 
-            def done(surf, accent):
+            def done(surf, palette):
                 if p.art_url == url:
-                    p.art, p.accent = surf, accent
+                    p.art, p.palette = surf, palette
                     self.kick()
                     if self.area is not None:
                         self.area.queue_draw()
@@ -1455,10 +2029,6 @@ class App(Gtk.Application):
             load_art_async(url, done)
         if "status" in changed and p.status == "Paused":
             GLib.timeout_add(4200, lambda: (self.refresh(), False)[1])
-        if ("track" in changed and not initial and p is self.active() and p.status == "Playing" and p.title
-                and self.cfg["music"] and self.cfg["track_popups"] and not (self.island.kind == "music" and self.island.open)):
-            self.post("track", p, 3.6, 1)
-            return
         self.refresh()
 
     def on_volume(self, pct, muted):
@@ -1712,17 +2282,18 @@ class App(Gtk.Application):
         self.mpris.players[":demo"] = p
         self.refresh()
         steps = [
-            (3.0, lambda: self.post("track", p, 3.6, 1)),
-            (7.0, lambda: [self._demo_after(int(i * 380), (lambda v: lambda: self.on_volume(v, False))(35 + i * 12)) for i in range(4)]),
-            (10.5, lambda: self.post("power", {"state": "charging", "pct": 78}, 2.6, 2)),
-            (14.0, lambda: self.post("notify", {"app": "Signal", "summary": "Mia", "body": "Kommst du später noch vorbei? Ich bring Kuchen mit.", "icon": None}, 4.5, 3)),
-            (19.0, lambda: self.post("power", {"state": "low", "pct": 19}, 3.4, 3)),
-            (23.0, lambda: setattr(self, "pinned", True) or self.refresh()),
-            (28.0, lambda: setattr(self, "pinned", False) or setattr(self, "hover_open", False) or self.refresh()),
+            (3.0, lambda: self.set_expanded(True)),
+            (8.5, lambda: self.set_expanded(False)),
+            (10.5, lambda: [self._demo_after(int(i * 380), (lambda v: lambda: self.on_volume(v, False))(35 + i * 12)) for i in range(4)]),
+            (14.0, lambda: self.post("power", {"state": "charging", "pct": 78}, 2.6, 2)),
+            (18.0, lambda: self.post("notify", {"app": "Signal", "summary": "Mia", "body": "Kommst du später noch vorbei? Ich bring Kuchen mit.", "icon": None}, 4.0, 3)),
+            (20.0, lambda: self.set_expanded(True)),
+            (24.5, lambda: self.set_expanded(False)),
+            (27.0, lambda: self.post("power", {"state": "low", "pct": 19}, 3.4, 3)),
         ]
         for delay, fn in steps:
             self._demo_after(int(delay * 1000), fn)
-        self._demo_after(32000, self._demo_cycle)
+        self._demo_after(33000, self._demo_cycle)
 
 
 # ------------------------------------------------------------------------------------------------------------------ the settings window
@@ -1823,7 +2394,7 @@ def build_settings(app):
 
     page.append(lbl('<span size="xx-large" weight="bold">Glimmer</span>', markup=True))
     page.append(lbl("Version %s · die Insel am oberen Bildschirmrand" % APP_VERSION, css=("dim-label",)))
-    status = ("Läuft. Die Insel sitzt oben am Bildschirmrand (Layer-Shell). Ein Klick auf die kleine Insel öffnet dieses Fenster."
+    status = ("Läuft. Die Insel sitzt oben am Bildschirmrand (Layer-Shell). Ein Tipp auf die leere Notch öffnet dieses Fenster."
               if app.layered else
               "Läuft als normales Fenster: ohne Layer-Shell (GNOME oder X11) sitzt die Insel nicht am Rand.")
     page.append(lbl(status, css=("dim-label",), wrap=True))
@@ -1832,7 +2403,7 @@ def build_settings(app):
     shape = Gtk.DropDown.new_from_strings(["Notch – am Rand angewachsen", "Insel – schwebt mit Abstand"])
     shape.set_selected(0 if cfg["mode"] == "notch" else 1)
     shape.connect("notify::selected", lambda w, _p: app.set_option("mode", "notch" if w.get_selected() == 0 else "island"))
-    add_row(box, "Form", "Glimmer startet nach der Änderung kurz neu.", shape)
+    add_row(box, "Form", "Notch wie beim MacBook, oder die kleine Insel darunter. Glimmer startet kurz neu.", shape)
     size = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.6, 1.6, 0.05)
     size.set_value(float(cfg["scale"]))
     size.set_digits(2)
@@ -1840,11 +2411,32 @@ def build_settings(app):
     size.set_size_request(190, -1)
     size.connect("value-changed", lambda w: app.set_option("scale", round(w.get_value(), 2)))
     add_row(box, "Größe", "1,00 ist normal.", size)
-    idles = ["clock", "pill", "off"]
-    idle = Gtk.DropDown.new_from_strings(["Uhrzeit zeigen", "Leere Insel", "Unsichtbar"])
+    idles = ["pill", "clock", "off"]
+    idle = Gtk.DropDown.new_from_strings(["Leere Notch", "Notch mit Uhrzeit", "Unsichtbar"])
     idle.set_selected(idles.index(cfg["idle"]) if cfg["idle"] in idles else 0)
     idle.connect("notify::selected", lambda w, _p: app.set_option("idle", idles[w.get_selected()]))
-    add_row(box, "Wenn nichts passiert", "Die Insel bleibt als kleine Notch stehen und wächst bei Ereignissen.", idle)
+    add_row(box, "Wenn nichts passiert", "Wie bei ZENITH bleibt die leere Notch stehen und wächst bei Ereignissen.", idle)
+    nw = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 120, 320, 5)
+    nw.set_value(float(cfg["notch_width"]))
+    nw.set_digits(0)
+    nw.set_draw_value(True)
+    nw.set_size_request(190, -1)
+    nw.connect("value-changed", lambda w: app.set_option("notch_width", int(w.get_value())))
+    add_row(box, "Breite der Notch", "In dp; 190 ist die Breite der MacBook-Notch in ZENITH.", nw)
+    nh = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 24, 60, 1)
+    nh.set_value(float(cfg["notch_height"]))
+    nh.set_digits(0)
+    nh.set_draw_value(True)
+    nh.set_size_request(190, -1)
+    nh.connect("value-changed", lambda w: app.set_option("notch_height", int(w.get_value())))
+    add_row(box, "Höhe der Notch", "34 wie in ZENITH.", nh)
+    fold = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 30, 1)
+    fold.set_value(float(cfg["auto_collapse"]))
+    fold.set_digits(0)
+    fold.set_draw_value(True)
+    fold.set_size_request(190, -1)
+    fold.connect("value-changed", lambda w: app.set_option("auto_collapse", int(w.get_value())))
+    add_row(box, "Aufgeklappt nach … Sekunden zuklappen", "0: bleibt aufgeklappt, bis du wieder tippst.", fold)
     langs = ["auto", "de", "en"]
     lang = Gtk.DropDown.new_from_strings(["Automatisch", "Deutsch", "English"])
     lang.set_selected(langs.index(cfg["language"]) if cfg["language"] in langs else 0)
@@ -1853,9 +2445,8 @@ def build_settings(app):
 
     box = section("Musik")
     add_switch(box, "music", "Musik zeigen", "Spotify, Firefox, VLC, mpv … – jeder Player, der sich meldet (MPRIS).")
-    add_switch(box, "music_persistent", "Kleine Insel, solange Musik läuft")
-    add_switch(box, "track_popups", "Titelwechsel kurz zeigen")
-    add_switch(box, "hover_reveal", "Maus oben in der Mitte öffnet die Steuerung", "Die Maus einen Moment ganz oben am Rand lassen.")
+    add_switch(box, "music_persistent", "Kleine Notch mit Cover und Wellen, solange Musik läuft")
+    add_switch(box, "hover_reveal", "Maus auf der Notch klappt die Musik auf", "Zusätzlich zum Tippen; die Maus einen Moment dort lassen.")
 
     box = section("Ereignisse")
     add_switch(box, "charging", "Laden", "Grüner Lichtstreifen beim Anstecken, „Voll geladen“.")
@@ -1962,65 +2553,56 @@ def demo_player(cfg):
     p.title, p.artist, p.status = "Meridian", "ClaudeOS", "Playing"
     p.length = 214_000_000
     p.set_position(83_000_000)
-    p.art, p.accent = demo_art(), (1.0, 0.47, 0.56)
+    p.art, p.palette = demo_art(), [(1.0, 0.47, 0.56), (0.72, 0.30, 0.82), (1.0, 0.72, 0.45)]
     p.known, p.last_active, p.last_change = True, time.monotonic(), time.monotonic()
     return p
 
 
 def render_snapshot(cfg, path):
     """Draws every state of the island, in both modes, into one picture – no window, no display needed."""
-    scenes = [
-        ("Leerlauf", "idle", False),
-        ("Musik, klein", "music", False),
-        ("Musik, geöffnet", "music", True),
-        ("Titelwechsel", "track", False),
-        ("Lautstärke", "volume", False),
-        ("Stumm", "volume", False),
-        ("Lädt", "power", False),
-        ("Voll", "power", False),
-        ("Akku schwach", "power", False),
-        ("Benachrichtigung", "notify", False),
-        ("Benachrichtigung, kurz", "notify", False),
+    player = demo_player(cfg)
+    notice = {"app": "Signal", "summary": "Mia", "body": "Kommst du später noch vorbei? Ich bring Kuchen mit.", "icon": None}
+    scenes = [  # (label, kind, data, unfolded)
+        ("Leerlauf", "idle", None, False),
+        ("Musik", "music", player, False),
+        ("Lautstärke", "volume", {"pct": 64, "muted": False}, False),
+        ("Lädt", "power", {"state": "charging", "pct": 78}, False),
+        ("Akku schwach", "power", {"state": "low", "pct": 14}, False),
+        ("Benachrichtigung", "notify", notice, False),
+        ("Musik, aufgeklappt", "music", player, True),
+        ("Lädt, aufgeklappt", "power", {"state": "charging", "pct": 78}, True),
+        ("Benachrichtigung, aufgeklappt", "notify", notice, True),
     ]
     s = cfg["scale"]
-    W, H = window_size(s)
+    W, _H = window_size(s)
     pad = int(14 * s)
-    cols = 2
-    rows = len(scenes)
-    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, cols * W + (cols + 1) * pad, rows * (H - int(SHADOW * s) + 16) + pad, )
+    small, big = int(64 * s), int(232 * s)
+    heights = [big if scene[3] else small for scene in scenes]
+    total = sum(heights) + (len(scenes) + 1) * pad // 2
+    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, 2 * W + 3 * pad, total)
     cr = cairo.Context(surf)
     cr.set_source_rgb(0.08, 0.08, 0.1)
     cr.paint()
-    player = demo_player(cfg)
-    cell_h = H - int(SHADOW * s) + 16
-    for row, (label, kind, open_) in enumerate(scenes):
+    y = pad // 2
+    for (label, kind, data, unfolded), cell_h in zip(scenes, heights):
         for col, mode in enumerate(("notch", "island")):
-            c2 = dict(cfg, mode=mode)
-            isl = Island(c2)
-            data = {
-                "Leerlauf": None, "Musik, klein": player, "Musik, geöffnet": player, "Titelwechsel": player,
-                "Lautstärke": {"pct": 64, "muted": False}, "Stumm": {"pct": 64, "muted": True},
-                "Lädt": {"state": "charging", "pct": 78}, "Voll": {"state": "full", "pct": 100},
-                "Akku schwach": {"state": "low", "pct": 14},
-                "Benachrichtigung": {"app": "Signal", "summary": "Mia", "body": "Kommst du später noch vorbei? Ich bring Kuchen mit.", "icon": None},
-                "Benachrichtigung, kurz": {"app": "Kalender", "summary": "Zahnarzt in 10 Minuten", "body": "", "icon": None},
-            }[label]
-            isl.show(kind, data, open_)
+            isl = Island(dict(cfg, mode=mode))
+            isl.show(kind, data, unfolded)
             isl.snap()
             x = pad + col * (W + pad)
-            y = pad // 2 + row * cell_h
             cr.save()
             cr.translate(x, y)
-            cr.rectangle(0, 0, W, cell_h - 4)
+            cr.rectangle(0, 0, W, cell_h)
             cr.clip()
             g = cairo.LinearGradient(0, 0, W, cell_h)
             g.add_color_stop_rgb(0, 0.16, 0.26, 0.46)
             g.add_color_stop_rgb(1, 0.46, 0.22, 0.52)
             cr.set_source(g)
             cr.paint()
-            isl.draw(cr, W, H, 1.3)
-            draw_text(cr, "%s · %s" % (label, mode), 8, cell_h - 14, 10.5, (1, 1, 1, 0.7))
+            isl.draw(cr, W, cell_h, 1.3)
+            draw_text(cr, "%s · %s" % (label, mode), 8, cell_h - 9, 10.5, (1, 1, 1, 0.7))
             cr.restore()
+        y += cell_h + pad // 2
     surf.write_to_png(path)
     print("Bild geschrieben:", path)
 

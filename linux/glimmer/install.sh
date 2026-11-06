@@ -65,7 +65,7 @@ case "${1:-install}" in
     sleep 2
     if pgrep -f "^/usr/bin/python3[0-9.]* ${BIN}( |\$)" >/dev/null 2>&1; then
       ok "Glimmer läuft jetzt: oben in der Mitte erscheint kurz „Glimmer läuft“, und das Einstellungsfenster öffnet sich."
-      say "Die Insel bleibt als kleine Notch mit der Uhrzeit oben stehen und wächst bei Musik, Laden, Lautstärke und Benachrichtigungen."
+      say "Oben in der Mitte steht die Notch (wie in ZENITH) und wächst bei Musik, Laden, Lautstärke und Benachrichtigungen. Tippen klappt sie auf."
       say "Das Einstellungsfenster öffnest du jederzeit im Anwendungsmenü unter „Glimmer“ (oder mit: $BIN)."
       say "Darin startest und beendest du auch die Vorführung und beendest Glimmer."
     else
