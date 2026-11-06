@@ -31,7 +31,7 @@ import dev.hearth.launcher.data.withBeColorOs
 /*
  * ZENITH 22.1, "Be ColorOS": the third mode of the Clawd Illuminati, next to "Be Smarter" and "Be Comet" – the whole launcher as
  * ColorOS 17 dresses it. It is the ColorOS look of Projekt Zenith (squircle icons, the ColorOS clock, the floating dock of glass, the
- * ColorOS control center) taken further and made a copy rather than something to tune: ColorOS's frosted glass with its own lens,
+ * ColorOS control center) taken further and made a copy rather than something to tune: ColorOS's Liquid Glass (clear, with a deep lens and a bright edge of light),
  * the fluid design (touches spread like liquid light, colours drift behind the screens), a calm home screen without saying and
  * greeting, ZENITH's own effects stepping aside, and Glimmer as OPPO's Fluid Cloud (a capsule tinted in the activity's colour, the
  * spinning cover with its progress ring, a light that breathes). The drawing is in LauncherSettings.withColorOsLook; this file is the
@@ -113,7 +113,7 @@ private fun ColorOsCard(on: Boolean, onToggle: (Boolean) -> Unit) {
         }
         Spacer(Modifier.height(10.dp))
         Text(
-            "Der ganze Launcher als ColorOS 17: Milchglas mit der tiefen Linse von ColorOS, runde Squircle-Icons, die ColorOS-Uhr, ein schwebendes Dock aus Glas, " +
+            "Der ganze Launcher als ColorOS 17: klares Liquid Glass mit tiefer Linse und hellem Lichtrand, runde Squircle-Icons, die ColorOS-Uhr, ein schwebendes Dock aus Glas, " +
                 "das ColorOS-Kontrollzentrum, das Fluid-Design (Berührungen breiten sich wie flüssiges Licht aus, Farben driften hinter den Bildschirmen) " +
                 "und Glimmer als Fluid Cloud – die Kapsel in der Farbe der Aktivität, das drehende Cover mit Fortschrittsring, ein atmendes Licht. " +
                 "Das Glas ist ein Abbild und lässt sich nicht verstellen; die eigenen Looks und Effekte von ZENITH treten solange zurück. " +

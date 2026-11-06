@@ -747,7 +747,7 @@ private fun ProjectZenithGate(settings: LauncherSettings, onChange: ((LauncherSe
         // ZENITH 19.2: the whole system as ColorOS 17.1 dresses it, the glass free to set.
         IlluminationSwitch(
             "◐", "ColorOS-17.1-Look",
-            "Das ganze System im Stil von ColorOS 17.1 – Milchglas, runde Squircle-Icons, die ColorOS-Uhr, das ColorOS-Schnellmenü, schwebendes Dock, dein eigener Hintergrund. Das Glas stellst du unten frei ein; ausgeschaltet ist alles wieder wie vorher.",
+            "Das ganze System im Stil von ColorOS 17.1 – Liquid Glass, runde Squircle-Icons, die ColorOS-Uhr, das ColorOS-Schnellmenü, schwebendes Dock, dein eigener Hintergrund. Das Glas stellst du unten frei ein; ausgeschaltet ist alles wieder wie vorher.",
             settings.projectColorOs,
         ) { v -> onChange { it.copy(projectColorOs = v, projectZenithGlass = if (v) false else it.projectZenithGlass) } }
         // ZENITH 19.3: the ColorOS look's own clock and dock.
@@ -859,7 +859,7 @@ private fun GlassTuning(settings: LauncherSettings, onChange: ((LauncherSettings
         )
         val looks = listOf(
             "Dezent" to listOf(0.7f, 0.8f, 0.3f, 0.7f, 1f),
-            "ColorOS" to listOf(1.3f, 1.2f, 0.6f, 1f, 1f),
+            "ColorOS" to listOf(2.6f, 0.8f, 0.9f, 2f, 1f),
             "Klar" to listOf(1.6f, 0.6f, 0.8f, 1.2f, 0.5f),
             "Milchglas" to listOf(0.5f, 2.2f, 0.2f, 0.8f, 2f),
             "Kristall" to listOf(2.4f, 0.6f, 1.4f, 1.7f, 0.6f),

@@ -219,8 +219,8 @@ fun LauncherSettings.withColorOsLook(): LauncherSettings = if (!colorOsLook) {
 }
 
 /**
- * ZENITH 22.1, "Be ColorOS": on top of the ColorOS look, the way ColorOS 17 does everything – its frosted glass with a deep lens and
- * soft colour fringes (not the user's own glass settings: the mode is a copy), a calm home screen with no saying and no greeting, and
+ * ZENITH 22.1, "Be ColorOS": on top of the ColorOS look, the way ColorOS 17 does everything – its Liquid Glass (clear, a deep lens, a
+ * fringe of colour and a bright edge of light; not the user's own glass settings: the mode is a copy), a calm home screen with no saying and no greeting, and
  * ZENITH's own effects stepping aside. (The fluid design, on by default, stays the user's to switch.)
  */
 private fun LauncherSettings.withColorOsMode(): LauncherSettings = copy(
@@ -243,12 +243,14 @@ private fun LauncherSettings.withColorOsMode(): LauncherSettings = copy(
     showLabels = true,
     animations = true,
     fluidRims = FluidRims.Calm,
+    // Liquid Glass, as ColorOS 17 has it – clear, hardly tinted, bending what lies behind it with a deep lens, a fringe of colour at the
+    // rim and a bright edge of light; not frosted (little blur).
     glassLook = GlassLook.Liquid,
-    glassTint = if (darkGlass) GlassTint.Dark else GlassTint.Light,
-    glassBlur = 1.2f,
-    glassRefraction = 1.3f,
-    glassDispersion = 0.6f,
-    glassSpecular = 1f,
+    glassTint = GlassTint.Clear,
+    glassBlur = 0.8f,
+    glassRefraction = 2.6f,
+    glassDispersion = 0.9f,
+    glassSpecular = 2f,
     glassTintStrength = 1f,
     glassInteractive = true,
 )
