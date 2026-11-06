@@ -58,7 +58,7 @@ import kotlin.math.sin
 @Composable
 fun LockStageContent(s: LauncherSettings, locked: Boolean, dozing: Boolean, wallpaper: ImageBitmap?) {
     when {
-        dozing && (s.fullAod || s.superParams.aod) -> FullAod(s, wallpaper)
+        dozing && s.zenithAod && (s.fullAod || s.superParams.aod) -> FullAod(s, wallpaper)
         dozing -> Unit
         locked -> LockExtras(s)
     }

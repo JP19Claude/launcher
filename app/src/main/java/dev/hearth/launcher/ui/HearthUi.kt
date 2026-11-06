@@ -238,6 +238,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Dynamic Notch und ein AOD-Schalter", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Für alle Notches und Inseln auf allen Geräten soll es eine Option geben, die nicht nur so aussieht wie die Dynamic Island, sondern sich so verhält und so aussieht wie die echte – die Notch soll zur „Dynamic Notch“ werden. Und das AOD soll sich ausschalten lassen.",
+                        "Dynamic Notch: Bei „MacBook-Notch“, „Notch (Handy)“ und „MacBook-Insel“ gibt es unter Einstellungen → Glimmer den Schalter „Dynamic Notch (1:1)“ (bei der Insel „Dynamic-Island-Stil (1:1)“). Er legt Aussehen und Bedienung der Dynamic Island des iPhones auf die Form der Kerbe oder der Insel: reines Schwarz, das Cover als abgerundetes Quadrat, aufgeklappt eine große, runde Karte, Antippen öffnet die App und gedrückt halten klappt auf, auf dem Sperrbildschirm sitzt nur die Kerbe, ohne Schloss. Größe und Lage bleiben deine; Leuchten, Rand, Nachrichten, Doppeltippen, Titel wischen und „Akku beim Laden“ sind dann aus, und deine eigenen Einstellungen kommen zurück, wenn du den Schalter wieder ausschaltest.",
+                        "Der AOD-Schalter: Unter „Sperrbildschirm & AOD“ gibt es den Hauptschalter „ZENITH auf dem AOD“. Ist er aus, zeichnet ZENITH nichts auf den Always-On-Display – weder Glimmer noch das große AOD noch den Planeten –, und dein Handy zeigt seinen AOD, wie er ist. Darunter lassen sich Glimmer und das große AOD einzeln ein- und ausschalten.",
+                        "Ehrlich dazu: Ich habe nichts davon auf einem Handy gesehen. Wenn dir an der Dynamic Notch noch etwas anders aussieht als bei der echten Dynamic Island (Größe, Tempo, Abstand, eine Aktivität), sag mir genau, was – ein Foto beider nebeneinander hilft mir am meisten. Auch bei den Fehlern, die du noch siehst: schreib mir, wo und wann.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Glimmer Drop über das WLAN", Icons.Rounded.Star, Blue,
                     listOf(
                         "Rückmeldung vom PC: Glimmer Drop ging dort nicht. Die Ursache, die ich im Code finde: Bisher brauchte es zwei Dinge, die ein PC oder Laptop meist nicht hat – ein Bluetooth-Signal (damit zwei Handys spüren, dass sie sich berühren) und Googles „Nearby“ (die Google Play-Dienste). Ohne die Erlaubnis „Geräte in der Nähe“ brach es außerdem sofort ab.",

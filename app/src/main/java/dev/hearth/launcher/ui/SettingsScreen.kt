@@ -1137,6 +1137,8 @@ fun SettingsScreen(
 internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) -> LauncherSettings) -> Unit) {
     // In the Dynamic Island mode the iPhone decides the look and handling; those rows step aside.
     val di = s.glimmerIsDynamicIsland
+    // The iPhone's way on a notch or the MacBook island too ("Dynamic Notch"): the same rows step aside, the shape's own rows stay.
+    val dyn = s.glimmerDynamicStyle
     // The MacBook notch mode (a laptop's screen has no hole for the camera: Glimmer hangs from the top edge as a black notch).
     val nt = s.glimmerIsNotch
     val mi = s.glimmerIsMacIsland
@@ -1226,14 +1228,24 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
         if (pn) Note(
             "Notch (Handy): Glimmer als schwarze Kerbe, die oben am Bildschirmrand hängt und genau um deine Kamera sitzt – wie die Notch der iPhones vor der Dynamic Island. Sie ist immer da, wächst bei Musik, Anrufen, Timern, Laden und Meldungen nur so weit, wie der Inhalt braucht, und klappt auf. Ruhig und ohne Wackeln; Leuchten, Rand und Fließfarben gibt es hier nicht. Die Breite stellst du unter „Größe & Position“ ein, die Lage mit „Nach oben / unten“ (0 = am Rand)."
         )
-        if (!di && !nt && !pn) ChoiceRow(
+        // The iPhone's way on the notch or the island: its look and handling, the shape stays your own.
+        if (nt || pn || mi) SwitchRow(
+            label = if (mi) "Dynamic-Island-Stil (1:1)" else "Dynamic Notch (1:1)",
+            description = if (s.glimmerDynamic) {
+                "An: so wie die echte Dynamic Island – reines Schwarz, das Cover als abgerundetes Quadrat, Antippen öffnet die App und gedrückt halten klappt auf, auf dem Sperrbildschirm nur die " + (if (mi) "Pille" else "Kerbe") + ". Die Form (Größe, Lage) bleibt deine; Leuchten, Rand, Nachrichten, Doppeltippen, Titel wischen und Akku beim Laden sind aus. Deine eigenen Einstellungen kommen zurück, wenn du es ausschaltest"
+            } else {
+                "Aus: " + (if (mi) "die Insel" else "die Kerbe") + " mit Glimmers Extras. An: Aussehen und Bedienung der Dynamic Island des iPhones, in der Form von " + (if (mi) "MacBook-Insel" else "Notch")
+            },
+            checked = s.glimmerDynamic,
+        ) { v -> update { it.copy(glimmerDynamic = v) } }
+        if (!dyn && !nt && !pn) ChoiceRow(
             label = "Aussehen",
             options = GlimmerStyle.entries,
             selected = s.glimmerStyle,
             optionLabel = { it.label },
             onSelect = { style -> update { it.copy(glimmerStyle = style) } },
         )
-        if (!di) ChoiceRow(
+        if (!dyn) ChoiceRow(
             label = "Musik",
             options = GlimmerMusicStyle.entries,
             selected = s.glimmerMusicStyle,
@@ -1241,7 +1253,7 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             onSelect = { style -> update { it.copy(glimmerMusicStyle = style) } },
         )
         // (The notch is always there; the island's pill too, if it is on.)
-        if (!di && !nt && !pn) SwitchRow(
+        if (!dyn && !nt && !pn) SwitchRow(
             label = "Kleine Pille, wenn nichts läuft",
             description = if (mi) "Aus: die Insel zeigt sich nur, wenn etwas läuft. An: sie ist immer da, auch im Querformat" else "Wie beim iPhone; im Querformat ausgeblendet",
             checked = s.glimmerIdlePill,
@@ -1276,7 +1288,7 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
         }
     }
 
-    if (!di) Section("Gestaltung") {
+    if (!dyn) Section("Gestaltung") {
         SwitchRow(label = "Leuchten bei Neuem", description = "Glimmer schimmert kurz, wenn etwas Neues kommt", checked = s.glimmerGlow) { v ->
             update { it.copy(glimmerGlow = v) }
         }
@@ -1369,12 +1381,12 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
     }
 
     Section("Bedienung") {
-        if (!di) SwitchRow(
+        if (!dyn) SwitchRow(
             label = "Antippen öffnet die App",
             description = if (s.glimmerTapOpens) "Wie beim iPhone; gedrückt halten klappt auf" else "Aus: Antippen klappt auf, gedrückt halten öffnet die App",
             checked = s.glimmerTapOpens,
         ) { v -> update { it.copy(glimmerTapOpens = v) } }
-        if (!di) ChoiceRow(
+        if (!dyn) ChoiceRow(
             label = "Doppeltippen",
             options = GlimmerDoubleTap.entries,
             selected = s.glimmerDoubleTap,
@@ -1388,7 +1400,7 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             optionLabel = { if (it == 0) "Nie" else "nach $it s" },
             onSelect = { secs -> update { it.copy(glimmerAutoCollapse = secs) } },
         )
-        if (!di) SwitchRow(
+        if (!dyn) SwitchRow(
             label = "Zur Seite wischen wechselt den Titel",
             description = "Läuft nur Musik: über Glimmer nach links für den nächsten, nach rechts für den vorherigen Titel",
             checked = s.glimmerSwipeTracks,
@@ -1399,17 +1411,17 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
     }
 
     Section("Was Glimmer zeigt") {
-        if (!di) SwitchRow(
+        if (!dyn) SwitchRow(
             label = "Bestätigungscodes zum Kopieren",
             description = "Kommt ein Code per SMS oder App (Bank, Login), sitzt er in Glimmer; antippen kopiert ihn – wie bei vivo und OPPO",
             checked = s.glimmerCodes,
         ) { v -> update { it.copy(glimmerCodes = v) } }
-        if (!di) SwitchRow(
+        if (!dyn) SwitchRow(
             label = "Bildschirmfotos in der Insel",
             description = "Ein neues Bildschirmfoto erscheint als kleines Bild: antippen öffnet es, aufgeklappt auch Teilen – wie vivos Origin Island (braucht den Zugriff auf Fotos, siehe Einrichten)",
             checked = s.glimmerScreenshots,
         ) { v -> update { it.copy(glimmerScreenshots = v) } }
-        if (!di) SwitchRow(label = "Neue Nachrichten kurz zeigen", checked = s.glimmerMessages) { v ->
+        if (!dyn) SwitchRow(label = "Neue Nachrichten kurz zeigen", checked = s.glimmerMessages) { v ->
             update { it.copy(glimmerMessages = v) }
         }
         SwitchRow(
@@ -1422,7 +1434,7 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             description = "Kurz anzeigen, wenn Kopfhörer sich verbinden, „Nicht stören“ umschaltet oder der Akku voll ist",
             checked = s.glimmerAlerts,
         ) { v -> update { it.copy(glimmerAlerts = v) } }
-        if (!di) SwitchRow(
+        if (!dyn) SwitchRow(
             label = "Akku beim Laden zeigen",
             description = "Solange das Handy lädt, bleibt der Akkustand mit rollenden Zahlen in Glimmer",
             checked = s.glimmerCharging,
@@ -1442,11 +1454,26 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             optionLabel = { it.label },
             onSelect = { u -> update { it.copy(glimmerUnlock = u) } },
         )
+        // The master switch: off, ZENITH draws nothing on the always-on display and the phone shows its own AOD, as it is.
         SwitchRow(
-            label = "Auf dem Always-On-Display",
+            label = "ZENITH auf dem AOD",
+            description = if (s.zenithAod) {
+                "An: Glimmer, das große AOD und der Planet dürfen auf den Always-On-Display (jedes einzeln unten ein- und auszuschalten)"
+            } else {
+                "Aus: ZENITH zeichnet nichts auf den Always-On-Display – dein Handy zeigt ihn, wie er ist"
+            },
+            checked = s.zenithAod,
+        ) { v -> update { it.copy(zenithAod = v) } }
+        if (s.zenithAod) SwitchRow(
+            label = "Glimmer auf dem Always-On-Display",
             description = "Musik und Aktivitäten bleiben im AOD sichtbar, gedimmt und ohne Bewegung (wenn das Handy fremde Einblendungen dort zulässt)",
             checked = s.glimmerAod,
         ) { v -> update { it.copy(glimmerAod = v) } }
+        if (s.zenithAod) SwitchRow(
+            label = "Großes AOD mit Hintergrundbild",
+            description = "Das Hintergrundbild gedimmt hinter einer großen Uhr, mit Datum und Akku. Braucht Glimmer und das AOD des Handys auf „Immer anzeigen“",
+            checked = s.fullAod,
+        ) { v -> update { it.copy(fullAod = v) } }
     }
 
     Section("Zurücksetzen") {

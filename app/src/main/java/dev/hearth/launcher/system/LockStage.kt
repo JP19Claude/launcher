@@ -52,7 +52,7 @@ class LockStage(private val service: GlimmerService, private val onShown: () -> 
         val s = MainScope()
         scope = s
         s.launch {
-            combine(settings, locked, dozing) { st, l, d -> st.wantsLockStage() && (l || d) }
+            combine(settings, locked, dozing) { st, l, d -> st.wantsLockStage() && (l || (d && st.zenithAod)) }
                 .distinctUntilChanged()
                 .collect { show -> if (show) add(settings, locked, dozing) else remove() }
         }

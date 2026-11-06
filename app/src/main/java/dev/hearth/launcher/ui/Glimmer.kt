@@ -530,7 +530,7 @@ fun GlimmerIsland(
     // round as the iPhone's unfolded island (44) or the Face ID square (30).
     val cornerCap by animateDpAsState(
         when {
-            expanded -> if (hanging) 30.dp else if (settings.glimmerIsDynamicIsland) 42.dp else 44.dp
+            expanded -> if (hanging) 30.dp else if (settings.glimmerDynamicStyle) 42.dp else 44.dp
             content is IslandContent.Unlock -> 30.dp
             else -> if (hanging) 14.dp else 60.dp
         },
@@ -1229,7 +1229,7 @@ private fun LeadingBadgeIcon(content: IslandContent, size: Dp) {
         is IslandContent.Media -> {
             val art = content.playing.art
             // The iPhone shows the cover as a small rounded square, Glimmer as a circle.
-            val artShape = if (LocalSettings.current.glimmerIsDynamicIsland) RoundedCornerShape(size * 0.24f) else CircleShape
+            val artShape = if (LocalSettings.current.glimmerDynamicStyle) RoundedCornerShape(size * 0.24f) else CircleShape
             if (art != null) {
                 Image(art, null, contentScale = ContentScale.Crop, modifier = Modifier.size(size).clip(artShape))
             } else {

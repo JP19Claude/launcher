@@ -4,14 +4,20 @@
 Leuchten, Clawd und Einstellungen wie die Glimmer-App – am oberen Bildschirmrand, über allen Fenstern. Sie ist **immer da** (leer, wenn
 nichts passiert) und wächst bei Ereignissen daraus heraus.
 
-## Die vier Modi
+## Die vier Modi – und die Dynamic Notch
 
 | Modus | Aussehen |
 | --- | --- |
 | **MacBook-Notch** (Standard) | die schwarze Kerbe, 190 × 34 dp, am Rand angewachsen, mit den „Ohren" an den Schultern; Inhalte wachsen links und rechts daneben heraus. Leuchten, Rand und Fließfarben sind aus (die gehören zur Pille) |
 | **MacBook-Insel** | wie die neueren MacBooks: eine kleine Pille (128 × 32 dp), 6 dp unter dem Rand |
 | **Glimmer (Pille)** | die Pille wie auf dem Handy, mit allem: Aussehen *Schwarz*, *Liquid Glass*, *Farbig getönt*, *AI Fluid*; Leuchten, Rand, fließende Farben, Atmen |
-| **Dynamic Island 1:1** | wie die Insel des iPhones: reines Schwarz, ihre Proportionen, Cover klassisch, Antippen öffnet die App, ohne Glimmers Extras. Deine eigenen Einstellungen bleiben gespeichert |
+| **Dynamic Island 1:1** | wie die Insel des iPhones: reines Schwarz, ihre Proportionen, Cover als abgerundetes Quadrat, Antippen öffnet die App, ohne Glimmers Extras. Deine eigenen Einstellungen bleiben gespeichert |
+
+**Dynamic Notch:** Bei *MacBook-Notch* und *MacBook-Insel* gibt es den Schalter **„Dynamic Notch (1:1)"** (bei der Insel „Dynamic-Island-Stil (1:1)").
+Er legt Aussehen und Bedienung der Dynamic Island des iPhones auf die Form der Notch bzw. der Insel: reines Schwarz, das Cover als abgerundetes
+Quadrat, aufgeklappt eine große, runde Karte, Antippen öffnet die App, gedrückt halten (rechte Maustaste) klappt auf. Größe und Lage bleiben deine
+(Breite und Höhe der Kerbe, nach oben/unten …); Leuchten, Rand, Nachrichten, Doppeltippen, Titel wischen und „Akku beim Laden" sind dann aus.
+Deine eigenen Einstellungen bleiben gespeichert und kommen zurück, wenn du den Schalter ausschaltest.
 
 ## Was Glimmer zeigt
 
@@ -85,7 +91,7 @@ Schlüssel heißen wie in der Android-App:
 
 | Gruppe | Schlüssel (Standard) |
 | --- | --- |
-| Glimmer | `enabled` (`true`) · `mode` (`"notch"`, `"island"`, `"glimmer"`, `"dynamic_island"`) · `style` (`"black"`, `"glass"`, `"tinted"`, `"fluid"`) · `music_style` (`"hyper"`, `"classic"`, `"fluid_cloud"`) · `idle_pill` (`true`) · `idle_clock` (`false`) |
+| Glimmer | `enabled` (`true`) · `mode` (`"notch"`, `"island"`, `"glimmer"`, `"dynamic_island"`) · `dynamic` (`false`; mit `"notch"`/`"island"`: die Dynamic Notch bzw. der Dynamic-Island-Stil) · `style` (`"black"`, `"glass"`, `"tinted"`, `"fluid"`) · `music_style` (`"hyper"`, `"classic"`, `"fluid_cloud"`) · `idle_pill` (`true`) · `idle_clock` (`false`) |
 | Clawd | `clawd` (`false`) · `clawd_idle` (`true`) · `clawd_side` (`"left"`, `"right"`) · `clawd_spot` (0 – 1) · `clawd_size` (0.7 – 1.4) · `clawd_skin` (`"terracotta"`, `"ocean"`, `"mint"`, `"lavender"`, `"gold"`, `"rose"`, `"snow"`, `"midnight"`, `"rainbow"`, `"galaxy"`) · `clawd_greeting` (`true`) · `clawd_greet_daily` (`false`) |
 | Gestaltung | `glow` (`true`) · `glow_color` (`"activity"`, `"accent"`, `"white"`, `"rainbow"`) · `ai_fluid` (`true`) · `breathe` (`false`) · `outline` (`"off"`, `"subtle"`, `"colored"`) · `motion` (`"calm"`, `"normal"`, `"playful"`) |
 | Größe & Position | `small` (`false`, 85 %) · `scale` (1.0; 0.6 – 2.5) · `width` (1.0; 0.8 – 1.3) · `notch_width`, `notch_height` (190, 34) · `island_width`, `island_height` (128, 32) · `offset_x` (0) · `offset_y` (0) |
@@ -103,11 +109,11 @@ Auch ohne Einrichtung geht: `glimmer --mode glimmer --scale 1.3`. Eine ältere D
 * **Keine Benachrichtigungen / Codes** – Glimmer liest sie über den Nachrichtenbus mit; bei einem Fehler steht der Grund im Terminal (`glimmer` dort starten, `GLIMMER_DEBUG=1 glimmer` zeigt mehr).
 * **Codes oder Bilder lassen sich nicht kopieren** – `sudo pacman -S wl-clipboard`.
 * **Bildschirmfotos erscheinen nicht** – Glimmer schaut in `Bilder/Screenshots` (und `Bilder`); lege deine Bildschirmfotos dort ab (Spectacle: Einstellungen → Speicherort).
-* **Ein Bild aller Zustände** (zum Ansehen, ohne Fenster, alle vier Modi): `glimmer --snapshot zustaende.png`
+* **Ein Bild aller Zustände** (zum Ansehen, ohne Fenster; alle Modi nebeneinander, auch Dynamic Notch und Dynamic-Island-Stil): `glimmer --snapshot zustaende.png`
 
 ## Was nicht dabei ist
 
-Was es nur auf dem Handy gibt: der Einflug beim Entsperren, Sperrbildschirm/Always-on-Display, Face ID, Taschenlampe, Anrufe, Timer und Navigation
+Was es nur auf dem Handy gibt: der Einflug beim Entsperren, Sperrbildschirm/Always-on-Display (auch dessen Ausschalter), Face ID, Taschenlampe, Anrufe, Timer und Navigation
 als Live-Aktivitäten, Hüte und Kleider für Clawd, Vibration, die Querformat-Ausrichtung.
 
 ## Technik in drei Zeilen

@@ -1199,7 +1199,9 @@ class GlimmerController(private val service: GlimmerService) {
                 val micOn by micInUse.collectAsStateWithLifecycle()
                 val cameraOn by cameraInUse.collectAsStateWithLifecycle()
                 val widthDp by screenWidth.collectAsStateWithLifecycle()
-                val onAod = aod && settings.glimmerAod
+                // Both switches have to be on: the master one ("ZENITH auf dem AOD") and Glimmer's own.
+                val aodAllowed = settings.zenithAod && settings.glimmerAod
+                val onAod = aod && aodAllowed
 
                 val ongoing = live.sortedBy { priority(it.kind) }
                 val ordered = buildList<IslandContent> {
@@ -1235,7 +1237,7 @@ class GlimmerController(private val service: GlimmerService) {
                 }
                 // On the always-on display only music and live activities, still and dimmed.
                 val shown = when {
-                    aod && !settings.glimmerAod -> emptyList()
+                    aod && !aodAllowed -> emptyList()
                     onAod -> activities.filter { it is IslandContent.Media || it is IslandContent.Live || it is IslandContent.Charging }
                     else -> activities
                 }
@@ -1259,7 +1261,7 @@ class GlimmerController(private val service: GlimmerService) {
                         // (The notch is always there, also on a screen that is wider than tall: a laptop's.)
                         !settings.glimmerIdlePill || (sideways && edge == 0 && turned == 0 && !settings.glimmerIsMac) || aod || stepBack -> IslandContent.Hidden
                         // The iPhone's island is just there on the lock screen, no padlock in it.
-                        settings.glimmerIsDynamicIsland -> IslandContent.Idle
+                        settings.glimmerDynamicStyle -> IslandContent.Idle
                         padlockOpen -> IslandContent.Lock(open = true)
                         onLockScreen -> IslandContent.Lock(open = false)
                         else -> IslandContent.Idle

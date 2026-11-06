@@ -117,6 +117,7 @@ DEFAULTS = {
     "music_style": "hyper",     # "hyper" (Hyper Island) | "classic" | "fluid_cloud" (OPPO/OnePlus)
     "idle_pill": True,          # die kleine Pille, wenn nichts läuft (bei der Notch immer da)
     "idle_clock": False,        # in der leeren Notch/Pille die Uhrzeit
+    "dynamic": False,           # Aussehen und Bedienung der Dynamic Island des iPhones auf der Notch ("Dynamic Notch") oder der MacBook-Insel
     # Clawd
     "clawd": False,
     "clawd_idle": True,
@@ -245,13 +246,20 @@ def sanitize_config(cfg):
     return cfg
 
 
+def is_dynamic(cfg):
+    """Glimmer in the iPhone's way: the Dynamic Island mode, or the "dynamic" choice on the notch or the MacBook island (the shape stays the
+    notch's or the island's own; look and handling are the iPhone's – with the notch it is the "Dynamic Notch")."""
+    return cfg["mode"] == "dynamic_island" or bool(cfg.get("dynamic")) and cfg["mode"] in ("notch", "island")
+
+
 def effective_config(cfg):
-    """The settings Glimmer actually runs with (ZENITH's forGlimmer): as chosen, or in the notch the plain black one; in the Dynamic Island
-    mode the iPhone's way – black, its proportions, tap opens, none of Glimmer's extras. The own choices stay saved."""
+    """The settings Glimmer actually runs with (ZENITH's forGlimmer): as chosen, or in the notch the plain black one; in the iPhone's way
+    (the Dynamic Island mode, or "dynamic" on the notch or the island) black, its proportions, tap opens, none of Glimmer's extras. The own
+    choices stay saved."""
     c = dict(cfg)
     if cfg["mode"] == "notch":
         c.update(style="black", idle_pill=True, glow=False, outline="off", width=1.0, breathe=False, ai_fluid=False)
-    elif cfg["mode"] == "dynamic_island":
+    if is_dynamic(cfg):
         c.update(style="black", music_style="classic", idle_pill=True, glow=False, outline="off", width=1.0, motion="normal", tap_opens=True,
                  double_tap="off", swipe_tracks=False, notifications=False, charging_live=False, codes=False, screenshots=False, breathe=False,
                  ai_fluid=False)
@@ -1064,7 +1072,8 @@ class Island:
         self.mode = cfg["mode"]
         self.hang = self.mode == "notch"
         self.mac = self.mode in ("notch", "island")
-        self.di = self.mode == "dynamic_island"
+        self.di = self.mode == "dynamic_island"     # (the iPhone's proportions)
+        self.dyn = is_dynamic(cfg)                  # (the iPhone's look: with the notch or the island too)
         if self.mode == "notch":
             self.nw, self.nh = float(cfg["notch_width"]), float(cfg["notch_height"])
         elif self.mode == "island":
@@ -1165,7 +1174,7 @@ class Island:
         tw, th = self.size_for(kind, data, expanded)
         self._tune()
         self.w.target, self.h.target = tw * self.s, th * self.s
-        self.cap.target = (30.0 if self.hang else 42.0 if self.di else 44.0) if expanded else (14.0 if self.hang else 60.0)
+        self.cap.target = (30.0 if self.hang else 42.0 if self.dyn else 44.0) if expanded else (14.0 if self.hang else 60.0)
         if changed:
             self.changed_at = now
 
@@ -1659,7 +1668,8 @@ class Island:
             else:
                 def left(c, x, cy):
                     if getattr(p, "art", None) is not None:
-                        self._cover(c, p, x, cy - 10, 20, 0, pal, circle=True)
+                        # (the iPhone shows the cover as a small rounded square, Glimmer as a circle)
+                        self._cover(c, p, x, cy - 10, 20, 4.8, pal, circle=not self.dyn)
                     else:
                         draw_glyph(c, "speaker", x, cy - 10, 20, WHITE3)
                     return 20.0
@@ -3554,6 +3564,16 @@ MODE_NOTES = {
 }
 
 
+def mode_note(c):
+    if c["mode"] in ("notch", "island") and c.get("dynamic"):
+        shape = "Notch" if c["mode"] == "notch" else "Insel"
+        return ("Dynamic %s: Glimmer in der Form der MacBook-%s, aber mit Aussehen und Bedienung der Dynamic Island des iPhones – reines Schwarz, "
+                "das Cover als abgerundetes Quadrat, aufgeklappt eine große, runde Karte; Antippen öffnet die App, gedrückt halten (rechte Maustaste) "
+                "klappt auf. Größe und Platz stellst du unten bei „Größe & Position“ ein. Leuchten, Rand, Nachrichten, Doppeltippen, Titel wischen "
+                "und Akku beim Laden sind aus; deine eigenen Einstellungen kommen zurück, wenn du „Dynamic“ ausschaltest." % (shape, shape))
+    return MODE_NOTES[c["mode"]]
+
+
 def build_settings(app):
     """The app's window, like the Glimmer app of ZENITH: dark, with Glimmer's colours drifting behind it, a little island as its logo, a live
     preview you can tap, and every setting of the island in cards of glass."""
@@ -3775,7 +3795,7 @@ def build_settings(app):
         if callable(text_fn):
             syncs.append(lambda: note.set_text(text_fn()))
 
-    def add_switch(card, key, label, desc=None, visible=None, desc_fn=None):
+    def add_switch(card, key, label, desc=None, visible=None, desc_fn=None, label_fn=None):
         sw = Gtk.Switch()
         sw.set_active(bool(cfg[key]))
         sw.connect("notify::active", lambda w, _p: app.set_option(key, w.get_active()))
@@ -3786,6 +3806,8 @@ def build_settings(app):
                 sw.set_active(bool(cfg[key]))
             if desc_fn is not None and d is not None:
                 d.set_text(desc_fn())
+            if label_fn is not None:
+                name.set_text(label_fn())
         syncs.append(sync_sw)
 
     def add_slider(card, key, label, desc, lo, hi, step, digits=0, as_int=True, visible=None, fmt=None, range_fn=None):
@@ -3863,9 +3885,8 @@ def build_settings(app):
         return name, d
 
     mode = lambda: app.cfg["mode"]                        # noqa: E731
-    not_di = lambda: app.cfg["mode"] != "dynamic_island"  # noqa: E731
-    pill_mode = lambda: app.cfg["mode"] in ("glimmer", "dynamic_island", "island")  # noqa: E731
-    only_pill_look = lambda: app.cfg["mode"] in ("glimmer", "island")  # noqa: E731
+    not_di = lambda: not is_dynamic(app.cfg)  # noqa: E731   (in the iPhone's way these rows step aside)
+    pill_look = lambda: app.cfg["mode"] in ("glimmer", "island") and not is_dynamic(app.cfg)  # noqa: E731
 
     # --- Einrichten: what Glimmer found on this desktop
     card = section("Einrichten")
@@ -3947,11 +3968,20 @@ def build_settings(app):
                    "Tippen oder nach unten ziehen klappt sie auf, nach oben ziehen schließt sie.")
     add_switch(card, "enabled", "Glimmer anzeigen")
     add_chips(card, "mode", "Modus", CHOICES["mode"], [MODE_NAMES[m] for m in CHOICES["mode"]])
-    add_note(card, lambda: MODE_NOTES[app.cfg["mode"]])
+    add_note(card, lambda: mode_note(app.cfg))
+    # The iPhone's way on the notch or the MacBook island: its look and handling, the shape stays your own.
+    add_switch(card, "dynamic", "Dynamic Notch (1:1)", visible=lambda: app.cfg["mode"] in ("notch", "island"),
+               label_fn=lambda: "Dynamic Notch (1:1)" if app.cfg["mode"] == "notch" else "Dynamic-Island-Stil (1:1)",
+               desc_fn=lambda: (
+                   "An: so wie die echte Dynamic Island – reines Schwarz, das Cover als abgerundetes Quadrat, Antippen öffnet die App und gedrückt halten "
+                   "(rechte Maustaste) klappt auf. Die Form bleibt deine; Leuchten, Rand, Nachrichten, Doppeltippen, Titel wischen und Akku beim Laden sind aus"
+                   if app.cfg["dynamic"] else
+                   "Aus: %s mit Glimmers Extras. An: Aussehen und Bedienung der Dynamic Island des iPhones, in der Form der %s" % (
+                       ("die Kerbe", "MacBook-Notch") if app.cfg["mode"] == "notch" else ("die Insel", "MacBook-Insel"))))
     add_chips(card, "style", "Aussehen", ["black", "glass", "tinted", "fluid"], ["Schwarz wie die Kamera", "Liquid Glass", "Farbig getönt", "AI Fluid"],
-              visible=lambda: app.cfg["mode"] in ("glimmer", "island"))
+              visible=pill_look)
     add_chips(card, "music_style", "Musik", CHOICES["music_style"], ["Hyper Island (Xiaomi)", "Klassisch", "Fluid Cloud (OPPO/OnePlus)"], visible=not_di)
-    add_switch(card, "idle_pill", "Kleine Pille, wenn nichts läuft", visible=lambda: app.cfg["mode"] in ("glimmer", "island"), desc_fn=lambda: (
+    add_switch(card, "idle_pill", "Kleine Pille, wenn nichts läuft", visible=pill_look, desc_fn=lambda: (
         "Aus: die Insel zeigt sich nur, wenn etwas läuft. An: sie ist immer da" if app.cfg["mode"] == "island" else "Wie beim iPhone"))
     add_switch(card, "idle_clock", "Uhrzeit in der leeren Insel", "Statt leer bleiben: die Uhrzeit (Clawd hat Vorrang, wenn er dort sitzt)")
 
@@ -3966,7 +3996,7 @@ def build_settings(app):
     add_chips(card, "outline", "Rand", CHOICES["outline"], ["Aus", "Dezent", "In Farbe der Aktivität"])
     add_chips(card, "motion", "Bewegung", CHOICES["motion"], ["Ruhig", "Normal", "Verspielt"])
     add_note(card, "In der MacBook-Notch sind Leuchten, Rand, fließende Farben und das Atmen aus, und sie federt ohne Wippen – das gehört zur Pille.",
-             visible=lambda: app.cfg["mode"] == "notch")
+             visible=lambda: app.cfg["mode"] == "notch" and not is_dynamic(app.cfg))
 
     # --- Größe & Position
     card = section("Größe & Position")
@@ -4245,7 +4275,11 @@ def demo_player(cfg):
     return p
 
 
-def render_snapshot(cfg, path, modes=("notch", "island", "glimmer", "dynamic_island")):
+SNAPSHOT_MODES = (("notch", "notch", False), ("island", "island", False), ("glimmer", "glimmer", False), ("dynamic_island", "dynamic_island", False),
+                  ("dynamic notch", "notch", True), ("dynamic insel", "island", True))
+
+
+def render_snapshot(cfg, path, modes=SNAPSHOT_MODES):
     """Draws every state of the island, in every mode, into one picture – no window, no display needed."""
     player = demo_player(cfg)
     notice = {"app": "Signal", "summary": "Mia", "body": "Kommst du später noch vorbei? Ich bring Kuchen mit.", "icon": None}
@@ -4282,8 +4316,8 @@ def render_snapshot(cfg, path, modes=("notch", "island", "glimmer", "dynamic_isl
     cr.paint()
     y = pad // 2
     for (label, kind, data, unfolded, privacy), cell_h in zip(scenes, heights):
-        for col, mode in enumerate(modes):
-            isl = Island(effective_config(dict(cfg, mode=mode)))
+        for col, (mode_label, mode, dynamic) in enumerate(modes):
+            isl = Island(effective_config(dict(cfg, mode=mode, dynamic=dynamic)))
             isl.privacy = privacy
             isl.show(kind, data, unfolded)
             isl.snap()
@@ -4298,7 +4332,7 @@ def render_snapshot(cfg, path, modes=("notch", "island", "glimmer", "dynamic_isl
             cr.set_source(g)
             cr.paint()
             isl.draw(cr, W, cell_h, 1.3)
-            draw_text(cr, "%s · %s" % (label, mode), 8, cell_h - 9, 10.5, (1, 1, 1, 0.7))
+            draw_text(cr, "%s · %s" % (label, mode_label), 8, cell_h - 9, 10.5, (1, 1, 1, 0.7))
             cr.restore()
         y += cell_h + pad // 2
     surf.write_to_png(path)

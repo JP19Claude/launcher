@@ -323,7 +323,7 @@ private fun GlimmerPreview(chosen: LauncherSettings, media: MediaRepository) {
             }
         }
     }
-    val content = demos[index].let { if (s.glimmerIsDynamicIsland && it is IslandContent.Lock) IslandContent.Idle else it }
+    val content = demos[index].let { if (s.glimmerDynamicStyle && it is IslandContent.Lock) IslandContent.Idle else it }
     val unfoldable = content !is IslandContent.Idle && content !is IslandContent.Lock
     val screenWidth = LocalConfiguration.current.screenWidthDp.toFloat()
     Column(Modifier.padding(vertical = 8.dp)) {
