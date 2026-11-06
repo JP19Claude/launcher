@@ -81,6 +81,17 @@ try:
 except (ValueError, ImportError):
     LayerShell = None
 
+# (Newer GLib wants GLibUnix.signal_add and warns about the old name; older ones only have the old one.)
+_signal_add = None
+try:
+    gi.require_version("GLibUnix", "2.0")
+    from gi.repository import GLibUnix  # noqa: E402
+    _signal_add = getattr(GLibUnix, "signal_add", None)
+except (ValueError, ImportError):
+    pass
+if _signal_add is None:
+    _signal_add = GLib.unix_signal_add
+
 DEBUG = bool(os.environ.get("GLIMMER_DEBUG"))
 # Programs we start must not inherit the preload (it would load GTK into every pactl call).
 CLEAN_ENV = {k: v for k, v in os.environ.items() if k != "LD_PRELOAD"}
@@ -102,6 +113,7 @@ DEFAULTS = {
     "language": "auto",         # "auto" | "de" | "en"
     "music": True,
     "music_persistent": True,   # kleine Insel, solange Musik läuft
+    "greet": True,              # beim Start kurz „Glimmer läuft" zeigen
     "track_popups": True,       # beim Titelwechsel kurz Titel und Interpret zeigen
     "hover_reveal": True,       # Maus an den oberen Rand in der Mitte: Musiksteuerung erscheint
     "charging": True,
@@ -142,9 +154,11 @@ def load_config(path=None):
 
 STRINGS = {
     "de": {"charging": "Lädt", "full": "Voll geladen", "unplugged": "Akkubetrieb", "low": "Akku schwach",
-           "nothing": "Keine Wiedergabe", "muted": "Stumm", "notification": "Benachrichtigung"},
+           "nothing": "Keine Wiedergabe", "muted": "Stumm", "notification": "Benachrichtigung",
+           "running": "Glimmer läuft", "hint": "Die Insel erscheint, wenn etwas passiert"},
     "en": {"charging": "Charging", "full": "Fully charged", "unplugged": "On battery", "low": "Battery low",
-           "nothing": "Nothing playing", "muted": "Muted", "notification": "Notification"},
+           "nothing": "Nothing playing", "muted": "Muted", "notification": "Notification",
+           "running": "Glimmer is running", "hint": "The island appears when something happens"},
 }
 _lang = "de"
 
@@ -1048,7 +1062,8 @@ class Mpris:
 
 class App(Gtk.Application):
     def __init__(self, cfg, demo=False, layer_shell=True):
-        super().__init__(application_id="dev.hearth.glimmer.linux")
+        super().__init__(application_id="dev.hearth.glimmer.linux",
+                         flags=Gio.ApplicationFlags.NON_UNIQUE if (demo or not layer_shell) else Gio.ApplicationFlags(0))
         self.cfg = cfg
         self.demo = demo
         self.use_layer = layer_shell
@@ -1478,6 +1493,8 @@ class App(Gtk.Application):
             self._start_notifications()
         if self.demo:
             self._run_demo()
+        elif self.cfg["greet"]:
+            GLib.timeout_add(600, lambda: (self.post("notify", {"app": "Glimmer", "summary": tr("running"), "body": tr("hint"), "icon": None}, 3.2, 1), False)[1])
 
     def _volume_loop(self):
         pactl, wpctl = shutil.which("pactl"), shutil.which("wpctl")
@@ -1729,8 +1746,15 @@ def main():
         return 0
 
     app = App(cfg, demo=args.demo, layer_shell=not args.no_layer_shell)
-    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, lambda *a: (app.quit(), False)[1])
-    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, lambda *a: (app.quit(), False)[1])
+    _signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, lambda *a: (app.quit(), False)[1])
+    _signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, lambda *a: (app.quit(), False)[1])
+    try:
+        app.register(None)
+        if app.get_is_remote():
+            print("Glimmer läuft schon. Mit --demo siehst du eine Vorführung daneben; beenden: ./install.sh stop")
+            return 0
+    except GLib.Error:
+        pass
     return app.run([sys.argv[0]])
 
 

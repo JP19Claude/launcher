@@ -58,8 +58,18 @@ case "${1:-install}" in
     case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) warn "$HOME/.local/bin ist nicht in deinem PATH – zum Starten im Terminal: $BIN";; esac
     stop_glimmer || true
     sleep 0.3
-    setsid -f "$BIN" >/dev/null 2>&1 || true
-    ok "Glimmer läuft jetzt. Zum Ausprobieren:  $BIN --demo   (Einstellungen: ~/.config/glimmer/config.json)"
+    LOG="${XDG_CACHE_HOME:-$HOME/.cache}/glimmer.log"
+    mkdir -p "$(dirname "$LOG")"
+    setsid -f "$BIN" >"$LOG" 2>&1 || true
+    sleep 2
+    if pgrep -f "^/usr/bin/python3[0-9.]* ${BIN}( |\$)" >/dev/null 2>&1; then
+      ok "Glimmer läuft jetzt (oben in der Mitte erscheint kurz „Glimmer läuft“)."
+      say "Sonst ist die Insel unsichtbar – sie erscheint nur bei Musik, Laden, Lautstärke und Benachrichtigungen."
+      say "Vorführung mit allen Ereignissen:  ./install.sh demo      (Einstellungen: ~/.config/glimmer/config.json)"
+    else
+      warn "Glimmer ist gleich wieder beendet worden. Meldung:"
+      cat "$LOG" >&2 || true
+    fi
     ;;
   pkg)
     have makepkg || die "makepkg fehlt: sudo pacman -S base-devel"
@@ -67,7 +77,7 @@ case "${1:-install}" in
     ;;
   demo)
     check_packages
-    exec python3 "$HERE/glimmer.py" --demo
+    exec /usr/bin/python3 "$HERE/glimmer.py" --demo
     ;;
   stop)
     stop_glimmer && ok "Glimmer beendet." || warn "Glimmer lief nicht."
