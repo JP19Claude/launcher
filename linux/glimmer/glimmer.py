@@ -52,7 +52,7 @@ def _preload_layer_shell():
 
 _preload_layer_shell()
 # Glimmer draws everything itself; the built-in theme keeps a broken system theme from filling the terminal with warnings.
-os.environ.setdefault("GTK_THEME", "Adwaita")
+os.environ.setdefault("GTK_THEME", "Adwaita:dark")
 
 import argparse  # noqa: E402
 import html  # noqa: E402
@@ -83,16 +83,14 @@ try:
 except (ValueError, ImportError):
     LayerShell = None
 
-# (Newer GLib wants GLibUnix.signal_add and warns about the old name; older ones only have the old one.)
-_signal_add = None
-try:
-    gi.require_version("GLibUnix", "2.0")
-    from gi.repository import GLibUnix  # noqa: E402
-    _signal_add = getattr(GLibUnix, "signal_add", None)
-except (ValueError, ImportError):
-    pass
-if _signal_add is None:
-    _signal_add = GLib.unix_signal_add
+import warnings  # noqa: E402
+
+
+def _signal_add(sig, handler):
+    """Calls handler(…) in the main loop when the signal arrives (the older GLib function – it works everywhere, only the newest ones warn)."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, sig, handler)
 
 DEBUG = bool(os.environ.get("GLIMMER_DEBUG"))
 # Programs we start must not inherit the preload (it would load GTK into every pactl call).
@@ -1084,6 +1082,13 @@ class App(Gtk.Application):
         self._leave_id = 0
         self._dwell_id = 0
         self._inside = False
+        self.settings = None
+        self.open_settings_at_start = False
+        self.config_path = CONFIG_PATH
+        self.demo_button = None
+        self._demo_ids = set()
+        self._demo_on = False
+        self._restart_id = 0
         self._tick_id = 0
         self._last_frame = None
         self._last_draw = 0.0
@@ -1096,6 +1101,7 @@ class App(Gtk.Application):
 
     def do_activate(self):
         if self.win is not None:
+            self.open_settings()  # started a second time (from the menu): the settings window
             return
         display = Gdk.Display.get_default()
         css = Gtk.CssProvider()
@@ -1138,6 +1144,8 @@ class App(Gtk.Application):
         win.connect("map", self.on_map)
         win.present()
         self.start_sources()
+        if self.open_settings_at_start:
+            self.open_settings()
 
     def _init_layer_shell(self, win, display):
         if not self.use_layer or LayerShell is None:
@@ -1484,19 +1492,66 @@ class App(Gtk.Application):
     # --- the sources of events
 
     def start_sources(self):
-        if self.cfg["music"] or self.demo:
-            self.mpris.start()
-        if self.cfg["volume"]:
-            threading.Thread(target=self._volume_loop, daemon=True).start()
-        if self.cfg["charging"] or self.cfg["low_battery"]:
-            self._power_tick()
-            GLib.timeout_add_seconds(2, self._power_tick)
-        if self.cfg["notifications"]:
-            self._start_notifications()
+        # (All sources run; what is shown is decided by the settings, so they can be switched on and off while Glimmer runs.)
+        self.mpris.start()
+        threading.Thread(target=self._volume_loop, daemon=True).start()
+        self._power_tick()
+        GLib.timeout_add_seconds(2, self._power_tick)
+        self._start_notifications()
+        force_greet = os.environ.pop("_GLIMMER_GREET", None)
         if self.demo:
-            self._run_demo()
-        elif self.cfg["greet"]:
+            self.start_demo()
+        elif self.cfg["greet"] or force_greet:
             GLib.timeout_add(600, lambda: (self.post("notify", {"app": "Glimmer", "summary": tr("running"), "body": tr("hint"), "icon": None}, 3.2, 1), False)[1])
+
+    # --- settings window, options
+
+    def open_settings(self):
+        if self.settings is None:
+            self.settings = build_settings(self)
+        self.settings.present()
+
+    def set_option(self, key, value):
+        if self.cfg.get(key) == value:
+            return
+        self.cfg[key] = value
+        save_config(self.cfg, self.config_path)
+        if key == "language":
+            set_language(value)
+        elif key in ("mode", "scale"):
+            self._schedule_restart()  # the size of the window and the shape are fixed at the start
+        self.refresh()
+        if self.area is not None:
+            self.area.queue_draw()
+
+    def _schedule_restart(self):
+        if self._restart_id:
+            GLib.source_remove(self._restart_id)
+        self._restart_id = GLib.timeout_add(900, self._restart)
+
+    def _restart(self):
+        self._restart_id = 0
+        env = dict(os.environ)
+        env["_GLIMMER_GREET"] = "1"
+        args, skip = [sys.executable], False
+        for a in sys.argv:
+            if skip:
+                skip = False
+            elif a in ("--mode", "--scale"):
+                skip = True  # (what was typed on the command line must not beat what was just chosen)
+            elif not a.startswith(("--mode=", "--scale=")):
+                args.append(a)
+        if "--settings" not in args:
+            args.append("--settings")
+        try:
+            os.execve(sys.executable, args, env)
+        except OSError as e:
+            print("Glimmer: Neustart nicht möglich (%s) – bitte Glimmer selbst beenden und neu starten." % e, file=sys.stderr)
+        return False
+
+    def quit_app(self):
+        self.quit()
+        GLib.timeout_add(2000, lambda: os._exit(0))  # (should something hold on, it ends anyway)
 
     def _volume_loop(self):
         pactl, wpctl = shutil.which("pactl"), shutil.which("wpctl")
@@ -1577,13 +1632,50 @@ class App(Gtk.Application):
 
     # --- demo
 
-    def _run_demo(self):
+    def demo_running(self):
+        return self._demo_on
+
+    def _demo_after(self, ms, fn):
+        holder = []
+
+        def run():
+            self._demo_ids.discard(holder[0])
+            fn()
+            return False
+        holder.append(GLib.timeout_add(ms, run))
+        self._demo_ids.add(holder[0])
+
+    def start_demo(self):
+        if self._demo_on:
+            return
+        self._demo_on = True
+        self._demo_cycle()
+        self._sync_demo_button()
+
+    def stop_demo(self):
+        if not self._demo_on:
+            return
+        self._demo_on = False
+        for i in list(self._demo_ids):
+            GLib.source_remove(i)
+        self._demo_ids.clear()
+        self.mpris.players.pop(":demo", None)
+        self.dismiss()
+        self._sync_demo_button()
+
+    def _sync_demo_button(self):
+        if self.demo_button is not None:
+            self.demo_button.set_label("Vorführung beenden" if self._demo_on else "Vorführung starten")
+
+    def _demo_cycle(self):
+        if not self._demo_on:
+            return
         p = demo_player(self.cfg)
         self.mpris.players[":demo"] = p
         self.refresh()
         steps = [
             (3.0, lambda: self.post("track", p, 3.6, 1)),
-            (7.0, lambda: [GLib.timeout_add(int(i * 380), (lambda v: lambda: (self.on_volume(v, False), False)[1])(35 + i * 12)) for i in range(4)]),
+            (7.0, lambda: [self._demo_after(int(i * 380), (lambda v: lambda: self.on_volume(v, False))(35 + i * 12)) for i in range(4)]),
             (10.5, lambda: self.post("power", {"state": "charging", "pct": 78}, 2.6, 2)),
             (14.0, lambda: self.post("notify", {"app": "Signal", "summary": "Mia", "body": "Kommst du später noch vorbei? Ich bring Kuchen mit.", "icon": None}, 4.5, 3)),
             (19.0, lambda: self.post("power", {"state": "low", "pct": 19}, 3.4, 3)),
@@ -1591,11 +1683,175 @@ class App(Gtk.Application):
             (28.0, lambda: setattr(self, "pinned", False) or setattr(self, "hover_open", False) or self.refresh()),
         ]
         for delay, fn in steps:
-            GLib.timeout_add(int(delay * 1000), (lambda f: lambda: (f(), False)[1])(fn))
-        GLib.timeout_add(32000, lambda: (self._run_demo_again(), False)[1])
+            self._demo_after(int(delay * 1000), fn)
+        self._demo_after(32000, self._demo_cycle)
 
-    def _run_demo_again(self):
-        self._run_demo()
+
+# ------------------------------------------------------------------------------------------------------------------ the settings window
+
+AUTOSTART_FILE = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "autostart", "glimmer.desktop")
+
+
+def save_config(cfg, path=None):
+    path = os.path.abspath(path or CONFIG_PATH)
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({k: cfg[k] for k in DEFAULTS}, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+    except OSError as e:
+        print("Glimmer: die Einstellungen ließen sich nicht speichern (%s)." % e, file=sys.stderr)
+
+
+def set_autostart(on):
+    try:
+        if on:
+            exe = shutil.which("glimmer") or os.path.abspath(sys.argv[0])
+            os.makedirs(os.path.dirname(AUTOSTART_FILE), exist_ok=True)
+            with open(AUTOSTART_FILE, "w", encoding="utf-8") as f:
+                f.write("[Desktop Entry]\nType=Application\nName=Glimmer\nComment=Die Insel am oberen Bildschirmrand\n"
+                        "Exec=%s --background\nIcon=preferences-desktop-notification\nTerminal=false\nNoDisplay=true\n"
+                        "X-KDE-autostart-after=panel\n" % exe)
+        elif os.path.exists(AUTOSTART_FILE):
+            os.remove(AUTOSTART_FILE)
+    except OSError as e:
+        print("Glimmer: der Autostart ließ sich nicht ändern (%s)." % e, file=sys.stderr)
+
+
+def build_settings(app):
+    """The window of the app: what is shown, how it looks, a demo, and the way to quit."""
+    cfg = app.cfg
+    win = Gtk.Window(application=app)
+    win.set_title("Glimmer")
+    win.set_default_size(500, 700)
+    win.connect("close-request", lambda w: (w.set_visible(False), True)[1])  # closing the window does not end Glimmer
+
+    outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+    win.set_child(outer)
+    scroll = Gtk.ScrolledWindow()
+    scroll.set_vexpand(True)
+    scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+    outer.append(scroll)
+    page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+    for side in ("top", "bottom", "start", "end"):
+        getattr(page, "set_margin_" + side)(20)
+    scroll.set_child(page)
+
+    def lbl(text, markup=False, css=(), wrap=False):
+        label = Gtk.Label(xalign=0.0)
+        (label.set_markup if markup else label.set_text)(text)
+        if wrap:
+            label.set_wrap(True)
+            label.set_max_width_chars(46)
+        for c in css:
+            label.add_css_class(c)
+        return label
+
+    def section(title):
+        head = lbl("<b>%s</b>" % title, markup=True)
+        head.set_margin_top(16)
+        page.append(head)
+        frame = Gtk.Frame()
+        box = Gtk.ListBox()
+        box.set_selection_mode(Gtk.SelectionMode.NONE)
+        frame.set_child(box)
+        page.append(frame)
+        return box
+
+    def add_row(box, title, sub, widget):
+        row = Gtk.ListBoxRow()
+        row.set_activatable(False)
+        line = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        for side in ("top", "bottom"):
+            getattr(line, "set_margin_" + side)(9)
+        for side in ("start", "end"):
+            getattr(line, "set_margin_" + side)(12)
+        texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        texts.set_hexpand(True)
+        texts.append(lbl(title))
+        if sub:
+            texts.append(lbl(sub, css=("dim-label", "caption"), wrap=True))
+        widget.set_valign(Gtk.Align.CENTER)
+        line.append(texts)
+        line.append(widget)
+        row.set_child(line)
+        box.append(row)
+
+    def add_switch(box, key, title, sub=""):
+        sw = Gtk.Switch()
+        sw.set_active(bool(cfg[key]))
+        sw.connect("notify::active", lambda w, _p: app.set_option(key, w.get_active()))
+        add_row(box, title, sub, sw)
+
+    page.append(lbl('<span size="xx-large" weight="bold">Glimmer</span>', markup=True))
+    page.append(lbl("Version %s · die Insel am oberen Bildschirmrand" % APP_VERSION, css=("dim-label",)))
+    status = ("Läuft. Die Insel sitzt oben am Bildschirmrand (Layer-Shell) und ist unsichtbar, solange nichts passiert."
+              if app.layered else
+              "Läuft als normales Fenster: ohne Layer-Shell (GNOME oder X11) sitzt die Insel nicht am Rand.")
+    page.append(lbl(status, css=("dim-label",), wrap=True))
+
+    box = section("Aussehen")
+    shape = Gtk.DropDown.new_from_strings(["Notch – am Rand angewachsen", "Insel – schwebt mit Abstand"])
+    shape.set_selected(0 if cfg["mode"] == "notch" else 1)
+    shape.connect("notify::selected", lambda w, _p: app.set_option("mode", "notch" if w.get_selected() == 0 else "island"))
+    add_row(box, "Form", "Glimmer startet nach der Änderung kurz neu.", shape)
+    size = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.6, 1.6, 0.05)
+    size.set_value(float(cfg["scale"]))
+    size.set_digits(2)
+    size.set_draw_value(True)
+    size.set_size_request(190, -1)
+    size.connect("value-changed", lambda w: app.set_option("scale", round(w.get_value(), 2)))
+    add_row(box, "Größe", "1,00 ist normal.", size)
+    langs = ["auto", "de", "en"]
+    lang = Gtk.DropDown.new_from_strings(["Automatisch", "Deutsch", "English"])
+    lang.set_selected(langs.index(cfg["language"]) if cfg["language"] in langs else 0)
+    lang.connect("notify::selected", lambda w, _p: app.set_option("language", langs[w.get_selected()]))
+    add_row(box, "Sprache der Insel", "", lang)
+
+    box = section("Musik")
+    add_switch(box, "music", "Musik zeigen", "Spotify, Firefox, VLC, mpv … – jeder Player, der sich meldet (MPRIS).")
+    add_switch(box, "music_persistent", "Kleine Insel, solange Musik läuft")
+    add_switch(box, "track_popups", "Titelwechsel kurz zeigen")
+    add_switch(box, "hover_reveal", "Maus oben in der Mitte öffnet die Steuerung", "Die Maus einen Moment ganz oben am Rand lassen.")
+
+    box = section("Ereignisse")
+    add_switch(box, "charging", "Laden", "Grüner Lichtstreifen beim Anstecken, „Voll geladen“.")
+    add_switch(box, "low_battery", "Akku schwach", "Bei 20 % und 10 %.")
+    add_switch(box, "volume", "Lautstärke", "KDE zeigt dazu auch seine eigene Anzeige.")
+    add_switch(box, "notifications", "Benachrichtigungen", "Glimmer liest nur mit, die normalen Benachrichtigungen bleiben.")
+
+    box = section("Start")
+    add_switch(box, "greet", "Beim Start „Glimmer läuft“ zeigen")
+    auto = Gtk.Switch()
+    auto.set_active(os.path.exists(AUTOSTART_FILE))
+    auto.connect("notify::active", lambda w, _p: set_autostart(w.get_active()))
+    add_row(box, "Bei der Anmeldung starten", "", auto)
+
+    note = lbl("Das Fenster zu schließen beendet Glimmer nicht – die Insel läuft weiter. Zum Beenden: „Glimmer beenden“.",
+               css=("dim-label", "caption"), wrap=True)
+    note.set_margin_top(14)
+    page.append(note)
+
+    bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+    for side in ("top", "bottom", "start", "end"):
+        getattr(bar, "set_margin_" + side)(12)
+    demo = Gtk.Button(label="Vorführung starten")
+    app.demo_button = demo
+    app._sync_demo_button()
+    demo.connect("clicked", lambda _b: app.stop_demo() if app.demo_running() else app.start_demo())
+    test = Gtk.Button(label="Test-Benachrichtigung")
+    test.connect("clicked", lambda _b: app.post(
+        "notify", {"app": "Glimmer", "summary": "So sieht eine Benachrichtigung aus", "body": "Mit zwei Zeilen Text darunter.", "icon": None}, 4.0, 3))
+    spacer = Gtk.Box()
+    spacer.set_hexpand(True)
+    quit_btn = Gtk.Button(label="Glimmer beenden")
+    quit_btn.add_css_class("destructive-action")
+    quit_btn.connect("clicked", lambda _b: app.quit_app())
+    for w in (demo, test, spacer, quit_btn):
+        bar.append(w)
+    outer.append(Gtk.Separator())
+    outer.append(bar)
+    return win
 
 
 def read_power():
@@ -1731,6 +1987,8 @@ def main():
     ap.add_argument("--scale", type=float, help="Größe, 1.0 ist normal")
     ap.add_argument("--config", help="Pfad der Einstellungen (Standard: ~/.config/glimmer/config.json)")
     ap.add_argument("--demo", action="store_true", help="zeigt der Reihe nach alle Ereignisse")
+    ap.add_argument("--settings", action="store_true", help="das Einstellungsfenster öffnen")
+    ap.add_argument("--background", action="store_true", help="nur im Hintergrund starten (Autostart); läuft schon eine Instanz, nichts tun")
     ap.add_argument("--snapshot", metavar="BILD.png", help="zeichnet alle Zustände in ein Bild und beendet sich")
     ap.add_argument("--no-layer-shell", action="store_true", help="als normales Fenster laufen (Test)")
     ap.add_argument("--version", action="version", version="Glimmer für Linux " + APP_VERSION)
@@ -1748,13 +2006,18 @@ def main():
         return 0
 
     app = App(cfg, demo=args.demo, layer_shell=not args.no_layer_shell)
-    _signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, lambda *a: (app.quit(), False)[1])
-    _signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, lambda *a: (app.quit(), False)[1])
+    app.config_path = args.config or CONFIG_PATH
+    app.open_settings_at_start = args.settings
+
+    def on_signal(*a):
+        app.quit_app()
+        return False
+    _signal_add(signal.SIGINT, on_signal)
+    _signal_add(signal.SIGTERM, on_signal)
     try:
         app.register(None)
-        if app.get_is_remote():
-            print("Glimmer läuft schon. Mit --demo siehst du eine Vorführung daneben; beenden: ./install.sh stop")
-            return 0
+        if app.get_is_remote() and args.background:
+            return 0  # (it runs already – a second start from the menu opens the settings, the autostart does nothing)
     except GLib.Error:
         pass
     return app.run([sys.argv[0]])

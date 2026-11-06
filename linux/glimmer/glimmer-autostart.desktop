@@ -2,7 +2,7 @@
 Type=Application
 Name=Glimmer
 Comment=Die Insel am oberen Bildschirmrand
-Exec=glimmer
+Exec=glimmer --background
 Icon=preferences-desktop-notification
 Terminal=false
 NoDisplay=true

@@ -14,6 +14,13 @@ Bedienung: **Klick** auf ⏮ ⏯ ⏭ steuert den Player, Klick auf den Fortschri
 **Rechtsklick** schließt die Insel. Ist gerade nichts los, ist sie unsichtbar und fängt keine Mausklicks ab.
 Bleibt die Maus einen Moment ganz oben in der Mitte am Bildschirmrand, erscheint die Musiksteuerung (auch bei Pause).
 
+## Die App: das Einstellungsfenster
+
+Im Anwendungsmenü gibt es **„Glimmer"** (oder im Terminal `glimmer`, wenn es schon läuft). Das öffnet das Einstellungsfenster:
+Form (Notch oder schwebende Insel), Größe, Sprache, jedes Ereignis einzeln ein- und ausschalten, Start bei der Anmeldung –
+dazu die Knöpfe **Vorführung starten/beenden**, **Test-Benachrichtigung** und **Glimmer beenden**.
+Das Fenster zu schließen beendet Glimmer nicht, die Insel läuft weiter. Änderungen gelten sofort (Form und Größe nach einem kurzen Neustart).
+
 ## Voraussetzungen
 
 * ein **Wayland-Desktop mit Layer-Shell**: KDE Plasma (Wayland), Hyprland, Sway, labwc … – **nicht GNOME** (dort läuft Glimmer nur als normales Fenster)
@@ -35,11 +42,12 @@ cd glimmer-linux
 * `./install.sh demo` – führt alle Ereignisse einmal vor, ohne etwas einzurichten
 * `./install.sh stop` · `./install.sh uninstall` – beenden · entfernen
 
-Beim Ausprobieren: `glimmer --demo` zeigt der Reihe nach Musik, Titelwechsel, Lautstärke, Laden, eine Benachrichtigung, Akku schwach und die große Musik-Insel.
+Beim Ausprobieren: im Einstellungsfenster **Vorführung starten** (oder `glimmer --demo` im Terminal; **Strg+C** beendet sie) zeigt der Reihe nach Musik, Titelwechsel, Lautstärke, Laden, eine Benachrichtigung, Akku schwach und die große Musik-Insel.
+Beenden geht auch von Hand: `./install.sh stop`.
 
-## Einstellungen
+## Einstellungen in der Datei
 
-`~/.config/glimmer/config.json` (wird beim ersten Start angelegt; nach einer Änderung Glimmer neu starten: `./install.sh install` oder abmelden):
+Alles aus dem Einstellungsfenster steht in `~/.config/glimmer/config.json` (wird beim ersten Start angelegt und vom Fenster gespeichert):
 
 | Schlüssel | Standard | Bedeutung |
 | --- | --- | --- |
@@ -51,6 +59,7 @@ Beim Ausprobieren: `glimmer --demo` zeigt der Reihe nach Musik, Titelwechsel, La
 | `music`, `music_persistent` | `true` | Musik zeigen · kleine Insel, solange Musik läuft |
 | `track_popups` | `true` | beim Titelwechsel kurz Titel und Interpret |
 | `hover_reveal` | `true` | Maus oben in der Mitte öffnet die Musiksteuerung |
+| `greet` | `true` | beim Start kurz „Glimmer läuft" |
 | `charging`, `low_battery` | `true` | Laden · Akku schwach |
 | `volume` | `true` | Lautstärke (KDE zeigt dazu seine eigene Anzeige – wer nur eine will, setzt hier `false`) |
 | `notifications` | `true` | Benachrichtigungen |
