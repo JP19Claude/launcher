@@ -1,36 +1,63 @@
 # Glimmer für Linux
 
-Die **Notch** von ZENITH, als echtes Programm für deinen Desktop (kein Android): dieselbe schwarze Notch wie die MacBook-Notch in der
-Glimmer-App – 190 × 34 dp groß, mit den Schultern am Bildschirmrand, mit den Bewegungen, Größen und Darstellungen aus ZENITH.
-Sie ist **immer da** (leer, wenn nichts passiert) und wächst bei Ereignissen daraus heraus:
+**Glimmer** von ZENITH, als echtes Programm für deinen Desktop (kein Android): dieselbe Insel mit denselben Modi, Aussehen, Musik-Stilen,
+Leuchten, Clawd und Einstellungen wie die Glimmer-App – am oberen Bildschirmrand, über allen Fenstern. Sie ist **immer da** (leer, wenn
+nichts passiert) und wächst bei Ereignissen daraus heraus.
 
-| Ereignis | Klein (neben der Notch) | Aufgeklappt (Tippen) |
+## Die vier Modi
+
+| Modus | Aussehen |
+| --- | --- |
+| **MacBook-Notch** (Standard) | die schwarze Kerbe, 190 × 34 dp, am Rand angewachsen, mit den „Ohren" an den Schultern; Inhalte wachsen links und rechts daneben heraus. Leuchten, Rand und Fließfarben sind aus (die gehören zur Pille) |
+| **MacBook-Insel** | wie die neueren MacBooks: eine kleine Pille (128 × 32 dp), 6 dp unter dem Rand |
+| **Glimmer (Pille)** | die Pille wie auf dem Handy, mit allem: Aussehen *Schwarz*, *Liquid Glass*, *Farbig getönt*, *AI Fluid*; Leuchten, Rand, fließende Farben, Atmen |
+| **Dynamic Island 1:1** | wie die Insel des iPhones: reines Schwarz, ihre Proportionen, Cover klassisch, Antippen öffnet die App, ohne Glimmers Extras. Deine eigenen Einstellungen bleiben gespeichert |
+
+## Was Glimmer zeigt
+
+| Ereignis | Klein | Aufgeklappt |
 | --- | --- | --- |
-| **Musik** (jeder MPRIS-Player: Spotify, Firefox, VLC, mpv, Elisa …) | Cover links, farbige Wellen rechts, die Farben des Covers glühen durch das Schwarz | Cover mit Schein, Titel, Interpret, Fortschritt zum Ziehen, ⏮ ⏯ ⏭, Farben des Covers als Licht dahinter |
-| **Laden** | grüner Funke links, Prozent rechts, ein grüner Lichtstreifen läuft einmal um die Notch | „Lädt", Prozent, Akku-Symbol, das sich füllt |
-| **Lautstärke** | Lautsprecher links, Prozent rechts | Titel, Wert, Balken |
-| **Benachrichtigungen** | App-Symbol links, pulsierender Punkt rechts | App-Symbol, Titel, Text |
-| **Akku schwach · Voll · Kabel getrennt** | Symbol links, Wert rechts | wie Laden |
+| **Musik** (jeder MPRIS-Player: Spotify, Firefox, VLC, mpv, Elisa …) | Cover, farbige Wellen; Stil *Hyper Island* (Xiaomi), *Klassisch* oder *Fluid Cloud* (OPPO/OnePlus) | Cover, Titel, Interpret, Fortschritt zum Ziehen, ⏮ ⏯ ⏭ |
+| **Bestätigungscodes** | der Code in der Insel (Bank, Login, TAN …), ein Tipp kopiert ihn | großer Code, Knopf „Kopieren" |
+| **Bildschirmfotos** | das Bild als Vorschau | Bild, „Kopieren", „Ansehen" |
+| **Benachrichtigungen** | App-Symbol, pulsierender Punkt | App-Symbol, Titel, Text |
+| **Laden** · **Kabel** · **Akku schwach** · **Voll** | Funke und Prozent, ein Lichtstreifen läuft um die Insel | Prozent, Akku, der sich füllt |
+| **Lautstärke** | Lautsprecher, Prozent | Titel, Wert, Balken |
+| **Kopfhörer** (Bluetooth) · **Nicht stören** | Symbol, Wert | wie oben |
+| **Kamera / Mikrofon in Benutzung** | grüner / oranger Punkt | – |
+| **Clawd** | Claudes kleines Pixelwesen sitzt in der Insel, tanzt zur Musik, schläft nachts, sagt beim Start Hallo | |
 
-Bedienung wie auf dem Handy: **Tippen** klappt auf und zu, **nach unten ziehen** klappt auf, **nach oben ziehen** klappt zu,
-**seitlich ziehen** springt bei Musik zum nächsten oder vorigen Titel, aufgeklappt hält der Fortschrittsbalken zum Ziehen zum Spulen, ⏮ ⏯ ⏭
-steuern den Player, ein Tipp auf Cover und Titel holt das Player-Fenster nach vorn. **Rechtsklick** holt bei Musik den Player, sonst schließt er die
-Meldung. Nach 9 Sekunden klappt sie von allein zu. Ein Tipp auf die leere Notch öffnet die App (das Einstellungsfenster).
-Außerhalb der Notch fängt Glimmer keine Mausklicks ab.
+Bedienung wie auf dem Handy: **Tippen** klappt auf und zu (oder öffnet die App, wenn du das einstellst), **nach unten ziehen** klappt auf,
+**nach oben ziehen** klappt zu, **seitlich ziehen** springt bei Musik zum nächsten oder vorigen Titel, **Doppeltippen** (einstellbar):
+Play/Pause, Clawd-Orakel, Münze oder Würfel. Aufgeklappt hält der Fortschrittsbalken zum Ziehen zum Spulen. **Rechtsklick** ist das
+Gedrückthalten vom Handy. Ein Tipp auf die leere Insel öffnet die App (das Einstellungsfenster). Außerhalb der Insel fängt Glimmer keine
+Mausklicks ab.
 
 ## Die App: das Einstellungsfenster
 
-Im Anwendungsmenü gibt es **„Glimmer"** (oder im Terminal `glimmer`, wenn es schon läuft). Das öffnet das Einstellungsfenster:
-Form (Notch oder die kleine Insel darunter), Größe und Breite/Höhe der Notch, was im Leerlauf zu sehen ist, Sprache, jedes Ereignis einzeln ein- und ausschalten, Start bei der Anmeldung –
-dazu die Knöpfe **Vorführung starten/beenden**, **Test-Benachrichtigung** und **Glimmer beenden**.
-Das Fenster ist die Glimmer-App von ZENITH für den Desktop: derselbe dunkle Verlauf mit den driftenden Farben, die kleine Logo-Insel, eine Vorschau zum Antippen (sie geht durch Leerlauf, Musik, Laden, Benachrichtigung, Lautstärke und Akku schwach) und die Einstellungen in Glas-Karten; oben steht, was Glimmer auf deinem Desktop gefunden hat (Layer-Shell, Player, Benachrichtigungen, Lautstärke, Akku).
-Das Fenster zu schließen beendet Glimmer nicht, die Notch läuft weiter. Änderungen gelten sofort (Form und Größe nach einem kurzen Neustart).
+Im Anwendungsmenü gibt es **„Glimmer"** (oder im Terminal `glimmer`, wenn es schon läuft). Das Fenster ist die Glimmer-App von ZENITH für den
+Desktop: der dunkle Verlauf mit den driftenden Farben, die atmende Logo-Insel, eine **Vorschau zum Antippen** (sie geht durch Leerlauf, Musik,
+Laden, Benachrichtigung, Code, Lautstärke, Kopfhörer, Bildschirmfoto und Akku schwach – und folgt jeder Änderung sofort) und die Einstellungen
+in Glas-Karten, wie in der Android-App:
+
+* **Einrichten** – was Glimmer auf deinem Desktop gefunden hat (Layer-Shell, Player, Benachrichtigungen, Lautstärke, Akku, Bildschirmfotos, Kamera/Mikrofon)
+* **Clawd** – an/aus, auch im Leerlauf, Seite, Position, Größe, Aussehen (10 Farben bis *Regenbogen* und *Galaxy*), „Hallo" beim Start, nur einmal am Tag
+* **Glimmer** – anzeigen, Modus, Aussehen, Musik-Stil, kleine Pille im Leerlauf, Uhrzeit in der leeren Insel
+* **Gestaltung** – Leuchten bei Neuem und seine Farbe, AI-Fluid-Rand, atmendes Leuchten, Rand, Bewegung (ruhig · normal · verspielt)
+* **Größe & Position** – „Kleiner (85 %)", Gesamtgröße, Breite und Höhe der Kerbe bzw. der Pille, Breite, nach links/rechts, nach oben/unten, Zurücksetzen
+* **Bedienung** – Antippen öffnet die App, Doppeltippen, von selbst zuklappen (5 · 9 · 15 · 30 s · nie), Titel wischen, Maus auf der Insel klappt die Musik auf
+* **Was Glimmer zeigt** – Musik, Cover-Insel, Codes, Bildschirmfotos, Nachrichten, Kamera/Mikrofon, Kopfhörer/Nicht stören/Akku voll, Laden, Akku schwach, Akku beim Laden, Lautstärke
+* **Linux** – Start bei der Anmeldung, Sprache, Ebene (auch über Vollbild), Bildschirm
+* **Ausprobieren** – Vorführung, Test-Benachrichtigung · **Zurücksetzen** (zweimal tippen)
+
+Optionen, die zum gewählten Modus nicht gehören, blendet das Fenster aus – wie die Android-App. Das Fenster zu schließen beendet Glimmer nicht,
+die Insel läuft weiter. Änderungen gelten sofort (Gesamtgröße, Ebene und Bildschirm nach einem kurzen Neustart).
 
 ## Voraussetzungen
 
 * ein **Wayland-Desktop mit Layer-Shell**: KDE Plasma (Wayland), Hyprland, Sway, labwc … – **nicht GNOME** (dort läuft Glimmer nur als normales Fenster)
 * Pakete: `python python-gobject python-cairo gtk4 gtk4-layer-shell` (der Installer holt sie, wenn sie fehlen)
-* optional für die Lautstärke: `libpulse` (`pactl`, auch mit PipeWire) oder `wireplumber` (`wpctl`)
+* optional: `libpulse` (`pactl`, auch mit PipeWire) oder `wireplumber` (`wpctl`) für Lautstärke und Mikrofon-Punkt · `wl-clipboard` zum Kopieren von Codes und Bildern · BlueZ für Kopfhörer
 
 ## Einrichten
 
@@ -47,44 +74,44 @@ cd glimmer-linux
 * `./install.sh demo` – führt alle Ereignisse einmal vor, ohne etwas einzurichten
 * `./install.sh stop` · `./install.sh uninstall` – beenden · entfernen
 
-Beim Ausprobieren: im Einstellungsfenster **Vorführung starten** (oder `glimmer --demo` im Terminal; **Strg+C** beendet sie) zeigt der Reihe nach Musik (klein und aufgeklappt), Lautstärke, Laden, eine Benachrichtigung (klein und aufgeklappt) und Akku schwach.
+Beim Ausprobieren: im Einstellungsfenster **Vorführung starten** (oder `glimmer --demo` im Terminal; **Strg+C** beendet sie) zeigt der Reihe nach
+Musik (klein und aufgeklappt), Lautstärke, Laden, eine Benachrichtigung, Akku schwach, einen Code, Kopfhörer und ein Bildschirmfoto.
 Beenden geht auch von Hand: `./install.sh stop`.
 
 ## Einstellungen in der Datei
 
-Alles aus dem Einstellungsfenster steht in `~/.config/glimmer/config.json` (wird beim ersten Start angelegt und vom Fenster gespeichert):
+Alles aus dem Einstellungsfenster steht in `~/.config/glimmer/config.json` (wird beim ersten Start angelegt und vom Fenster gespeichert). Die
+Schlüssel heißen wie in der Android-App:
 
-| Schlüssel | Standard | Bedeutung |
-| --- | --- | --- |
-| `mode` | `"notch"` | `"notch"`: die MacBook-Notch, am Rand angewachsen, mit den Schultern · `"island"`: die kleine Insel, 6 dp darunter |
-| `scale` | `1.0` | Größe von allem (0.6 – 2.5) |
-| `notch_width`, `notch_height` | `190`, `34` | Größe der leeren Notch in dp (wie in ZENITH) |
-| `island_width`, `island_height` | `128`, `32` | dasselbe für die Insel |
-| `idle` | `"pill"` | wenn nichts passiert: `"pill"` die leere Notch · `"clock"` mit Uhrzeit · `"off"` unsichtbar |
-| `auto_collapse` | `9` | aufgeklappt nach so vielen Sekunden zuklappen (0: bleibt) |
-| `monitor` | `0` | Nummer des Bildschirms |
-| `layer` | `"overlay"` | `"overlay"`: auch über Vollbild-Fenstern · `"top"`: darunter |
-| `language` | `"auto"` | `"de"`, `"en"` oder nach der Systemsprache |
-| `music`, `music_persistent` | `true` | Musik zeigen · kleine Notch mit Cover und Wellen, solange Musik läuft |
-| `hover_reveal` | `false` | Maus auf der Notch klappt die Musik auf (zusätzlich zum Tippen) |
-| `greet` | `true` | beim Start kurz „Glimmer läuft" |
-| `charging`, `low_battery` | `true` | Laden · Akku schwach |
-| `volume` | `true` | Lautstärke (KDE zeigt dazu seine eigene Anzeige – wer nur eine will, setzt hier `false`) |
-| `notifications` | `true` | Benachrichtigungen |
-| `accent` | `"#FF7A9C"` | Farbe des Benachrichtigungspunkts |
+| Gruppe | Schlüssel (Standard) |
+| --- | --- |
+| Glimmer | `enabled` (`true`) · `mode` (`"notch"`, `"island"`, `"glimmer"`, `"dynamic_island"`) · `style` (`"black"`, `"glass"`, `"tinted"`, `"fluid"`) · `music_style` (`"hyper"`, `"classic"`, `"fluid_cloud"`) · `idle_pill` (`true`) · `idle_clock` (`false`) |
+| Clawd | `clawd` (`false`) · `clawd_idle` (`true`) · `clawd_side` (`"left"`, `"right"`) · `clawd_spot` (0 – 1) · `clawd_size` (0.7 – 1.4) · `clawd_skin` (`"terracotta"`, `"ocean"`, `"mint"`, `"lavender"`, `"gold"`, `"rose"`, `"snow"`, `"midnight"`, `"rainbow"`, `"galaxy"`) · `clawd_greeting` (`true`) · `clawd_greet_daily` (`false`) |
+| Gestaltung | `glow` (`true`) · `glow_color` (`"activity"`, `"accent"`, `"white"`, `"rainbow"`) · `ai_fluid` (`true`) · `breathe` (`false`) · `outline` (`"off"`, `"subtle"`, `"colored"`) · `motion` (`"calm"`, `"normal"`, `"playful"`) |
+| Größe & Position | `small` (`false`, 85 %) · `scale` (1.0; 0.6 – 2.5) · `width` (1.0; 0.8 – 1.3) · `notch_width`, `notch_height` (190, 34) · `island_width`, `island_height` (128, 32) · `offset_x` (0) · `offset_y` (0) |
+| Bedienung | `tap_opens` (`false`) · `double_tap` (`"off"`, `"play_pause"`, `"oracle"`, `"coin"`, `"dice"`) · `auto_collapse` (9 s; 0: bleibt) · `swipe_tracks` (`true`) · `hover_reveal` (`false`) |
+| Was Glimmer zeigt | `music` · `music_persistent` · `notifications` · `codes` · `screenshots` · `privacy` · `alerts` · `charging` · `low_battery` · `volume` (alle `true`) · `charging_live` (`false`) |
+| Linux | `monitor` (0) · `layer` (`"overlay"` über Vollbild, `"top"` darunter) · `language` (`"auto"`, `"de"`, `"en"`) · `accent` (`"#FF7A9C"`, Farbe des Benachrichtigungspunkts) |
 
-Auch ohne Einrichtung geht: `glimmer --mode island --scale 1.3`.
+Auch ohne Einrichtung geht: `glimmer --mode glimmer --scale 1.3`. Eine ältere Datei mit `idle` oder `greet` wird beim Lesen übernommen bzw. ignoriert.
 
 ## Wenn etwas nicht geht
 
 * **Glimmer erscheint als normales Fenster in der Ecke** – dein Desktop kennt kein Layer-Shell (GNOME) oder `gtk4-layer-shell` fehlt. Unter KDE: Anmelden mit „Plasma (Wayland)".
 * **„gtk4-layer-shell nicht gefunden"** – `sudo pacman -S gtk4-layer-shell` (extra), sonst `yay -S gtk4-layer-shell` (AUR).
-* **Keine Lautstärke-Anzeige** – `pactl` oder `wpctl` fehlt (`sudo pacman -S libpulse`).
-* **Keine Benachrichtigungen** – Glimmer liest sie über den Nachrichtenbus mit; bei einem Fehler steht der Grund im Terminal (`glimmer` dort starten, `GLIMMER_DEBUG=1 glimmer` zeigt mehr).
-* **Ein Bild aller Zustände** (zum Ansehen, ohne Fenster): `glimmer --snapshot zustaende.png`
+* **Keine Lautstärke-Anzeige / kein Mikrofon-Punkt** – `pactl` oder `wpctl` fehlt (`sudo pacman -S libpulse`).
+* **Keine Benachrichtigungen / Codes** – Glimmer liest sie über den Nachrichtenbus mit; bei einem Fehler steht der Grund im Terminal (`glimmer` dort starten, `GLIMMER_DEBUG=1 glimmer` zeigt mehr).
+* **Codes oder Bilder lassen sich nicht kopieren** – `sudo pacman -S wl-clipboard`.
+* **Bildschirmfotos erscheinen nicht** – Glimmer schaut in `Bilder/Screenshots` (und `Bilder`); lege deine Bildschirmfotos dort ab (Spectacle: Einstellungen → Speicherort).
+* **Ein Bild aller Zustände** (zum Ansehen, ohne Fenster, alle vier Modi): `glimmer --snapshot zustaende.png`
+
+## Was nicht dabei ist
+
+Was es nur auf dem Handy gibt: der Einflug beim Entsperren, Sperrbildschirm/Always-on-Display, Face ID, Taschenlampe, Anrufe, Timer und Navigation
+als Live-Aktivitäten, Hüte und Kleider für Clawd, Vibration, die Querformat-Ausrichtung.
 
 ## Technik in drei Zeilen
 
-Python 3 + GTK 4 + `gtk4-layer-shell`, gezeichnet mit Cairo: ein Nachbau der Notch aus ZENITHs Glimmer (Größen, Federn ohne Wippen am Rand, die weichen „kontinuierlichen" Ecken, Cover-Farben, Lichtstreifen beim Laden).
-Musik: MPRIS über D-Bus · Laden: `/sys/class/power_supply` · Lautstärke: `pactl subscribe` · Benachrichtigungen: D-Bus-Monitor (nur lesend).
+Python 3 + GTK 4 + `gtk4-layer-shell`, gezeichnet mit Cairo: ein Nachbau von ZENITHs Glimmer (Größenrechnung `islandSize`, Federn, die weichen „kontinuierlichen" Ecken, Cover-Farben, Lichtstreifen beim Laden, Clawd als Pixelbild).
+Musik: MPRIS über D-Bus · Laden: `/sys/class/power_supply` · Lautstärke: `pactl subscribe` · Benachrichtigungen: D-Bus-Monitor (nur lesend) · Kopfhörer: BlueZ · Kamera: `/proc` · Mikrofon: `pactl`.
 Dieselbe Idee wie Glimmer in ZENITH, nur für den Desktop.
