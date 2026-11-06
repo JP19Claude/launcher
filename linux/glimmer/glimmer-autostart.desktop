@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Glimmer
+Comment=Die Insel am oberen Bildschirmrand
+Exec=glimmer
+Icon=preferences-desktop-notification
+Terminal=false
+NoDisplay=true
+X-KDE-autostart-after=panel
+X-GNOME-Autostart-enabled=true

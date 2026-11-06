@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Glimmer
+Comment=Die Insel am oberen Bildschirmrand: Musik, Laden, Lautstärke, Benachrichtigungen
+Comment[en]=The island at the top of the screen: music, charging, volume, notifications
+Exec=glimmer
+Icon=preferences-desktop-notification
+Categories=Utility;
+Terminal=false
+StartupNotify=false

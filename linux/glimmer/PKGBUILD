@@ -1,0 +1,23 @@
+# Maintainer: ZENITH
+# Glimmer für Arch Linux: die Insel (oder der Notch) am oberen Bildschirmrand – Musik, Laden, Lautstärke, Benachrichtigungen.
+# Ein echtes Programm für den Desktop (kein Android): GTK 4 + gtk4-layer-shell, läuft unter KDE Plasma (Wayland), Hyprland, Sway …
+pkgname=glimmer-desktop
+pkgver=22.0
+pkgrel=1
+pkgdesc="Glimmer: die Insel am oberen Bildschirmrand für Wayland-Desktops (Musik, Laden, Lautstärke, Benachrichtigungen)"
+arch=('any')
+url="https://github.com/JP19Claude/launcher"
+license=('unknown')
+depends=('python' 'python-gobject' 'python-cairo' 'gtk4' 'gtk4-layer-shell')
+optdepends=(
+  'libpulse: Lautstärke-Anzeige über pactl (auch mit pipewire-pulse)'
+  'wireplumber: Lautstärke-Anzeige über wpctl, falls es kein pactl gibt'
+)
+source=('glimmer.py' 'glimmer.desktop' 'glimmer-autostart.desktop')
+sha256sums=('SKIP' 'SKIP' 'SKIP')
+
+package() {
+  install -Dm755 "$srcdir/glimmer.py" "$pkgdir/usr/bin/glimmer"
+  install -Dm644 "$srcdir/glimmer.desktop" "$pkgdir/usr/share/applications/glimmer.desktop"
+  install -Dm644 "$srcdir/glimmer-autostart.desktop" "$pkgdir/etc/xdg/autostart/glimmer.desktop"
+}
