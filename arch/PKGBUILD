@@ -1,0 +1,24 @@
+# Maintainer: ZENITH
+# ZENITH für Arch Linux: der Launcher läuft als Android-App in Waydroid. Dieses Paket bringt das Programm 'zenith-arch' (einrichten,
+# starten, aktualisieren) und den Eintrag im Anwendungsmenü; die App selbst holt 'zenith-arch install' von der neuesten Veröffentlichung.
+pkgname=zenith-waydroid
+pkgver=22.0
+pkgrel=1
+pkgdesc="ZENITH, der Android-Launcher mit Glimmer, auf Arch Linux über Waydroid"
+arch=('x86_64' 'aarch64')
+url="https://github.com/JP19Claude/launcher"
+license=('unknown')
+depends=('bash' 'curl' 'sudo')
+optdepends=(
+  'waydroid: führt die Android-App aus (extra oder AUR)'
+  'dnsmasq: Netzwerk in Waydroid'
+  'nftables: Netzwerk in Waydroid'
+  'cage: Waydroid unter X11 in einem kleinen Wayland-Fenster'
+)
+source=('zenith-arch' 'zenith.desktop')
+sha256sums=('SKIP' 'SKIP')
+
+package() {
+  install -Dm755 "$srcdir/zenith-arch" "$pkgdir/usr/bin/zenith-arch"
+  install -Dm644 "$srcdir/zenith.desktop" "$pkgdir/usr/share/applications/zenith.desktop"
+}

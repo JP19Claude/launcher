@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ZENITH
+GenericName=Android-Launcher
+Comment=ZENITH (Android) in Waydroid starten
+Exec=zenith-arch start
+Terminal=false
+Categories=System;Utility;
+Keywords=ZENITH;Launcher;Android;Waydroid;Glimmer;

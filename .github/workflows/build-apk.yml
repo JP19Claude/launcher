@@ -37,6 +37,12 @@ jobs:
           cp app/build/outputs/apk/duft/debug/app-duft-debug.apk Duftschrank.apk
           cp app/build/outputs/apk/one/debug/app-one-debug.apk ZENITH.apk
           cp smart/build/outputs/apk/smart/debug/smart-smart-debug.apk ZENITH-Smart.apk
+          # ZENITH for Arch Linux (through Waydroid): the files of arch/ as one archive, with this build's version in the PKGBUILD.
+          av=$(grep -o 'versionName = "[^"]*"' app/build.gradle.kts | cut -d'"' -f2)
+          rm -rf zenith-arch
+          cp -r arch zenith-arch
+          sed -i "s/^pkgver=.*/pkgver=$av/" zenith-arch/PKGBUILD
+          tar czf ZENITH-Arch.tar.gz zenith-arch
           # ZENITH Hintergründe: every scene of the Super-Wallpaper as an app (a live wallpaper) of its own.
           for entry in alle:Alle moon:Mond earth:Erde mars:Mars venus:Venus jupiter:Jupiter saturn:Saturn neptune:Neptun pluto:Pluto io:Io europa:Europa ganymede:Ganymed flag:Iwo-Jima geometry:Geometrie; do
             id="${entry%%:*}"; name="${entry#*:}"
@@ -54,6 +60,7 @@ jobs:
             Duftschrank.apk
             Hearth-alt.apk
             ZENITH-Hintergrund-*.apk
+            ZENITH-Arch.tar.gz
 
       # Once: every earlier version of every app as its own release (oldest first, so they
       # line up in order). A marker tag remembers it's done.
@@ -205,8 +212,8 @@ jobs:
           }
           json.dump(out, open("versions.json", "w"), ensure_ascii=False, indent=1)
           PY
-          gh release create "build-${{ github.run_number }}" ZENITH.apk ZENITH-Smart.apk Glimmer.apk Clawd.apk Duftschrank.apk Hearth-alt.apk ZENITH-Hintergrund-*.apk versions.json \
+          gh release create "build-${{ github.run_number }}" ZENITH.apk ZENITH-Smart.apk Glimmer.apk Clawd.apk Duftschrank.apk Hearth-alt.apk ZENITH-Hintergrund-*.apk ZENITH-Arch.tar.gz versions.json \
             --target "${{ github.sha }}" \
             --title "ZENITH Build ${{ github.run_number }}" \
-            --notes "Welche Datei? ZENITH.apk: die Hauptapp (Launcher, Glimmer und Clawd in einer App). ZENITH-Smart.apk: ZENITH im Look des Smart Launchers, eine eigene App daneben. Glimmer.apk: die Insel um die Kamera, Clawd.apk: Clawds Widgets für jeden Launcher, Duftschrank.apk: Clawds Parfüm-Berater – alle drei stecken schon in ZENITH. Hearth-alt.apk: der alte Launcher allein, ohne Glimmer und Clawd – nicht nötig. ZENITH-Hintergrund-Alle.apk: alle Szenen des Super-Wallpapers in einer App. ZENITH-Hintergrund-….apk: jede Szene als eigene App (Mond, Erde, Mars …), einzeln zu installieren. versions.json ist die Liste für die Update-Suche. Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
+            --notes "Welche Datei? ZENITH.apk: die Hauptapp (Launcher, Glimmer und Clawd in einer App). ZENITH-Smart.apk: ZENITH im Look des Smart Launchers, eine eigene App daneben. Glimmer.apk: die Insel um die Kamera, Clawd.apk: Clawds Widgets für jeden Launcher, Duftschrank.apk: Clawds Parfüm-Berater – alle drei stecken schon in ZENITH. Hearth-alt.apk: der alte Launcher allein, ohne Glimmer und Clawd – nicht nötig. ZENITH-Hintergrund-Alle.apk: alle Szenen des Super-Wallpapers in einer App. ZENITH-Hintergrund-….apk: jede Szene als eigene App (Mond, Erde, Mars …), einzeln zu installieren. ZENITH-Arch.tar.gz: ZENITH für Arch Linux (läuft in Waydroid; auspacken, ./zenith-arch install). versions.json ist die Liste für die Update-Suche. Debug-APKs vom Branch ${{ github.ref_name }}, Commit ${{ github.sha }}." \
             --latest
