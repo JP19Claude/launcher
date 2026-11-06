@@ -11,7 +11,7 @@ Sie zeigt, was gerade passiert:
 | **Benachrichtigungen** | App, Titel und Text – Glimmer liest nur mit, die normalen Benachrichtigungen bleiben, wie sie sind |
 
 Bedienung: **Klick** auf ⏮ ⏯ ⏭ steuert den Player, Klick auf den Fortschrittsbalken spult, Klick auf das Cover holt das Player-Fenster nach vorn,
-**Rechtsklick** schließt die Insel. Ist gerade nichts los, ist sie unsichtbar und fängt keine Mausklicks ab.
+**Rechtsklick** schließt die Insel. Die Insel ist **immer da**: wenn nichts passiert, bleibt sie als kleine Notch mit der Uhrzeit oben stehen und wächst bei Ereignissen daraus heraus; ein Klick darauf öffnet die App. (Wer sie im Leerlauf lieber leer oder unsichtbar will: Einstellung „Wenn nichts passiert“.) Außerhalb der Insel fängt Glimmer keine Mausklicks ab.
 Bleibt die Maus einen Moment ganz oben in der Mitte am Bildschirmrand, erscheint die Musiksteuerung (auch bei Pause).
 
 ## Die App: das Einstellungsfenster
@@ -58,6 +58,7 @@ Alles aus dem Einstellungsfenster steht in `~/.config/glimmer/config.json` (wird
 | `language` | `"auto"` | `"de"`, `"en"` oder nach der Systemsprache |
 | `music`, `music_persistent` | `true` | Musik zeigen · kleine Insel, solange Musik läuft |
 | `track_popups` | `true` | beim Titelwechsel kurz Titel und Interpret |
+| `idle` | `"clock"` | wenn nichts passiert: `"clock"` Uhrzeit · `"pill"` leere Insel · `"off"` unsichtbar |
 | `hover_reveal` | `true` | Maus oben in der Mitte öffnet die Musiksteuerung |
 | `greet` | `true` | beim Start kurz „Glimmer läuft" |
 | `charging`, `low_battery` | `true` | Laden · Akku schwach |

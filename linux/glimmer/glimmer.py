@@ -115,6 +115,7 @@ DEFAULTS = {
     "music_persistent": True,   # kleine Insel, solange Musik läuft
     "greet": True,              # beim Start kurz „Glimmer läuft" zeigen
     "track_popups": True,       # beim Titelwechsel kurz Titel und Interpret zeigen
+    "idle": "clock",            # wenn nichts passiert: "clock" (Uhrzeit) · "pill" (leere Insel) · "off" (unsichtbar)
     "hover_reveal": True,       # Maus an den oberen Rand in der Mitte: Musiksteuerung erscheint
     "charging": True,
     "low_battery": True,
@@ -149,6 +150,8 @@ def load_config(path=None):
     cfg["scale"] = max(0.6, min(2.5, float(cfg["scale"])))
     if cfg["mode"] not in ("notch", "island"):
         cfg["mode"] = "notch"
+    if cfg["idle"] not in ("clock", "pill", "off"):
+        cfg["idle"] = "clock"
     return cfg
 
 
@@ -188,6 +191,7 @@ def parse_color(text, fallback=(1.0, 0.48, 0.61)):
 
 # Content sizes in dp (scaled by the setting "scale").
 LAYOUTS = {
+    "idle": (100, 30),
     "music": (236, 36),
     "music_open": (420, 152),
     "track": (344, 64),
@@ -680,10 +684,17 @@ class Island:
             self._power(cr, tw, th)
         elif k == "notify":
             self._notify(cr, tw, th)
+        elif k == "idle":
+            self._idle(cr, tw, th)
         cr.restore()
         cr.pop_group_to_source()
         cr.paint_with_alpha(ca)
         cr.restore()
+
+    def _idle(self, cr, tw, th):
+        """Nothing is going on: the island stays, small, like the notch of a laptop – with the time, or empty."""
+        if self.cfg.get("idle", "clock") == "clock":
+            draw_text(cr, time.strftime("%H:%M"), tw / 2, th / 2, 13, (1.0, 1.0, 1.0, 0.92), bold=True, align="center")
 
     def _art(self, cr, p, x, y, size):
         cr.save()
@@ -1089,6 +1100,8 @@ class App(Gtk.Application):
         self._demo_ids = set()
         self._demo_on = False
         self._restart_id = 0
+        self._clock_id = 0
+        self._clock_minute = ""
         self._tick_id = 0
         self._last_frame = None
         self._last_draw = 0.0
@@ -1252,10 +1265,31 @@ class App(Gtk.Application):
             self._start_pos_timer()
         elif self.music_visible():
             isl.show("music", p, False)
+        elif self.cfg["idle"] != "off":
+            isl.show("idle", None, False)
         else:
             isl.hide()
+        self._clock_sync()
         self.update_input()
         self.kick()
+
+    def _clock_sync(self):
+        """While the idle island shows the time, look once a second whether the minute changed (nothing else wakes up)."""
+        want = self.island.kind == "idle" and self.island.visible and self.cfg["idle"] == "clock"
+        if want and not self._clock_id:
+            self._clock_minute = time.strftime("%H:%M")
+
+            def tick():
+                if not (self.island.kind == "idle" and self.island.visible and self.cfg["idle"] == "clock"):
+                    self._clock_id = 0
+                    return False
+                now = time.strftime("%H:%M")
+                if now != self._clock_minute:
+                    self._clock_minute = now
+                    if self.area is not None:
+                        self.area.queue_draw()
+                return True
+            self._clock_id = GLib.timeout_add_seconds(1, tick)
 
     def _start_pos_timer(self):
         if self._pos_timer:
@@ -1339,8 +1373,8 @@ class App(Gtk.Application):
             self._leave_id = 0
         if self.transient is not None or not self.cfg["music"] or self.active() is None:
             return
-        if self.island.kind is None:
-            # Only the thin strip at the screen's edge is there: the island opens once the pointer stays a moment,
+        if self.island.kind in (None, "idle"):
+            # Only the idle island (or the thin strip at the screen's edge) is there: it opens once the pointer stays a moment,
             # so that passing by on the way to a window's title bar does not open it.
             if not self._dwell_id:
                 self._dwell_id = GLib.timeout_add(320, self._dwell)
@@ -1374,6 +1408,9 @@ class App(Gtk.Application):
     def on_click(self, gesture, n, x, y, *rest):
         isl = self.island
         p = self.active()
+        if isl.kind == "idle":
+            self.open_settings()
+            return
         act = isl.hit(x, y)
         if act and p is not None:
             action, value = act
@@ -1498,6 +1535,7 @@ class App(Gtk.Application):
         self._power_tick()
         GLib.timeout_add_seconds(2, self._power_tick)
         self._start_notifications()
+        self.refresh()  # (the idle island is there from the first moment, not only after the first event)
         force_greet = os.environ.pop("_GLIMMER_GREET", None)
         if self.demo:
             self.start_demo()
@@ -1785,7 +1823,7 @@ def build_settings(app):
 
     page.append(lbl('<span size="xx-large" weight="bold">Glimmer</span>', markup=True))
     page.append(lbl("Version %s · die Insel am oberen Bildschirmrand" % APP_VERSION, css=("dim-label",)))
-    status = ("Läuft. Die Insel sitzt oben am Bildschirmrand (Layer-Shell) und ist unsichtbar, solange nichts passiert."
+    status = ("Läuft. Die Insel sitzt oben am Bildschirmrand (Layer-Shell). Ein Klick auf die kleine Insel öffnet dieses Fenster."
               if app.layered else
               "Läuft als normales Fenster: ohne Layer-Shell (GNOME oder X11) sitzt die Insel nicht am Rand.")
     page.append(lbl(status, css=("dim-label",), wrap=True))
@@ -1802,6 +1840,11 @@ def build_settings(app):
     size.set_size_request(190, -1)
     size.connect("value-changed", lambda w: app.set_option("scale", round(w.get_value(), 2)))
     add_row(box, "Größe", "1,00 ist normal.", size)
+    idles = ["clock", "pill", "off"]
+    idle = Gtk.DropDown.new_from_strings(["Uhrzeit zeigen", "Leere Insel", "Unsichtbar"])
+    idle.set_selected(idles.index(cfg["idle"]) if cfg["idle"] in idles else 0)
+    idle.connect("notify::selected", lambda w, _p: app.set_option("idle", idles[w.get_selected()]))
+    add_row(box, "Wenn nichts passiert", "Die Insel bleibt als kleine Notch stehen und wächst bei Ereignissen.", idle)
     langs = ["auto", "de", "en"]
     lang = Gtk.DropDown.new_from_strings(["Automatisch", "Deutsch", "English"])
     lang.set_selected(langs.index(cfg["language"]) if cfg["language"] in langs else 0)
@@ -1927,6 +1970,7 @@ def demo_player(cfg):
 def render_snapshot(cfg, path):
     """Draws every state of the island, in both modes, into one picture – no window, no display needed."""
     scenes = [
+        ("Leerlauf", "idle", False),
         ("Musik, klein", "music", False),
         ("Musik, geöffnet", "music", True),
         ("Titelwechsel", "track", False),
@@ -1954,7 +1998,7 @@ def render_snapshot(cfg, path):
             c2 = dict(cfg, mode=mode)
             isl = Island(c2)
             data = {
-                "Musik, klein": player, "Musik, geöffnet": player, "Titelwechsel": player,
+                "Leerlauf": None, "Musik, klein": player, "Musik, geöffnet": player, "Titelwechsel": player,
                 "Lautstärke": {"pct": 64, "muted": False}, "Stumm": {"pct": 64, "muted": True},
                 "Lädt": {"state": "charging", "pct": 78}, "Voll": {"state": "full", "pct": 100},
                 "Akku schwach": {"state": "low", "pct": 14},
