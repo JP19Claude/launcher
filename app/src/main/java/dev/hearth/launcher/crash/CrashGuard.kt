@@ -134,6 +134,7 @@ fun LauncherSettings.safeLook(): LauncherSettings = if (!CrashGuard.safe) {
     copy(
         beSmarter = false,
         beComet = false,
+        beColorOs = false,
         zenithWallpaper = false,
         zenithAurora = false,
         projectZenith = false,

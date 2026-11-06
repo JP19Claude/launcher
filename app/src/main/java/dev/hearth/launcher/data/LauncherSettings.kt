@@ -138,10 +138,16 @@ enum class AodTint(val label: String) {
  * – frosted glass, round squircle icons, the ColorOS clock and quick panel – with the glass
  * adjustable freely. (Only seen, never saved over what's chosen: see [withColorOsLook].)
  */
-val LauncherSettings.colorOsLook: Boolean get() = projectZenith && projectColorOs
+val LauncherSettings.colorOsLook: Boolean get() = (projectZenith && projectColorOs) || beColorOsActive
+
+/**
+ * ZENITH 22.1, "Be ColorOS": the Illuminati's third mode – the whole launcher as ColorOS 17 – is on (it gives way to "Be Smarter" and
+ * "Be Comet" if they are on as well, which the switches prevent anyway).
+ */
+val LauncherSettings.beColorOsActive: Boolean get() = beColorOs && !beSmarter && !beComet
 
 /** Projekt Zenith's hologram look: on with Projekt Zenith, off in the ColorOS 17.1 look. */
-val LauncherSettings.hologram: Boolean get() = projectZenith && !projectColorOs
+val LauncherSettings.hologram: Boolean get() = projectZenith && !projectColorOs && !beColorOsActive
 
 /** ZENITH 20, Aurora: the colors of the curtains of light moving over the home screen. */
 enum class AuroraLook(val label: String, val colors: List<Color>) {
@@ -209,8 +215,43 @@ fun LauncherSettings.withColorOsLook(): LauncherSettings = if (!colorOsLook) {
         zenithAurora = false,
         omegaGlass = false,
         glassLook = if (glassLook == GlassLook.Zenith) GlassLook.Liquid else glassLook,
-    ).withCcStyle(CcStyle.ColorOS)
+    ).withCcStyle(CcStyle.ColorOS).let { if (beColorOsActive) it.withColorOsMode() else it }
 }
+
+/**
+ * ZENITH 22.1, "Be ColorOS": on top of the ColorOS look, the way ColorOS 17 does everything – its frosted glass with a deep lens and
+ * soft colour fringes (not the user's own glass settings: the mode is a copy), a calm home screen with no saying and no greeting, and
+ * ZENITH's own effects stepping aside. (The fluid design, on by default, stays the user's to switch.)
+ */
+private fun LauncherSettings.withColorOsMode(): LauncherSettings = copy(
+    omegaOverdrive = false,
+    hyperGlass = false,
+    colorWorld = ColorWorld.Off,
+    omegaRain = false,
+    weightless = false,
+    clawdParade = false,
+    giantClawd = false,
+    allSeeingEye = false,
+    clawdHalo = false,
+    clawdCompanion = false,
+    omegaLight = false,
+    omegaZeros = false,
+    perks = emptySet(),
+    showClaudeCard = false,
+    showGreeting = false,
+    sloganEverywhere = false,
+    showLabels = true,
+    animations = true,
+    fluidRims = FluidRims.Calm,
+    glassLook = GlassLook.Liquid,
+    glassTint = if (darkGlass) GlassTint.Dark else GlassTint.Light,
+    glassBlur = 1.2f,
+    glassRefraction = 1.3f,
+    glassDispersion = 0.6f,
+    glassSpecular = 1f,
+    glassTintStrength = 1f,
+    glassInteractive = true,
+)
 
 /** ZENITH 20.5, "Be Smarter": how the clock sits on the home screen. */
 enum class SmartClockLayout(val label: String) {
@@ -542,10 +583,13 @@ fun LauncherSettings.withCometLook(): LauncherSettings = if (!beComet || beSmart
 }
 
 /** ZENITH 21.5: "Be Comet" on or off – it and "Be Smarter" are two looks for the same screen, never both. */
-fun LauncherSettings.withComet(on: Boolean): LauncherSettings = copy(beComet = on, beSmarter = if (on) false else beSmarter)
+fun LauncherSettings.withComet(on: Boolean): LauncherSettings = copy(beComet = on, beSmarter = if (on) false else beSmarter, beColorOs = if (on) false else beColorOs)
 
 /** ZENITH 21.5: "Be Smarter" on or off (on turns "Be Comet" off). */
-fun LauncherSettings.withSmarter(on: Boolean): LauncherSettings = copy(beSmarter = on, beComet = if (on) false else beComet)
+fun LauncherSettings.withSmarter(on: Boolean): LauncherSettings = copy(beSmarter = on, beComet = if (on) false else beComet, beColorOs = if (on) false else beColorOs)
+
+/** ZENITH 22.1: "Be ColorOS" on or off – the three looks are three ways to dress the same screen, never two at once. */
+fun LauncherSettings.withBeColorOs(on: Boolean): LauncherSettings = copy(beColorOs = on, beSmarter = if (on) false else beSmarter, beComet = if (on) false else beComet)
 
 /** ZENITH 19.3: the clock as it's shown – in the ColorOS 17.1 look, that look's own choice. */
 val LauncherSettings.shownClock: ClockStyle get() = if (colorOsLook) colorOsClock else clockStyle
@@ -1003,6 +1047,8 @@ data class LauncherSettings(
     val beSmarter: Boolean = false,
     /** ZENITH 21.5, "Be Comet": the Illuminati's second mode – the launcher dressed after CometOS, with ZENITH at its core. */
     val beComet: Boolean = false,
+    /** ZENITH 22.1, "Be ColorOS": the Illuminati's third mode – the whole launcher as ColorOS 17 dresses it (glass, fluid design, Fluid Cloud). */
+    val beColorOs: Boolean = false,
     /**
      * ZENITH 21.5, "Be Comet": the look's own choices – in one field of their own, because a data class with more than about
      * 245 fields can't be copied on the phone any more (its copy needs more registers than Android's code format allows).
@@ -1402,7 +1448,19 @@ data class LauncherSettings(
         } else {
             this
         }
-        if (!glimmerDynamicStyle) return shaped
+        // Be ColorOS: OPPO's way – the capsule tinted in the activity's colour, the Fluid Cloud for music, a light that breathes round it
+        // (only on the pill: the notch and the iPhone's way keep to their own plain look).
+        val oppo = if (beColorOsActive && !glimmerHangs && !glimmerDynamicStyle) {
+            shaped.copy(
+                glimmerStyle = GlimmerStyle.Tinted,
+                glimmerMusicStyle = GlimmerMusicStyle.FluidCloud,
+                glimmerBreathe = true,
+                glimmerGlow = true,
+            )
+        } else {
+            shaped
+        }
+        if (!glimmerDynamicStyle) return oppo
         // The iPhone's way, on whatever shape: black, its cover, a tap opens the app and holding unfolds, none of Glimmer's extras.
         return shaped.copy(
             glimmerStyle = GlimmerStyle.Black,
@@ -1792,6 +1850,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             smartCustomColor = prefs.getInt("smartCustomColor", d.smartCustomColor),
             zenithTheme = migratedTheme(enumOf("zenithTheme", d.zenithTheme)),
             beComet = prefs.getBoolean("beComet", d.beComet),
+            beColorOs = prefs.getBoolean("beColorOs", d.beColorOs),
             cometStyle = CometStyle(
                 glass = enumOf("cometGlass", d.cometGlass),
                 strength = prefs.getFloat("cometStrength", d.cometStrength),
@@ -2076,6 +2135,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putInt("smartCustomColor", s.smartCustomColor)
             .putString("zenithTheme", s.zenithTheme.name)
             .putBoolean("beComet", s.beComet)
+            .putBoolean("beColorOs", s.beColorOs)
             .putString("cometGlass", s.cometGlass.name)
             .putFloat("cometStrength", s.cometStrength)
             .putFloat("cometOpacity", s.cometOpacity)
@@ -2317,7 +2377,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
          */
         val GLIMMER_LIVE_KEYS = setOf(
             "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "zenithDaylight", "zenithStrikeSystem", "strikeColor", "strikeSpeed", "strikeOnCharge", "strikeOnFull", "chargeGuard", "chargeLimit", "newAppGuard", "projectZenith", "projectZenithGlass", "projectColorOs", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "glassLook", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
-            "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "zenithAod", "glimmerDynamic", "glimmerGlowColor", "glimmerOutline",
+            "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "zenithAod", "glimmerDynamic", "beColorOs", "beSmarter", "beComet", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
             "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerNotchW", "glimmerNotchH", "glimmerIslandW", "glimmerIslandH", "glimmerPrivacy", "accent", "animations",
             // The Super-Wallpaper's body on the AOD (the still is drawn again when one of these changes).

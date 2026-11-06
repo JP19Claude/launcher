@@ -238,6 +238,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Be ColorOS: der ganze Launcher als ColorOS 17", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Rückmeldung: Im Clawd Illuminati soll es einen Modus geben, der den ganzen Launcher zu einer 1:1-Kopie von ColorOS 17 macht – das Glas, die Fluid-Animation, alles gleich.",
+                        "Der Modus „Be ColorOS“ steht im Clawd Illuminati neben „Be Smarter“ und „Be Comet“ (ohne Passwort; die drei laufen nie zusammen). Eingeschaltet wird aus dem ColorOS-Look von Projekt Zenith ein vollständiger Modus: Milchglas mit der tiefen Linse und den weichen Farbsäumen von ColorOS (ein festes Abbild, kein Regler), runde Squircle-Icons, die ColorOS-Uhr, das schwebende Dock aus Glas, das ColorOS-Kontrollzentrum, ein ruhiger Startbildschirm ohne Spruch und Gruß, und das Fluid-Design: Berührungen breiten sich wie flüssiges Licht aus, hinter den Bildschirmen driften Farben. Die eigenen Looks und Effekte von ZENITH (Overdrive, Hyperglas, Z-Regen, Schwerelos, Parade …) treten solange zurück.",
+                        "Glimmer wird zur Fluid Cloud von OPPO und OnePlus: die Kapsel in der Farbe der Aktivität, bei Musik das drehende Cover mit Fortschrittsring, ein Licht, das um die Kapsel atmet. (Die Notch und die Dynamic-Island-Stile behalten ihr eigenes, schlichtes Aussehen.) Uhr und Dock im ColorOS-Look sowie das Fluid-Design lassen sich unter dem Schalter wählen.",
+                        "Ehrlich dazu: Ich habe kein ColorOS 17 vor mir – gebaut ist es aus dem, was ZENITH vom ColorOS-17.1-Look schon konnte, und aus dem, was ich von ColorOS weiß (Milchglas, Fluid Cloud, Squircle-Icons, schwebendes Dock). Ob jede Animation, jeder Abstand und jede Glasstärke wirklich 1:1 stimmt, kann ich nicht prüfen, und auf einem Handy habe ich es nicht gesehen. Schick mir Fotos oder eine Bildschirmaufnahme der echten Oberfläche (Startbildschirm, Ordner, App-Schublade, Kontrollzentrum, Apps öffnen und schließen), dann gleiche ich es Stück für Stück an.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Dynamic Notch und ein AOD-Schalter", Icons.Rounded.Star, Blue,
                     listOf(
                         "Rückmeldung: Für alle Notches und Inseln auf allen Geräten soll es eine Option geben, die nicht nur so aussieht wie die Dynamic Island, sondern sich so verhält und so aussieht wie die echte – die Notch soll zur „Dynamic Notch“ werden. Und das AOD soll sich ausschalten lassen.",

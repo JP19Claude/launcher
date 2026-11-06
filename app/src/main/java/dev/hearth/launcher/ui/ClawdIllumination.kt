@@ -278,6 +278,9 @@ fun ClawdIlluminationScreen(
             // ZENITH 21.5: Be Comet – the launcher after CometOS, with ZENITH at its core.
             CometSection(settings, onChange)
 
+            // ZENITH 22.1: Be ColorOS – the whole launcher as ColorOS 17 dresses it.
+            ColorOsSection(settings, onChange)
+
             // ZENITH 19: Projekt Zenith lives only here, behind a secret password.
             IlluminationSection("◈ Projekt Zenith") {
                 ProjectZenithGate(settings, onChange)

@@ -1373,6 +1373,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
                             galaxyClaude = true,
                             projectZenith = false,
                             projectColorOs = false,
+                            beColorOs = false,
                             glassLook = dev.hearth.launcher.data.GlassLook.Zenith,
                         )
                     } else if (settings.beSmarter || settings.beComet) {
