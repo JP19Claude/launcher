@@ -52,7 +52,7 @@ in Glas-Karten, wie in der Android-App:
 * **Gestaltung** – Leuchten bei Neuem und seine Farbe, AI-Fluid-Rand, atmendes Leuchten, Rand, Bewegung (ruhig · normal · verspielt)
 * **Größe & Position** – „Kleiner (85 %)", **Breite bei Musik, Laden & Co.** (70 – 160 %: wie breit die kleine Insel ist, solange etwas läuft – Cover links, Wellen rechts), **Aufgeklappt: Breite und Höhe** (80 – 130 % und 80 – 150 %; eine lange Benachrichtigung macht die Karte von selbst höher), Gesamtgröße, Breite und Höhe der Kerbe bzw. der Pille, Breite, nach links/rechts, nach oben/unten, Zurücksetzen
 * **Bedienung** – Antippen öffnet die App, Doppeltippen, von selbst zuklappen (5 · 9 · 15 · 30 s · nie), Titel wischen, Maus auf der Insel klappt die Musik auf
-* **Was Glimmer zeigt** – Musik, Cover-Insel, Codes, Bildschirmfotos, Nachrichten, Kamera/Mikrofon, Kopfhörer/Nicht stören/Akku voll, Laden, Akku schwach, Akku beim Laden, Lautstärke
+* **Was Glimmer zeigt** – Musik, **Apps ohne Meldung in Glimmer** (zum Antippen aus den Apps, die schon etwas geschickt haben, oder per Namen), Cover-Insel, Codes, Bildschirmfotos, Nachrichten, Kamera/Mikrofon, Kopfhörer/Nicht stören/Akku voll, Laden, Akku schwach, Akku beim Laden, Lautstärke
 * **Linux** – Start bei der Anmeldung, Sprache, Ebene (auch über Vollbild), Bildschirm
 * **Ausprobieren** – Vorführung, Test-Benachrichtigung · **Zurücksetzen** (zweimal tippen)
 
@@ -96,7 +96,7 @@ Schlüssel heißen wie in der Android-App:
 | Gestaltung | `glow` (`true`) · `glow_color` (`"activity"`, `"accent"`, `"white"`, `"rainbow"`) · `ai_fluid` (`true`) · `breathe` (`false`) · `outline` (`"off"`, `"subtle"`, `"colored"`) · `motion` (`"calm"`, `"normal"`, `"playful"`) |
 | Größe & Position | `small` (`false`, 85 %) · `active_width` (1.0; 0.7 – 1.6) · `expand_width` (1.0; 0.8 – 1.3) · `expand_height` (1.0; 0.8 – 1.5) · `scale` (1.0; 0.6 – 2.5) · `width` (1.0; 0.8 – 1.3) · `notch_width`, `notch_height` (190, 34) · `island_width`, `island_height` (128, 32) · `offset_x` (0) · `offset_y` (0) |
 | Bedienung | `tap_opens` (`false`) · `double_tap` (`"off"`, `"play_pause"`, `"oracle"`, `"coin"`, `"dice"`) · `auto_collapse` (9 s; 0: bleibt) · `swipe_tracks` (`true`) · `hover_reveal` (`false`) |
-| Was Glimmer zeigt | `music` · `music_persistent` · `notifications` · `codes` · `screenshots` · `privacy` · `alerts` · `charging` · `low_battery` · `volume` (alle `true`) · `charging_live` (`false`) |
+| Was Glimmer zeigt | `music` · `music_persistent` · `notifications` · `codes` · `screenshots` · `privacy` · `alerts` · `charging` · `low_battery` · `volume` (alle `true`) · `charging_live` (`false`) · `blocked_apps` (`[]`: Apps, von denen Glimmer nichts zeigt, mit dem Namen aus der Meldung) |
 | Linux | `monitor` (0) · `layer` (`"overlay"` über Vollbild, `"top"` darunter) · `language` (`"auto"`, `"de"`, `"en"`) · `accent` (`"#FF7A9C"`, Farbe des Benachrichtigungspunkts) |
 
 Auch ohne Einrichtung geht: `glimmer --mode glimmer --scale 1.3`. Eine ältere Datei mit `idle` oder `greet` wird beim Lesen übernommen bzw. ignoriert.

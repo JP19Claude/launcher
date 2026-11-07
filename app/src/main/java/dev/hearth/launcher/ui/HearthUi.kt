@@ -238,6 +238,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Glimmer: Apps stumm, Zuklappen ohne Sprung", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Man soll einstellen können, von welcher App keine Benachrichtigung in der Insel oder Notch erscheint; es ist noch nicht alles 1:1 wie bei Apple; und es gibt einen Fehler: Wenn man etwas aufklappt und wieder zuklappt, fliegt die Insel kurz ein Stück nach links und kommt zurück.",
+                        "Apps stumm: Einstellungen → Glimmer → „Was Glimmer zeigt“ → „Apps ohne Meldung in Glimmer“. Dort stehen alle Apps mit Symbol auf dem Handy; was du einschaltest, zeigt Glimmer nicht mehr – keine Nachrichten, keine Codes, keine Anrufe, Timer oder Updates (die Benachrichtigung selbst kommt wie immer aufs Handy, nur die Insel lässt sie weg). „Größe & Position zurücksetzen“ lässt die Liste in Ruhe; „Alle Glimmer-Einstellungen zurücksetzen“ leert sie.",
+                        "Der Sprung: Der Inhalt der Insel (Cover, Wellen, die Karte) wurde von AnimatedContent in einer eigenen Fläche gehalten, deren Größe mit einer Feder der Insel hinterherlief – beim Zu- und Aufklappen war sie mal größer, mal kleiner als die Insel, hielt den Inhalt links am Rand und beschnitt ihn. Jetzt hat der Inhalt in jedem Bild sofort die Größe der Insel. Ob das der Sprung nach links war, kann ich ohne das Handy nicht sicher sagen – wenn er bleibt, schreib mir, ob gerade zwei Dinge liefen (zum Beispiel Musik und ein Anruf), in welchem Modus du bist und was du aufgeklappt hast.",
+                        "Nicht 1:1 wie Apple: Das ist eine offene Rückmeldung, zu der mir noch das Konkrete fehlt. Sag mir, was bei dir anders aussieht oder sich anders bewegt als bei der echten Dynamic Island (Größe, Abstand, Tempo, Wackeln, welche Aktivität) – ein Foto oder eine Bildschirmaufnahme beider nebeneinander hilft am meisten.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Glimmer: aufgeklappt, Texte, Animation", Icons.Rounded.Star, Blue,
                     listOf(
                         "Rückmeldung: Die Größe der aufgeklappten Dynamic Island oder Notch soll einstellbar sein; bei manchen Benachrichtigungen mit Text wird ein Wort gezeigt und der Rest abgeschnitten; die Animation in der Insel und beim Aufklappen soll besser werden, es gibt Fehler.",
