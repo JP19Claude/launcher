@@ -165,6 +165,7 @@ DEFAULTS = {
     "charging_live": False,     # solange es lädt
     "low_battery": True,
     "volume": True,
+    "blocked_apps": [],         # Apps, von denen Glimmer nichts zeigt (Name wie in der Benachrichtigung)
     # Linux
     "monitor": 0,               # Nummer des Bildschirms
     "layer": "overlay",         # "overlay": auch über Vollbild · "top"
@@ -247,6 +248,7 @@ def sanitize_config(cfg):
     for key, (lo, hi) in RANGES.items():
         v = clamp(float(cfg[key]), lo, hi)
         cfg[key] = int(round(v)) if isinstance(DEFAULTS[key], int) else float(v)
+    cfg["blocked_apps"] = [str(x).strip() for x in (cfg["blocked_apps"] if isinstance(cfg["blocked_apps"], list) else []) if str(x).strip()]
     return cfg
 
 
@@ -2466,6 +2468,7 @@ class App(Gtk.Application):
         self._single_id = 0
         self._screen_monitors = []
         self._screen_seen = set()
+        self.seen_apps = []             # (the apps that have sent a notification since Glimmer started: the settings offer them to be muted)
         self._tick_id = 0
         self._last_frame = None
         self._last_draw = 0.0
@@ -3068,6 +3071,11 @@ class App(Gtk.Application):
             return False
         if "x-canonical-private-synchronous" in hints or (not summary and not text):
             return False
+        name = (app or "").strip()
+        if name and name not in self.seen_apps:
+            self.seen_apps = (self.seen_apps + [name])[-30:]
+        if name.lower() in {b.lower() for b in self.cfg["blocked_apps"]}:
+            return False   # (muted in the settings: nothing in the island; the notification itself comes as always)
         text = html.unescape(re.sub(r"<[^>]+>", "", text or "")).strip()
         dur = clamp(timeout / 1000.0, 3.5, 8.0) if timeout and timeout > 0 else 5.0
         picture = self.load_icon(icon, hints, app)
@@ -4102,6 +4110,65 @@ def build_settings(app):
     add_switch(card, "charging_live", "Akku beim Laden zeigen", "Solange der Laptop lädt, bleibt der Akkustand in Glimmer", visible=not_di)
     add_switch(card, "volume", "Lautstärke", "KDE zeigt dazu auch seine eigene Anzeige")
 
+    # Apps that stay quiet in the island: the ones that have sent something since Glimmer started, to tap, and a field for any other name.
+    apps_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+    apps_row.add_css_class("g-row")
+    apps_row.append(lbl("Apps ohne Meldung in Glimmer", "g-label"))
+    apps_desc = lbl("", "g-desc", wrap=True)
+    apps_row.append(apps_desc)
+    apps_flow = Gtk.FlowBox()
+    apps_flow.set_selection_mode(Gtk.SelectionMode.NONE)
+    apps_flow.set_min_children_per_line(1)
+    apps_flow.set_max_children_per_line(8)
+    apps_flow.set_column_spacing(6)
+    apps_flow.set_row_spacing(6)
+    apps_flow.set_homogeneous(False)
+    apps_row.append(apps_flow)
+    apps_entry = Gtk.Entry()
+    apps_entry.set_placeholder_text("App-Name hinzufügen, dann Eingabetaste")
+    apps_row.append(apps_entry)
+    place(card, apps_row)
+    apps_state = {"key": None}
+
+    def toggle_app(name):
+        names = [b for b in app.cfg["blocked_apps"]]
+        if name.lower() in [b.lower() for b in names]:
+            names = [b for b in names if b.lower() != name.lower()]
+        else:
+            names.append(name)
+        app.set_option("blocked_apps", names)
+
+    def add_typed(entry):
+        name = entry.get_text().strip()
+        if name and name.lower() not in [b.lower() for b in app.cfg["blocked_apps"]]:
+            app.set_option("blocked_apps", list(app.cfg["blocked_apps"]) + [name])
+        entry.set_text("")
+    apps_entry.connect("activate", add_typed)
+
+    def sync_apps():
+        blocked = list(app.cfg["blocked_apps"])
+        names = list(dict.fromkeys(list(app.seen_apps) + blocked))
+        key = (tuple(names), tuple(blocked))
+        apps_desc.set_text(("%d stumm. " % len(blocked) if blocked else "") +
+                           ("Tippe eine App an, die geschwiegen soll – die Liste zeigt die Apps, die seit dem Start von Glimmer eine Meldung geschickt haben."
+                            if names else "Sobald eine App eine Meldung schickt, steht sie hier. Du kannst auch ihren Namen unten eintippen."))
+        if key == apps_state["key"]:
+            return
+        apps_state["key"] = key
+        child = apps_flow.get_first_child()
+        while child is not None:
+            nxt = child.get_next_sibling()
+            apps_flow.remove(child)
+            child = nxt
+        for n in names:
+            b = Gtk.Button(label=n)
+            b.add_css_class("g-chip")
+            if n.lower() in [x.lower() for x in blocked]:
+                b.add_css_class("selected")
+            b.connect("clicked", lambda _b, name=n: toggle_app(name))
+            apps_flow.append(b)
+    syncs.append(sync_apps)
+
     # --- Linux
     card = section("Linux")
     auto = Gtk.Switch()
@@ -4186,6 +4253,8 @@ def build_settings(app):
         if abs(state["ph"] - state["shown"]) >= 1.0:
             state["shown"] = state["ph"]
             preview.set_content_height(int(state["ph"]))
+        if state["n"] % 45 == 0:
+            sync_apps()   # (a new app may have sent a notification)
         preview.queue_draw()
         logo.queue_draw()
         if app.cfg["clawd"] or state["n"] % 2 == 0:

@@ -437,6 +437,12 @@ internal fun compactTextExtra(content: IslandContent): Dp {
     return (text.length * 6.8f - 73f).coerceIn(0f, 110f).dp
 }
 
+/**
+ * What fills the island always has the island's size at once: AnimatedContent's own size animation (a spring behind the shape, retargeted
+ * every frame while the island itself is moving) lagged behind it, clipped the content and set it down on the left of its area.
+ */
+private val noSizeAnimation = androidx.compose.animation.SizeTransform(clip = false) { _, _ -> androidx.compose.animation.core.snap() }
+
 /** Sends a notification's intent; Android 14+ wants the sender to vouch for opening a screen. */
 fun sendIntent(context: Context, intent: PendingIntent?) {
     if (intent == null) return
@@ -956,21 +962,21 @@ fun GlimmerIsland(
                         val top = TransformOrigin(0.5f, 0f)
                         when {
                             // The hanging notch: one content fades into the next – no scaling and sliding about while the notch itself moves.
-                            hanging -> fadeIn(tween(170, delayMillis = 70)).togetherWith(fadeOut(tween(90)))
+                            hanging -> fadeIn(tween(170, delayMillis = 70)).togetherWith(fadeOut(tween(90))).using(noSizeAnimation)
                             // Unfolding: the small content melts away, the big one grows in from
                             // the top while the shape is still stretching.
                             targetState.second && !initialState.second ->
                                 (fadeIn(tween(240, delayMillis = 110)) +
                                     scaleIn(spring(dampingRatio = 0.78f, stiffness = 300f), initialScale = 0.82f, transformOrigin = top))
-                                    .togetherWith(fadeOut(tween(90)) + scaleOut(tween(140), targetScale = 1.12f))
+                                    .togetherWith(fadeOut(tween(90)) + scaleOut(tween(140), targetScale = 1.12f)).using(noSizeAnimation)
                             // Folding: the big content sinks back into the camera, quickly.
                             !targetState.second && initialState.second ->
                                 (fadeIn(tween(200, delayMillis = 150)) + scaleIn(tween(240, delayMillis = 120), initialScale = 0.9f))
-                                    .togetherWith(fadeOut(tween(120)) + scaleOut(tween(200), targetScale = 0.8f, transformOrigin = top))
+                                    .togetherWith(fadeOut(tween(120)) + scaleOut(tween(200), targetScale = 0.8f, transformOrigin = top)).using(noSizeAnimation)
                             // Something else takes over the pill: a quick cross-fade with a little rise.
                             else ->
                                 (fadeIn(tween(220, delayMillis = 90)) + scaleIn(tween(260, delayMillis = 60), initialScale = 0.9f))
-                                    .togetherWith(fadeOut(tween(110)) + scaleOut(tween(140), targetScale = 0.94f))
+                                    .togetherWith(fadeOut(tween(110)) + scaleOut(tween(140), targetScale = 0.94f)).using(noSizeAnimation)
                         }
                     },
                     contentKey = { (c, e) -> islandKey(c) to e },

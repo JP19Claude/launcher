@@ -1449,6 +1449,8 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             description = "Bei Videos und Spielen ohne Statusleiste bleibt nur Wichtiges (Anruf, Wecker, Entsperren). Nicht jedes Handy meldet das zuverlässig: verschwindet Glimmer dann auch anderswo, schalte es wieder aus.",
             checked = s.glimmerHideFullscreen,
         ) { v -> update { it.copy(glimmerHideFullscreen = v) } }
+        // Apps that stay quiet in the island (their notifications, codes, calls and timers are left out).
+        GlimmerBlockedRow(s.glimmerExpand.blocked) { set -> update { it.copy(glimmerExpand = it.glimmerExpand.copy(blocked = set)) } }
     }
 
     Section("Sperrbildschirm & AOD") {

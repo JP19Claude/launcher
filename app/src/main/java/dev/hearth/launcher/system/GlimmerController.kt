@@ -816,10 +816,13 @@ class GlimmerController(private val service: GlimmerService) {
         stage.start(settingsState, locked, dozing)
         scope = MainScope().also { s ->
             s.launch {
-                NotificationHub.incoming.collect { if (settings.glimmerMessages) flashMessage(it) }
+                NotificationHub.incoming.collect { if (settings.glimmerMessages && it.packageName !in settings.glimmerExpand.blocked) flashMessage(it) }
             }
             s.launch {
-                NotificationHub.codes.collect { if (settings.glimmerCodes) showCode(it) }
+                // (A notification's key is "user|package|id|tag|uid": the package says which app a code came from.)
+                NotificationHub.codes.collect {
+                    if (settings.glimmerCodes && it.key.split('|').getOrNull(1) !in settings.glimmerExpand.blocked) showCode(it)
+                }
             }
             // Glimmer Drop: the island tells what's happening between the two phones.
             s.launch {
@@ -1203,7 +1206,8 @@ class GlimmerController(private val service: GlimmerService) {
                 val aodAllowed = settings.zenithAod && settings.glimmerAod
                 val onAod = aod && aodAllowed
 
-                val ongoing = live.sortedBy { priority(it.kind) }
+                // (Apps muted in the settings show nothing in the island: no calls, timers or updates either.)
+                val ongoing = live.filter { it.packageName !in settings.glimmerExpand.blocked }.sortedBy { priority(it.kind) }
                 val ordered = buildList<IslandContent> {
                     currentAlert?.let { add(it) }
                     // Locked, codes and messages wait: whoever holds the phone shouldn't read them.
