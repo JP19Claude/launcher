@@ -364,6 +364,8 @@ fun islandSize(
     /** The setting "unfolded size": how much wider and taller the unfolded island is than usual. */
     expandWidth: Float = 1f,
     expandHeight: Float = 1f,
+    /** The setting "wide while something runs": how wide the small island is for music, a call and the like (the notch keeps its own width; the room beside it grows). */
+    activeWidth: Float = 1f,
 ): DpSize {
     // Unfolded it's always as wide as at 100 % (the 85 % mode only slims the small states).
     // (Hanging from the screen's edge as the MacBook's notch, unfolded it stays a card of 380 dp, not as wide as the screen would let it.)
@@ -374,7 +376,7 @@ fun islandSize(
         ((screenWidthDp * 0.44f).coerceIn(150f, 190f) * widthScale * narrow).coerceAtMost(screenWidthDp - 60f).dp
     }
     // Beside the notch there has to be room for something on each side (and no more: a notch only grows by what its content needs).
-    val compact = if (notch != null) notch.width + notchRoom else compactBase
+    val compact = if (notch != null) notch.width + notchRoom * activeWidth else compactBase * activeWidth
     val barHeight = if (notch != null) maxOf(ISLAND_HEIGHT_DP.dp, notch.height) else ISLAND_HEIGHT_DP.dp
     val idle = (if (dynamicIsland) ISLAND_HEIGHT_DP * 3.375f else (screenWidthDp * 0.27f).coerceIn(86f, 110f) * widthScale) * narrow
     return when {
@@ -532,6 +534,7 @@ fun GlimmerIsland(
         notchRoom = if (phoneNotch) (notchRoomFor(c, true) - PhoneNotchPad * 2).coerceAtLeast(24.dp) else notchRoomFor(c, hanging),
         expandWidth = settings.glimmerExpand.width,
         expandHeight = settings.glimmerExpand.height,
+        activeWidth = settings.glimmerExpand.active,
     )
     val target = sizeOf(content, expanded, hasSecondary)
     LaunchedEffect(target) { onTargetSize(target) }

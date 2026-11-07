@@ -1332,6 +1332,8 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             checked = s.glimmerSmall,
         ) { v -> update { it.copy(glimmerSmall = v) } }
         // How big the unfolded island or notch is (a long notification makes it taller by itself).
+        // How wide the island grows while something runs (music with its cover and waves, a call, a timer): in every mode.
+        PercentSlider("Breite bei Musik, Anruf & Co.", s.glimmerExpand.active, 0.7f..1.6f) { v -> update { it.copy(glimmerExpand = it.glimmerExpand.copy(active = v)) } }
         PercentSlider("Aufgeklappt: Breite", s.glimmerExpand.width, 0.8f..1.3f) { v -> update { it.copy(glimmerExpand = it.glimmerExpand.copy(width = v)) } }
         PercentSlider("Aufgeklappt: Höhe", s.glimmerExpand.height, 0.8f..1.5f) { v -> update { it.copy(glimmerExpand = it.glimmerExpand.copy(height = v)) } }
         if (nt) {

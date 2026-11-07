@@ -146,6 +146,7 @@ DEFAULTS = {
     "offset_y": 0,
     "expand_width": 1.0,        # wie breit die aufgeklappte Insel/Notch ist (gegenüber der üblichen Größe)
     "expand_height": 1.0,       # und wie hoch
+    "active_width": 1.0,        # wie breit die kleine Insel ist, solange etwas läuft (Musik mit Cover und Wellen, Laden …)
     # Bedienung
     "tap_opens": False,
     "double_tap": "off",        # "off" | "play_pause" | "oracle" | "coin" | "dice"
@@ -188,7 +189,7 @@ RANGES = {
     "scale": (0.6, 2.5), "width": (0.8, 1.3), "clawd_spot": (0.0, 1.0), "clawd_size": (0.7, 1.4),
     "notch_width": (80, 420), "notch_height": (16, 90), "island_width": (60, 420), "island_height": (16, 90),
     "offset_x": (-40, 40), "offset_y": (-10, 40), "auto_collapse": (0, 120), "monitor": (0, 16),
-    "expand_width": (0.8, 1.3), "expand_height": (0.8, 1.5),
+    "expand_width": (0.8, 1.3), "expand_height": (0.8, 1.5), "active_width": (0.7, 1.6),
 }
 LINUX_ONLY = ("monitor", "layer", "language")
 
@@ -1160,7 +1161,8 @@ class Island:
             return (self.nw, self.nh) if self.mac else (idle, ISLAND_H)
         if not expanded:
             room = ROOMS.get(kind, 72) if self.hang else 72
-            compact = (self.nw + room) if self.mac else compact_base
+            aw = float(self.cfg["active_width"])   # (wider or narrower while something runs: the notch keeps its width, the room beside it grows)
+            compact = (self.nw + room * aw) if self.mac else min(compact_base * aw, 480.0)
             return compact, (max(ISLAND_H, self.nh) if self.mac else ISLAND_H)
         body = float(BODY_HEIGHT.get(kind, 96))
         if kind == "notify":
@@ -4045,6 +4047,8 @@ def build_settings(app):
     # --- Größe & Position
     card = section("Größe & Position")
     add_switch(card, "small", "Kleiner (85 %)", "Die kleine Insel ist 15 % schmaler; aufgeklappt bleibt Glimmer so groß wie bei 100 %. Höhe, Inhalte und Schrift bleiben gleich")
+    add_slider(card, "active_width", "Breite bei Musik, Laden & Co.", "Wie breit die kleine Insel ist, solange etwas läuft (Cover links, Wellen rechts).", 0.7, 1.6, 0.05, digits=2, as_int=False,
+               fmt=lambda v: "%d %%" % round(v * 100))
     add_slider(card, "expand_width", "Aufgeklappt: Breite", "Wie breit die aufgeklappte Insel oder Notch ist.", 0.8, 1.3, 0.05, digits=2, as_int=False,
                fmt=lambda v: "%d %%" % round(v * 100))
     add_slider(card, "expand_height", "Aufgeklappt: Höhe", "Wie hoch sie ist; eine lange Benachrichtigung macht sie von selbst höher.", 0.8, 1.5, 0.05, digits=2, as_int=False,

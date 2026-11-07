@@ -727,8 +727,12 @@ enum class GlimmerMode(val label: String) {
 /** The size of the notch (or of the MacBook island's pill), in dp. */
 data class GlimmerNotch(val width: Int = 190, val height: Int = 34)
 
-/** ZENITH 22.1: how big the unfolded island (or notch) is, against its usual size – wider, taller (one field: the settings class is near its limit). */
-data class GlimmerExpand(val width: Float = 1f, val height: Float = 1f)
+/**
+ * ZENITH 22.1: how big the island is against its usual size when it grows – [width] and [height] of the unfolded card, and [active], how wide
+ * the small island is while something runs (music with its cover and waves, a call, a timer …; in every mode). One field: the settings
+ * class is near its limit.
+ */
+data class GlimmerExpand(val width: Float = 1f, val height: Float = 1f, val active: Float = 1f)
 
 /** The color Glimmer shimmers in when something new arrives. */
 enum class GlimmerGlowColor(val label: String) {
@@ -2049,6 +2053,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             glimmerExpand = GlimmerExpand(
                 width = prefs.getFloat("glimmerExpandW", d.glimmerExpand.width).coerceIn(0.8f, 1.3f),
                 height = prefs.getFloat("glimmerExpandH", d.glimmerExpand.height).coerceIn(0.8f, 1.5f),
+                active = prefs.getFloat("glimmerActiveW", d.glimmerExpand.active).coerceIn(0.7f, 1.6f),
             ),
             badgeStyle = enumOf("badgeStyle", d.badgeStyle),
             doubleTapLock = prefs.getBoolean("doubleTapLock", d.doubleTapLock),
@@ -2321,6 +2326,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putBoolean("glimmerSmall", s.glimmerSmall)
             .putFloat("glimmerExpandW", s.glimmerExpand.width)
             .putFloat("glimmerExpandH", s.glimmerExpand.height)
+            .putFloat("glimmerActiveW", s.glimmerExpand.active)
             .putInt("glimmerNotchW", s.glimmerNotch.width)
             .putInt("glimmerNotchH", s.glimmerNotch.height)
             .putInt("glimmerIslandW", s.glimmerIsland.width)
@@ -2401,7 +2407,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "zenithDaylight", "zenithStrikeSystem", "strikeColor", "strikeSpeed", "strikeOnCharge", "strikeOnFull", "chargeGuard", "chargeLimit", "newAppGuard", "projectZenith", "projectZenithGlass", "projectColorOs", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "glassLook", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "zenithAod", "glimmerDynamic", "beColorOs", "beSmarter", "beComet", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
-            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerExpandW", "glimmerExpandH", "glimmerNotchW", "glimmerNotchH", "glimmerIslandW", "glimmerIslandH", "glimmerPrivacy", "accent", "animations",
+            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerExpandW", "glimmerExpandH", "glimmerActiveW", "glimmerNotchW", "glimmerNotchH", "glimmerIslandW", "glimmerIslandH", "glimmerPrivacy", "accent", "animations",
             // The Super-Wallpaper's body on the AOD (the still is drawn again when one of these changes).
             "superAod", "superAodDim", "superScene", "superPlace", "superSize", "superPhoto", "superOffsetX", "superOffsetY",
         )
