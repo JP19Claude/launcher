@@ -238,6 +238,18 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Glimmer nach dem Video: Blasen links und rechts, kein Sprung", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: ein Video, wie die Insel sich bewegen soll (die Dynamic Island mit einer Blase links und einer rechts), und die Bitte, nach Fehlern zu suchen.",
+                        "Drei Dinge zugleich: Läuft neben der Hauptaktivität noch eine zweite, sitzt sie wie bisher als kleine Blase rechts. Neu: eine dritte sitzt als Blase links, und die Pille bleibt zwischen beiden in der Mitte – wie im Video (Aufnahme links, Musik in der Mitte, Timer rechts). Beide Blasen lösen sich wie Tropfen aus der Pille; antippen holt die Aktivität nach vorn, gedrückt halten öffnet ihre App.",
+                        "Gefundener Fehler, der Sprung: Mit einer Blase daneben sitzt die Pille 18 dp links der Mitte (Pille und Blase zusammen sind mittig). Beim Aufklappen verschwand die Blase und beim Zuklappen kam sie wieder – und die Pille sprang jedes Mal diese 18 dp in einem Bild. Jetzt gleitet sie. Das ist sehr wahrscheinlich das „fliegt kurz nach links“, wenn bei dir zwei Dinge liefen.",
+                        "Gefundener Fehler, die Karte: Seit Hotfix 241 wurde die aufgeklappte Karte in der wachsenden Insel mittig statt oben ausgerichtet – sie rutschte beim Aufklappen von oben herein. Jetzt liegt sie oben an und wird nur freigelegt.",
+                        "Laden wie beim iPhone: Im Dynamic-Island-Stil zeigt die Insel beim Anstecken links das Wort „Lädt“ und rechts die Prozentzahl in Grün mit einem kleinen grünen Akku, statt Symbol links und Zahl rechts.",
+                        "Ehrlich dazu: Ich habe das Video Bild für Bild angesehen, aber Glimmer nicht auf einem Handy. Was im Video noch anders ist und ich nicht gebaut habe: Die App, die gerade offen ist, blendet dort ihre eigene Aktivität aus (in der Musik-App zeigt die Insel den Timer statt der Musik), und die Blasen verschmelzen beim Aufklappen sichtbar mit der Pille, bevor die Karte wächst – bei Glimmer verschwinden sie sofort.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Glimmer: Apps stumm, Zuklappen ohne Sprung", Icons.Rounded.Star, Blue,
                     listOf(
                         "Rückmeldung: Man soll einstellen können, von welcher App keine Benachrichtigung in der Insel oder Notch erscheint; es ist noch nicht alles 1:1 wie bei Apple; und es gibt einen Fehler: Wenn man etwas aufklappt und wieder zuklappt, fliegt die Insel kurz ein Stück nach links und kommt zurück.",

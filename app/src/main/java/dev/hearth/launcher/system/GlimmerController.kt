@@ -1271,6 +1271,8 @@ class GlimmerController(private val service: GlimmerService) {
                         else -> IslandContent.Idle
                     }
                 val second = if (unlocking != null || landed != null) null else visible.drop(1).firstOrNull()
+                // (A third thing running: its bubble on the left of the pill.)
+                val third = if (second == null) null else visible.drop(2).firstOrNull()
 
                 // Dark mode: Glimmer's glass goes dark with the rest of Hearth.
                 val night = dev.hearth.launcher.ui.rememberNight(settings)
@@ -1347,6 +1349,7 @@ class GlimmerController(private val service: GlimmerService) {
                                 2 -> androidx.compose.ui.Alignment.End
                                 else -> androidx.compose.ui.Alignment.CenterHorizontally
                             },
+                            tertiary = third,
                         )
                         }
                     }
