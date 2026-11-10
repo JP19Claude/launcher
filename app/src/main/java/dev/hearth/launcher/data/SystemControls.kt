@@ -30,6 +30,8 @@ import android.os.PowerManager
 import android.view.KeyEvent
 import dev.hearth.launcher.system.GlimmerLink
 import dev.hearth.launcher.system.GlimmerService
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -259,6 +261,15 @@ class SystemControls(private val context: Context) {
             writer.postDelayed({ other.globalAction(context, action) }, delayMs)
             return true
         }
+        // ZENITH 22.1: with Shizuku the shell does it (no accessibility service needed).
+        val command = ShizukuBridge.shellFor(action)
+        if (command != null && ShizukuBridge.isReady(context)) {
+            shell.launch {
+                delay(delayMs)
+                ShizukuBridge.run(command)
+            }
+            return true
+        }
         start(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         return false
     }
@@ -294,6 +305,7 @@ class SystemControls(private val context: Context) {
     // Sliders send a value for every finger movement (up to 120 per second). Writing each one
     // into the system settings made them stutter, so values are handed to a background thread
     // that writes the newest one at most every 40 ms.
+    private val shell = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
     private val writerThread = HandlerThread("hearth-controls").apply { start() }
     private val writer = Handler(writerThread.looper)
     @Volatile private var pendingBrightness = -1
@@ -500,6 +512,7 @@ class SystemControls(private val context: Context) {
     }
 
     fun close() {
+        shell.coroutineContext[kotlinx.coroutines.Job]?.cancel()
         writerThread.quitSafely()
         runCatching { camera?.unregisterTorchCallback(torchCallback) }
     }

@@ -23,6 +23,27 @@ object ShizukuBridge {
 
     enum class Status { NotInstalled, NotRunning, NoPermission, Ready }
 
+    /**
+     * ZENITH 22.1: the app's context, so settings can be written directly once the app has been given the right to change secure
+     * settings (through Shizuku, once) – from then on those switches work without Shizuku running, also after a restart.
+     */
+    @Volatile private var app: Context? = null
+
+    fun attach(context: Context) {
+        app = context.applicationContext
+    }
+
+    /** May this app change global and secure settings by itself? */
+    fun canWriteSecure(): Boolean =
+        app?.checkSelfPermission("android.permission.WRITE_SECURE_SETTINGS") == PackageManager.PERMISSION_GRANTED
+
+    /** Writes global settings by itself (true if all of them were written); false without the right, and nothing is half done. */
+    private fun directGlobal(vararg pairs: Pair<String, String>): Boolean {
+        val context = app ?: return false
+        if (!canWriteSecure()) return false
+        return runCatching { pairs.all { (k, v) -> Settings.Global.putString(context.contentResolver, k, v) } }.getOrDefault(false)
+    }
+
     fun status(context: Context): Status {
         val installed = runCatching { context.packageManager.getPackageInfo(PACKAGE, 0) }.isSuccess
         val running = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
@@ -130,6 +151,7 @@ object ShizukuBridge {
     /** System animations (windows, transitions, animators): 0 = off, 1 = normal. */
     suspend fun setAnimationScale(scale: Float): Boolean {
         val v = if (scale == 0f) "0" else scale.toString()
+        if (directGlobal("window_animation_scale" to v, "transition_animation_scale" to v, "animator_duration_scale" to v)) return true
         return run(
             "settings put global window_animation_scale $v && settings put global transition_animation_scale $v && " +
                 "settings put global animator_duration_scale $v",
@@ -153,10 +175,14 @@ object ShizukuBridge {
         return if (mode == "hostname") Dns.entries.firstOrNull { it.host == host } ?: Dns.Off else Dns.Off
     }
 
-    suspend fun setDns(dns: Dns): Boolean = if (dns.host == null) {
-        run("settings put global private_dns_mode opportunistic")
-    } else {
-        run("settings put global private_dns_specifier ${dns.host} && settings put global private_dns_mode hostname")
+    suspend fun setDns(dns: Dns): Boolean {
+        val host = dns.host
+        return if (host == null) {
+            directGlobal("private_dns_mode" to "opportunistic") || run("settings put global private_dns_mode opportunistic")
+        } else {
+            directGlobal("private_dns_specifier" to host, "private_dns_mode" to "hostname") ||
+                run("settings put global private_dns_specifier $host && settings put global private_dns_mode hostname")
+        }
     }
 
     /** The packages installed for this user ([flags] e.g. "-u" for removed ones too). */
@@ -220,4 +246,44 @@ object ShizukuBridge {
     suspend fun reboot() = run("svc power reboot")
 
     suspend fun shutdown() = run("svc power shutdown")
+
+    // ZENITH 22.1: deeper in the normal system -------------------------------------------------------------------------
+
+    /**
+     * What an accessibility global action (Android's numbers: back 1, home 2, recents 3, notifications 4, quick settings 5, power
+     * menu 6, split screen 7, lock 8, screenshot 9) does, as a shell command – so the control center, the double tap and the
+     * assistant can do these without Glimmer's accessibility service when Shizuku is there. Null: no shell equivalent.
+     */
+    fun shellFor(globalAction: Int): String? = when (globalAction) {
+        1 -> "input keyevent 4"
+        2 -> "input keyevent 3"
+        3 -> "input keyevent 187"
+        4 -> "cmd statusbar expand-notifications"
+        5 -> "cmd statusbar expand-settings"
+        6 -> "input keyevent --longpress 26"
+        8 -> "input keyevent 223"
+        9 -> "input keyevent 120"
+        else -> null
+    }
+
+    /** Empties the cache of one app (what it can download again anyway). */
+    suspend fun clearCache(packageName: String) = run("pm clear --cache-only $packageName")
+
+    /** The screen's density in dpi: (the display's own, the one in use now) – or null if it can't be read. */
+    suspend fun density(): Pair<Int, Int>? {
+        val text = output("wm density") ?: return null
+        val physical = Regex("Physical density:\\s*(\\d+)").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: return null
+        val override = Regex("Override density:\\s*(\\d+)").find(text)?.groupValues?.get(1)?.toIntOrNull()
+        return physical to (override ?: physical)
+    }
+
+    /** Sets the screen's density (everything on the screen gets smaller or bigger); null brings the display's own back. */
+    suspend fun setDensity(dpi: Int?) = run(if (dpi == null) "wm density reset" else "wm density $dpi")
+
+    /** Makes [packageName] the home screen of the phone (the same as choosing it under Settings → Apps → Default apps). */
+    suspend fun makeHome(packageName: String) =
+        run("cmd role add-role-holder --user 0 android.app.role.HOME $packageName")
+
+    /** Lets Shizuku itself start again after a restart (it needs the right to change secure settings for that). */
+    suspend fun letShizukuStartItself() = run("pm grant $PACKAGE android.permission.WRITE_SECURE_SETTINGS")
 }

@@ -1000,11 +1000,11 @@ fun LauncherScreen(vm: LauncherViewModel) {
                                         when (settings.doubleTapAction) {
                                             HomeGesture.Off -> Unit
                                             HomeGesture.Lock -> {
-                                                // Locking needs an accessibility service: Glimmer's.
-                                                if (GlimmerLink.isInstalled(context)) {
+                                                // Locking needs an accessibility service (Glimmer's) – or Shizuku, which does it with the shell.
+                                                if (GlimmerLink.isInstalled(context) || dev.hearth.launcher.data.ShizukuBridge.isReady(context)) {
                                                     vm.controls.lockScreen()
                                                 } else {
-                                                    toast = GlassToast("Zum Sperren per Doppeltippen: die App „Glimmer“ installieren und ihre Bedienungshilfe einschalten")
+                                                    toast = GlassToast("Zum Sperren per Doppeltippen: Shizuku einrichten (Einstellungen → System) oder die App „Glimmer“ installieren und ihre Bedienungshilfe einschalten")
                                                 }
                                             }
                                             HomeGesture.Claude -> vm.askClaude()
@@ -1714,6 +1714,9 @@ private fun appMenuItems(vm: LauncherViewModel, app: AppInfo, onSelect: () -> Un
         })
         add(GlassMenuItem("Einfrieren", Icons.Rounded.Lock) {
             vm.shizukuAction("${app.label} eingefroren") { dev.hearth.launcher.data.ShizukuBridge.freeze(app.packageName) }
+        })
+        add(GlassMenuItem("Cache leeren", Icons.Rounded.Delete) {
+            vm.shizukuAction("Cache von ${app.label} geleert") { dev.hearth.launcher.data.ShizukuBridge.clearCache(app.packageName) }
         })
         val context = vm.getApplication<android.app.Application>()
         if (BackgroundLock.isLocked(context, app.packageName)) {

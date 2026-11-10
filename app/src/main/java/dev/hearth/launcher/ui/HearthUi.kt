@@ -238,6 +238,19 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Shizuku tiefer im System", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Rückmeldung: Shizuku soll auch im normalen System tiefer eingebaut sein – nicht nur in Glimmer.",
+                        "Neu in Einstellungen → System (sobald Shizuku bereit ist): „Rechte & Einrichten“. Ein Tipp auf „Alle Rechte erlauben“ gibt dem Launcher, was Android sonst auf einem Dutzend Seiten einzeln vergibt – Systemeinstellungen ändern (Helligkeit, Drehen), Nicht stören, Zugriff auf alle Dateien (fürs Glas), Benachrichtigungen lesen, die Bedienungshilfe, die Ausnahme vom Akkusparen, Apps installieren (Updates) und das Recht auf geheime Einstellungen. Danach liest die App ihre Rechte noch einmal und nennt, was Android trotzdem zurückhält – ein „Fertig“ steht nur da, wenn es stimmt.",
+                        "Ohne Bedienungshilfe: Bildschirm sperren (auch das Doppeltippen auf dem Startbildschirm), Bildschirmfoto, Zurück, Home, Letzte Apps, Benachrichtigungen, Schnelleinstellungen und das Ausschaltmenü macht jetzt auch Shizuku über die Shell – im Kontrollzentrum, beim Doppeltippen und für den Assistenten. Ist Glimmers Bedienungshilfe an, nimmt die App weiter sie.",
+                        "Shizuku nur einmal: „System-Animationen“ und „Werbeblocker fürs ganze Handy (Privates DNS)“ schreibt der Launcher selbst, sobald er das Recht auf geheime Einstellungen hat – auch nach einem Neustart, wenn Shizuku noch gar nicht läuft. Die Seite zeigt diese beiden dann trotzdem.",
+                        "„ZENITH zum Startbildschirm machen“ setzt den Launcher als Standard, ohne den Weg über Einstellungen → Apps → Standard-Apps. „Shizuku nach dem Neustart selbst starten lassen“ gibt Shizuku das Recht, sich über das kabellose Debugging wieder zu starten (dazu in Shizuku „Beim Start von Android starten“ einschalten).",
+                        "Neu: „Anzeige“ – die Größe von allem auf dem Bildschirm in fünf Stufen (85 bis 120 % der Dichte deines Displays), wie „Anzeigegröße“ in den Entwickleroptionen. „Normal“ stellt es zurück. Im Menü einer App (lange drücken) gibt es „Cache leeren“.",
+                        "Ehrlich dazu: Ich habe nichts davon auf einem Handy ausprobiert. Welche Befehle ein Hersteller zulässt, ist verschieden – das Bildschirmfoto per Shell geht nicht auf jedem Handy, das Ausschaltmenü und „Cache leeren“ hängen von der Android-Version ab, und der Neustart von Shizuku braucht eine neuere Shizuku-Version. Klappt eins nicht, sag mir, welches Handy es ist.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Glimmer tiefer im System (Shizuku)", Icons.Rounded.Star, Green,
                     listOf(
                         "Rückmeldung: Glimmer soll sich viel tiefer ins System einbauen lassen, zum Beispiel mit Shizuku.",

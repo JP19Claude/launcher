@@ -674,7 +674,7 @@ class ClaudeTools(private val context: Context, private val host: () -> Assistan
         } else {
             ToolResult(
                 false,
-                "Dafür muss Glimmer oder das Kontrollzentrum als Bedienungshilfe an sein. Die Einstellungen dafür sind offen.",
+                "Dafür muss Shizuku bereit sein oder Glimmer als Bedienungshilfe an sein. Die Einstellungen dafür sind offen.",
                 label = "Erlaubnis fehlt: Bedienungshilfe",
                 opensScreen = true,
                 fix = ClaudeFix.Accessibility,

@@ -336,6 +336,7 @@ private fun ShizukuSection(state: ControlState, onChanged: () -> Unit) {
     // What was just switched shows at once; the real state is read again a moment later.
     var pending by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     var mobileData by remember { mutableStateOf(readMobileData(context)) }
+    var canWriteSecure by remember { mutableStateOf(ShizukuBridge.canWriteSecure()) }
     val hasNfc = remember { runCatching { android.nfc.NfcAdapter.getDefaultAdapter(context) != null }.getOrDefault(false) }
 
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -343,6 +344,7 @@ private fun ShizukuSection(state: ControlState, onChanged: () -> Unit) {
         val refresh = {
             status = ShizukuBridge.status(context)
             mobileData = readMobileData(context)
+            canWriteSecure = ShizukuBridge.canWriteSecure()
         }
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) refresh() }
         val received = Shizuku.OnBinderReceivedListener { refresh() }
@@ -414,8 +416,13 @@ private fun ShizukuSection(state: ControlState, onChanged: () -> Unit) {
         }
     }
     if (status == ShizukuBridge.Status.Ready) {
-        ShizukuTools()
+        ShizukuRightsSection()
+        ShizukuTools(ready = true)
+        ShizukuDisplaySection()
         ShizukuPowerTools()
+    } else if (canWriteSecure) {
+        // Shizuku isn't running (after a restart), but the app was given the right to change settings by itself once.
+        ShizukuTools(ready = false)
     }
     PrivacyCheck(status == ShizukuBridge.Status.Ready)
 }
@@ -436,14 +443,14 @@ private fun scaleLabel(scale: Float): String = when (scale) {
 
 /** What else Shizuku makes possible: tempo, ad blocking, memory, frozen apps, power. */
 @Composable
-private fun ShizukuTools() {
+private fun ShizukuTools(ready: Boolean) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var scale by remember { mutableFloatStateOf(ShizukuBridge.animationScale(context)) }
     var dns by remember { mutableStateOf(ShizukuBridge.dns(context)) }
     var frozen by remember { mutableStateOf<List<String>>(emptyList()) }
     var confirm by remember { mutableStateOf<String?>(null) }
-    androidx.compose.runtime.LaunchedEffect(Unit) { frozen = ShizukuBridge.frozenApps() }
+    androidx.compose.runtime.LaunchedEffect(ready) { frozen = if (ready) ShizukuBridge.frozenApps() else emptyList() }
 
     fun label(pkg: String): String = runCatching {
         val pm = context.packageManager
@@ -473,7 +480,11 @@ private fun ShizukuTools() {
             }
         }
         Note("AdGuard blockt Werbung und Tracker in allen Apps und im Browser, ohne zusätzliche App.")
+        if (!ready) {
+            Note("Shizuku läuft gerade nicht – diese beiden Schalter gehen trotzdem, weil ${dev.hearth.launcher.data.Brand.name} das Recht dafür einmal bekommen hat.")
+        }
     }
+    if (!ready) return
 
     Section("Shizuku · Speicher & Apps") {
         SystemPageRow(SystemPage("Hintergrund-Apps beenden", "Gibt Arbeitsspeicher frei", Color(0xFF34C759), emptyList(), icon = Icons.Rounded.Refresh)) {

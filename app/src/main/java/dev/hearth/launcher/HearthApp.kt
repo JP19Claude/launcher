@@ -2,6 +2,7 @@ package dev.hearth.launcher
 
 import android.app.Application
 import dev.hearth.launcher.crash.CrashGuard
+import dev.hearth.launcher.data.ShizukuBridge
 
 /**
  * ZENITH's application: it sets up the crash guard (an error is written down and shown, three in two minutes start the
@@ -13,6 +14,8 @@ class HearthApp : Application() {
         CrashGuard.load(this)
         val inCrashScreen = runCatching { Application.getProcessName().endsWith(":crash") }.getOrDefault(false)
         if (!inCrashScreen) CrashGuard.install(this)
+        // Shizuku deeper in the system: settings the app has the right to change by itself are written without Shizuku running.
+        ShizukuBridge.attach(this)
         // Glimmer deeper in the system: if the user chose "keep Glimmer switched on" and Android switched its service off, it goes on again.
         if (!inCrashScreen) runCatching { dev.hearth.launcher.system.GlimmerDeep.heal(this) }
     }
