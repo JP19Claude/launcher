@@ -238,6 +238,18 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Glimmer tiefer im System (Shizuku)", Icons.Rounded.Star, Green,
+                    listOf(
+                        "Rückmeldung: Glimmer soll sich viel tiefer ins System einbauen lassen, zum Beispiel mit Shizuku.",
+                        "Neuer Abschnitt „Tiefer im System (Shizuku)“ in den Glimmer-Einstellungen. Er zeigt, ob Shizuku installiert ist, läuft und Glimmer erlaubt ist, und bietet drei Dinge – jedes nur, wenn du es antippst.",
+                        "„Alles einrichten“: schaltet Glimmers Bedienungshilfe und den Zugriff auf Benachrichtigungen ein, nimmt Glimmer vom Akkusparen aus und gibt ihm seine Berechtigungen (Benachrichtigungen, Fotos für Bildschirmfotos, Bluetooth) – ohne den Weg durch Androids Einstellungen. Dabei bekommt Glimmer auch das Recht, sichere Einstellungen selbst zu ändern; deshalb braucht es Shizuku danach nicht mehr, auch nicht nach einem Neustart.",
+                        "„Glimmer eingeschaltet halten“: Android schaltet eine Bedienungshilfe manchmal ab – nach einem Absturz, einem Update oder vom Akkusparen. Mit dem Schalter schaltet Glimmer sie beim nächsten Start der App (oder wenn der Benachrichtigungs-Zugriff anspringt) selbst wieder ein.",
+                        "„Banner des Systems aus“: Neue Nachrichten schieben sich nicht mehr von oben ins Bild; nur die Insel meldet sie, wie beim iPhone. Das gilt für das ganze Handy und ist mit demselben Schalter wieder an.",
+                        "Ehrlich dazu: Ich habe es nicht auf einem Handy ausprobiert. Ob Samsung die Banner-Einstellung beachtet, weiß ich nicht – tut es das nicht, bleibt der Schalter ohne Wirkung und schadet nichts. Was Shizuku nicht kann: Glimmer zu einem Teil der Statusleiste machen oder deren Symbole verschieben; das ginge nur mit Root.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Glimmer: der Timer zeigt seine Zeit", Icons.Rounded.Star, Blue,
                     listOf(
                         "Rückmeldung: Bei manchen Aktivitäten sieht man nicht, wie lange sie laufen oder was sie tun – beim Timer steht nur „Timer“, nicht die Restzeit.",

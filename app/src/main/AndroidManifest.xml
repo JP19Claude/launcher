@@ -5,6 +5,11 @@
     <!-- Updates from within each app: asking GitHub for the newest version and installing it
          (Android asks before every install). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Glimmer deeper in the system: never given to a normal app by Android itself – only the user can grant it, through Shizuku
+         (or ADB), and then Glimmer can switch its own service on again and silence the system's banners. -->
+    <uses-permission
+        android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 

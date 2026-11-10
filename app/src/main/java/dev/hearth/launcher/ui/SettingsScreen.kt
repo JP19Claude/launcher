@@ -1460,6 +1460,9 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
         GlimmerBlockedRow(s.glimmerExpand.blocked) { set -> update { it.copy(glimmerExpand = it.glimmerExpand.copy(blocked = set)) } }
     }
 
+    // Glimmer deeper in the system, with Shizuku: setting itself up, staying switched on, the system's banners.
+    GlimmerDeepSection()
+
     Section("Sperrbildschirm & AOD") {
         ChoiceRow(
             label = "Beim Entsperren",

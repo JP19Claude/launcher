@@ -12,6 +12,8 @@ import dev.hearth.launcher.data.NotificationHub
 class MediaListenerService : NotificationListenerService() {
 
     override fun onListenerConnected() {
+        // (The notification access usually outlives Glimmer's own service: a good moment to switch that one on again, if wanted.)
+        runCatching { GlimmerDeep.heal(this) }
         NotificationHub.refresh(this)
     }
 

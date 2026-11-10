@@ -13,5 +13,7 @@ class HearthApp : Application() {
         CrashGuard.load(this)
         val inCrashScreen = runCatching { Application.getProcessName().endsWith(":crash") }.getOrDefault(false)
         if (!inCrashScreen) CrashGuard.install(this)
+        // Glimmer deeper in the system: if the user chose "keep Glimmer switched on" and Android switched its service off, it goes on again.
+        if (!inCrashScreen) runCatching { dev.hearth.launcher.system.GlimmerDeep.heal(this) }
     }
 }
