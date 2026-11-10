@@ -43,6 +43,8 @@ data class NowPlaying(
     val speed: Float,
     /** Two or three vivid colors from the cover (for Glimmer's Hyper Island look). */
     val artPalette: List<Color> = emptyList(),
+    /** The app that plays (to leave its activity out of the island while that app is open). */
+    val packageName: String = "",
 ) {
     fun currentPosition(now: Long = SystemClock.elapsedRealtime()): Long {
         if (!playing) return positionMs
@@ -180,6 +182,7 @@ class MediaRepository(private val context: Context) {
             positionUpdated = state?.lastPositionUpdateTime?.takeIf { it > 0 } ?: SystemClock.elapsedRealtime(),
             speed = state?.playbackSpeed?.takeIf { it > 0f } ?: 1f,
             artPalette = palette,
+            packageName = c.packageName,
         )
     }
 

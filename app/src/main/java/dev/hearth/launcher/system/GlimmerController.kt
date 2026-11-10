@@ -441,11 +441,20 @@ class GlimmerController(private val service: GlimmerService) {
     /** The same settings for the island itself, so changes show without restarting. */
     private val settingsState = MutableStateFlow(LauncherSettings())
 
+    /** The app that is open right now (only known while "the open app leaves its activity out" is on; null on the home screen). */
+    private val frontPackage = MutableStateFlow<String?>(null)
+
+    fun onFrontApp(pkg: String?) {
+        frontPackage.value = if (settings.glimmerExpand.hideOwn) pkg else null
+    }
+
     /** Settings that apply while running (see [SettingsRepository.GLIMMER_LIVE_KEYS]). */
     fun update(newSettings: LauncherSettings) {
         val effective = newSettings.forGlimmer()
         val moved = effective.glimmerOffsetX != settings.glimmerOffsetX || effective.glimmerOffsetY != settings.glimmerOffsetY ||
-            effective.glimmerSmall != settings.glimmerSmall || effective.glimmerSideways != settings.glimmerSideways
+            effective.glimmerSmall != settings.glimmerSmall || effective.glimmerSideways != settings.glimmerSideways ||
+            effective.glimmerPill != settings.glimmerPill
+        if (!effective.glimmerExpand.hideOwn) frontPackage.value = null
         settings = effective
         settingsState.value = effective
         refreshCharging()
@@ -1119,15 +1128,15 @@ class GlimmerController(private val service: GlimmerService) {
         if (settings.glimmerIsMacIsland) return dp(MAC_ISLAND_GAP + settings.glimmerOffsetY.toFloat()).coerceAtLeast(0)
         // Turned with the phone: from the camera's edge, the same as from the top when upright.
         upright()?.let { u ->
-            return ((u.fromEdge - dp(IDLE_HEIGHT) / 2).coerceAtLeast(dp(4f)) + dp(settings.glimmerOffsetY.toFloat())).coerceAtLeast(0)
+            return ((u.fromEdge - dp(settings.glimmerPill) / 2).coerceAtLeast(dp(4f)) + dp(settings.glimmerOffsetY.toFloat())).coerceAtLeast(0)
         }
         // Sideways: exactly level with the camera; only on a very low screen pushed up a little,
         // so the unfolded card (music, the tallest) still fits below.
         sideCamera()?.let { (_, rect) ->
-            val wanted = rect.centerY() - dp(IDLE_HEIGHT) / 2
+            val wanted = rect.centerY() - dp(settings.glimmerPill) / 2
             return wanted.coerceAtMost(screenSize().second - dp(192f)).coerceAtLeast(0)
         }
-        return ((cameraCenter().second - dp(IDLE_HEIGHT) / 2).coerceAtLeast(dp(4f)) + dp(settings.glimmerOffsetY.toFloat())).coerceAtLeast(0)
+        return ((cameraCenter().second - dp(settings.glimmerPill) / 2).coerceAtLeast(dp(4f)) + dp(settings.glimmerOffsetY.toFloat())).coerceAtLeast(0)
     }
 
     /** Where the window sits sideways: over the camera, plus the nudge from the settings (at an edge: right at it). */
@@ -1240,10 +1249,26 @@ class GlimmerController(private val service: GlimmerService) {
                     }
                 }
                 // On the always-on display only music and live activities, still and dimmed.
-                val shown = when {
+                val shownAll = when {
                     aod && !aodAllowed -> emptyList()
                     onAod -> activities.filter { it is IslandContent.Media || it is IslandContent.Live || it is IslandContent.Charging }
                     else -> activities
+                }
+                // As on the iPhone: the app that is open leaves its own activity out of the island (in the music app no music there – the
+                // next thing shows instead). Not while unfolded, locked or on the always-on display.
+                val front by frontPackage.collectAsStateWithLifecycle()
+                val own = front?.takeIf { settings.glimmerExpand.hideOwn && !isExpanded && !onLockScreen && !aod }
+                val shown = if (own == null) {
+                    shownAll
+                } else {
+                    shownAll.filterNot { item ->
+                        when (item) {
+                            is IslandContent.Media -> item.playing.packageName == own
+                            is IslandContent.Live -> item.notice.packageName == own
+                            is IslandContent.Message -> item.notice.packageName == own
+                            else -> false
+                        }
+                    }
                 }
                 // On the lock screen too, but without the empty idle pill there.
                 // Unlocking (Face ID moment) goes before everything else.
@@ -1403,12 +1428,12 @@ class GlimmerController(private val service: GlimmerService) {
     /** The island's middle on the screen (px), for the fly-in with another launcher to aim at. */
     fun islandCenterOnScreen(): android.graphics.PointF {
         upright()?.let { u ->
-            val across = topInsetPx() + dp(IDLE_HEIGHT) / 2f
+            val across = topInsetPx() + dp(settings.glimmerPill) / 2f
             val mid = if (u.edge == 1) u.length / 2f - windowX() else u.length / 2f + windowX()
             return android.graphics.PointF(if (u.edge == 1) across else screenSize().first - across, mid)
         }
         val screenW = screenSize().first
-        val y = topInsetPx() + dp(IDLE_HEIGHT) / 2f
+        val y = topInsetPx() + dp(settings.glimmerPill) / 2f
         sideCamera()?.let { (edge, _) ->
             val half = dp(islandSize.width.value.coerceAtLeast(IDLE_WIDTH)) / 2f
             return android.graphics.PointF(if (edge == 1) dp(PAD) + half else screenW - dp(PAD) - half, y)

@@ -69,6 +69,11 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         cachedSettings = null
         when (key) {
             AppLock.KEY, "glimmerFlyIn", "glimmerFlyInEverywhere", "glimmerFlyInCover" -> applyEventScope()
+            // (Which app is open: Glimmer has to hear the other apps' windows for it, and not any more once it is switched off.)
+            "glimmerHideOwn" -> {
+                applyEventScope()
+                glimmer?.update(SettingsRepository(this, listen = false).settings.value)
+            }
             // Applied while running, so sliders and switches show at once without a flicker.
             in SettingsRepository.GLIMMER_LIVE_KEYS -> glimmer?.update(SettingsRepository(this, listen = false).settings.value)
             in SettingsRepository.GLIMMER_KEYS -> restartGlimmer()
@@ -123,7 +128,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
             val info = serviceInfo ?: return
             homePackage = null
             windowPackages.clear()
-            val guard = AppLock.lockedPackages(this).isNotEmpty() || flyInHere()
+            val guard = AppLock.lockedPackages(this).isNotEmpty() || flyInHere() || current().glimmerExpand.hideOwn
             info.packageNames = if (guard) null else arrayOf(SYSTEM_UI)
             // View names, only to tell the launcher's recent apps from its home screen.
             info.flags = if (flyInHere()) {
@@ -165,6 +170,7 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
         // App lock: a locked app came to the front.
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && pkg != SYSTEM_UI) {
             AppLockGuard.onWindow(this, pkg, event.className?.toString())
+            noteFront(pkg)
             onFront(pkg)
             return
         }
@@ -414,6 +420,19 @@ class GlimmerService : AccessibilityService(), LifecycleOwner, SavedStateRegistr
 
     /** A moment after an app came up: does it fill the screen (so its closing can be covered)? */
     private val checkFull = Runnable { if (frontApp != null && covering == null) onWindowsChanged() }
+
+    /**
+     * Which app is open, for "the open app leaves its own activity out of the island": an app with an icon of its own counts, the
+     * launcher means none; keyboards, dialogs of the system and the like change nothing.
+     */
+    private fun noteFront(pkg: String) {
+        if (!current().glimmerExpand.hideOwn) return
+        val g = glimmer ?: return
+        when {
+            pkg == home() -> g.onFrontApp(null)
+            launchable.getOrPut(pkg) { packageManager.getLaunchIntentForPackage(pkg) != null && !isKeyboard(pkg) } -> g.onFrontApp(pkg)
+        }
+    }
 
     /** Something new came to the front: an app (keep its picture), or home (let the app fly). */
     private fun onFront(pkg: String) {

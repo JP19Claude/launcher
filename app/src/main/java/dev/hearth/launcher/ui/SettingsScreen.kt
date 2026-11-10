@@ -1340,6 +1340,8 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             IntSlider("Breite der Kerbe", s.glimmerNotch.width, 80..420, " dp") { v -> update { it.copy(glimmerNotch = it.glimmerNotch.copy(width = v)) } }
             IntSlider("Höhe der Kerbe", s.glimmerNotch.height, 16..90, " dp") { v -> update { it.copy(glimmerNotch = it.glimmerNotch.copy(height = v)) } }
         }
+        // The pill's own height (the Dynamic Island mode starts with the iPhone's 37 dp, Glimmer with 30); what is in it grows with it.
+        if (!mac && !pn) IntSlider("Höhe der Pille", s.glimmerPill.toInt(), 26..44, " dp") { v -> update { it.copy(glimmerExpand = it.glimmerExpand.copy(pill = v)) } }
         if (mi) {
             IntSlider("Breite der Pille", s.glimmerIsland.width, 60..420, " dp") { v -> update { it.copy(glimmerIsland = it.glimmerIsland.copy(width = v)) } }
             IntSlider("Höhe der Pille", s.glimmerIsland.height, 16..90, " dp") { v -> update { it.copy(glimmerIsland = it.glimmerIsland.copy(height = v)) } }
@@ -1449,6 +1451,11 @@ internal fun GlimmerSections(s: LauncherSettings, update: ((LauncherSettings) ->
             description = "Bei Videos und Spielen ohne Statusleiste bleibt nur Wichtiges (Anruf, Wecker, Entsperren). Nicht jedes Handy meldet das zuverlässig: verschwindet Glimmer dann auch anderswo, schalte es wieder aus.",
             checked = s.glimmerHideFullscreen,
         ) { v -> update { it.copy(glimmerHideFullscreen = v) } }
+        SwitchRow(
+            label = "Offene App blendet ihre Aktivität aus",
+            description = "Wie beim iPhone: In der Musik-App zeigt die Insel keine Musik, sondern das Nächste (Timer, Aufnahme …) oder nichts. Dafür erfährt Glimmer, welche App gerade vorne ist – sonst liest es von anderen Apps nichts",
+            checked = s.glimmerExpand.hideOwn,
+        ) { v -> update { it.copy(glimmerExpand = it.glimmerExpand.copy(hideOwn = v)) } }
         // Apps that stay quiet in the island (their notifications, codes, calls and timers are left out).
         GlimmerBlockedRow(s.glimmerExpand.blocked) { set -> update { it.copy(glimmerExpand = it.glimmerExpand.copy(blocked = set)) } }
     }

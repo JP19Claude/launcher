@@ -244,6 +244,10 @@ data class CameraHole(
 ) {
     val bottom: Dp get() = y + halfHeight
 
+    /** The same hole in another measure (for content laid out with a scaled density). */
+    fun scaled(f: Float): CameraHole =
+        copy(x = x * f, y = y * f, radius = radius * f, halfHeight = halfHeight * f, fromStart = fromStart?.let { it * f }, fromEnd = fromEnd?.let { it * f })
+
     /** The camera's center from the island's left edge, for an island [width] wide. */
     fun centerIn(width: Dp): Dp = fromStart ?: fromEnd?.let { width - it } ?: (width / 2 + x)
 }
@@ -368,24 +372,26 @@ fun islandSize(
     activeWidth: Float = 1f,
     /** A third activity: a second little bubble, on the left of the pill. */
     hasTertiary: Boolean = false,
+    /** How tall the pill is (the setting; the iPhone's is 37, Glimmer's own 30). */
+    pill: Float = ISLAND_HEIGHT_DP,
 ): DpSize {
     // Unfolded it's always as wide as at 100 % (the 85 % mode only slims the small states).
     // (Hanging from the screen's edge as the MacBook's notch, unfolded it stays a card of 380 dp, not as wide as the screen would let it.)
     val full = if (dynamicIsland) (screenWidthDp - 22f).coerceAtMost(440f).dp else min(screenWidthDp - 16f, if (notch != null) 380f else 420f).dp
     val compactBase = if (dynamicIsland) {
-        (ISLAND_HEIGHT_DP * 6.2f).coerceAtMost(screenWidthDp - 60f).dp * narrow
+        (pill * 6.2f).coerceAtMost(screenWidthDp - 60f).dp * narrow
     } else {
         ((screenWidthDp * 0.44f).coerceIn(150f, 190f) * widthScale * narrow).coerceAtMost(screenWidthDp - 60f).dp
     }
     // Beside the notch there has to be room for something on each side (and no more: a notch only grows by what its content needs).
     val compact = if (notch != null) notch.width + notchRoom * activeWidth else compactBase * activeWidth
-    val barHeight = if (notch != null) maxOf(ISLAND_HEIGHT_DP.dp, notch.height) else ISLAND_HEIGHT_DP.dp
-    val idle = (if (dynamicIsland) ISLAND_HEIGHT_DP * 3.375f else (screenWidthDp * 0.27f).coerceIn(86f, 110f) * widthScale) * narrow
+    val barHeight = if (notch != null) maxOf(ISLAND_HEIGHT_DP.dp, notch.height) else pill.dp
+    val idle = (if (dynamicIsland) pill * 3.375f else (screenWidthDp * 0.27f).coerceIn(86f, 110f) * widthScale) * narrow
     return when {
         content is IslandContent.Hidden -> DpSize(0.dp, 0.dp)
-        content is IslandContent.Idle -> notch ?: DpSize(idle.dp, ISLAND_HEIGHT_DP.dp)
+        content is IslandContent.Idle -> notch ?: DpSize(idle.dp, pill.dp)
         // A little wider than the idle pill, for the padlock on its left.
-        content is IslandContent.Lock -> if (notch != null) DpSize(notch.width + 26.dp, notch.height) else DpSize(idle.dp + 26.dp, ISLAND_HEIGHT_DP.dp)
+        content is IslandContent.Lock -> if (notch != null) DpSize(notch.width + 26.dp, notch.height) else DpSize(idle.dp + 26.dp, pill.dp)
         // Like Face ID on the iPhone: the island becomes a rounded square for the moment.
         content is IslandContent.Unlock -> DpSize(UNLOCK_SIZE_DP.dp, UNLOCK_SIZE_DP.dp)
         // (A live update with words – navigation, alarm – gets the room for them on both sides of the camera, not just one word.)
@@ -406,7 +412,7 @@ fun islandSize(
             DpSize(width, cameraClearance + body * expandHeight)
         }
     }.let {
-        if (hasSecondary && !expanded && !isPassive(content)) DpSize(it.width + SecondaryExtra * (if (hasTertiary) 2 else 1), it.height) else it
+        if (hasSecondary && !expanded && !isPassive(content)) DpSize(it.width + (pill.dp + SecondaryGap) * (if (hasTertiary) 2 else 1), it.height) else it
     }
 }
 
@@ -521,6 +527,10 @@ fun GlimmerIsland(
     // (Three things running: the third is a bubble on the left, as on the newer iPhones' island. Not at a screen's side edge.)
     val hasTertiary = hasSecondary && tertiary != null && anchor == Alignment.CenterHorizontally
     val bubbles = if (hasTertiary) 2 else if (hasSecondary) 1 else 0
+    // How tall the pill is (a bubble is as tall), and how much bigger what is in it is drawn for a taller one.
+    val pill = settings.glimmerPill
+    val bubbleExtra = pill.dp + SecondaryGap
+    val contentScale = (pill / ISLAND_HEIGHT_DP).coerceIn(0.85f, 1.5f)
     // The MacBook modes: the notch is a black tab hanging from the top edge (its top corners square while it touches the edge),
     // the MacBook island a small pill below it; both with a size of their own.
     val phoneNotch = settings.glimmerIsPhoneNotch
@@ -551,6 +561,7 @@ fun GlimmerIsland(
         expandHeight = settings.glimmerExpand.height,
         activeWidth = settings.glimmerExpand.active,
         hasTertiary = withTertiary,
+        pill = pill,
     )
     val target = sizeOf(content, expanded, hasSecondary, hasTertiary)
     LaunchedEffect(target) { onTargetSize(target) }
@@ -584,7 +595,7 @@ fun GlimmerIsland(
         expanded -> spring(dampingRatio = damp(0.72f), stiffness = 240f)
         else -> spring(dampingRatio = damp(0.86f), stiffness = 520f)
     }
-    val mainWidth = target.width - SecondaryExtra * bubbles
+    val mainWidth = target.width - bubbleExtra * bubbles
     val width = animateDpAsState(mainWidth, widthSpec, label = "islandWidth").value.coerceAtLeast(0.dp)
     val height = animateDpAsState(target.height, heightSpec, label = "islandHeight").value.coerceAtLeast(0.dp)
     // The corners follow the shape without jumping: never rounder than a pill, at most as
@@ -735,6 +746,9 @@ fun GlimmerIsland(
     // from under the pill, joined to it by a liquid neck that thins and lets go.
     val detach = remember { Animatable(0f) }
     val secondaryKey = secondary?.let { islandKey(it) }
+    // (What the bubble showed last: while it melts back into the pill it is still drawn.)
+    val lastSecondary = remember { arrayOf<IslandContent?>(null) }
+    if (secondary != null) lastSecondary[0] = secondary
     LaunchedEffect(hasSecondary, secondaryKey) {
         if (hasSecondary) {
             if (!animations || dimmed) {
@@ -743,13 +757,20 @@ fun GlimmerIsland(
                 detach.snapTo(0f)
                 detach.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 260f))
             }
+        } else if (detach.value > 0f) {
+            // Unfolding (or the activity ending): the bubble slips back under the pill and melts into it, instead of vanishing at once.
+            if (!animations || dimmed) detach.snapTo(0f) else detach.animateTo(0f, tween(190, easing = FastOutSlowInEasing))
         }
     }
+    val rightShown = hasSecondary || detach.value > 0.02f
+    val rightItem = if (hasSecondary) secondary else lastSecondary[0]
 
     // The same for a third activity, on the left.
     val tertiaryNow by rememberUpdatedState(tertiary)
     val detachLeft = remember { Animatable(0f) }
     val tertiaryKey = tertiary?.let { islandKey(it) }
+    val lastTertiary = remember { arrayOf<IslandContent?>(null) }
+    if (tertiary != null) lastTertiary[0] = tertiary
     LaunchedEffect(hasTertiary, tertiaryKey) {
         if (hasTertiary) {
             if (!animations || dimmed) {
@@ -758,21 +779,27 @@ fun GlimmerIsland(
                 detachLeft.snapTo(0f)
                 detachLeft.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 260f))
             }
+        } else if (detachLeft.value > 0f) {
+            if (!animations || dimmed) detachLeft.snapTo(0f) else detachLeft.animateTo(0f, tween(190, easing = FastOutSlowInEasing))
         }
     }
+    val leftShown = hasTertiary || detachLeft.value > 0.02f
+    val leftItem = if (hasTertiary) tertiary else lastTertiary[0]
 
     // With one bubble beside it, the pill sits left of the middle (pill and bubble together are centred): the camera is further right in it.
     // The pill glides there and back – it used to jump those 18 dp at once whenever the bubble came or went (unfolding, folding).
     val centered = anchor == Alignment.CenterHorizontally
-    val layoutShift = if (centered && hasSecondary && !hasTertiary) -(SecondaryExtra / 2) else 0.dp
+    // (Where the layout puts the pill right now – a bubble that is still melting away keeps its place – and where it is to end up.)
+    val layoutShift = if (centered) (bubbleExtra / 2) * ((if (leftShown) 1 else 0) - (if (rightShown) 1 else 0)) else 0.dp
+    val restShift = if (centered) (bubbleExtra / 2) * ((if (hasTertiary) 1 else 0) - (if (hasSecondary) 1 else 0)) else 0.dp
     val glide by animateDpAsState(
-        layoutShift,
+        restShift,
         if (animations && !dimmed) spring<Dp>(dampingRatio = 0.86f, stiffness = 380f) else androidx.compose.animation.core.snap<Dp>(),
         label = "islandShift",
     )
     val cameraInPill = when {
         // At a side edge (held sideways): as it was, at once.
-        !centered && hasSecondary -> camera.copy(x = camera.x + SecondaryExtra / 2, fromEnd = camera.fromEnd?.let { it - SecondaryExtra })
+        !centered && hasSecondary -> camera.copy(x = camera.x + bubbleExtra / 2, fromEnd = camera.fromEnd?.let { it - bubbleExtra })
         centered && glide != 0.dp -> camera.copy(x = camera.x - glide, fromEnd = camera.fromEnd?.let { it + glide * 2 })
         else -> camera
     }
@@ -815,15 +842,15 @@ fun GlimmerIsland(
             verticalAlignment = Alignment.Top,
         ) {
             // A third activity: its bubble on the left, slipping out from under the pill like the one on the right.
-            if (hasTertiary && tertiary != null) {
+            if (leftShown && leftItem != null) {
                 IslandShape(
                     style = style,
-                    corner = 15.dp,
-                    tint = if (style == GlimmerStyle.Tinted) glowColorOf(tertiary, settings.accent.color) else Color.Black,
+                    corner = pill.dp / 2,
+                    tint = if (style == GlimmerStyle.Tinted) glowColorOf(leftItem, settings.accent.color) else Color.Black,
                     modifier = Modifier
                         .graphicsLayer {
                             val d = detachLeft.value
-                            translationX = (1f - d) * (ISLAND_HEIGHT_DP.dp + SecondaryGap).toPx()
+                            translationX = (1f - d) * bubbleExtra.toPx()
                             val grow = 0.55f + 0.45f * d.coerceAtMost(1f)
                             scaleX = grow
                             scaleY = grow
@@ -844,7 +871,7 @@ fun GlimmerIsland(
                                 }
                             }
                         }
-                        .size(ISLAND_HEIGHT_DP.dp)
+                        .size(pill.dp)
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = {
@@ -857,7 +884,7 @@ fun GlimmerIsland(
                             )
                         },
                 ) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LeadingBadge(tertiary, 18.dp) }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LeadingBadge(leftItem, 18.dp * contentScale) }
                 }
                 Spacer(Modifier.width(SecondaryGap))
             }
@@ -1104,8 +1131,18 @@ fun GlimmerIsland(
                                 }
                             }
                         }
-                    } else {
+                    } else if (contentScale == 1f) {
                         CompactWithClawd(c)
+                    } else {
+                        // A taller (or flatter) pill: what is in it is drawn that much bigger – symbols, digits, the cover – by laying it out
+                        // with a coarser density; the camera's place is given in the same measure, so content still keeps clear of it.
+                        val density = androidx.compose.ui.platform.LocalDensity.current
+                        CompositionLocalProvider(
+                            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density * contentScale, density.fontScale),
+                            LocalCameraHole provides cameraInPill.scaled(1f / contentScale),
+                        ) {
+                            CompactWithClawd(c)
+                        }
                     }
                 }
                 // Camera (green) or microphone (orange) in use, like the iPhone's dot.
@@ -1116,16 +1153,16 @@ fun GlimmerIsland(
                     }
                 }
             }
-            if (hasSecondary && secondary != null) {
+            if (rightShown && rightItem != null) {
                 Spacer(Modifier.width(SecondaryGap))
                 IslandShape(
                     style = style,
-                    corner = 15.dp,
-                    tint = if (style == GlimmerStyle.Tinted) glowColorOf(secondary, settings.accent.color) else Color.Black,
+                    corner = pill.dp / 2,
+                    tint = if (style == GlimmerStyle.Tinted) glowColorOf(rightItem, settings.accent.color) else Color.Black,
                     modifier = Modifier
                         .graphicsLayer {
                             val d = detach.value
-                            translationX = -(1f - d) * (ISLAND_HEIGHT_DP.dp + SecondaryGap).toPx()
+                            translationX = -(1f - d) * bubbleExtra.toPx()
                             val grow = 0.55f + 0.45f * d.coerceAtMost(1f)
                             scaleX = grow
                             scaleY = grow
@@ -1146,7 +1183,7 @@ fun GlimmerIsland(
                                 }
                             }
                         }
-                        .size(ISLAND_HEIGHT_DP.dp)
+                        .size(pill.dp)
                         // Tap: bring it to the front and unfold it; hold: open its app.
                         .pointerInput(Unit) {
                             detectTapGestures(
@@ -1160,7 +1197,7 @@ fun GlimmerIsland(
                             )
                         },
                 ) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LeadingBadge(secondary, 18.dp) }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LeadingBadge(rightItem, 18.dp * contentScale) }
                 }
             }
         }

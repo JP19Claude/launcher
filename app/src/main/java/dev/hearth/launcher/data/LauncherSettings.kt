@@ -738,6 +738,10 @@ data class GlimmerExpand(
     val active: Float = 1f,
     /** The apps whose notifications, codes, calls and timers Glimmer does not show (package names). */
     val blocked: Set<String> = emptySet(),
+    /** How tall the pill is, in dp (0: by itself – the iPhone's 37 in the Dynamic Island mode, 30 otherwise). */
+    val pill: Int = 0,
+    /** The app that is open leaves its own activity out of the island, as on the iPhone (Glimmer then hears which app comes to the front). */
+    val hideOwn: Boolean = false,
 )
 
 /** The color Glimmer shimmers in when something new arrives. */
@@ -1402,7 +1406,7 @@ data class LauncherSettings(
             glimmerNotch = d.glimmerNotch,
             glimmerIsland = d.glimmerIsland,
             // (the sizes only: the apps that are muted stay muted)
-            glimmerExpand = glimmerExpand.copy(width = d.glimmerExpand.width, height = d.glimmerExpand.height, active = d.glimmerExpand.active),
+            glimmerExpand = glimmerExpand.copy(width = d.glimmerExpand.width, height = d.glimmerExpand.height, active = d.glimmerExpand.active, pill = 0),
         )
     }
 
@@ -1411,11 +1415,23 @@ data class LauncherSettings(
         get() = LauncherSettings().let { d ->
             glimmerWidth == d.glimmerWidth && glimmerOffsetX == d.glimmerOffsetX && glimmerOffsetY == d.glimmerOffsetY &&
                 glimmerSmall == d.glimmerSmall && glimmerNotch == d.glimmerNotch && glimmerIsland == d.glimmerIsland &&
-                glimmerExpand.copy(blocked = emptySet()) == d.glimmerExpand.copy(blocked = emptySet())
+                glimmerExpand.copy(blocked = emptySet(), hideOwn = false) == d.glimmerExpand.copy(blocked = emptySet(), hideOwn = false)
         }
 
     /** How wide Glimmer is: the 85 % mode makes it narrower (height, content and text stay as they are). */
     val glimmerNarrow: Float get() = if (glimmerSmall) 0.85f else 1f
+
+    /**
+     * How tall the pill is, in dp: as set, else the iPhone's own 37 in the Dynamic Island mode and 30 otherwise. (The notches and the
+     * MacBook island have a size of their own.)
+     */
+    val glimmerPill: Float
+        get() = when {
+            glimmerHangs || glimmerIsMac -> 30f
+            glimmerExpand.pill > 0 -> glimmerExpand.pill.toFloat()
+            glimmerIsDynamicIsland -> 37f
+            else -> 30f
+        }
 
     /** True when Glimmer copies the iPhone's Dynamic Island. */
     val glimmerIsDynamicIsland: Boolean get() = glimmerMode == GlimmerMode.DynamicIsland
@@ -2063,6 +2079,8 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
                 height = prefs.getFloat("glimmerExpandH", d.glimmerExpand.height).coerceIn(0.8f, 1.5f),
                 active = prefs.getFloat("glimmerActiveW", d.glimmerExpand.active).coerceIn(0.7f, 1.6f),
                 blocked = prefs.getStringSet("glimmerBlocked", null)?.toSet() ?: d.glimmerExpand.blocked,
+                pill = prefs.getInt("glimmerPillH", d.glimmerExpand.pill).let { if (it <= 0) 0 else it.coerceIn(26, 44) },
+                hideOwn = prefs.getBoolean("glimmerHideOwn", d.glimmerExpand.hideOwn),
             ),
             badgeStyle = enumOf("badgeStyle", d.badgeStyle),
             doubleTapLock = prefs.getBoolean("doubleTapLock", d.doubleTapLock),
@@ -2337,6 +2355,8 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             .putFloat("glimmerExpandH", s.glimmerExpand.height)
             .putFloat("glimmerActiveW", s.glimmerExpand.active)
             .putStringSet("glimmerBlocked", s.glimmerExpand.blocked)
+            .putInt("glimmerPillH", s.glimmerExpand.pill)
+            .putBoolean("glimmerHideOwn", s.glimmerExpand.hideOwn)
             .putInt("glimmerNotchW", s.glimmerNotch.width)
             .putInt("glimmerNotchH", s.glimmerNotch.height)
             .putInt("glimmerIslandW", s.glimmerIsland.width)
@@ -2417,7 +2437,7 @@ class SettingsRepository(context: Context, listen: Boolean = true) {
             "glimmerIdlePill", "clawdInGlimmer", "glimmerClawdSide", "glimmerClawdSpot", "glimmerClawdSize", "glimmerClawdGreeting", "glimmerClawdGreetDaily", "glimmerClawdIdle", "clawdSkin", "clawdHat", "clawdOutfit", "clawdCloth", "clawdOmega", "omegaGlass", "omegaColor", "zenithDaylight", "zenithStrikeSystem", "strikeColor", "strikeSpeed", "strikeOnCharge", "strikeOnFull", "chargeGuard", "chargeLimit", "newAppGuard", "projectZenith", "projectZenithGlass", "projectColorOs", "smoothMode", "clawdHalo", "omegaOverdrive", "hyperGlass", "fullAod", "aodClawd", "aodBattery", "aodNotifications", "aodEdge", "aodDate", "lockClawd", "lockEdge", "lockCharge", "lockGreeting", "lockAtmosphere", "lockBattery", "lockOmega", "aodClock", "aodBrightness", "aodTint", "lockMessage", "aodImage", "glassLook", "perks", "mythos", "glimmerMessages", "glimmerTapOpens", "glimmerAlerts", "glimmerGlow",
             "glimmerMusicStyle", "glimmerUnlock", "glimmerAod", "zenithAod", "glimmerDynamic", "beColorOs", "beSmarter", "beComet", "glimmerGlowColor", "glimmerOutline",
             "glimmerOffsetX", "glimmerOffsetY", "glimmerWidth", "glimmerMotion", "glimmerSideways", "glimmerAutoCollapse",
-            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerExpandW", "glimmerExpandH", "glimmerActiveW", "glimmerBlocked", "glimmerNotchW", "glimmerNotchH", "glimmerIslandW", "glimmerIslandH", "glimmerPrivacy", "accent", "animations",
+            "glimmerDoubleTap", "glimmerSwipeTracks", "glimmerCharging", "glimmerHaptics", "glimmerHideFullscreen", "glimmerCodes", "glimmerScreenshots", "glimmerBreathe", "glimmerAiFluid", "glimmerSmall", "glimmerExpandW", "glimmerExpandH", "glimmerActiveW", "glimmerBlocked", "glimmerPillH", "glimmerNotchW", "glimmerNotchH", "glimmerIslandW", "glimmerIslandH", "glimmerPrivacy", "accent", "animations",
             // The Super-Wallpaper's body on the AOD (the still is drawn again when one of these changes).
             "superAod", "superAodDim", "superScene", "superPlace", "superSize", "superPhoto", "superOffsetX", "superOffsetY",
         )

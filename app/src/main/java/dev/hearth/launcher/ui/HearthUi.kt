@@ -238,6 +238,17 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Glimmer: was vom Video noch fehlte", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Warum die drei Dinge, die ich beim letzten Mal nicht gebaut hatte, nicht gebaut sind. Zu Recht – hier sind sie.",
+                        "Die Blasen schmelzen zurück: Beim Aufklappen (oder wenn eine Aktivität endet) gleitet die Blase unter die Pille zurück und verschmilzt mit ihr, statt in einem Bild zu verschwinden. Die Pille gleitet dabei mit.",
+                        "Die Höhe der Pille: Im Modus „Dynamic Island 1:1“ ist die Pille jetzt 37 dp hoch wie die echte (vorher 30), entsprechend breiter (125 dp leer, 229 dp mit einer Aktivität), und was in ihr steht – Symbole, Ziffern, das Cover – wird im selben Maß größer gezeichnet. Unter „Größe & Position“ gibt es dazu den Regler „Höhe der Pille“ (26 bis 44 dp), auch für den Modus Glimmer. Liegt die Kamera deines Handys sehr nah am oberen Rand, sitzt sie in der höheren Pille nicht mehr genau in der Mitte – dann den Regler etwas zurücknehmen.",
+                        "Die offene App blendet ihre Aktivität aus: neuer Schalter unter „Was Glimmer zeigt“. Wie beim iPhone zeigt die Insel in der Musik-App dann nicht die Musik, sondern das Nächste (Timer, Aufnahme) oder nur die leere Pille. Dafür muss Glimmer erfahren, welche App gerade vorne ist; sonst hört es von anderen Apps nichts. Deshalb ist der Schalter von Haus aus aus.",
+                        "Ehrlich dazu: Alles drei ist ohne Handy gebaut; ich sehe erst an deiner Rückmeldung, ob Höhe, Tempo und das Ausblenden bei dir stimmen.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Glimmer nach dem Video: Blasen links und rechts, kein Sprung", Icons.Rounded.Star, Blue,
                     listOf(
                         "Rückmeldung: ein Video, wie die Insel sich bewegen soll (die Dynamic Island mit einer Blase links und einer rechts), und die Bitte, nach Fehlern zu suchen.",
