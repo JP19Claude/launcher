@@ -238,6 +238,19 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Glimmer bewegt sich wie die Dynamic Island", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Du hast mir eine fertige Dynamic-Island-App (ein Xposed-Modul) gegeben, aus der ich das Beste für Animationen mitnehmen soll.",
+                        "Was ich daraus mitgenommen habe, sind Messwerte und Ideen – kein Code und keine Bilder oder Shader: Die App beschreibt jede Bewegung als Feder mit „Antwortzeit“ (wie lange ein Schwung dauert) und Dämpfung (1 = kein Überschwingen, 0,5 = deutliches Nachfedern), so wie Apple es tut, und gibt jeder Bewegung ihre eigene.",
+                        "Neu bei Glimmer: Die Insel wächst mit leichtem Nachfedern – aufgeklappt erst in die Breite (0,44 s), dann in die Tiefe (0,5 s) –, schrumpft fester (0,32 s) und klappt als Karte am festesten zurück (0,3 s, ohne Überschwingen). Ob sie wächst oder schrumpft, entscheidet jetzt die Richtung der Größe; vorher entschied nur, ob sie aufgeklappt ist.",
+                        "Drücken ist schneller und fester (0,18 s), Loslassen federt weicher nach (0,34 s) – das Antippen fühlt sich direkter an.",
+                        "Ein Schutz für den Weichzeichner: Glimmer macht beim Wechsel des Inhalts weich. Kommen dabei zu viele Bilder zu spät (über 33 ms), lässt er das Weichzeichnen 4 Sekunden weg, bei Wiederholung doppelt so lange (höchstens eine Minute); ein sauberer Lauf halbiert die Wartezeit wieder. So bekommt ein schwaches Handy eine glatte Insel ohne Weichzeichner statt einer ruckelnden mit.",
+                        "Dieselben Federn laufen auch in Glimmer unter Linux (am Rechner nachgemessen: Aufklappen ca. 5 % Überschwingen, Zuklappen keines).",
+                        "Ehrlich dazu: Ich habe die Insel auf keinem Handy gesehen – ob es sich nun wirklich so anfühlt, kann nur dein Auge sagen. Das Modul gibt es nur als fertige App ohne Lizenz, die ich nachlesen könnte; deshalb habe ich nichts davon kopiert. Weitere Ideen darin, die ich noch nicht gebaut habe: Fortschrittsstufen für Essen, Taxi und Paket („Unterwegs“, „Fast da“) aus dem Text der Benachrichtigung, eine Verbindungsbrücke zwischen Pille und Blase (wie ein Tropfen) und eine Gummiband-Bewegung beim Ziehen.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Shizuku tiefer im System", Icons.Rounded.Star, Green,
                     listOf(
                         "Rückmeldung: Shizuku soll auch im normalen System tiefer eingebaut sein – nicht nur in Glimmer.",

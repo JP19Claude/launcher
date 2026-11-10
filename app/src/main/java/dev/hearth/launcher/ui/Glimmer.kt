@@ -585,19 +585,31 @@ fun GlimmerIsland(
     // Like the Dynamic Island: unfolding stretches out sideways first and then drops down with
     // a little bounce; folding pulls up first and is quicker; going away has no bounce at all.
     val hidden = content is IslandContent.Hidden
+    val mainWidth = target.width - bubbleExtra * bubbles
+    // (The size shown a moment ago tells whether the island grows or shrinks now: growing has a little bounce, shrinking is firmer, and
+    // folding the card back is the firmest – spring values taken from how a reference Dynamic Island moves, see [IslandSprings].)
+    val shown = remember { floatArrayOf(0f, 0f) }
+    val widening = mainWidth.value > shown[0] + 0.5f
+    val dropping = target.height.value > shown[1] + 0.5f
+    val folding = !expanded && shown[0] - mainWidth.value > 80f
     val widthSpec = when {
         hidden -> spring<Dp>(dampingRatio = 1f, stiffness = 520f)
-        expanded -> spring(dampingRatio = damp(0.68f), stiffness = 330f)
-        else -> spring(dampingRatio = damp(0.78f), stiffness = 380f)
+        expanded -> spring(dampingRatio = damp(0.68f), stiffness = IslandSprings.stiffness(0.44f))
+        folding -> spring(dampingRatio = damp(0.9f), stiffness = IslandSprings.stiffness(0.3f))
+        widening -> spring(dampingRatio = damp(0.6f), stiffness = IslandSprings.stiffness(0.42f))
+        else -> spring(dampingRatio = damp(0.78f), stiffness = IslandSprings.stiffness(0.32f))
     }
     val heightSpec = when {
         hidden -> spring<Dp>(dampingRatio = 1f, stiffness = 520f)
-        expanded -> spring(dampingRatio = damp(0.72f), stiffness = 240f)
-        else -> spring(dampingRatio = damp(0.86f), stiffness = 520f)
+        expanded -> spring(dampingRatio = damp(0.66f), stiffness = IslandSprings.stiffness(0.5f))
+        folding -> spring(dampingRatio = damp(0.9f), stiffness = IslandSprings.stiffness(0.3f))
+        dropping -> spring(dampingRatio = damp(0.55f), stiffness = IslandSprings.stiffness(0.36f))
+        else -> spring(dampingRatio = damp(0.78f), stiffness = IslandSprings.stiffness(0.32f))
     }
-    val mainWidth = target.width - bubbleExtra * bubbles
     val width = animateDpAsState(mainWidth, widthSpec, label = "islandWidth").value.coerceAtLeast(0.dp)
     val height = animateDpAsState(target.height, heightSpec, label = "islandHeight").value.coerceAtLeast(0.dp)
+    shown[0] = width.value
+    shown[1] = height.value
     // The corners follow the shape without jumping: never rounder than a pill, at most as
     // round as the iPhone's unfolded island (44) or the Face ID square (30).
     val cornerCap by animateDpAsState(
@@ -711,12 +723,16 @@ fun GlimmerIsland(
     // How sharp the content is: from a blur to clear whenever it changes or unfolds.
     val clarity = remember { Animatable(1f) }
     LaunchedEffect(key, expanded) {
-        if (!animations || dimmed || isPassive(content) || hanging) {
+        if (!animations || dimmed || isPassive(content) || hanging || !IslandBlurGovernor.allowed()) {
             clarity.snapTo(1f)
             return@LaunchedEffect
         }
         clarity.snapTo(0f)
-        clarity.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
+        // (While it blurs the frames are watched: on a phone that cannot keep up the blur is left out for a while.)
+        kotlinx.coroutines.coroutineScope {
+            launch { IslandBlurGovernor.watch(360) }
+            clarity.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
+        }
     }
     val tap: () -> Unit = {
         if (!isPassive(content)) {
@@ -998,9 +1014,9 @@ fun GlimmerIsland(
                         detectTapGestures(
                             onPress = {
                                 if (pressableNow) {
-                                    pressScope.launch { press.animateTo(if (expandedNow) 1.015f else if (hanging) 1.02f else 1.06f, spring(dampingRatio = 0.7f, stiffness = 700f)) }
+                                    pressScope.launch { press.animateTo(if (expandedNow) 1.015f else if (hanging) 1.02f else 1.06f, spring(dampingRatio = 0.9f, stiffness = IslandSprings.stiffness(0.18f))) }
                                     tryAwaitRelease()
-                                    pressScope.launch { press.animateTo(1f, spring(dampingRatio = 0.42f, stiffness = 520f)) }
+                                    pressScope.launch { press.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = IslandSprings.stiffness(0.34f))) }
                                 }
                             },
                             onTap = { tapNow() },
@@ -2950,5 +2966,53 @@ private fun LevelBar(level: Float, color: Color, modifier: Modifier, charging: B
             drawPath(bolt, Color.Black.copy(alpha = 0.55f), style = Stroke(size.height * 0.08f, join = StrokeJoin.Round))
             drawPath(bolt, Color.White)
         }
+    }
+}
+
+/**
+ * How the island's springs are written: a spring is given as its "response" (the time of one swing, in seconds – smaller is quicker)
+ * and its damping (1 = no overshoot, 0.5 = a clear bounce) – the way the iPhone's are described – and Compose wants stiffness.
+ */
+internal object IslandSprings {
+    fun stiffness(response: Float): Float {
+        val omega = (2.0 * Math.PI / response.coerceAtLeast(0.016f)).toFloat()
+        return omega * omega
+    }
+}
+
+/**
+ * Blur costs the graphics chip. While the island blurs its content, the frames are watched; when too many come late (over 33 ms),
+ * the blur is left out for a while – 4 seconds first, twice as long every time it happens again (at most a minute), and a clean
+ * run halves the wait again – so a weak phone gets a smooth island without blur instead of a stuttering one with.
+ */
+internal object IslandBlurGovernor {
+    private var offUntil = 0L
+    private var penalty = 4_000L
+
+    fun allowed(): Boolean = android.os.SystemClock.uptimeMillis() >= offUntil
+
+    private fun tooSlow() {
+        offUntil = android.os.SystemClock.uptimeMillis() + penalty
+        penalty = (penalty * 2).coerceAtMost(60_000L)
+    }
+
+    /** Looks at the frames for [millis] ms: three late ones end the blur for a while. */
+    suspend fun watch(millis: Long) {
+        val end = android.os.SystemClock.uptimeMillis() + millis
+        var last = androidx.compose.runtime.withFrameNanos { it }
+        var frames = 0
+        var late = 0
+        while (android.os.SystemClock.uptimeMillis() < end) {
+            val now = androidx.compose.runtime.withFrameNanos { it }
+            frames++
+            // (The first two frames build the transition and are always long.)
+            if (frames > 2 && now - last > 33_000_000L) late++
+            last = now
+            if (late >= 3) {
+                tooSlow()
+                return
+            }
+        }
+        if (late == 0) penalty = (penalty / 2).coerceAtLeast(4_000L)
     }
 }

@@ -1183,16 +1183,32 @@ class Island:
         springy = {"calm": 0.22, "normal": 0.0, "playful": -0.2}.get(self.cfg["motion"], 0.0)
         return clamp(r + springy, 0.25, 1.0)
 
-    def _tune(self):
+    @staticmethod
+    def _stiff(response):
+        """A spring given as its response (the time of one swing, in seconds) and damping, as the iPhone's are described, as stiffness."""
+        return (2.0 * math.pi / max(response, 0.016)) ** 2
+
+    def _tune(self, tw=None, th=None):
+        """The springs of the size. Growing has a little bounce, shrinking is firmer, folding the card back is the firmest (the same
+        values as in the Android app, which has them from how a reference Dynamic Island moves)."""
+        st = self._stiff
         if not self.visible:
             self.w.tune(520, 1.0)
             self.h.tune(520, 1.0)
-        elif self.expanded:
-            self.w.tune(330, self._damp(0.68))
-            self.h.tune(240, self._damp(0.72))
+            return
+        tw = self.w.target if tw is None else tw
+        th = self.h.target if th is None else th
+        if self.expanded:
+            self.w.tune(st(0.44), self._damp(0.68))
+            self.h.tune(st(0.5), self._damp(0.66))
+        elif self.w.x - tw > 80.0 * self.s:
+            self.w.tune(st(0.3), self._damp(0.9))
+            self.h.tune(st(0.3), self._damp(0.9))
         else:
-            self.w.tune(380, self._damp(0.78))
-            self.h.tune(520, self._damp(0.86))
+            widening = tw > self.w.x + 0.5
+            dropping = th > self.h.x + 0.5
+            self.w.tune(st(0.42), self._damp(0.6)) if widening else self.w.tune(st(0.32), self._damp(0.78))
+            self.h.tune(st(0.36), self._damp(0.55)) if dropping else self.h.tune(st(0.32), self._damp(0.78))
 
     # --- what to show
 
@@ -1219,7 +1235,7 @@ class Island:
         self.kind, self.data, self.expanded = kind, data, expanded
         self.visible = True
         tw, th = self.size_for(kind, data, expanded)
-        self._tune()
+        self._tune(tw * self.s, th * self.s)
         self.w.target, self.h.target = tw * self.s, th * self.s
         self.cap.target = (30.0 if self.hang else 42.0 if self.dyn else 44.0) if expanded else (14.0 if self.hang else 60.0)
         if changed:
@@ -1238,10 +1254,10 @@ class Island:
         if self.kind in (None, "idle"):
             return
         if down:
-            self.press.tune(700, 0.7)
+            self.press.tune(self._stiff(0.18), 0.9)
             self.press.target = (1.015 if self.expanded else 1.02) if self.hang else 1.06
         else:
-            self.press.tune(520, 0.42)
+            self.press.tune(self._stiff(0.34), 0.5)
             self.press.target = 1.0
 
     def snap(self):
