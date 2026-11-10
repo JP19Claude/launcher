@@ -296,6 +296,45 @@ object NotificationHub {
         )
     }
 
+    /** The time each timer showed at the last look (by the notification's key), to tell a countdown from a stopwatch. */
+    private val lastTimes = HashMap<String, Long>()
+
+    /** What a notification's own layout says: its texts (also of its buttons), and whether a running clock is in it. */
+    private class OwnLayout(val texts: List<String>, val chronometer: Boolean, val countDown: Boolean)
+
+    /**
+     * Builds the notification's own layout (the one its app drew for it) without showing it, and reads the texts in it. Null if it
+     * has none or it can't be built.
+     */
+    private fun readOwnLayout(context: Context, n: Notification): OwnLayout? {
+        return runCatching {
+            @Suppress("DEPRECATION")
+            val remote = n.bigContentView ?: n.contentView ?: n.headsUpContentView
+            if (remote == null) {
+                null
+            } else {
+                val root = remote.apply(context.applicationContext, android.widget.FrameLayout(context))
+                val texts = ArrayList<String>()
+                var chronometer = false
+                var down = false
+                fun walk(v: android.view.View) {
+                    if (v.visibility != android.view.View.VISIBLE) return
+                    if (v is android.widget.Chronometer) {
+                        chronometer = true
+                        if (v.isCountDown) down = true
+                    }
+                    if (v is android.widget.TextView) v.text?.toString()?.takeIf { it.isNotBlank() }?.let { texts.add(it) }
+                    v.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { texts.add(it) }
+                    if (v is android.view.ViewGroup) {
+                        for (i in 0 until v.childCount) walk(v.getChildAt(i))
+                    }
+                }
+                walk(root)
+                OwnLayout(texts, chronometer, down)
+            }
+        }.getOrNull()
+    }
+
     /** "12:34", "1:02:03" or "12:34,56" in a text, as milliseconds. */
     private fun parseClockTime(text: String): Long? {
         val m = ClockTimeRegex.find(text) ?: return null
@@ -383,20 +422,50 @@ object NotificationHub {
         val stopwatch = StopwatchWords.any { it in words } || n.category == "stopwatch"
         var countDown = extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN, false) ||
             (!stopwatch && TimerWords.any { it in words })
-        val paused = actionTitles.any { a -> ResumeWords.any { it in a } } &&
+        var paused = actionTitles.any { a -> ResumeWords.any { it in a } } &&
             actionTitles.none { a -> PauseWords.any { it in a } }
+        var isStopwatch = stopwatch
         var base = n.`when`
         var pausedMs = 0L
         var hasTime = true
         if (kind == NoticeKind.Timer || kind == NoticeKind.Recording || kind == NoticeKind.Call) {
-            val textTime = parseClockTime(title) ?: parseClockTime(body) ?: parseClockTime(sub)
+            var textTime = parseClockTime(title) ?: parseClockTime(body) ?: parseClockTime(sub)
+                ?: parseClockTime(extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty())
+                ?: parseClockTime(extras.getCharSequence(Notification.EXTRA_INFO_TEXT)?.toString().orEmpty())
             val chronometerUsable = showChronometer && base > 0 && !paused
+            // Some clocks (Samsung's among them) draw their timer in a layout of their own: the notification's title only says "Timer",
+            // and how long it still runs stands in that layout alone. So the layout is built once and read: its time, its buttons.
+            var readNow = false
+            if (!chronometerUsable && textTime == null && kind != NoticeKind.Call) {
+                val custom = readOwnLayout(service, n)
+                if (custom != null) {
+                    val said = custom.texts.joinToString(" ").lowercase()
+                    textTime = custom.texts.firstNotNullOfOrNull { parseClockTime(it) }
+                    readNow = custom.chronometer
+                    if (StopwatchWords.any { it in said }) isStopwatch = true
+                    if (custom.countDown || (!isStopwatch && TimerWords.any { it in said })) countDown = true
+                    if (ResumeWords.any { it in said } && PauseWords.none { it in said }) paused = true
+                }
+            }
+            // Which way it runs, if nothing said so: by how its time moved since the last look (a smaller time is a countdown).
+            if (textTime != null && !paused) {
+                val before = lastTimes[sbn.key]
+                if (before != null && before != textTime && !isStopwatch && kind == NoticeKind.Timer) countDown = textTime < before
+                if (lastTimes.size > 40) lastTimes.clear()
+                lastTimes[sbn.key] = textTime
+            }
             when {
                 chronometerUsable -> if (extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN, false)) countDown = true
                 textTime != null && paused -> pausedMs = textTime
                 textTime != null -> {
-                    val seen = sbn.postTime.takeIf { it > 0 } ?: System.currentTimeMillis()
+                    // (A running clock in the layout shows the time of this moment; a written time is the one of when it was posted.)
+                    val seen = if (readNow) System.currentTimeMillis() else sbn.postTime.takeIf { it > 0 } ?: System.currentTimeMillis()
                     base = if (countDown) seen + textTime else seen - textTime
+                }
+                // A recording that names no time: it runs since its notification came.
+                kind == NoticeKind.Recording && (base > 0 || sbn.postTime > 0) -> {
+                    if (base <= 0) base = sbn.postTime
+                    countDown = false
                 }
                 // A call without a running time is still ringing.
                 else -> hasTime = false
@@ -414,7 +483,7 @@ object NotificationHub {
             paused = paused,
             pausedMs = pausedMs,
             hasTime = hasTime,
-            stopwatch = stopwatch && !countDown,
+            stopwatch = isStopwatch && !countDown,
             shortText = extras.getCharSequence(EXTRA_SHORT_CRITICAL_TEXT)?.toString()?.takeIf { it.isNotBlank() }
                 ?: if (kind == NoticeKind.Hotspot) Regex("""\d+""").find(body)?.value else null,
             progress = extras.getInt(Notification.EXTRA_PROGRESS, 0),

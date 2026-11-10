@@ -238,6 +238,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Glimmer: der Timer zeigt seine Zeit", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Bei manchen Aktivitäten sieht man nicht, wie lange sie laufen oder was sie tun – beim Timer steht nur „Timer“, nicht die Restzeit.",
+                        "Die Ursache: Glimmer liest die Zeit aus der Benachrichtigung – aus ihrer laufenden Uhr oder aus ihrem Text. Manche Uhren-Apps (auch die von Samsung) zeichnen ihren Timer aber in einer eigenen Ansicht; im Titel steht dann nur „Timer“, und Glimmer fand keine Zeit. Jetzt baut Glimmer diese Ansicht unsichtbar auf und liest sie: die Zeit, ob eine laufende Uhr darin ist, ob sie herunterzählt, und an den Knöpfen („Fortsetzen“ oder „Pause“), ob der Timer gerade angehalten ist. Zählt nichts davon die Richtung an, erkennt Glimmer sie daran, ob die Zeit beim nächsten Blick kleiner oder größer geworden ist.",
+                        "Dazu: Eine Bildschirmaufnahme, die keine Zeit nennt, zählt in der Insel ab ihrem Beginn hoch statt nur einen Punkt zu zeigen.",
+                        "Ehrlich dazu: Wie Samsungs Uhr ihre Benachrichtigung genau baut, kann ich von hier nicht sehen – ich habe den Weg gebaut, der bei eigenen Ansichten üblich ist. Steht beim Timer danach immer noch nur „Timer“, sag es mir (und welche Uhr-App es ist); bei welchen anderen Aktivitäten dir Zeit oder Inhalt fehlt, auch.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Glimmer: was vom Video noch fehlte", Icons.Rounded.Star, Blue,
                     listOf(
                         "Rückmeldung: Warum die drei Dinge, die ich beim letzten Mal nicht gebaut hatte, nicht gebaut sind. Zu Recht – hier sind sie.",
