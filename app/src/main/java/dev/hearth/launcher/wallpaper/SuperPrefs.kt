@@ -52,7 +52,7 @@ object SuperPrefs {
             place?.let { m.spin = it.spin; m.lat = it.tilt }
         }
         renderer.draw(Canvas(scene), w, h, 5000L, params, motion)
-        if (params.scene == SuperScene.Photo || params.scene == SuperScene.Flag || params.scene == SuperScene.Geometry || params.scene.isScape || params.scene.isVideo) return@runCatching scene
+        if (params.scene.isPhotoLike || params.scene == SuperScene.Geometry || params.scene.isScape || params.scene.isVideo) return@runCatching scene
         val pose = SuperPose()
         SuperCamera.pose(params.scene, 1f, 0f, pose, params.offsetX, params.offsetY)
         val cx = w * pose.cx

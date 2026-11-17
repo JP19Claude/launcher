@@ -71,6 +71,13 @@ object SuperCamera {
         // of it stays in view.
         SuperScene.Flag -> floatArrayOf(0.10f, 0.20f, 2.4f, 0.50f, 0.50f, 1.04f, 0.50f, 0.50f, 1.05f, 0.46f, 0.51f, 1.14f)
         SuperScene.Photo -> floatArrayOf(0.15f, 0.15f, 1.9f, 0.50f, 0.50f, 1.06f, 0.50f, 0.47f, 1.10f, 0.50f, 0.50f, 1.35f)
+        // The pictures ZENITH draws (USA): the flight starts on a detail – the stars of the flag, the stars over the wave, the eagle's head, the
+        // dome, the elephant's face – pulls back to the whole picture and, unlocked, comes in only a little (the pictures are made to be seen whole).
+        SuperScene.UsaFlag -> floatArrayOf(0.14f, 0.12f, 2.0f, 0.50f, 0.50f, 1.04f, 0.50f, 0.50f, 1.08f, 0.40f, 0.30f, 1.22f)
+        SuperScene.UsaWave -> floatArrayOf(0.50f, 0.20f, 1.9f, 0.50f, 0.50f, 1.04f, 0.50f, 0.50f, 1.08f, 0.50f, 0.42f, 1.24f)
+        SuperScene.UsaEagle -> floatArrayOf(0.46f, 0.40f, 2.2f, 0.50f, 0.50f, 1.04f, 0.50f, 0.49f, 1.08f, 0.47f, 0.43f, 1.30f)
+        SuperScene.UsaCapitol -> floatArrayOf(0.50f, 0.42f, 2.2f, 0.50f, 0.50f, 1.04f, 0.50f, 0.50f, 1.08f, 0.50f, 0.48f, 1.28f)
+        SuperScene.UsaElephant -> floatArrayOf(0.32f, 0.60f, 2.1f, 0.50f, 0.50f, 1.04f, 0.50f, 0.52f, 1.08f, 0.38f, 0.58f, 1.30f)
         // The landscapes ZENITH draws itself: the same camera as a photo (cx, cy as fractions of the picture, r the magnification), but the picture
         // has no edge – the mountains start with a close look at the sky, pull back to the whole range and, unlocked, dive down into the valley.
         SuperScene.Video1, SuperScene.Video2 -> floatArrayOf(0.5f, 0.5f, 1f, 0.5f, 0.5f, 1f, 0.5f, 0.5f, 1f, 0.5f, 0.5f, 1f)

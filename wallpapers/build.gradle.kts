@@ -34,8 +34,8 @@ android {
     defaultConfig {
         minSdk = 28
         targetSdk = 35
-        versionCode = 23
-        versionName = "3.2"
+        versionCode = 24
+        versionName = "3.3"
     }
 
     // The same fixed debug key as ZENITH's, so every CI build installs as an update over the last one.

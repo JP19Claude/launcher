@@ -238,6 +238,17 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "Fünf USA-Hintergründe", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Ins Wallpaper sollen USA-Hintergründe, die in Richtung Republikaner gehen.",
+                        "Neu im Super-Wallpaper und in der App „ZENITH Hintergründe“, mit der Flagge als Rahmen: „USA · Stars & Stripes“ (die Flagge als wehendes Banner, 50 Sterne, 13 Streifen, Falten im Wind), „USA · Rote Welle“ (eine rote Seidenwelle mit weißen und blauen Streifen unter dreizehn Sternen), „USA · Weißkopfseeadler“ (der Adler mit dem Schild der Flagge, Olivenzweig und Pfeilen, im Stil des Wappens), „USA · Kapitol bei Nacht“ (im Flutlicht, mit Feuerwerk über dem Spiegelbecken) und „USA · Roter Elefant“ (das alte Wahrzeichen der Republikaner, vor der verblassten Flagge).",
+                        "Alle fünf hat ZENITH selbst gezeichnet – ohne Fotos, ohne echte Personen, ohne das Logo einer Partei und ohne Wahlkampfsprüche. Sie bewegen sich wie ein Foto: mit der Neigung des Telefons, mit den Seiten, und beim Entsperren fliegt die Kamera heran.",
+                        "Die Auswahl steht in Einstellungen → Hintergrund → Super-Wallpaper unter „Szene“; in der Hintergrund-App erscheinen sie in der Liste hinter „Iwo Jima“.",
+                        "Ehrlich dazu: Ich habe sie am Rechner gezeichnet und angesehen, aber nicht auf einem Handy. Ob dir Stil und Farben gefallen, sagst du mir – Motive wie ein Demokraten-Gegenstück, die Freiheitsstatue oder Texas sind schnell dazugemalt.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Glimmer bewegt sich wie die Dynamic Island", Icons.Rounded.Star, Blue,
                     listOf(
                         "Rückmeldung: Du hast mir eine fertige Dynamic-Island-App (ein Xposed-Modul) gegeben, aus der ich das Beste für Animationen mitnehmen soll.",

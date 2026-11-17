@@ -53,6 +53,26 @@ enum class SuperScene(val label: String, val note: String) {
         "Iwo Jima",
         "Das Foto vom Iwo-Jima-Denkmal: der Vollmond hinter den Marines, die US-Flagge im Wind. Auf dem Sperrbildschirm fliegt die Kamera von der Flagge oben links über das ganze Bild, nach dem Entsperren fährt sie auf Flagge und Mond zu; ein sanftes Licht liegt auf der Flagge.",
     ),
+    UsaFlag(
+        "USA · Stars & Stripes",
+        "Die Flagge der Vereinigten Staaten als wehendes Banner: 50 Sterne im blauen Feld, 13 Streifen, Falten im Wind und Licht von links oben. Von ZENITH selbst gezeichnet. Das Bild folgt der Neigung des Telefons und kommt beim Entsperren näher.",
+    ),
+    UsaWave(
+        "USA · Rote Welle",
+        "Eine rote Welle aus Seide mit weißen und blauen Streifen unter einem Sternenhimmel; dreizehn Sterne im Kreis, einer groß in der Mitte. Von ZENITH selbst gezeichnet.",
+    ),
+    UsaEagle(
+        "USA · Weißkopfseeadler",
+        "Der Weißkopfseeadler mit dem Schild der Stars and Stripes, Olivenzweig und Pfeilen, dreizehn Sterne im Strahlenkranz – im Stil des Wappens, von ZENITH selbst gezeichnet.",
+    ),
+    UsaCapitol(
+        "USA · Kapitol bei Nacht",
+        "Das Kapitol in Washington im Flutlicht, mit Feuerwerk in Rot, Weiß und Blau über dem Spiegelbecken. Von ZENITH selbst gezeichnet.",
+    ),
+    UsaElephant(
+        "USA · Roter Elefant",
+        "Der rote Elefant mit weißen Sternen vor der verblassten Flagge – das alte Wahrzeichen der Republikaner (aus dem 19. Jahrhundert), von ZENITH selbst gezeichnet, ohne Parteilogo und ohne Personen.",
+    ),
     Geometry("Geometrie", "Ein Ikosaeder aus Licht mit einem zweiten Körper darin, die beide umeinander drehen."),
     Photo(
         "Eigenes Foto",
@@ -82,6 +102,22 @@ enum class SuperScene(val label: String, val note: String) {
         "Video 2",
         "Ein zweites eigenes Video, genauso: Datei wählen, stumm in Endlosschleife, bildfüllend.",
     );
+
+    /** The picture of a scene that ships a picture of its own besides the Iwo Jima photo (drawn by ZENITH itself; in the apps' assets). */
+    val asset: String? get() = when (this) {
+        UsaFlag -> "usa/usa_flagge.jpg"
+        UsaWave -> "usa/usa_welle.jpg"
+        UsaEagle -> "usa/usa_adler.jpg"
+        UsaCapitol -> "usa/usa_kapitol.jpg"
+        UsaElephant -> "usa/usa_elefant.jpg"
+        else -> null
+    }
+
+    /** One of the scenes that show a picture of their own (it moves like a photo: tilt, pages, the zoom when unlocked). */
+    val isPicture: Boolean get() = asset != null
+
+    /** A scene that shows one picture and has no body to resize or place: the photos, the Iwo Jima photo and the pictures. */
+    val isPhotoLike: Boolean get() = this == Photo || this == Flag || isPicture
 
     /** One of the two scenes that play a video of the user's own ([SuperVideo]). */
     val isVideo: Boolean get() = this == Video1 || this == Video2
@@ -279,7 +315,8 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
         if (ready) return
         when (scene) {
             SuperScene.Geometry, SuperScene.Mountains, SuperScene.Silk -> Unit
-            SuperScene.Photo, SuperScene.Flag, SuperScene.Video1, SuperScene.Video2 -> {
+            SuperScene.Photo, SuperScene.Flag, SuperScene.Video1, SuperScene.Video2,
+            SuperScene.UsaFlag, SuperScene.UsaWave, SuperScene.UsaEagle, SuperScene.UsaCapitol, SuperScene.UsaElephant -> {
                 loadPhoto()
                 ready = true
                 return
@@ -559,7 +596,7 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
 
     private fun drawScene(canvas: Canvas, w: Int, h: Int, timeMs: Long, p: SuperParams, m: SuperMotion) {
         val seconds = timeMs / 1000f
-        if (scene == SuperScene.Photo || scene == SuperScene.Flag || scene.isVideo) {
+        if (scene.isPhotoLike || scene.isVideo) {
             drawPhoto(canvas, w, h, seconds, p, m)
             return
         }
@@ -632,10 +669,11 @@ class SuperRenderer(val scene: SuperScene, private val photoFile: File? = null, 
     }
 
     private fun loadPhoto() {
-        if (scene == SuperScene.Flag) {
-            // The photo of this scene is part of the app.
+        // The picture of these scenes is part of the app.
+        val bundled = if (scene == SuperScene.Flag) "planets/iwojima.jpg" else scene.asset
+        if (bundled != null) {
             val manager = assets ?: return
-            photo = runCatching { manager.open("planets/iwojima.jpg").use { BitmapFactory.decodeStream(it) } }.getOrNull()
+            photo = runCatching { manager.open(bundled).use { BitmapFactory.decodeStream(it) } }.getOrNull()
             return
         }
         val file = photoFile ?: return

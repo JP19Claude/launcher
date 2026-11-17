@@ -276,10 +276,12 @@ internal class SuperGl(
                         true
                     }
                 }
-                SuperScene.Photo, SuperScene.Flag, SuperScene.Video1, SuperScene.Video2 -> {
+                SuperScene.Photo, SuperScene.Flag, SuperScene.Video1, SuperScene.Video2,
+                SuperScene.UsaFlag, SuperScene.UsaWave, SuperScene.UsaEagle, SuperScene.UsaCapitol, SuperScene.UsaElephant -> {
                     kind = Kind.PHOTO
                     val photo = when {
                         forScene == SuperScene.Flag -> decodeAsset("planets/iwojima.jpg")
+                        forScene.isPicture -> forScene.asset?.let { decodeAsset(it) }
                         forScene.isVideo -> decodePhoto(frameOf(forScene))
                         else -> decodePhoto()
                     }

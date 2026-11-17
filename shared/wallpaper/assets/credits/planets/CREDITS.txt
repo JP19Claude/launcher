@@ -45,3 +45,5 @@ der Shader.
 Iwo Jima (iwojima.jpg): Foto des Iwo-Jima-Denkmals (U.S. Marine Corps War Memorial) mit dem Vollmond und der US-Flagge, nach einer
 Bildschirmaufnahme aus ZENITHs Wallpaper-Galerie, deren Fotos aus der NASA-Bildbibliothek (images.nasa.gov) kommen. Den Fotografen
 und die Bildnummer kenne ich nicht; NASA-Bilder sind in der Regel gemeinfrei, bei einzelnen können andere Rechte gelten.
+
+USA-Bilder (USA · Stars & Stripes, Rote Welle, Weißkopfseeadler, Kapitol bei Nacht, Roter Elefant): von ZENITH selbst gezeichnet (Vektorgrafik und Code), keine Fotos fremder Urheber, keine Personen, kein Parteilogo.

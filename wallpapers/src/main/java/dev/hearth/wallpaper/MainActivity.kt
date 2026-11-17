@@ -333,7 +333,7 @@ class MainActivity : Activity() {
             )
         }
         // The size of the planet or the Moon (the photo of "Iwo Jima" and the landscapes have none to resize).
-        if (scene != SuperScene.Flag && scene != SuperScene.Photo && !scene.isScape && !scene.isVideo) {
+        if (!scene.isPhotoLike && !scene.isScape && !scene.isVideo) {
             val sizeLabel = TextView(this).apply {
                 setTextColor(Color.WHITE)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
@@ -367,7 +367,7 @@ class MainActivity : Activity() {
             )
         }
         // Where the body hangs on the lock screen: moved right/left and down/up, e.g. up behind the clock.
-        if (scene != SuperScene.Flag && scene != SuperScene.Photo && scene != SuperScene.Geometry && !scene.isScape && !scene.isVideo) {
+        if (!scene.isPhotoLike && scene != SuperScene.Geometry && !scene.isScape && !scene.isVideo) {
             fun positionSlider(title: String, key: String) {
                 val label = TextView(this).apply {
                     setTextColor(Color.WHITE)

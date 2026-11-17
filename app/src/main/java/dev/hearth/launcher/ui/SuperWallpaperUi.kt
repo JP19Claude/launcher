@@ -251,7 +251,7 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             valueText = "${"%.1f".format(s.superSpeed)}×",
         ) { v -> update { it.copy(superParams = it.superParams.copy(speed = v)) } }
         // The photos (Iwo Jima, your own) and the landscapes have no body to resize.
-        if (s.superScene != SuperScene.Photo && s.superScene != SuperScene.Flag && !s.superScene.isScape && !s.superScene.isVideo) {
+        if (!s.superScene.isPhotoLike && !s.superScene.isScape && !s.superScene.isVideo) {
             SliderRow(
                 label = "Größe",
                 value = params.size,
@@ -260,7 +260,7 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             ) { v -> update { it.copy(superParams = it.superParams.copy(size = v)) } }
         }
         // Where the body hangs on the lock screen: moved, e.g. up behind the clock (the photos, the geometry and the landscapes fill the screen).
-        if (s.superScene != SuperScene.Photo && s.superScene != SuperScene.Flag && s.superScene != SuperScene.Geometry && !s.superScene.isScape && !s.superScene.isVideo) {
+        if (!s.superScene.isPhotoLike && s.superScene != SuperScene.Geometry && !s.superScene.isScape && !s.superScene.isVideo) {
             SliderRow(
                 label = "Position waagerecht",
                 value = params.offsetX,
@@ -294,7 +294,7 @@ internal fun SuperWallpaperSection(s: LauncherSettings, update: ((LauncherSettin
             },
         )
         WallpaperAppsUpdate()
-        Note("Mond und Erde sind Aufnahmen der NASA, Mars, Venus, Jupiter, Saturn, Neptun, Pluto und die Monde drehen sich auf echten Karten der NASA (gemeinfrei, im App-Paket enthalten, keine Verbindung nötig). Das Glas in ZENITH bricht ein Standbild der Szene; es bewegt sich nur der Hintergrund selbst. „Iwo Jima“ ist ein Foto im Paket (aus der NASA-Bildbibliothek), „Eigenes Foto“ zeigt ein Foto aus der Wallpaper-Galerie, „Geometrie“ ist in ZENITH selbst gezeichnet.")
+        Note("Mond und Erde sind Aufnahmen der NASA, Mars, Venus, Jupiter, Saturn, Neptun, Pluto und die Monde drehen sich auf echten Karten der NASA (gemeinfrei, im App-Paket enthalten, keine Verbindung nötig). Das Glas in ZENITH bricht ein Standbild der Szene; es bewegt sich nur der Hintergrund selbst. „Iwo Jima“ ist ein Foto im Paket (aus der NASA-Bildbibliothek), die fünf USA-Bilder zeichnet ZENITH selbst, „Eigenes Foto“ zeigt ein Foto aus der Wallpaper-Galerie, „Geometrie“ ist in ZENITH selbst gezeichnet.")
     }
 }
 
