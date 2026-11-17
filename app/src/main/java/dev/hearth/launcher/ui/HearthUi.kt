@@ -238,6 +238,16 @@ internal object HearthChangelog {
                     hearth,
                 ),
                 ChangeSection(
+                    "USA-Hintergründe: weniger KI-Look", Icons.Rounded.Star, Blue,
+                    listOf(
+                        "Rückmeldung: Die USA-Hintergründe sind schon sehr gut, sehen aber viel zu sehr nach KI aus.",
+                        "Woran man das sah: glänzende Verläufe, Leuchten um alles, Strahlenglanz, glatte Flächen ohne Fehler. Das ist genau, was KI-Bilder verrät – und was ein Mensch am Plakat nicht so zeichnen würde.",
+                        "Jetzt sind alle fünf im Stil eines Siebdruck-Plakats gemacht: eine feste Auswahl von Druckfarben (Rot, Marineblau, Papierweiß, Gold), flache Flächen statt Verläufen, leicht raue Kanten, Papierkorn und winzige Stellen, an denen die Farbe nicht gehalten hat. Die Motive sind dieselben (Stars & Stripes, Rote Welle, Weißkopfseeadler, Kapitol bei Nacht, Roter Elefant); beim Adler sitzt jetzt ein Strahlenkranz aus zwei Blautönen hinter einer hellen Scheibe, beim Elefanten eine nachtblaue Flagge.",
+                        "Ehrlich dazu: Echte Fotos wären die sicherste Antwort auf „sieht nach KI aus“ – von hier aus komme ich aber nicht an die Archive der Behörden und von Wikimedia heran (das Netz ist für diese Umgebung gesperrt). Mit freigegebenem Zugriff oder mit Fotos von dir, die frei verwendet werden dürfen, ginge das. Gesehen habe ich auch das nur am Rechner, nicht auf dem Handy.",
+                    ),
+                    hearth,
+                ),
+                ChangeSection(
                     "Fünf USA-Hintergründe", Icons.Rounded.Star, Blue,
                     listOf(
                         "Rückmeldung: Ins Wallpaper sollen USA-Hintergründe, die in Richtung Republikaner gehen.",

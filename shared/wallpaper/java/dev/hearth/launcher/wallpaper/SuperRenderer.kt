@@ -55,23 +55,23 @@ enum class SuperScene(val label: String, val note: String) {
     ),
     UsaFlag(
         "USA · Stars & Stripes",
-        "Die Flagge der Vereinigten Staaten als wehendes Banner: 50 Sterne im blauen Feld, 13 Streifen, Falten im Wind und Licht von links oben. Von ZENITH selbst gezeichnet. Das Bild folgt der Neigung des Telefons und kommt beim Entsperren näher.",
+        "Die Flagge der Vereinigten Staaten als wehendes Banner: 50 Sterne im blauen Feld, 13 Streifen, Falten im Wind und Licht von links oben. Von ZENITH selbst gezeichnet, im Stil eines Siebdruck-Plakats. Das Bild folgt der Neigung des Telefons und kommt beim Entsperren näher.",
     ),
     UsaWave(
         "USA · Rote Welle",
-        "Eine rote Welle aus Seide mit weißen und blauen Streifen unter einem Sternenhimmel; dreizehn Sterne im Kreis, einer groß in der Mitte. Von ZENITH selbst gezeichnet.",
+        "Eine rote Welle aus Seide mit weißen und blauen Streifen unter einem Sternenhimmel; dreizehn Sterne im Kreis, einer groß in der Mitte. Von ZENITH selbst gezeichnet, im Stil eines Siebdruck-Plakats.",
     ),
     UsaEagle(
         "USA · Weißkopfseeadler",
-        "Der Weißkopfseeadler mit dem Schild der Stars and Stripes, Olivenzweig und Pfeilen, dreizehn Sterne im Strahlenkranz – im Stil des Wappens, von ZENITH selbst gezeichnet.",
+        "Der Weißkopfseeadler mit dem Schild der Stars and Stripes, Olivenzweig und Pfeilen, dreizehn Sterne im Strahlenkranz – im Stil des Wappens, von ZENITH selbst gezeichnet, als Siebdruck-Plakat.",
     ),
     UsaCapitol(
         "USA · Kapitol bei Nacht",
-        "Das Kapitol in Washington im Flutlicht, mit Feuerwerk in Rot, Weiß und Blau über dem Spiegelbecken. Von ZENITH selbst gezeichnet.",
+        "Das Kapitol in Washington im Flutlicht, mit Feuerwerk in Rot, Weiß und Blau über dem Spiegelbecken. Von ZENITH selbst gezeichnet, im Stil eines Siebdruck-Plakats.",
     ),
     UsaElephant(
         "USA · Roter Elefant",
-        "Der rote Elefant mit weißen Sternen vor der verblassten Flagge – das alte Wahrzeichen der Republikaner (aus dem 19. Jahrhundert), von ZENITH selbst gezeichnet, ohne Parteilogo und ohne Personen.",
+        "Der rote Elefant mit weißen Sternen vor der verblassten Flagge – das alte Wahrzeichen der Republikaner (aus dem 19. Jahrhundert), von ZENITH selbst gezeichnet, als Siebdruck-Plakat, ohne Parteilogo und ohne Personen.",
     ),
     Geometry("Geometrie", "Ein Ikosaeder aus Licht mit einem zweiten Körper darin, die beide umeinander drehen."),
     Photo(
